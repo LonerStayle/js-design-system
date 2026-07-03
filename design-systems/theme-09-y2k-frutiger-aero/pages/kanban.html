@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>칸반 보드 · Aero</title>
+  <link rel="stylesheet" href="../tokens.css" />
+  <link rel="stylesheet" href="../semantic.css" />
+  <link rel="stylesheet" href="../base.css" />
+  <link rel="stylesheet" href="../components/buttons.css" />
+  <link rel="stylesheet" href="../components/forms.css" />
+  <link rel="stylesheet" href="../components/forms-advanced.css" />
+  <link rel="stylesheet" href="../components/card.css" />
+  <link rel="stylesheet" href="../components/badge.css" />
+  <link rel="stylesheet" href="../components/data-display.css" />
+  <link rel="stylesheet" href="../components/overlay.css" />
+  <link rel="stylesheet" href="../components/feedback.css" />
+  <link rel="stylesheet" href="../components/nav.css" />
+  <link rel="stylesheet" href="../components/carousel.css" />
+
+  <style>
+    /* ==========================================================================
+       KANBAN PAGE LAYOUT — tokens only. Board scrolls horizontally on narrow
+       screens; comfortable on desktop.
+       ========================================================================== */
+    .board-shell {
+      max-width: 1480px;
+      margin-inline: auto;
+      padding: var(--space-6) var(--space-6) var(--space-9);
+    }
+    @media (max-width: 600px) {
+      .board-shell { padding: var(--space-4) var(--space-3) var(--space-8); }
+    }
+
+    /* --- Toolbar -------------------------------------------------------------- */
+    .board-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-4);
+      padding: var(--space-5) var(--space-6);
+      margin-bottom: var(--space-6);
+      border-radius: var(--radius-lg);
+      background: var(--color-surface);
+      border: var(--border-1) solid var(--color-border-soft);
+      box-shadow: var(--shadow-sm), var(--surface-rim);
+    }
+    .board-toolbar__titles { margin-right: auto; }
+    .board-toolbar__title {
+      font-size: var(--text-2xl);
+      font-weight: var(--weight-bold);
+      line-height: var(--leading-tight);
+      color: var(--color-text);
+    }
+    .board-toolbar__subtitle {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+      margin-top: var(--space-1);
+    }
+    .board-toolbar__group {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      flex-wrap: wrap;
+    }
+    .board-toolbar__search { width: clamp(180px, 24vw, 280px); }
+    .board-toolbar__sep {
+      width: var(--border-1);
+      align-self: stretch;
+      background: var(--color-border-soft);
+      margin-inline: var(--space-1);
+    }
+    @media (max-width: 760px) {
+      .board-toolbar__sep { display: none; }
+      .board-toolbar__search { width: 100%; }
+    }
+
+    /* --- The board (horizontal scroller of columns) -------------------------- */
+    .board {
+      display: flex;
+      gap: var(--space-5);
+      align-items: flex-start;
+      overflow-x: auto;
+      overflow-y: visible;
+      padding-bottom: var(--space-4);
+      scroll-snap-type: x proximity;
+      -webkit-overflow-scrolling: touch;
+    }
+    .board::-webkit-scrollbar { height: 10px; }
+    .board::-webkit-scrollbar-thumb {
+      background: var(--color-border);
+      border-radius: var(--radius-full);
+    }
+    .board::-webkit-scrollbar-track { background: transparent; }
+
+    /* --- A column = glass panel --------------------------------------------- */
+    .board-col {
+      scroll-snap-align: start;
+      flex: 0 0 320px;
+      width: 320px;
+      max-height: calc(100vh - 220px);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      padding: var(--space-4);
+      border-radius: var(--radius-lg);
+      background: var(--color-surface-2);
+      border: var(--border-1) solid var(--color-border-soft);
+      box-shadow: var(--shadow-sm), var(--surface-rim);
+      -webkit-backdrop-filter: blur(var(--color-backdrop-blur)) saturate(1.3);
+      backdrop-filter: blur(var(--color-backdrop-blur)) saturate(1.3);
+    }
+    @media (max-width: 420px) {
+      .board-col { flex-basis: 86vw; width: 86vw; }
+    }
+    .board-col__header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .board-col__dot {
+      width: 10px;
+      height: 10px;
+      flex: none;
+      border-radius: var(--radius-full);
+      box-shadow: var(--rim-light);
+    }
+    .board-col__dot--backlog  { background: var(--sky-400); }
+    .board-col__dot--progress { background: var(--aqua-500); }
+    .board-col__dot--review   { background: var(--color-warning); }
+    .board-col__dot--done     { background: var(--lime-500, var(--color-success)); }
+    .board-col__title {
+      font-size: var(--text-base);
+      font-weight: var(--weight-bold);
+      color: var(--color-text);
+    }
+    .board-col__add {
+      margin-left: auto;
+    }
+    .board-col__list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      overflow-y: auto;
+      padding: var(--space-1);
+      margin: calc(var(--space-1) * -1);
+    }
+    .board-col__list::-webkit-scrollbar { width: 8px; }
+    .board-col__list::-webkit-scrollbar-thumb {
+      background: var(--color-border);
+      border-radius: var(--radius-full);
+    }
+
+    /* --- kanban-card extras (compose with component styles) ------------------ */
+    .kanban-card__desc {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+      line-height: var(--leading-snug);
+    }
+    /* thumbnail / progress bar accent inside a card */
+    .kanban-card__thumb {
+      height: 8px;
+      border-radius: var(--radius-full);
+      background: var(--color-surface-sunken);
+      box-shadow: inset 0 1px 2px rgba(10, 59, 97, 0.18);
+      overflow: hidden;
+    }
+    .kanban-card__thumb > span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--sky-400), var(--aqua-500));
+      box-shadow: var(--gloss-inset);
+    }
+    .kanban-card__metaicons {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-left: auto;
+      color: var(--color-text-muted);
+      font-size: var(--text-xs);
+    }
+    .kanban-card__metaicons span {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .kanban-card__metaicons svg { width: 14px; height: 14px; }
+    .kanban-card__footer .avatar { box-shadow: var(--rim-light), var(--shadow-xs); }
+    .due {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .due svg { width: 13px; height: 13px; }
+    .due--soon { color: var(--color-warning-fg, var(--color-warning)); font-weight: var(--weight-semibold); }
+
+    /* modal form grid */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-4);
+    }
+    .form-grid .field--full { grid-column: 1 / -1; }
+    @media (max-width: 560px) {
+      .form-grid { grid-template-columns: 1fr; }
+    }
+    .hide-mobile { }
+    @media (max-width: 640px) { .hide-mobile { display: none; } }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+  <div class="aero-sky" aria-hidden="true"></div>
+  <div class="aero-bubbles" data-bubbles="14" aria-hidden="true"></div>
+
+  <!-- ===================== SHARED NAVBAR ===================== -->
+  <header class="navbar navbar--sticky" role="banner">
+    <a class="navbar__brand" href="../index.html">
+      <span class="navbar__logo" aria-hidden="true">
+        <svg width="30" height="30" viewBox="0 0 32 32" fill="none">
+          <defs>
+            <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#84CFFF"/><stop offset=".5" stop-color="#00D6C8"/><stop offset="1" stop-color="#9BE15D"/>
+            </linearGradient>
+          </defs>
+          <circle cx="16" cy="16" r="14" fill="url(#lg)"/>
+          <ellipse cx="12" cy="11" rx="6" ry="4" fill="rgba(255,255,255,.75)"/>
+        </svg>
+      </span>
+      <strong>Aero</strong>
+    </a>
+    <nav class="navbar__nav" aria-label="주요 메뉴">
+      <a class="navbar__link" href="dashboard.html">대시보드</a>
+      <a class="navbar__link is-active" href="kanban.html" aria-current="page">칸반 보드</a>
+      <a class="navbar__link" href="inbox.html">인박스</a>
+      <a class="navbar__link" href="../index.html">컴포넌트 허브</a>
+    </nav>
+    <div class="navbar__actions">
+      <button class="btn btn--ghost btn--sm" data-command-open aria-label="명령 팔레트 열기 (⌘K)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <span class="hide-mobile">⌘K</span>
+      </button>
+      <button class="btn btn--secondary btn--sm" data-theme-toggle aria-pressed="false">
+        <span data-theme-label>Dark</span>
+      </button>
+      <button class="navbar__toggle" data-nav-toggle aria-label="메뉴 열기" aria-expanded="false">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="board-shell">
+
+      <!-- ===================== BOARD TOOLBAR ===================== -->
+      <section class="board-toolbar" aria-label="보드 도구 모음">
+        <div class="board-toolbar__titles">
+          <h1 class="board-toolbar__title">Aero 모바일 앱 출시</h1>
+          <p class="board-toolbar__subtitle">스프린트 14 · 6월 9일 – 6월 27일 · 12개 작업</p>
+        </div>
+
+        <div class="board-toolbar__group">
+          <div class="avatar-group" aria-label="참여 팀원 5명">
+            <span class="avatar avatar--sm" role="img" aria-label="김하늘">김</span>
+            <span class="avatar avatar--sm" role="img" aria-label="이바다">이</span>
+            <span class="avatar avatar--sm" role="img" aria-label="박솔잎">박</span>
+            <span class="avatar avatar--sm" role="img" aria-label="정구름">정</span>
+            <span class="avatar avatar--sm avatar--count" role="img" aria-label="외 4명 더">+4</span>
+          </div>
+
+          <span class="board-toolbar__sep" aria-hidden="true"></span>
+
+          <div class="search board-toolbar__search">
+            <input class="input input--sm" type="search" placeholder="작업 검색…" aria-label="작업 검색" />
+            <button class="search__clear" type="button" aria-label="검색어 지우기"></button>
+          </div>
+
+          <div class="btn-group" role="group" aria-label="필터">
+            <button class="btn btn--secondary btn--sm" type="button" aria-pressed="true">전체</button>
+            <button class="btn btn--ghost btn--sm" type="button" aria-pressed="false">내 작업</button>
+            <button class="btn btn--ghost btn--sm" type="button" aria-pressed="false">높은 우선순위</button>
+          </div>
+
+          <button class="btn btn--primary btn--sm" type="button" data-modal-open="task-modal">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            새 작업
+          </button>
+        </div>
+      </section>
+
+      <!-- ===================== THE BOARD ===================== -->
+      <section class="board" aria-label="칸반 보드">
+
+        <!-- ─────────── 백로그 ─────────── -->
+        <div class="board-col" role="group" aria-labelledby="col-backlog-h">
+          <div class="board-col__header">
+            <span class="board-col__dot board-col__dot--backlog" aria-hidden="true"></span>
+            <h2 class="board-col__title" id="col-backlog-h">백로그</h2>
+            <span class="badge badge--neutral">4</span>
+            <button class="btn btn--icon btn--ghost btn--sm board-col__add" type="button" data-modal-open="task-modal" aria-label="백로그에 작업 추가">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+          </div>
+          <div class="board-col__list">
+
+            <article class="kanban-card" tabindex="0" aria-roledescription="이동 가능한 작업 카드">
+              <div class="kanban-card__tags">
+                <span class="badge badge--info">디자인</span>
+                <span class="badge badge--neutral">보통</span>
+              </div>
+              <h3 class="kanban-card__title">온보딩 일러스트레이션 4종 리디자인</h3>
+              <p class="kanban-card__desc">물방울·잎사귀 모티프 적용, 라이트/다크 양쪽 검수.</p>
+              <div class="kanban-card__footer">
+                <span class="avatar avatar--sm" role="img" aria-label="담당 박솔잎">박</span>
+                <span class="kanban-card__meta due">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                  6월 24일
+                </span>
+                <span class="kanban-card__metaicons" aria-hidden="true">
+                  <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>3</span>
+                  <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.4 11.05 12.25 20.2a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.2 9.19a1 1 0 0 1-1.41-1.41l8.49-8.49"/></svg>2</span>
+                </span>
+              </div>
+            </article>
+
+            <article class="kanban-card" tabindex="0" aria-roledescription="이동 가능한 작업 카드">
+              <div class="kanban-card__tags">
+                <span class="badge badge--success">개발</span>
+                <span class="badge badge--neutral">낮음</span>
+              </div>
+              <h3 class="kanban-card__title">푸시 알림 권한 안내 화면</h3>
+              <p class="kanban-card__desc">iOS 17 권한 플로우 대응, 거부 후 재안내 카피 포함.</p>
+              <div class="kanban-card__footer">
+                <span class="avatar avatar--sm" role="img" aria-label="담당 이바다">이</span>
+                <span class="kanban-card__meta due">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                  6월 26일
+                </span>
+                <span class="kanban-card__metaicons" aria-hidden="true">
+                  <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>1</span>
+                </span>
+              </div>
+            </article>
+
+            <article class="kanban-card" tabindex="0" aria-roledescription="이동 가능한 작업 카드">
+              <div class="kanban-card__tags">
+                <span class="badge badge--warning">리서치</span>
+              </div>
+              <h3 class="kanban-card__title">경쟁 앱 빈 화면(Empty state) 벤치마크</h3>
+              <div class="kanban-card__footer">
+                <span class="avatar avatar--sm" role="img" aria-label="담당 정구름">정</span>
+                <span class="kanban-card__meta due">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                  미정
+                </span>
+                <span class="kanban-card__metaicons" aria-hidden="true">
+                  <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.4 11.05 12.25 20.2a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.2 9.19a1 1 0 0 1-1.41-1.41l8.49-8.49"/></svg>4</span>
+                </span>
+              </div>
+            </article>
+
+            <article class="kanban-card" tabindex="0" aria-roledescription="이동 가능한 작업 카드">
+              <div class="kanban-card__tags">
+                <span class="badge badge--danger">버그</span>
+                <span class="badge badge--warning">보통</span>
+              </div>
+              <h3 class="kanban-card__title">다크 모드 토글 시 일부 아이콘 색 깨짐</h3>
+              <p class="kanban-card__desc">currentColor 미적용 SVG 3건 추적 필요.</p>
+              <div class="kanban-card__footer">
+                <span class="avatar avatar--sm" role="img" aria-label="담당 김하늘">김</span>
+                <span class="kanban-card__meta due">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                  6월 25일
+                </span>
+                <span class="kanban-card__metaicons" aria-hidden="true">
+                  <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>2</span>
+                </span>
+              </div>
+            </article>
+
+          </div>
+        </div>
+
+        <!-- ─────────── 진행 중 ─────────── -->
+        <div class="board-col" role="group" aria-labelledby="col-progress-h">
+          <div class="board-col__header">
+            <span class="board-col__dot board-col__dot--progress" aria-hidden="true"></span>
+            <h2 class="board-col__title" id="col-progress-h">진행 중</h2>
+            <span class="badge badge--info">3</span>
+            <button class="btn btn--icon btn--ghost btn--sm board-col__add" type="button" data-modal-open="task-modal" aria-label="진행 중에 작업 추가">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+          </div>
+          <div class="board-col__list">
+
+            <article class="kanban-card" tabindex="0" aria-roledescription="이동 가능한 작업 카드">
+              <div class="kanban-card__tags">
+                <span class="badge badge--success">개발</span>
+                <span class="badge badge--danger">높음</span>
+              </div>
+              <h3 class="kanban-card__title">홈 피드 무한 스크롤 + 스켈레톤 로딩</h3>
+              <div class="kanban-card__thumb" role="img" aria-label="진행률 70%"><span style="width:70%"></span></div>
+              <div class="kanban-card__footer">
+                <span class="avatar avatar--sm" role="img" aria-label="담당 이바다">이</span>
+                <span class="kanban-card__meta due due--soon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                  내일 마감
+                </span>
+                <span class="kanban-card__metaicons" aria-hidden="true">
+                  <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>6</span>
+                  <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.4 11.05 12.25 20.2a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.2 9.19a1 1 0 0 1-1.41-1.41l8.49-8.49"/></svg>3</span>
+                </span>
+              </div>
+            </article>
+
+            <article class="kanban-card" tabindex="0" aria-roledescription="이동 가능한 작업 카드">
+              <div class="kanban-card__tags">
+                <span class="badge badge--info">디자인</span>
+                <span class="badge badge--warning">보통</span>
+              </div>
+              <h3 class="kanban-card__title">글래스 버튼 컴포넌트 스펙 정리</h3>
+              <p class="kanban-card__desc">hover 광택 + 포커스 아쿠아 링 토큰 매핑 문서화.</p>
+              <div class="kanban-card__thumb" role="img" aria-label="진행률 45%"><span style="width:45%"></span></div>
+              <div class="kanban-card__footer">
+                <span class="avatar avatar--sm" role="img" aria-label="담당 박솔잎">박</span>
+                <span class="kanban-card__meta due">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                  6월 23일
+                </span>
+                <span class="kanban-card__metaicons" aria-hidden="true">
+                  <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>2</span>
+                </span>
+              </div>
+            </article>
+
+            <article class="kanban-card" tabindex="0" aria-roledescription="이동 가능한 작업 카드">
+              <div class="kanban-card__tags">
+                <span class="badge badge--success">개발</span>
+                <span class="badge badge--neutral">보통</span>
+              </div>
+              <h3 class="kanban-card__title">로그인 화면 소셜 OAuth 연동</h3>
+              <div class="kanban-card__thumb" role="img" aria-label="진행률 30%"><span style="width:30%"></span></div>
+              <div class="kanban-card__footer">
+                <span class="avatar avatar--sm" role="img" aria-label="담당 김하늘">김</span>
+                <span class="kanban-card__meta due">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                  6월 27일
+                </span>
+                <span class="kanban-card__metaicons" aria-hidden="true">
+                  <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>1</span>
+                  <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.4 11.05 12.25 20.2a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.2 9.19a1 1 0 0 1-1.41-1.41l8.49-8.49"/></svg>1</span>
+                </span>
+              </div>
+            </article>
+
+          </div>
+        </div>
+
+        <!-- ─────────── 리뷰 ─────────── -->
+        <div class="board-col" role="group" aria-labelledby="col-review-h">
+          <div class="board-col__header">
+            <span class="board-col__dot board-col__dot--review" aria-hidden="true"></span>
+            <h2 class="board-col__title" id="col-review-h">리뷰</h2>
+            <span class="badge badge--warning">2</span>
+            <button class="btn btn--icon btn--ghost btn--sm board-col__add" type="button" data-modal-open="task-modal" aria-label="리뷰에 작업 추가">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+          </div>
+          <div class="board-col__list">
+
+            <article class="kanban-card" tabindex="0" aria-roledescription="이동 가능한 작업 카드">
+              <div class="kanban-card__tags">
+                <span class="badge badge--success">개발</span>
+                <span class="badge badge--danger">높음</span>
+              </div>
+              <h3 class="kanban-card__title">결제 모듈 토스페이먼츠 연동 PR</h3>
+              <p class="kanban-card__desc">2명 리뷰 대기 · 결제 실패 토스트 처리 확인 요청.</p>
+              <div class="kanban-card__footer">
+                <span class="avatar avatar--sm" role="img" aria-label="담당 정구름">정</span>
+                <span class="kanban-card__meta due">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                  6월 22일
+                </span>
+                <span class="kanban-card__metaicons" aria-hidden="true">
+                  <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>8</span>
+                  <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.4 11.05 12.25 20.2a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.2 9.19a1 1 0 0 1-1.41-1.41l8.49-8.49"/></svg>5</span>
+                </span>
+              </div>
+            </article>
+
+            <article class="kanban-card" tabindex="0" aria-roledescription="이동 가능한 작업 카드">
+              <div class="kanban-card__tags">
+                <span class="badge badge--info">디자인</span>
+                <span class="badge badge--neutral">낮음</span>
+              </div>
+              <h3 class="kanban-card__title">앱 아이콘 라운드 그라데이션 시안 검토</h3>
+              <div class="kanban-card__footer">
+                <span class="avatar avatar--sm" role="img" aria-label="담당 박솔잎">박</span>
+                <span class="kanban-card__meta due">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                  6월 24일
+                </span>
+                <span class="kanban-card__metaicons" aria-hidden="true">
+                  <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>3</span>
+                </span>
+              </div>
+            </article>
+
+          </div>
+        </div>
+
+        <!-- ─────────── 완료 ─────────── -->
+        <div class="board-col" role="group" aria-labelledby="col-done-h">
+          <div class="board-col__header">
+            <span class="board-col__dot board-col__dot--done" aria-hidden="true"></span>
+            <h2 class="board-col__title" id="col-done-h">완료</h2>
+            <span class="badge badge--success">3</span>
+            <button class="btn btn--icon btn--ghost btn--sm board-col__add" type="button" data-modal-open="task-modal" aria-label="완료에 작업 추가">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+          </div>
+          <div class="board-col__list">
+
+            <article class="kanban-card" tabindex="0" aria-roledescription="이동 가능한 작업 카드">
+              <div class="kanban-card__tags">
+                <span class="badge badge--success badge--glossy">완료</span>
+                <span class="badge badge--info">디자인</span>
+              </div>
+              <h3 class="kanban-card__title">스플래시 + 로딩 애니메이션 모션 가이드</h3>
+              <div class="kanban-card__footer">
+                <span class="avatar avatar--sm" role="img" aria-label="담당 정구름">정</span>
+                <span class="kanban-card__meta due">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+                  6월 18일
+                </span>
+                <span class="kanban-card__metaicons" aria-hidden="true">
+                  <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>4</span>
+                </span>
+              </div>
+            </article>
+
+            <article class="kanban-card" tabindex="0" aria-roledescription="이동 가능한 작업 카드">
+              <div class="kanban-card__tags">
+                <span class="badge badge--success badge--glossy">완료</span>
+                <span class="badge badge--success">개발</span>
+              </div>
+              <h3 class="kanban-card__title">디자인 토큰 → CSS 변수 빌드 파이프라인</h3>
+              <div class="kanban-card__footer">
+                <span class="avatar avatar--sm" role="img" aria-label="담당 김하늘">김</span>
+                <span class="kanban-card__meta due">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+                  6월 16일
+                </span>
+                <span class="kanban-card__metaicons" aria-hidden="true">
+                  <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>2</span>
+                  <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.4 11.05 12.25 20.2a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.2 9.19a1 1 0 0 1-1.41-1.41l8.49-8.49"/></svg>1</span>
+                </span>
+              </div>
+            </article>
+
+            <article class="kanban-card" tabindex="0" aria-roledescription="이동 가능한 작업 카드">
+              <div class="kanban-card__tags">
+                <span class="badge badge--success badge--glossy">완료</span>
+                <span class="badge badge--danger">버그</span>
+              </div>
+              <h3 class="kanban-card__title">iOS 사파리 backdrop-filter 깜빡임 수정</h3>
+              <div class="kanban-card__footer">
+                <span class="avatar avatar--sm" role="img" aria-label="담당 이바다">이</span>
+                <span class="kanban-card__meta due">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+                  6월 19일
+                </span>
+                <span class="kanban-card__metaicons" aria-hidden="true">
+                  <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>5</span>
+                </span>
+              </div>
+            </article>
+
+          </div>
+        </div>
+
+      </section>
+    </div>
+  </main>
+
+  <!-- ===================== STANDARD FOOTER ===================== -->
+  <footer class="site-footer container" style="padding-block:var(--space-9);text-align:center;color:var(--color-text-muted)">
+    <p>Aero · Y2K / Frutiger Aero 디자인 시스템 — <a class="link" href="../index.html">컴포넌트 허브로 돌아가기</a></p>
+  </footer>
+
+  <!-- ===================== NEW TASK MODAL ===================== -->
+  <div class="modal" id="task-modal" data-modal role="dialog" aria-modal="true" aria-labelledby="task-modal-title">
+    <div class="modal__backdrop" data-modal-close></div>
+    <div class="modal__panel">
+      <div class="modal__header">
+        <h2 class="modal__title" id="task-modal-title">새 작업 추가</h2>
+        <button class="modal__close" type="button" data-modal-close aria-label="닫기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form class="modal__body" id="task-form">
+        <div class="form-grid">
+
+          <div class="field field--full">
+            <label class="field__label" for="task-title">제목 <span class="field__req" aria-hidden="true">*</span></label>
+            <input class="input" id="task-title" name="title" type="text" placeholder="예: 홈 피드 빈 화면 디자인" required />
+          </div>
+
+          <div class="field field--full">
+            <label class="field__label" for="task-desc">설명</label>
+            <textarea class="textarea" id="task-desc" name="desc" rows="3" placeholder="작업 범위와 완료 조건을 적어주세요."></textarea>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="task-assignee">담당자</label>
+            <select class="select" id="task-assignee" name="assignee">
+              <option value="">담당자 선택…</option>
+              <option value="kim">김하늘 · 개발</option>
+              <option value="lee">이바다 · 개발</option>
+              <option value="park">박솔잎 · 디자인</option>
+              <option value="jung">정구름 · 디자인</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="task-due">마감일</label>
+            <input class="input" id="task-due" name="due" type="date" value="2026-06-27" aria-label="마감일" />
+          </div>
+
+          <div class="field field--full">
+            <span class="field__label" id="task-priority-label">우선순위</span>
+            <div class="segmented" role="radiogroup" aria-labelledby="task-priority-label">
+              <label class="segmented__option">
+                <input type="radio" name="priority" value="low" />
+                <span class="segmented__label">낮음</span>
+              </label>
+              <label class="segmented__option">
+                <input type="radio" name="priority" value="mid" checked />
+                <span class="segmented__label">보통</span>
+              </label>
+              <label class="segmented__option">
+                <input type="radio" name="priority" value="high" />
+                <span class="segmented__label">높음</span>
+              </label>
+            </div>
+          </div>
+
+        </div>
+      </form>
+      <div class="modal__footer">
+        <button class="btn btn--ghost" type="button" data-modal-close>취소</button>
+        <button class="btn btn--primary" type="submit" form="task-form"
+                data-modal-close
+                data-toast data-toast-variant="success" data-toast-msg="새 작업이 백로그에 추가되었습니다.">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+          저장
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== COMMAND PALETTE ===================== -->
+  <div class="command-palette" data-command-palette aria-hidden="true" role="dialog" aria-modal="true" aria-label="명령 팔레트">
+    <div class="command-palette__backdrop"></div>
+    <div class="command-palette__panel">
+      <div class="command-palette__search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" placeholder="명령 또는 페이지 검색…" aria-label="명령 검색" />
+      </div>
+      <div class="command-palette__list" role="listbox">
+        <button class="command-palette__item" role="option" onclick="location.href='dashboard.html'">📊 분석 대시보드</button>
+        <button class="command-palette__item" role="option" onclick="location.href='kanban.html'">🗂️ 칸반 보드</button>
+        <button class="command-palette__item" role="option" onclick="location.href='inbox.html'">✉️ 이메일 인박스</button>
+        <button class="command-palette__item" role="option" onclick="location.href='product.html'">🛍️ 상품 상세</button>
+        <button class="command-palette__item" role="option" onclick="location.href='pricing.html'">💎 가격표</button>
+        <button class="command-palette__item" role="option" onclick="location.href='settings.html'">⚙️ 설정</button>
+        <button class="command-palette__item" role="option" onclick="location.href='../index.html'">🏠 홈으로</button>
+        <button class="command-palette__item" role="option" data-theme-toggle>🌙 테마 전환</button>
+      </div>
+      <div class="command-palette__empty" hidden>일치하는 결과가 없습니다.</div>
+    </div>
+  </div>
+
+  <script src="../app.js"></script>
+</body>
+</html>

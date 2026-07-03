@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Kanban Board — BAUHAUS</title>
+<link rel="stylesheet" href="../tokens.css" />
+<link rel="stylesheet" href="../semantic.css" />
+<link rel="stylesheet" href="../base.css" />
+<link rel="stylesheet" href="../components/shapes.css" />
+<link rel="stylesheet" href="../components/buttons.css" />
+<link rel="stylesheet" href="../components/forms.css" />
+<link rel="stylesheet" href="../components/cards.css" />
+<link rel="stylesheet" href="../components/data-display.css" />
+<link rel="stylesheet" href="../components/feedback.css" />
+<link rel="stylesheet" href="../components/overlays.css" />
+<link rel="stylesheet" href="../components/navigation.css" />
+<style>
+  /* ── Kanban board layout ── */
+  .board-page { display: flex; flex-direction: column; gap: var(--space-5); }
+
+  .board-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    padding-bottom: var(--space-5);
+    border-bottom: var(--border-3) solid var(--black);
+  }
+  .board-toolbar__title {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-weight: var(--weight-bold);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    margin-right: var(--space-2);
+  }
+  .board-toolbar__spacer { flex: 1; }
+
+  /* ── Column grid ── */
+  .kanban-board {
+    display: flex;
+    gap: var(--space-5);
+    overflow-x: auto;
+    padding-bottom: var(--space-4);
+    align-items: flex-start;
+  }
+  .kanban-col {
+    flex: 0 0 280px;
+    min-width: 260px;
+    border: var(--border-3) solid var(--black);
+    background: var(--color-surface);
+    display: flex;
+    flex-direction: column;
+  }
+  .kanban-col__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-3) var(--space-3) 0;
+    border-bottom: var(--border-2) solid var(--black);
+    background: var(--color-surface-2);
+  }
+  .kanban-col__bar {
+    width: 6px;
+    align-self: stretch;
+    flex-shrink: 0;
+  }
+  .kanban-col__bar.is-gray { background: var(--color-text-muted); }
+  .kanban-col__bar.is-blue { background: var(--blue-500); }
+  .kanban-col__bar.is-yellow { background: var(--yellow-400); }
+  .kanban-col__bar.is-green { background: #22a06b; }
+
+  .kanban-col__name {
+    font-family: var(--font-display);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-bold);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    flex: 1;
+  }
+  .kanban-col__body {
+    padding: var(--space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-height: 120px;
+  }
+  .kanban-col__body.drag-over {
+    background: var(--color-surface-2);
+    outline: 2px dashed var(--blue-500);
+    outline-offset: -4px;
+  }
+  .kanban-col__add {
+    margin: 0 var(--space-3) var(--space-3);
+    border: var(--border-2) dashed var(--color-border);
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    padding: var(--space-2);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    transition: background var(--duration-fast) var(--ease-standard), color var(--duration-fast);
+    width: calc(100% - var(--space-6));
+  }
+  .kanban-col__add:hover {
+    background: var(--color-accent);
+    color: var(--black);
+    border-color: var(--black);
+    border-style: solid;
+  }
+
+  /* ── Kanban card extras ── */
+  .kanban-card {
+    cursor: grab;
+    user-select: none;
+  }
+  .kanban-card__badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    margin: var(--space-2) 0;
+  }
+  .kanban-card__title {
+    margin-bottom: var(--space-2);
+  }
+  .kanban-card__meta-icons {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+  .kanban-card__meta-icons .ico {
+    font-size: 12px;
+  }
+
+  /* ── Priority radio colors ── */
+  .priority-group {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+  .priority-radio {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+  }
+  .priority-radio input { display: none; }
+  .priority-radio__dot {
+    width: 16px;
+    height: 16px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background var(--duration-fast);
+  }
+  .priority-radio__dot::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0;
+    transition: opacity var(--duration-fast);
+  }
+  .priority-radio input:checked + .priority-radio__dot::after { opacity: 1; }
+  .priority-radio.pr-high { color: var(--red-500); }
+  .priority-radio.pr-med  { color: var(--yellow-400); filter: brightness(0.8); }
+  .priority-radio.pr-low  { color: var(--blue-500); }
+
+  /* ── Mobile sidebar backdrop ── */
+  .sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: calc(var(--z-drawer) - 1);
+  }
+  .sidebar-backdrop.is-open { display: block; }
+
+  @media (max-width: 767px) {
+    .board-toolbar__title { font-size: var(--text-lg); }
+    .kanban-col { flex: 0 0 240px; }
+    .board-toolbar { gap: var(--space-2); }
+  }
+</style>
+</head>
+<body>
+<a href="#main" class="sr-only">Skip to content</a>
+
+<!-- ═══ APP SHELL ═══ -->
+<div class="app-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar" aria-label="Application navigation">
+    <div class="sidebar__head">
+      <a href="../index.html" aria-label="BAUHAUS home">
+        <span class="logomark"><span class="mark"><i></i><i></i><i></i></span> BAUHAUS</span>
+      </a>
+    </div>
+    <nav class="sidebar__nav" aria-label="Sidebar">
+      <span class="sidebar__group-label">Main</span>
+      <a class="nav-link" href="../index.html">
+        <span class="ico ico-home"></span>
+        <span class="nav-link__text">Dashboard</span>
+      </a>
+      <a class="nav-link is-active" href="#">
+        <span class="ico ico-grid"></span>
+        <span class="nav-link__text">Board</span>
+      </a>
+      <a class="nav-link" href="#">
+        <span class="ico ico-calendar"></span>
+        <span class="nav-link__text">Timeline</span>
+      </a>
+      <a class="nav-link" href="#">
+        <span class="ico ico-chart"></span>
+        <span class="nav-link__text">Reports</span>
+        <span class="badge badge--blue nav-link__badge">New</span>
+      </a>
+
+      <span class="sidebar__group-label">Team</span>
+      <a class="nav-link" href="#">
+        <span class="ico ico-user"></span>
+        <span class="nav-link__text">Members</span>
+      </a>
+      <a class="nav-link" href="#">
+        <span class="ico ico-gear"></span>
+        <span class="nav-link__text">Settings</span>
+      </a>
+    </nav>
+    <div class="sidebar__foot">
+      <button class="btn btn-ghost btn-block btn-sm" data-sidebar-toggle aria-label="Collapse sidebar">
+        <span class="ico ico-arrow-l ico-sm"></span> Collapse
+      </button>
+    </div>
+  </aside>
+
+  <!-- Sidebar mobile backdrop -->
+  <div class="sidebar-backdrop" id="sidebar-backdrop" aria-hidden="true"></div>
+
+  <!-- MAIN AREA -->
+  <div class="app-shell__main">
+
+    <!-- NAVBAR -->
+    <header class="navbar no-print">
+      <button class="btn-icon" data-sidebar-mobile aria-label="Open menu" aria-expanded="false" aria-controls="sidebar">
+        <span class="ico ico-menu"></span>
+      </button>
+      <a class="navbar__brand" href="../index.html" aria-label="BAUHAUS home">
+        <span class="logomark"><span class="mark"><i></i><i></i><i></i></span> BAUHAUS</span>
+      </a>
+      <nav class="navbar__nav" aria-label="Primary">
+        <a class="navbar__link" href="../index.html">Home</a>
+        <a class="navbar__link is-active" href="#">Board</a>
+      </nav>
+      <span class="navbar__spacer"></span>
+      <div class="navbar__actions">
+        <button class="btn-icon" data-theme-toggle aria-label="Toggle theme" aria-pressed="false">
+          <span class="ico ico-gear"></span>
+        </button>
+        <div class="avatar-group" aria-label="Active team members">
+          <span class="avatar avatar--blue avatar--sm" title="Sarah K.">SK</span>
+          <span class="avatar avatar--red avatar--sm" title="Mark T.">MT</span>
+          <span class="avatar avatar--yellow avatar--sm" title="Jin L." style="color:var(--black)">JL</span>
+          <span class="avatar avatar--black avatar--sm avatar--more" title="2 more">+2</span>
+        </div>
+        <button class="btn btn-primary btn-sm" data-open-modal="modal-new-task" aria-label="Create new task">
+          <span class="ico ico-plus ico-sm"></span> New task
+        </button>
+      </div>
+    </header>
+
+    <!-- PAGE CONTENT -->
+    <main id="main" class="app-shell__content">
+      <div class="board-page">
+
+        <!-- BOARD TOOLBAR -->
+        <div class="board-toolbar" role="toolbar" aria-label="Board controls">
+          <div>
+            <p class="eyebrow">Product Team · Q3 2025</p>
+            <h1 class="board-toolbar__title">Product Roadmap</h1>
+          </div>
+
+          <div class="avatar-group" aria-label="Board members">
+            <span class="avatar avatar--blue avatar--sm" title="Sarah Kim">SK</span>
+            <span class="avatar avatar--red avatar--sm" title="Mark Torres">MT</span>
+            <span class="avatar avatar--yellow avatar--sm" title="Jin Lee" style="color:var(--black)">JL</span>
+            <span class="avatar avatar--black avatar--sm" title="Priya N.">PN</span>
+            <span class="avatar avatar--sm avatar--more" title="1 more">+1</span>
+          </div>
+
+          <div class="segmented" role="group" aria-label="View mode">
+            <button class="segmented__option" aria-pressed="false" data-value="list" aria-label="List view">
+              <span class="ico ico-grid ico-sm"></span>
+            </button>
+            <button class="segmented__option" aria-pressed="true" data-value="board" aria-label="Board view">
+              <span class="ico ico-chart ico-sm"></span>
+            </button>
+            <button class="segmented__option" aria-pressed="false" data-value="timeline" aria-label="Timeline view">
+              <span class="ico ico-calendar ico-sm"></span>
+            </button>
+          </div>
+
+          <div class="board-toolbar__spacer"></div>
+
+          <button class="btn btn-secondary btn-sm" data-open-drawer="drawer-filter" aria-label="Open filter panel">
+            <span class="ico ico-filter ico-sm"></span> Filter
+          </button>
+          <button class="btn btn-primary btn-sm" data-open-modal="modal-new-task" aria-label="Create new task">
+            <span class="ico ico-plus ico-sm"></span> New task
+          </button>
+        </div>
+
+        <!-- KANBAN BOARD -->
+        <div class="kanban-board" role="region" aria-label="Kanban board" data-stagger>
+
+          <!-- COL: BACKLOG -->
+          <section class="kanban-col" aria-label="Backlog column" data-col="backlog">
+            <div class="kanban-col__header">
+              <div class="kanban-col__bar is-gray" aria-hidden="true"></div>
+              <span class="kanban-col__name">Backlog</span>
+              <span class="badge badge--black" aria-label="4 tasks in Backlog">4</span>
+              <div class="menu">
+                <button class="btn-icon btn-round" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-label="Backlog column options">
+                  <span class="ico ico-dots"></span>
+                </button>
+                <div class="menu__panel menu__panel--right" hidden role="menu">
+                  <button class="menu__item" role="menuitem"><span class="ico ico-plus"></span> Add card</button>
+                  <button class="menu__item" role="menuitem"><span class="ico ico-star"></span> Sort by priority</button>
+                  <div class="menu__sep" role="separator"></div>
+                  <button class="menu__item menu__item--danger" role="menuitem"><span class="ico ico-trash"></span> Clear column</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="kanban-col__body" id="col-backlog" data-droptarget="backlog">
+              <!-- CARD 1 -->
+              <article class="kanban-card" draggable="true" data-card-id="card-1" aria-label="Dark mode support task">
+                <div class="kanban-card__bar is-blue" aria-label="Low priority"></div>
+                <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
+                  <span class="status status--progress"><span class="status__shape"></span> Planned</span>
+                  <div class="menu">
+                    <button class="btn-icon" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-label="Card options" style="width:20px;height:20px;font-size:12px;">
+                      <span class="ico ico-dots ico-sm"></span>
+                    </button>
+                    <div class="menu__panel menu__panel--right" hidden role="menu">
+                      <button class="menu__item" role="menuitem"><span class="ico ico-star"></span> Edit</button>
+                      <button class="menu__item menu__item--danger" role="menuitem"><span class="ico ico-trash"></span> Delete</button>
+                    </div>
+                  </div>
+                </div>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">Dark mode support for all components</p>
+                <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
+                  <span class="badge badge--blue">Design System</span>
+                  <span class="badge">UX</span>
+                </div>
+                <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
+                  <div class="avatar-wrap">
+                    <span class="avatar avatar--blue avatar--sm" title="Sarah Kim" aria-label="Assigned to Sarah Kim">SK</span>
+                  </div>
+                  <div class="kanban-card__meta-icons">
+                    <span class="ico ico-calendar ico-sm" aria-hidden="true"></span>
+                    <time datetime="2025-08-15">Aug 15</time>
+                    <span class="ico ico-mail ico-sm" aria-hidden="true"></span>
+                    <span aria-label="3 comments">3</span>
+                  </div>
+                </div>
+              </article>
+
+              <!-- CARD 2 -->
+              <article class="kanban-card" draggable="true" data-card-id="card-2" aria-label="Onboarding flow redesign task">
+                <div class="kanban-card__bar is-yellow" aria-label="Medium priority"></div>
+                <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
+                  <span class="status status--blocked"><span class="status__shape"></span> Blocked</span>
+                  <div class="menu">
+                    <button class="btn-icon" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-label="Card options" style="width:20px;height:20px;">
+                      <span class="ico ico-dots ico-sm"></span>
+                    </button>
+                    <div class="menu__panel menu__panel--right" hidden role="menu">
+                      <button class="menu__item" role="menuitem"><span class="ico ico-star"></span> Edit</button>
+                      <button class="menu__item menu__item--danger" role="menuitem"><span class="ico ico-trash"></span> Delete</button>
+                    </div>
+                  </div>
+                </div>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">Onboarding flow redesign — step 3 wizard</p>
+                <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
+                  <span class="badge badge--warning">Blocked</span>
+                  <span class="badge">Product</span>
+                </div>
+                <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
+                  <span class="avatar avatar--yellow avatar--sm" title="Jin Lee" style="color:var(--black)" aria-label="Assigned to Jin Lee">JL</span>
+                  <div class="kanban-card__meta-icons">
+                    <span class="ico ico-calendar ico-sm" aria-hidden="true"></span>
+                    <time datetime="2025-08-22">Aug 22</time>
+                    <span class="ico ico-upload ico-sm" aria-hidden="true"></span>
+                    <span aria-label="2 attachments">2</span>
+                  </div>
+                </div>
+              </article>
+
+              <!-- CARD 3 -->
+              <article class="kanban-card" draggable="true" data-card-id="card-3" aria-label="Token audit task">
+                <div class="kanban-card__bar is-blue" aria-label="Low priority"></div>
+                <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
+                  <span class="status status--progress"><span class="status__shape"></span> Planned</span>
+                </div>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">Token audit — spacing & typography scale</p>
+                <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
+                  <span class="badge badge--blue">Tokens</span>
+                </div>
+                <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
+                  <span class="avatar avatar--black avatar--sm" title="Priya N." aria-label="Assigned to Priya N.">PN</span>
+                  <div class="kanban-card__meta-icons">
+                    <span class="ico ico-calendar ico-sm" aria-hidden="true"></span>
+                    <time datetime="2025-09-01">Sep 1</time>
+                    <span class="ico ico-mail ico-sm" aria-hidden="true"></span>
+                    <span aria-label="1 comment">1</span>
+                  </div>
+                </div>
+              </article>
+
+              <!-- CARD 4 -->
+              <article class="kanban-card" draggable="true" data-card-id="card-4" aria-label="Accessibility audit task">
+                <div class="kanban-card__bar is-red" aria-label="High priority"></div>
+                <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
+                  <span class="status status--blocked"><span class="status__shape"></span> High</span>
+                </div>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">Full WCAG 2.2 AA accessibility audit</p>
+                <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
+                  <span class="badge badge--danger">High</span>
+                  <span class="badge">A11y</span>
+                </div>
+                <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
+                  <span class="avatar avatar--red avatar--sm" title="Mark Torres" aria-label="Assigned to Mark Torres">MT</span>
+                  <div class="kanban-card__meta-icons">
+                    <span class="ico ico-calendar ico-sm" aria-hidden="true"></span>
+                    <time datetime="2025-07-30">Jul 30</time>
+                    <span class="ico ico-mail ico-sm" aria-hidden="true"></span>
+                    <span aria-label="5 comments">5</span>
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <button class="kanban-col__add" data-open-modal="modal-new-task" aria-label="Add card to Backlog">
+              <span class="ico ico-plus ico-sm" aria-hidden="true"></span> Add card
+            </button>
+          </section>
+
+          <!-- COL: IN PROGRESS -->
+          <section class="kanban-col" aria-label="In Progress column" data-col="inprogress">
+            <div class="kanban-col__header">
+              <div class="kanban-col__bar is-blue" aria-hidden="true"></div>
+              <span class="kanban-col__name">In Progress</span>
+              <span class="badge badge--blue" aria-label="3 tasks in progress">3</span>
+              <div class="menu">
+                <button class="btn-icon btn-round" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-label="In Progress column options">
+                  <span class="ico ico-dots"></span>
+                </button>
+                <div class="menu__panel menu__panel--right" hidden role="menu">
+                  <button class="menu__item" role="menuitem"><span class="ico ico-plus"></span> Add card</button>
+                  <button class="menu__item" role="menuitem"><span class="ico ico-star"></span> Sort by priority</button>
+                  <div class="menu__sep" role="separator"></div>
+                  <button class="menu__item menu__item--danger" role="menuitem"><span class="ico ico-trash"></span> Clear column</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="kanban-col__body" id="col-inprogress" data-droptarget="inprogress">
+              <!-- CARD 5 -->
+              <article class="kanban-card" draggable="true" data-card-id="card-5" aria-label="Component library v2 task">
+                <div class="kanban-card__bar is-red" aria-label="High priority"></div>
+                <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
+                  <span class="status status--progress"><span class="status__shape"></span> Active</span>
+                  <div class="menu">
+                    <button class="btn-icon" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-label="Card options" style="width:20px;height:20px;">
+                      <span class="ico ico-dots ico-sm"></span>
+                    </button>
+                    <div class="menu__panel menu__panel--right" hidden role="menu">
+                      <button class="menu__item" role="menuitem"><span class="ico ico-star"></span> Edit</button>
+                      <button class="menu__item menu__item--danger" role="menuitem"><span class="ico ico-trash"></span> Delete</button>
+                    </div>
+                  </div>
+                </div>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">Component library v2 — button variants</p>
+                <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
+                  <span class="badge badge--danger">High</span>
+                  <span class="badge badge--blue">Design System</span>
+                </div>
+                <div style="padding: var(--space-2);">
+                  <div class="progress" aria-label="Progress: 60%">
+                    <div class="progress__fill" style="width:60%;" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
+                  </div>
+                  <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:4px;">60% complete</p>
+                </div>
+                <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
+                  <span class="avatar avatar--blue avatar--sm" title="Sarah Kim" aria-label="Assigned to Sarah Kim">SK</span>
+                  <div class="kanban-card__meta-icons">
+                    <span class="ico ico-calendar ico-sm" aria-hidden="true"></span>
+                    <time datetime="2025-07-25">Jul 25</time>
+                    <span class="ico ico-mail ico-sm" aria-hidden="true"></span>
+                    <span aria-label="8 comments">8</span>
+                  </div>
+                </div>
+              </article>
+
+              <!-- CARD 6 -->
+              <article class="kanban-card" draggable="true" data-card-id="card-6" aria-label="API rate limiting task">
+                <div class="kanban-card__bar is-yellow" aria-label="Medium priority"></div>
+                <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
+                  <span class="status status--progress"><span class="status__shape"></span> Active</span>
+                </div>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">API rate limiting &amp; quota dashboard</p>
+                <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
+                  <span class="badge badge--warning">Medium</span>
+                  <span class="badge">Backend</span>
+                </div>
+                <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
+                  <span class="avatar avatar--red avatar--sm" title="Mark Torres" aria-label="Assigned to Mark Torres">MT</span>
+                  <div class="kanban-card__meta-icons">
+                    <span class="ico ico-calendar ico-sm" aria-hidden="true"></span>
+                    <time datetime="2025-07-28">Jul 28</time>
+                    <span class="ico ico-upload ico-sm" aria-hidden="true"></span>
+                    <span aria-label="4 attachments">4</span>
+                  </div>
+                </div>
+              </article>
+
+              <!-- CARD 7 -->
+              <article class="kanban-card" draggable="true" data-card-id="card-7" aria-label="Mobile nav redesign task">
+                <div class="kanban-card__bar is-blue" aria-label="Low priority"></div>
+                <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
+                  <span class="status status--progress"><span class="status__shape"></span> Active</span>
+                </div>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">Mobile navigation bottom bar redesign</p>
+                <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
+                  <span class="badge badge--blue">Mobile</span>
+                  <span class="badge">UX</span>
+                </div>
+                <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
+                  <span class="avatar avatar--yellow avatar--sm" title="Jin Lee" style="color:var(--black)" aria-label="Assigned to Jin Lee">JL</span>
+                  <div class="kanban-card__meta-icons">
+                    <span class="ico ico-calendar ico-sm" aria-hidden="true"></span>
+                    <time datetime="2025-08-05">Aug 5</time>
+                    <span class="ico ico-mail ico-sm" aria-hidden="true"></span>
+                    <span aria-label="2 comments">2</span>
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <button class="kanban-col__add" data-open-modal="modal-new-task" aria-label="Add card to In Progress">
+              <span class="ico ico-plus ico-sm" aria-hidden="true"></span> Add card
+            </button>
+          </section>
+
+          <!-- COL: REVIEW -->
+          <section class="kanban-col" aria-label="Review column" data-col="review">
+            <div class="kanban-col__header">
+              <div class="kanban-col__bar is-yellow" aria-hidden="true"></div>
+              <span class="kanban-col__name">Review</span>
+              <span class="badge badge--warning" aria-label="3 tasks in review">3</span>
+              <div class="menu">
+                <button class="btn-icon btn-round" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-label="Review column options">
+                  <span class="ico ico-dots"></span>
+                </button>
+                <div class="menu__panel menu__panel--right" hidden role="menu">
+                  <button class="menu__item" role="menuitem"><span class="ico ico-plus"></span> Add card</button>
+                  <button class="menu__item" role="menuitem"><span class="ico ico-star"></span> Sort by priority</button>
+                  <div class="menu__sep" role="separator"></div>
+                  <button class="menu__item menu__item--danger" role="menuitem"><span class="ico ico-trash"></span> Clear column</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="kanban-col__body" id="col-review" data-droptarget="review">
+              <!-- CARD 8 -->
+              <article class="kanban-card" draggable="true" data-card-id="card-8" aria-label="Figma token export task">
+                <div class="kanban-card__bar is-red" aria-label="High priority"></div>
+                <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
+                  <span class="status status--progress"><span class="status__shape"></span> Review</span>
+                  <div class="menu">
+                    <button class="btn-icon" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-label="Card options" style="width:20px;height:20px;">
+                      <span class="ico ico-dots ico-sm"></span>
+                    </button>
+                    <div class="menu__panel menu__panel--right" hidden role="menu">
+                      <button class="menu__item" role="menuitem"><span class="ico ico-star"></span> Edit</button>
+                      <button class="menu__item menu__item--danger" role="menuitem"><span class="ico ico-trash"></span> Delete</button>
+                    </div>
+                  </div>
+                </div>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">Figma token export pipeline to CSS vars</p>
+                <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
+                  <span class="badge badge--danger">High</span>
+                  <span class="badge badge--blue">Tokens</span>
+                </div>
+                <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
+                  <span class="avatar avatar--black avatar--sm" title="Priya N." aria-label="Assigned to Priya N.">PN</span>
+                  <div class="kanban-card__meta-icons">
+                    <span class="ico ico-calendar ico-sm" aria-hidden="true"></span>
+                    <time datetime="2025-07-22">Jul 22</time>
+                    <span class="ico ico-mail ico-sm" aria-hidden="true"></span>
+                    <span aria-label="6 comments">6</span>
+                  </div>
+                </div>
+              </article>
+
+              <!-- CARD 9 -->
+              <article class="kanban-card" draggable="true" data-card-id="card-9" aria-label="Search component task">
+                <div class="kanban-card__bar is-yellow" aria-label="Medium priority"></div>
+                <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
+                  <span class="status status--progress"><span class="status__shape"></span> Review</span>
+                </div>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">Search component with keyboard navigation</p>
+                <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
+                  <span class="badge badge--warning">Medium</span>
+                  <span class="badge">Component</span>
+                </div>
+                <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
+                  <span class="avatar avatar--blue avatar--sm" title="Sarah Kim" aria-label="Assigned to Sarah Kim">SK</span>
+                  <div class="kanban-card__meta-icons">
+                    <span class="ico ico-calendar ico-sm" aria-hidden="true"></span>
+                    <time datetime="2025-07-24">Jul 24</time>
+                    <span class="ico ico-upload ico-sm" aria-hidden="true"></span>
+                    <span aria-label="3 attachments">3</span>
+                  </div>
+                </div>
+              </article>
+
+              <!-- CARD 10 -->
+              <article class="kanban-card" draggable="true" data-card-id="card-10" aria-label="Email notification system task">
+                <div class="kanban-card__bar is-blue" aria-label="Low priority"></div>
+                <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
+                  <span class="status status--progress"><span class="status__shape"></span> Review</span>
+                </div>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">Email notification digest system</p>
+                <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
+                  <span class="badge">Backend</span>
+                  <span class="badge badge--blue">Infra</span>
+                </div>
+                <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
+                  <span class="avatar avatar--red avatar--sm" title="Mark Torres" aria-label="Assigned to Mark Torres">MT</span>
+                  <div class="kanban-card__meta-icons">
+                    <span class="ico ico-calendar ico-sm" aria-hidden="true"></span>
+                    <time datetime="2025-07-26">Jul 26</time>
+                    <span class="ico ico-mail ico-sm" aria-hidden="true"></span>
+                    <span aria-label="4 comments">4</span>
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <button class="kanban-col__add" data-open-modal="modal-new-task" aria-label="Add card to Review">
+              <span class="ico ico-plus ico-sm" aria-hidden="true"></span> Add card
+            </button>
+          </section>
+
+          <!-- COL: DONE -->
+          <section class="kanban-col" aria-label="Done column" data-col="done">
+            <div class="kanban-col__header">
+              <div class="kanban-col__bar is-green" aria-hidden="true"></div>
+              <span class="kanban-col__name">Done</span>
+              <span class="badge badge--success" aria-label="5 tasks done">5</span>
+              <div class="menu">
+                <button class="btn-icon btn-round" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-label="Done column options">
+                  <span class="ico ico-dots"></span>
+                </button>
+                <div class="menu__panel menu__panel--right" hidden role="menu">
+                  <button class="menu__item" role="menuitem"><span class="ico ico-plus"></span> Add card</button>
+                  <button class="menu__item" role="menuitem"><span class="ico ico-star"></span> Sort by priority</button>
+                  <div class="menu__sep" role="separator"></div>
+                  <button class="menu__item menu__item--danger" role="menuitem"><span class="ico ico-trash"></span> Archive all</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="kanban-col__body" id="col-done" data-droptarget="done">
+              <!-- CARD 11 -->
+              <article class="kanban-card" draggable="true" data-card-id="card-11" aria-label="Color token system task — done" style="opacity:0.75;">
+                <div class="kanban-card__bar is-blue" aria-label="Low priority"></div>
+                <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
+                  <span class="status status--done"><span class="status__shape"></span> Done</span>
+                </div>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0; text-decoration: line-through; color: var(--color-text-muted);">Color token system — semantic layer</p>
+                <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
+                  <span class="badge badge--success">Done</span>
+                  <span class="badge badge--blue">Tokens</span>
+                </div>
+                <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
+                  <span class="avatar avatar--blue avatar--sm" title="Sarah Kim" aria-label="Assigned to Sarah Kim">SK</span>
+                  <div class="kanban-card__meta-icons">
+                    <span class="ico ico-check ico-sm" aria-hidden="true"></span>
+                    <time datetime="2025-07-10">Jul 10</time>
+                  </div>
+                </div>
+              </article>
+
+              <!-- CARD 12 -->
+              <article class="kanban-card" draggable="true" data-card-id="card-12" aria-label="Grid system task — done" style="opacity:0.75;">
+                <div class="kanban-card__bar is-yellow" aria-label="Medium priority"></div>
+                <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
+                  <span class="status status--done"><span class="status__shape"></span> Done</span>
+                </div>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0; text-decoration: line-through; color: var(--color-text-muted);">12-column grid system implementation</p>
+                <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
+                  <span class="badge badge--success">Done</span>
+                </div>
+                <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
+                  <span class="avatar avatar--yellow avatar--sm" title="Jin Lee" style="color:var(--black)" aria-label="Assigned to Jin Lee">JL</span>
+                  <div class="kanban-card__meta-icons">
+                    <span class="ico ico-check ico-sm" aria-hidden="true"></span>
+                    <time datetime="2025-07-14">Jul 14</time>
+                  </div>
+                </div>
+              </article>
+
+              <!-- CARD 13 -->
+              <article class="kanban-card" draggable="true" data-card-id="card-13" aria-label="Typography scale task — done" style="opacity:0.75;">
+                <div class="kanban-card__bar is-blue" aria-label="Low priority"></div>
+                <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
+                  <span class="status status--done"><span class="status__shape"></span> Done</span>
+                </div>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0; text-decoration: line-through; color: var(--color-text-muted);">Typography scale — Jost variable font setup</p>
+                <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
+                  <span class="badge badge--success">Done</span>
+                  <span class="badge">Type</span>
+                </div>
+                <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
+                  <span class="avatar avatar--black avatar--sm" title="Priya N." aria-label="Assigned to Priya N.">PN</span>
+                  <div class="kanban-card__meta-icons">
+                    <span class="ico ico-check ico-sm" aria-hidden="true"></span>
+                    <time datetime="2025-07-17">Jul 17</time>
+                  </div>
+                </div>
+              </article>
+
+              <!-- CARD 14 -->
+              <article class="kanban-card" draggable="true" data-card-id="card-14" aria-label="Shape alphabet task — done" style="opacity:0.75;">
+                <div class="kanban-card__bar is-red" aria-label="High priority"></div>
+                <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
+                  <span class="status status--done"><span class="status__shape"></span> Done</span>
+                </div>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0; text-decoration: line-through; color: var(--color-text-muted);">Shape alphabet: circle, triangle, arc, square</p>
+                <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
+                  <span class="badge badge--success">Done</span>
+                  <span class="badge badge--blue">Shapes</span>
+                </div>
+                <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
+                  <span class="avatar avatar--red avatar--sm" title="Mark Torres" aria-label="Assigned to Mark Torres">MT</span>
+                  <div class="kanban-card__meta-icons">
+                    <span class="ico ico-check ico-sm" aria-hidden="true"></span>
+                    <time datetime="2025-07-20">Jul 20</time>
+                    <span class="ico ico-mail ico-sm" aria-hidden="true"></span>
+                    <span aria-label="11 comments">11</span>
+                  </div>
+                </div>
+              </article>
+
+              <!-- CARD 15 -->
+              <article class="kanban-card" draggable="true" data-card-id="card-15" aria-label="Button variants task — done" style="opacity:0.75;">
+                <div class="kanban-card__bar is-blue" aria-label="Low priority"></div>
+                <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
+                  <span class="status status--done"><span class="status__shape"></span> Done</span>
+                </div>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0; text-decoration: line-through; color: var(--color-text-muted);">Button component — all 8 variants</p>
+                <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
+                  <span class="badge badge--success">Done</span>
+                </div>
+                <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
+                  <span class="avatar avatar--blue avatar--sm" title="Sarah Kim" aria-label="Assigned to Sarah Kim">SK</span>
+                  <div class="kanban-card__meta-icons">
+                    <span class="ico ico-check ico-sm" aria-hidden="true"></span>
+                    <time datetime="2025-07-21">Jul 21</time>
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <button class="kanban-col__add" data-open-modal="modal-new-task" aria-label="Add card to Done">
+              <span class="ico ico-plus ico-sm" aria-hidden="true"></span> Add card
+            </button>
+          </section>
+
+        </div>
+        <!-- /kanban-board -->
+
+      </div>
+      <!-- /board-page -->
+    </main>
+  </div>
+  <!-- /app-shell__main -->
+</div>
+<!-- /app-shell -->
+
+
+<!-- ═══ MODAL: NEW TASK ═══ -->
+<div class="modal" id="modal-new-task" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modal-new-task-title">
+  <div class="modal__dialog modal__dialog--lg">
+    <div class="modal__header">
+      <h2 class="modal__title" id="modal-new-task-title">
+        <span class="shape shape-square fill-blue" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:8px;" aria-hidden="true"></span>
+        Create New Task
+      </h2>
+      <button class="btn-icon modal__close" data-close-modal aria-label="Close modal">
+        <span class="ico ico-x"></span>
+      </button>
+    </div>
+    <div class="modal__body">
+      <form id="new-task-form" novalidate>
+        <div class="grid-2" style="gap:var(--space-4);">
+          <!-- Title -->
+          <div class="field" style="grid-column:1/-1;">
+            <label class="field__label req" for="task-title">Task Title</label>
+            <input class="input" id="task-title" name="title" type="text" placeholder="e.g. Implement dark mode tokens" required autocomplete="off" />
+            <p class="field__help">Describe the task clearly in one line.</p>
+          </div>
+
+          <!-- Status -->
+          <div class="field">
+            <label class="field__label" for="task-status">Status</label>
+            <select class="select" id="task-status" name="status">
+              <option value="backlog">Backlog</option>
+              <option value="inprogress">In Progress</option>
+              <option value="review">Review</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
+
+          <!-- Assignee -->
+          <div class="field">
+            <label class="field__label" for="task-assignee">Assignee</label>
+            <select class="select" id="task-assignee" name="assignee">
+              <option value="">Unassigned</option>
+              <option value="sk">Sarah Kim</option>
+              <option value="mt">Mark Torres</option>
+              <option value="jl">Jin Lee</option>
+              <option value="pn">Priya Nair</option>
+              <option value="ra">Raj Anand</option>
+            </select>
+          </div>
+
+          <!-- Priority -->
+          <div class="field" style="grid-column:1/-1;">
+            <span class="field__label" id="priority-group-label">Priority</span>
+            <div class="priority-group" role="group" aria-labelledby="priority-group-label">
+              <label class="priority-radio pr-high">
+                <input type="radio" name="priority" value="high" />
+                <span class="priority-radio__dot" aria-hidden="true"></span>
+                High
+              </label>
+              <label class="priority-radio pr-med">
+                <input type="radio" name="priority" value="medium" checked />
+                <span class="priority-radio__dot" aria-hidden="true"></span>
+                Medium
+              </label>
+              <label class="priority-radio pr-low">
+                <input type="radio" name="priority" value="low" />
+                <span class="priority-radio__dot" aria-hidden="true"></span>
+                Low
+              </label>
+            </div>
+          </div>
+
+          <!-- Due Date -->
+          <div class="field">
+            <label class="field__label" for="task-due">Due Date</label>
+            <input class="input" id="task-due" name="due" type="date" />
+          </div>
+
+          <!-- Labels -->
+          <div class="field">
+            <label class="field__label" for="task-label">Label</label>
+            <select class="select" id="task-label" name="label">
+              <option value="">None</option>
+              <option value="design-system">Design System</option>
+              <option value="ux">UX</option>
+              <option value="backend">Backend</option>
+              <option value="mobile">Mobile</option>
+              <option value="tokens">Tokens</option>
+              <option value="a11y">A11y</option>
+              <option value="infra">Infra</option>
+            </select>
+          </div>
+
+          <!-- Description -->
+          <div class="field" style="grid-column:1/-1;">
+            <label class="field__label" for="task-desc">Description</label>
+            <textarea class="textarea" id="task-desc" name="description" rows="3" placeholder="Add more context, acceptance criteria, or links..."></textarea>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn btn-primary" id="btn-create-task" type="button">
+        <span class="ico ico-plus ico-sm"></span> Create Task
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══ DRAWER: FILTER ═══ -->
+<div class="drawer" id="drawer-filter" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="drawer-filter-title">
+  <div class="drawer__header">
+    <h2 class="drawer__title" id="drawer-filter-title">Filter Board</h2>
+    <button class="btn-icon" data-close-drawer aria-label="Close filter panel">
+      <span class="ico ico-x"></span>
+    </button>
+  </div>
+  <div class="drawer__body">
+    <div class="stack">
+
+      <div class="field">
+        <label class="field__label" for="filter-search">Search tasks</label>
+        <div class="searchbar">
+          <span class="ico ico-search" aria-hidden="true"></span>
+          <input class="input" id="filter-search" type="search" placeholder="Search by title..." />
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="field__label" id="filter-priority-label">Priority</span>
+        <div class="stack" style="gap:var(--space-2);" role="group" aria-labelledby="filter-priority-label">
+          <label class="checkbox">
+            <input type="checkbox" checked />
+            <span class="checkbox__box" aria-hidden="true"></span>
+            <span class="badge badge--danger" style="margin-left:4px;">High</span>
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" checked />
+            <span class="checkbox__box" aria-hidden="true"></span>
+            <span class="badge badge--warning" style="margin-left:4px;">Medium</span>
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" checked />
+            <span class="checkbox__box" aria-hidden="true"></span>
+            <span class="badge badge--blue" style="margin-left:4px;">Low</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="rule"></div>
+
+      <div class="field">
+        <span class="field__label" id="filter-assignee-label">Assignee</span>
+        <div class="stack" style="gap:var(--space-2);" role="group" aria-labelledby="filter-assignee-label">
+          <label class="checkbox">
+            <input type="checkbox" checked />
+            <span class="checkbox__box" aria-hidden="true"></span>
+            <span class="avatar avatar--blue avatar--sm" style="margin-left:6px;" aria-hidden="true">SK</span>
+            Sarah Kim
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" checked />
+            <span class="checkbox__box" aria-hidden="true"></span>
+            <span class="avatar avatar--red avatar--sm" style="margin-left:6px;" aria-hidden="true">MT</span>
+            Mark Torres
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" checked />
+            <span class="checkbox__box" aria-hidden="true"></span>
+            <span class="avatar avatar--yellow avatar--sm" style="margin-left:6px;color:var(--black);" aria-hidden="true">JL</span>
+            Jin Lee
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" checked />
+            <span class="checkbox__box" aria-hidden="true"></span>
+            <span class="avatar avatar--black avatar--sm" style="margin-left:6px;" aria-hidden="true">PN</span>
+            Priya Nair
+          </label>
+        </div>
+      </div>
+
+      <div class="rule"></div>
+
+      <div class="field">
+        <span class="field__label" id="filter-label-label">Labels</span>
+        <div class="flex flex-wrap gap-2" role="group" aria-labelledby="filter-label-label" style="gap:var(--space-2);">
+          <label class="checkbox">
+            <input type="checkbox" checked />
+            <span class="checkbox__box" aria-hidden="true"></span>
+            Design System
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" checked />
+            <span class="checkbox__box" aria-hidden="true"></span>
+            Tokens
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" checked />
+            <span class="checkbox__box" aria-hidden="true"></span>
+            UX
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" checked />
+            <span class="checkbox__box" aria-hidden="true"></span>
+            Backend
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" checked />
+            <span class="checkbox__box" aria-hidden="true"></span>
+            Mobile
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" checked />
+            <span class="checkbox__box" aria-hidden="true"></span>
+            A11y
+          </label>
+        </div>
+      </div>
+
+      <div class="rule"></div>
+
+      <div class="field">
+        <label class="field__label" for="filter-due-from">Due date range</label>
+        <div class="flex gap-2" style="gap:var(--space-2);flex-wrap:wrap;">
+          <input class="input input-sm" id="filter-due-from" type="date" aria-label="Filter from date" style="flex:1;" />
+          <input class="input input-sm" id="filter-due-to" type="date" aria-label="Filter to date" style="flex:1;" />
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <div class="drawer__footer">
+    <button class="btn btn-ghost btn-sm">Reset</button>
+    <button class="btn btn-primary btn-sm" data-close-drawer>Apply Filters</button>
+  </div>
+</div>
+
+
+<!-- ═══ INLINE DRAG-AND-DROP SCRIPT ═══ -->
+<script>
+(function () {
+  'use strict';
+
+  var dragging = null;
+
+  function getDropTarget(el) {
+    while (el) {
+      if (el.dataset && el.dataset.droptarget) return el;
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  document.addEventListener('dragstart', function (e) {
+    var card = e.target.closest('[data-card-id]');
+    if (!card) return;
+    dragging = card;
+    requestAnimationFrame(function () { card.classList.add('is-dragging'); });
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', card.dataset.cardId);
+  });
+
+  document.addEventListener('dragend', function () {
+    if (dragging) {
+      dragging.classList.remove('is-dragging');
+      dragging = null;
+    }
+    document.querySelectorAll('.drag-over').forEach(function (el) {
+      el.classList.remove('drag-over');
+    });
+  });
+
+  document.addEventListener('dragover', function (e) {
+    var target = getDropTarget(e.target);
+    if (!target || !dragging) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('.drag-over').forEach(function (el) {
+      if (el !== target) el.classList.remove('drag-over');
+    });
+    target.classList.add('drag-over');
+  });
+
+  document.addEventListener('dragleave', function (e) {
+    var target = getDropTarget(e.target);
+    if (!target) return;
+    // Only remove if we actually left the drop target
+    if (!target.contains(e.relatedTarget)) {
+      target.classList.remove('drag-over');
+    }
+  });
+
+  document.addEventListener('drop', function (e) {
+    var target = getDropTarget(e.target);
+    if (!target || !dragging) return;
+    e.preventDefault();
+    target.classList.remove('drag-over');
+
+    // Find the card element to insert before (if dropping on a card)
+    var overCard = e.target.closest('[data-card-id]');
+    if (overCard && overCard !== dragging) {
+      target.insertBefore(dragging, overCard);
+    } else {
+      target.appendChild(dragging);
+    }
+
+    // Update column badge counts
+    updateCounts();
+  });
+
+  function updateCounts() {
+    document.querySelectorAll('[data-droptarget]').forEach(function (col) {
+      var count = col.querySelectorAll('[data-card-id]').length;
+      var colEl = col.closest('.kanban-col');
+      if (!colEl) return;
+      var badge = colEl.querySelector('.kanban-col__header .badge');
+      if (badge) badge.textContent = count;
+    });
+  }
+
+  // ─── New task form submit ───
+  var btnCreate = document.getElementById('btn-create-task');
+  if (btnCreate) {
+    btnCreate.addEventListener('click', function () {
+      var form = document.getElementById('new-task-form');
+      var titleEl = document.getElementById('task-title');
+      if (!titleEl.value.trim()) {
+        titleEl.focus();
+        titleEl.classList.add('is-error');
+        return;
+      }
+      titleEl.classList.remove('is-error');
+
+      // Close modal via app.js convention
+      var modal = document.getElementById('modal-new-task');
+      if (modal) {
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('modal-open');
+      }
+
+      // Append new card to chosen column
+      var status = document.getElementById('task-status').value;
+      var priority = document.querySelector('input[name="priority"]:checked');
+      var priorityVal = priority ? priority.value : 'medium';
+      var assignee = document.getElementById('task-assignee').value;
+      var due = document.getElementById('task-due').value;
+      var label = document.getElementById('task-label').value;
+      var title = titleEl.value.trim();
+
+      var barClass = priorityVal === 'high' ? 'is-red' : (priorityVal === 'low' ? 'is-blue' : 'is-yellow');
+      var badgeClass = priorityVal === 'high' ? 'badge--danger' : (priorityVal === 'low' ? 'badge--blue' : 'badge--warning');
+      var badgeText = priorityVal.charAt(0).toUpperCase() + priorityVal.slice(1);
+
+      var assigneeMap = { sk: 'SK', mt: 'MT', jl: 'JL', pn: 'PN', ra: 'RA' };
+      var avatarColorMap = { sk: 'blue', mt: 'red', jl: 'yellow', pn: 'black', ra: 'blue' };
+      var avatarInitials = assignee ? (assigneeMap[assignee] || '') : '';
+      var avatarColor = assignee ? (avatarColorMap[assignee] || 'black') : 'black';
+
+      var newId = 'card-new-' + Date.now();
+      var card = document.createElement('article');
+      card.className = 'kanban-card';
+      card.draggable = true;
+      card.dataset.cardId = newId;
+      card.setAttribute('aria-label', title + ' task');
+      card.innerHTML =
+        '<div class="kanban-card__bar ' + barClass + '" aria-label="' + badgeText + ' priority"></div>' +
+        '<div class="kanban-card__top" style="padding:var(--space-2) var(--space-2) 0;">' +
+          '<span class="status status--progress"><span class="status__shape"></span> New</span>' +
+        '</div>' +
+        '<p class="kanban-card__title" style="padding:var(--space-1) var(--space-2) 0;">' + escapeHtml(title) + '</p>' +
+        '<div class="kanban-card__badges" style="padding:0 var(--space-2);">' +
+          '<span class="badge ' + badgeClass + '">' + badgeText + '</span>' +
+          (label ? '<span class="badge">' + escapeHtml(label) + '</span>' : '') +
+        '</div>' +
+        '<div class="kanban-card__meta" style="padding:0 var(--space-2) var(--space-2);">' +
+          (avatarInitials ? '<span class="avatar avatar--' + avatarColor + ' avatar--sm"' + (avatarColor === 'yellow' ? ' style="color:var(--black)"' : '') + '>' + avatarInitials + '</span>' : '') +
+          '<div class="kanban-card__meta-icons">' +
+            (due ? '<span class="ico ico-calendar ico-sm" aria-hidden="true"></span><time>' + due + '</time>' : '') +
+          '</div>' +
+        '</div>';
+
+      var colId = 'col-' + status;
+      var colBody = document.getElementById(colId);
+      if (colBody) colBody.appendChild(card);
+
+      form.reset();
+      updateCounts();
+
+      // Fire toast
+      if (window.Bauhaus && window.Bauhaus.toast) {
+        window.Bauhaus.toast({ title: 'Task created', text: '"' + title + '" added to ' + status, variant: 'success' });
+      }
+    });
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // ─── Segmented view switch ───
+  document.querySelectorAll('.segmented').forEach(function (seg) {
+    seg.querySelectorAll('.segmented__option').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        seg.querySelectorAll('.segmented__option').forEach(function (b) { b.setAttribute('aria-pressed', 'false'); });
+        btn.setAttribute('aria-pressed', 'true');
+      });
+    });
+  });
+
+  // ─── Mobile sidebar backdrop ───
+  var backdrop = document.getElementById('sidebar-backdrop');
+  if (backdrop) {
+    backdrop.addEventListener('click', function () {
+      var sidebar = document.getElementById('sidebar');
+      if (sidebar) sidebar.classList.remove('is-mobile-open');
+      backdrop.classList.remove('is-open');
+      var mobileBtn = document.querySelector('[data-sidebar-mobile]');
+      if (mobileBtn) mobileBtn.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  // Extend sidebar-mobile toggle to show backdrop
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('[data-sidebar-mobile]')) {
+      var sidebar = document.getElementById('sidebar');
+      if (!sidebar) return;
+      var isOpen = sidebar.classList.toggle('is-mobile-open');
+      e.target.closest('[data-sidebar-mobile]').setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      if (backdrop) backdrop.classList.toggle('is-open', isOpen);
+    }
+  }, true);
+
+})();
+</script>
+
+<script src="../app.js"></script>
+</body>
+</html>

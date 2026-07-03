@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comms Console · AETHER-HUD</title>
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../semantic.css">
+<link rel="stylesheet" href="../base.css">
+<link rel="stylesheet" href="../components/index.css">
+<style>
+  .inbox-shell { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  .inbox-grid { flex: 1; display: grid; grid-template-columns: 220px 360px 1fr; min-height: 0; }
+  .pane { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--color-border-faint); }
+  .pane-head { padding: var(--space-4); border-bottom: 1px solid var(--color-border-faint); display: flex; align-items: center; gap: var(--space-2); }
+  .pane-head .ph-title { font-family: var(--font-display); font-size: var(--text-sm); text-transform: uppercase; letter-spacing: var(--tracking-wide); color: var(--color-text-strong); }
+  .pane-scroll { overflow-y: auto; flex: 1; }
+  /* folders */
+  .folder { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); color: var(--color-text-muted); font-size: var(--text-sm); font-weight: 600; cursor: pointer; clip-path: var(--clip-bevel); --bevel:5px; margin: 2px var(--space-2); transition: all var(--duration-fast); }
+  .folder svg { width: 16px; height: 16px; }
+  .folder:hover { background: var(--color-primary-muted); color: var(--color-primary); }
+  .folder.is-active { background: var(--color-primary-muted); color: var(--color-primary); }
+  .folder .f-count { margin-left: auto; font-family: var(--font-mono); font-size: var(--text-2xs); }
+  /* message list */
+  .msg { padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border-faint); cursor: pointer; display: grid; gap: 4px; transition: background var(--duration-fast); position: relative; }
+  .msg:hover { background: var(--table-row-hover); }
+  .msg.is-active { background: var(--table-row-selected); }
+  .msg.is-active::before { content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background: var(--color-primary); box-shadow: 0 0 8px var(--glow-cyan); }
+  .msg.unread .msg-from { color: var(--color-text-strong); }
+  .msg.unread .msg-subj { font-weight: 700; }
+  .msg-top { display: flex; align-items: center; gap: var(--space-2); }
+  .msg-from { font-size: var(--text-sm); font-weight: 600; color: var(--color-text); }
+  .msg-time { margin-left: auto; font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--color-text-faint); }
+  .msg-subj { font-size: var(--text-sm); color: var(--color-text-muted); }
+  .msg-prev { font-size: var(--text-xs); color: var(--color-text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* reading pane */
+  .read { padding: var(--space-6); overflow-y: auto; flex: 1; }
+  .read-head { display: flex; align-items: flex-start; gap: var(--space-4); padding-bottom: var(--space-5); border-bottom: 1px solid var(--color-border-faint); margin-bottom: var(--space-5); }
+  .read-body { color: var(--color-text); line-height: var(--leading-relaxed); }
+  .read-body p { margin-bottom: var(--space-4); max-width: 65ch; }
+  @media (max-width: 1000px){ .inbox-grid { grid-template-columns: 1fr; } .pane:nth-child(1), .pane:nth-child(2){ display:none; } }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#read">Skip to content</a>
+<div class="inbox-shell">
+  <nav class="navbar" aria-label="Primary">
+    <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M16 2l12 7v14l-12 7L4 23V9z"/><circle cx="16" cy="16" r="5"/></svg></span><span class="brand-name">AETHER<b>·HUD</b></span></a>
+    <div class="navbar-links"><a class="nav-link" href="dashboard.html">Dashboard</a><a class="nav-link" href="kanban.html">Board</a><a class="nav-link is-active" href="inbox.html">Comms</a></div>
+    <div class="navbar-actions"><div class="searchbar" style="width:240px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21l-4.35-4.35M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"/></svg><input placeholder="Search transmissions…" aria-label="Search"></div>
+      <button class="btn btn-icon btn-secondary btn-sm" data-theme-toggle aria-label="Toggle theme"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4 12H2M22 12h-2"/></svg><span class="sr-only" data-theme-label>DARK</span></button></div>
+  </nav>
+
+  <div class="inbox-grid">
+    <!-- Folders -->
+    <div class="pane">
+      <div class="pane-head"><button class="btn btn-primary btn-block btn-sm" data-toast="info" data-toast-title="COMPOSE" data-toast-msg="New transmission window opened."><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Compose</button></div>
+      <div class="pane-scroll" role="navigation" aria-label="Folders">
+        <div class="folder is-active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/></svg>Inbox<span class="f-count">3</span></div>
+        <div class="folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>Sent</div>
+        <div class="folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg>Archive</div>
+        <div class="folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2 7h7l-6 4 2 7-7-4-7 4 2-7-6-4h7z"/></svg>Priority<span class="f-count">1</span></div>
+        <div class="folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>Trash</div>
+      </div>
+      <div class="sidebar-foot"><div class="meter" data-value="62"><div class="meter-top"><span>STORAGE</span><span class="mt-val">62%</span></div><div class="meter-track"><div class="meter-fill" style="width:0"></div></div></div></div>
+    </div>
+
+    <!-- Message list -->
+    <div class="pane">
+      <div class="pane-head"><span class="ph-title">Inbox</span><span class="badge is-danger" style="margin-left:auto">3 NEW</span></div>
+      <div class="pane-scroll" id="msg-list" role="list">
+        <div class="msg unread is-active" role="listitem" tabindex="0" data-msg="0"><div class="msg-top"><span class="live-dot is-danger" aria-hidden="true"></span><span class="msg-from">FLEET COMMAND</span><span class="msg-time">12:04</span></div><div class="msg-subj">⚠ Priority: Hostile contact sector 7</div><div class="msg-prev">All units, be advised — unidentified signature closing at…</div></div>
+        <div class="msg unread" role="listitem" tabindex="0" data-msg="1"><div class="msg-top"><span class="live-dot is-warning" aria-hidden="true"></span><span class="msg-from">ENGINEERING</span><span class="msg-time">11:48</span></div><div class="msg-subj">Coolant reserves critical</div><div class="msg-prev">Reserve levels have dropped below the 20% threshold…</div></div>
+        <div class="msg unread" role="listitem" tabindex="0" data-msg="2"><div class="msg-top"><span class="live-dot" aria-hidden="true"></span><span class="msg-from">CMDR R.XI</span><span class="msg-time">10:22</span></div><div class="msg-subj">Recon report · sector 12</div><div class="msg-prev">Drone sweep complete. Mapping data attached…</div></div>
+        <div class="msg" role="listitem" tabindex="0" data-msg="3"><div class="msg-top"><span class="msg-from">M.AYA</span><span class="msg-time">09:15</span></div><div class="msg-subj">Re: Targeting calibration</div><div class="msg-prev">Optics recalibrated to 0.02°. Ready for verification.</div></div>
+        <div class="msg" role="listitem" tabindex="0" data-msg="4"><div class="msg-top"><span class="msg-from">LOGISTICS</span><span class="msg-time">08:40</span></div><div class="msg-subj">Supply manifest updated</div><div class="msg-prev">New armory inventory synced to fleet registry.</div></div>
+        <div class="msg" role="listitem" tabindex="0" data-msg="5"><div class="msg-top"><span class="msg-from">SYSTEM</span><span class="msg-time">07:00</span></div><div class="msg-subj">Daily diagnostic complete</div><div class="msg-prev">All 128 units reporting. 2 flagged for maintenance.</div></div>
+      </div>
+    </div>
+
+    <!-- Reading pane -->
+    <div class="read" id="read">
+      <div class="read-head">
+        <span class="avatar avatar-lg is-ring" aria-hidden="true">FC</span>
+        <div style="flex:1">
+          <h2 style="font-size:var(--text-xl)" id="read-subj">⚠ Priority: Hostile contact sector 7</h2>
+          <div class="row mt-2"><span class="msg-from" id="read-from">FLEET COMMAND</span><span class="coord">&lt;command@aether.fleet&gt;</span><span class="badge is-danger" style="margin-left:auto">PRIORITY</span></div>
+        </div>
+      </div>
+      <div class="row mb-6" style="gap:var(--space-2)">
+        <button class="btn btn-secondary btn-sm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 17l-5-5 5-5M4 12h12a4 4 0 0 1 0 8h-1"/></svg>Reply</button>
+        <button class="btn btn-ghost btn-sm">Forward</button>
+        <button class="btn btn-icon btn-ghost btn-sm" data-toast="success" data-toast-title="ARCHIVED" data-toast-msg="Transmission moved to archive." aria-label="Archive"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v5H1z"/></svg></button>
+        <button class="btn btn-icon btn-ghost btn-sm" data-toast="danger" data-toast-title="DELETED" data-toast-msg="Transmission purged." aria-label="Delete"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4h8v2"/></svg></button>
+      </div>
+      <div class="read-body" id="read-body">
+        <div class="banner mb-6"><span class="banner-tag">ALERT</span><span>This transmission is flagged PRIORITY-1. Immediate acknowledgement required.</span></div>
+        <p>All units, be advised. Long-range sensors have detected an unidentified contact bearing 287° in sector 7, closing at 340 m/s. Signature does not match any registered fleet transponder.</p>
+        <p>Commander Kim is directed to assume intercept posture. Weapons systems are cleared to standby-hot. Shields to 100%. Maintain comms discipline on encrypted channel ALPHA.</p>
+        <p>Engineering: divert auxiliary power to forward deflector array. Estimated time to contact: <span class="u-data">04:12</span>.</p>
+        <div class="card hex-surface" style="margin-top:var(--space-6)">
+          <div class="panel-bar">Attached Telemetry<span class="pb-id">SCAN//7</span></div>
+          <div class="readout"><div class="ro-cell"><span class="ro-key">Bearing</span><span class="ro-val">287°</span></div><div class="ro-cell"><span class="ro-key">Range</span><span class="ro-val amber">2.4km</span></div><div class="ro-cell"><span class="ro-key">Velocity</span><span class="ro-val danger">340</span></div><div class="ro-cell"><span class="ro-key">ETA</span><span class="ro-val">04:12</span></div></div>
+        </div>
+        <p class="mt-6">— FLEET COMMAND · AUTHENTICATED · OMEGA CLEARANCE</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../app.js"></script>
+<script>
+  (function(){
+    var data=[
+      {from:'FLEET COMMAND',subj:'⚠ Priority: Hostile contact sector 7'},
+      {from:'ENGINEERING',subj:'Coolant reserves critical'},
+      {from:'CMDR R.XI',subj:'Recon report · sector 12'},
+      {from:'M.AYA',subj:'Re: Targeting calibration'},
+      {from:'LOGISTICS',subj:'Supply manifest updated'},
+      {from:'SYSTEM',subj:'Daily diagnostic complete'}
+    ];
+    var list=document.getElementById('msg-list');
+    var rf=document.getElementById('read-from'), rs=document.getElementById('read-subj');
+    function select(el){
+      Array.prototype.forEach.call(list.children,function(m){m.classList.remove('is-active');});
+      el.classList.add('is-active'); el.classList.remove('unread');
+      var i=+el.dataset.msg; rf.textContent=data[i].from; rs.textContent=data[i].subj;
+    }
+    Array.prototype.forEach.call(list.children,function(m){
+      m.addEventListener('click',function(){select(m);});
+      m.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){e.preventDefault();select(m);} });
+    });
+  })();
+</script>
+</body>
+</html>

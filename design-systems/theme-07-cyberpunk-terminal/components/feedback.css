@@ -1,0 +1,972 @@
+/* ============================================================================
+   THEME 07 — CYBERPUNK TERMINAL · components/feedback.css
+   ----------------------------------------------------------------------------
+   FEEDBACK & OVERLAY SURFACES. Follows the button.css patterns exactly:
+     · BEM-ish naming:  .ct-alert  ·  .ct-alert--danger  ·  .is-open / .is-leaving
+     · hard corners (radius 0), uppercase tracked mono labels, neon as decoration
+     · solid color carries contrast/legibility — glow never the sole signal
+     · status is encoded by color + icon-slot + text label (never color alone)
+     · entrance motion is SINGLE-SHOT (ct-rise) — NO strobing, NO looping flash
+     · sweeps/spins/indeterminate bars are frozen by base.css under
+       prefers-reduced-motion; every such state stays legible while static
+   ----------------------------------------------------------------------------
+   Components in this file:
+     1. .ct-alert        — inline / banner status callout (4 statuses)
+     2. .ct-toast        — transient terminal-log card + .ct-toast-stack
+     3. .ct-modal        — terminal-window dialog + scrim (sizes sm/md/lg/full)
+     4. .ct-drawer       — slide-in panel (right/left/bottom)
+     5. .ct-progress     — linear / circular / ascii progress (+ statuses)
+     6. .ct-spinner      — ascii glyph + ring + dots fallbacks (sizes sm/md/lg)
+     7. .ct-inline-note  — compact inline notification row
+   ============================================================================ */
+
+
+/* ============================================================================
+   1. ALERT — .ct-alert
+   ----------------------------------------------------------------------------
+   A status callout block. Uses the per-status -weak background + -text color
+   and a LEFT neon accent border in the status hue. Status is reinforced by an
+   icon glyph slot + a title, so meaning never rests on color alone.
+   Variants: --info (default) | --success | --warning | --danger
+   Modifier: --banner (full-width top strip, no rounding, neon top+bottom rule)
+   Parts: __icon · __title · __body · __close · __actions
+   ============================================================================ */
+.ct-alert {
+  /* per-status channels — overridden by the variant blocks below */
+  --_accent: var(--color-info);
+  --_text:   var(--color-info-text);
+  --_weak:   var(--color-info-weak);
+  --_glow:   var(--glow-cyan);
+
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas:
+    "icon title close"
+    "icon body  close"
+    "icon acts  acts";
+  align-items: start;
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+  padding: var(--space-4) var(--space-5);
+  background: var(--_weak);
+  color: var(--color-text);
+  border: var(--border-1) solid var(--color-border);
+  /* signature left neon accent bar in the status hue */
+  border-left: var(--border-thick) solid var(--_accent);
+  border-radius: var(--radius-0);
+  box-shadow: inset 0 0 0 9999px transparent, var(--shadow-glow-sm);
+}
+
+/* icon slot — fixed square, neon glyph in the status color */
+.ct-alert__icon {
+  grid-area: icon;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-top: 1px;
+  color: var(--_accent);
+  text-shadow: var(--_glow);
+  font-size: var(--text-md);
+  line-height: 1;
+  flex-shrink: 0;
+}
+.ct-alert__icon svg { width: 1.25rem; height: 1.25rem; }
+
+/* title — uppercase tracked terminal label, in the status text color */
+.ct-alert__title {
+  grid-area: title;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--_text);
+  line-height: var(--leading-tight);
+}
+
+/* body — solid legible copy (full-contrast text, NOT the status tint) */
+.ct-alert__body {
+  grid-area: body;
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-muted);
+}
+.ct-alert__body a { color: var(--_text); text-decoration: underline; text-underline-offset: 2px; }
+
+/* optional action row (buttons) */
+.ct-alert__actions {
+  grid-area: acts;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* dismiss button — focusable, square, hover lifts to the status accent */
+.ct-alert__close {
+  grid-area: close;
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin: -2px -4px 0 0;
+  color: var(--color-text-subtle);
+  background: transparent;
+  border: var(--border-1) solid transparent;
+  border-radius: var(--radius-0);
+  font-size: var(--text-md);
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color var(--duration-fast) var(--ease-standard),
+              border-color var(--duration-fast) var(--ease-standard),
+              background var(--duration-fast) var(--ease-standard);
+}
+.ct-alert__close::before { content: "\00D7"; }   /* × */
+.ct-alert__close:hover {
+  color: var(--_accent);
+  border-color: var(--_accent);
+  background: rgba(var(--rgb-white) / .04);
+}
+
+/* ---- status variants ----------------------------------------------------- */
+.ct-alert--info {
+  --_accent: var(--color-info);    --_text: var(--color-info-text);
+  --_weak:   var(--color-info-weak); --_glow: var(--glow-cyan);
+}
+.ct-alert--success {
+  --_accent: var(--color-success); --_text: var(--color-success-text);
+  --_weak:   var(--color-success-weak); --_glow: var(--glow-green);
+}
+.ct-alert--warning {
+  --_accent: var(--color-warning); --_text: var(--color-warning-text);
+  --_weak:   var(--color-warning-weak); --_glow: var(--glow-amber);
+}
+.ct-alert--danger {
+  --_accent: var(--color-danger);  --_text: var(--color-danger-text);
+  --_weak:   var(--color-danger-weak); --_glow: var(--glow-red);
+}
+
+/* ---- banner modifier: full-width top strip ------------------------------- */
+.ct-alert--banner {
+  grid-template-areas:
+    "icon title close"
+    "icon body  close"
+    "icon acts  close";
+  align-items: center;
+  width: 100%;
+  border-left: none;
+  border-right: none;
+  /* thicker neon top + bottom rule spanning the viewport edge-to-edge */
+  border-top: var(--border-2) solid var(--_accent);
+  border-bottom: var(--border-2) solid var(--_accent);
+  border-radius: var(--radius-0);
+  box-shadow:
+    0 0 14px -2px rgba(var(--rgb-cyan) / 0),         /* keep tint neutral */
+    inset 0 0 22px -10px var(--_accent);
+}
+
+
+/* ============================================================================
+   2. TOAST — .ct-toast  +  .ct-toast-stack
+   ----------------------------------------------------------------------------
+   Transient terminal-log card. The stack is a fixed top-right column that lets
+   pointer events pass THROUGH it (pointer-events:none) while each toast
+   re-enables them. Entrance = single-shot ct-rise; dismissal = .is-leaving
+   (ct-rise-out). Auto-dismiss is communicated by a thin neon progress bar that
+   does ONE linear shrink — never a repeating strobe.
+   Variants: --success | --warning | --danger | --info
+   Parts: __icon · __body (__title + __msg) · __time · __close · __progress
+   ============================================================================ */
+.ct-toast-stack {
+  position: fixed;
+  top: var(--space-5);
+  right: var(--space-5);
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: min(380px, calc(100vw - var(--space-8)));
+  max-height: calc(100vh - var(--space-10));
+  overflow: hidden;
+  pointer-events: none;   /* stack is click-through; toasts opt back in */
+}
+.ct-toast-stack--left   { right: auto; left: var(--space-5); }
+.ct-toast-stack--bottom { top: auto; bottom: var(--space-5); justify-content: flex-end; }
+
+.ct-toast {
+  --_accent: var(--color-info);
+  --_text:   var(--color-info-text);
+  --_glow:   var(--glow-cyan);
+
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas:
+    "icon body  close"
+    "icon time  close";
+  align-items: start;
+  column-gap: var(--space-3);
+  row-gap: 2px;
+  padding: var(--space-3) var(--space-4);
+  padding-bottom: var(--space-4);   /* room for the progress bar */
+  background: var(--toast-bg);
+  color: var(--color-text);
+  border: var(--border-1) solid var(--color-border);
+  border-left: var(--border-2) solid var(--_accent);
+  border-radius: var(--radius-0);
+  box-shadow: var(--shadow-glow-md), var(--shadow-2);
+  overflow: hidden;
+  pointer-events: auto;             /* re-enable interaction on the card */
+  animation: ct-rise var(--duration-base) var(--ease-out) 1 both;
+}
+
+.ct-toast__icon {
+  grid-area: icon;
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 1px;
+  color: var(--_accent);
+  text-shadow: var(--_glow);
+  font-size: var(--text-base);
+  line-height: 1;
+}
+.ct-toast__icon svg { width: 1.1rem; height: 1.1rem; }
+
+.ct-toast__body { grid-area: body; min-width: 0; }
+.ct-toast__title {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--_text);
+  line-height: var(--leading-tight);
+}
+.ct-toast__msg {
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  color: var(--color-text-muted);
+  overflow-wrap: break-word;
+}
+
+/* timestamp — subtle mono meta, terminal-log style */
+.ct-toast__time {
+  grid-area: time;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.ct-toast__close {
+  grid-area: close;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: -2px -2px 0 0;
+  color: var(--color-text-subtle);
+  background: transparent;
+  border: var(--border-1) solid transparent;
+  font-size: var(--text-sm);
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-standard),
+              border-color var(--duration-fast) var(--ease-standard);
+}
+.ct-toast__close::before { content: "\00D7"; }
+.ct-toast__close:hover { color: var(--_accent); border-color: var(--_accent); }
+
+/* auto-dismiss progress bar — ONE linear shrink, pinned to the bottom edge.
+   JS sets --ct-toast-duration; the bar shrinks left-to-right exactly once.
+   A static (non-animated) bar still reads as a neon underline. */
+.ct-toast__progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;
+  transform-origin: left center;
+  background: var(--_accent);
+  box-shadow: var(--_glow);
+  animation: ct-toast-drain var(--ct-toast-duration, 5s) linear 1 forwards;
+}
+@keyframes ct-toast-drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* leaving state — single-shot exit, then JS removes from DOM */
+.ct-toast.is-leaving {
+  animation: ct-rise-out var(--duration-base) var(--ease-in) 1 both;
+  pointer-events: none;
+}
+
+/* ---- status variants ----------------------------------------------------- */
+.ct-toast--info {
+  --_accent: var(--color-info);    --_text: var(--color-info-text);    --_glow: var(--glow-cyan);
+}
+.ct-toast--success {
+  --_accent: var(--color-success); --_text: var(--color-success-text); --_glow: var(--glow-green);
+}
+.ct-toast--warning {
+  --_accent: var(--color-warning); --_text: var(--color-warning-text); --_glow: var(--glow-amber);
+}
+.ct-toast--danger {
+  --_accent: var(--color-danger);  --_text: var(--color-danger-text);  --_glow: var(--glow-red);
+}
+
+/* under reduced motion the drain bar must not animate away — show full bar */
+@media (prefers-reduced-motion: reduce) {
+  .ct-toast__progress { animation: none; transform: scaleX(1); }
+}
+
+
+/* ============================================================================
+   3. MODAL — .ct-modal
+   ----------------------------------------------------------------------------
+   A centered terminal-window dialog over a blurred scrim. Visibility is driven
+   by .is-open via opacity + visibility (so the node can stay in the DOM and
+   remain animatable). The __dialog is the focus scope: it carries the visible
+   neon border that signals the trapped focus region; close + footer actions
+   are focusable. Entrance = ct-rise on the dialog; the overlay fades.
+   Sizes: --sm | --md (default) | --lg | --full
+   Parts: __overlay · __dialog · __chrome (__dots · __title · __close)
+          · __body · __footer
+   ============================================================================ */
+.ct-modal,
+.ct-modal__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+  background: var(--color-overlay);
+  -webkit-backdrop-filter: blur(4px) saturate(.85);
+  backdrop-filter: blur(4px) saturate(.85);
+  /* closed by default — hidden + non-interactive, kept in the DOM */
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--duration-base) var(--ease-standard),
+              visibility 0s linear var(--duration-base);
+}
+.ct-modal.is-open,
+.ct-modal__overlay.is-open {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--duration-base) var(--ease-out),
+              visibility 0s;
+}
+/* native <dialog>/[hidden] hook — keep parity with the JS-toggled class */
+.ct-modal[hidden] { display: none; }
+
+/* the terminal window itself = the focus containment scope */
+.ct-modal__dialog {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 100%);
+  max-height: min(86vh, 760px);
+  background: var(--modal-bg);
+  color: var(--color-text);
+  border: var(--border-1) solid var(--modal-border);
+  border-radius: var(--radius-0);
+  box-shadow: var(--shadow-glow-lg), var(--shadow-3);
+  overflow: hidden;
+  /* entrance: single-shot rise; sits idle once .is-open settles */
+  transform: translateY(12px);
+  opacity: 0;
+  transition: transform var(--duration-base) var(--ease-out),
+              opacity var(--duration-base) var(--ease-out);
+}
+.ct-modal.is-open .ct-modal__dialog,
+.ct-modal__overlay.is-open .ct-modal__dialog {
+  transform: translateY(0);
+  opacity: 1;
+  animation: ct-rise var(--duration-base) var(--ease-out) 1 both;
+}
+
+/* chrome bar — the window title strip with traffic-light dots */
+.ct-modal__chrome {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: var(--card-chrome-h);
+  min-height: var(--card-chrome-h);
+  padding: 0 var(--space-3);
+  background: var(--color-chrome);
+  border-bottom: var(--border-1) solid var(--color-chrome-line);
+}
+.ct-modal__dots { display: inline-flex; gap: var(--space-2); flex-shrink: 0; }
+.ct-modal__dots::before,
+.ct-modal__dots::after,
+.ct-modal__dots > i {
+  content: "";
+  width: 9px; height: 9px;
+  border-radius: var(--radius-full);
+  display: inline-block;
+}
+.ct-modal__dots::before { background: var(--color-danger);  box-shadow: var(--glow-red); }
+.ct-modal__dots > i     { background: var(--color-warning); box-shadow: var(--glow-amber); }
+.ct-modal__dots::after  { background: var(--color-success); box-shadow: var(--glow-green); }
+
+.ct-modal__title {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ct-modal__close {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--color-text-subtle);
+  background: transparent;
+  border: var(--border-1) solid transparent;
+  font-size: var(--text-md);
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color var(--duration-fast) var(--ease-standard),
+              border-color var(--duration-fast) var(--ease-standard);
+}
+.ct-modal__close::before { content: "\00D7"; }
+.ct-modal__close:hover { color: var(--color-danger); border-color: var(--color-danger); }
+
+/* body — the scrollable content region */
+.ct-modal__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-5) var(--space-6);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text-muted);
+}
+.ct-modal__body > * + * { margin-top: var(--space-3); }
+
+/* footer — right-aligned actions, separated by a top divider */
+.ct-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: var(--border-1) solid var(--color-divider);
+  background: rgba(var(--rgb-ink) / .35);
+}
+.ct-modal__footer--between { justify-content: space-between; }
+
+/* ---- sizes --------------------------------------------------------------- */
+.ct-modal--sm   .ct-modal__dialog { width: min(420px, 100%); }
+.ct-modal--md   .ct-modal__dialog { width: min(560px, 100%); }
+.ct-modal--lg   .ct-modal__dialog { width: min(820px, 100%); }
+.ct-modal--full .ct-modal__dialog {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+}
+
+
+/* ============================================================================
+   4. DRAWER — .ct-drawer
+   ----------------------------------------------------------------------------
+   Off-canvas slide-in panel sharing the modal's scrim contract. Closed state
+   translates the panel fully off-screen; .is-open slides it to 0 with a
+   transform transition. The neon border sits on the OPEN edge (the edge that
+   meets the content). z = var(--z-drawer).
+   Variants: --right (default) | --left | --bottom
+   Parts: __overlay · __panel · __header (title + __close) · __body · __footer
+   ============================================================================ */
+.ct-drawer,
+.ct-drawer__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-drawer);
+  background: var(--color-overlay);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--duration-base) var(--ease-standard),
+              visibility 0s linear var(--duration-base);
+}
+.ct-drawer.is-open,
+.ct-drawer__overlay.is-open {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--duration-base) var(--ease-out), visibility 0s;
+}
+.ct-drawer[hidden] { display: none; }
+
+.ct-drawer__panel {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  background: var(--drawer-bg);
+  color: var(--color-text);
+  box-shadow: var(--shadow-3);
+  overflow: hidden;
+  transition: transform var(--duration-base) var(--ease-out);
+  will-change: transform;
+}
+
+/* ---- right (default): full-height panel pinned to the right edge ---------- */
+.ct-drawer__panel,
+.ct-drawer--right .ct-drawer__panel {
+  top: 0; right: 0; bottom: 0;
+  width: min(420px, 92vw);
+  border-left: var(--border-2) solid var(--color-border-strong);
+  transform: translateX(100%);
+}
+.ct-drawer.is-open .ct-drawer__panel,
+.ct-drawer--right.is-open .ct-drawer__panel { transform: translateX(0); }
+
+/* ---- left ----------------------------------------------------------------- */
+.ct-drawer--left .ct-drawer__panel {
+  right: auto; left: 0;
+  border-left: none;
+  border-right: var(--border-2) solid var(--color-border-strong);
+  transform: translateX(-100%);
+}
+.ct-drawer--left.is-open .ct-drawer__panel { transform: translateX(0); }
+
+/* ---- bottom --------------------------------------------------------------- */
+.ct-drawer--bottom .ct-drawer__panel {
+  top: auto; left: 0; right: 0; bottom: 0;
+  width: 100%;
+  height: min(60vh, 540px);
+  border-left: none;
+  border-top: var(--border-2) solid var(--color-border-strong);
+  transform: translateY(100%);
+}
+.ct-drawer--bottom.is-open .ct-drawer__panel { transform: translateY(0); }
+
+/* header — title + close, on the chrome strip */
+.ct-drawer__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-chrome);
+  border-bottom: var(--border-1) solid var(--color-chrome-line);
+  flex-shrink: 0;
+}
+.ct-drawer__title {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ct-drawer__title::before {
+  content: "> ";
+  color: var(--color-primary);
+  text-shadow: var(--glow-primary);
+}
+.ct-drawer__close {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  color: var(--color-text-subtle);
+  background: transparent;
+  border: var(--border-1) solid transparent;
+  font-size: var(--text-md);
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color var(--duration-fast) var(--ease-standard),
+              border-color var(--duration-fast) var(--ease-standard);
+}
+.ct-drawer__close::before { content: "\00D7"; }
+.ct-drawer__close:hover { color: var(--color-primary); border-color: var(--color-primary); }
+
+/* body — scrollable region */
+.ct-drawer__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-5) var(--space-4);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-text-muted);
+}
+.ct-drawer__body > * + * { margin-top: var(--space-4); }
+
+/* footer — pinned actions */
+.ct-drawer__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: var(--border-1) solid var(--color-divider);
+  background: rgba(var(--rgb-ink) / .35);
+  flex-shrink: 0;
+}
+
+
+/* ============================================================================
+   5. PROGRESS — .ct-progress
+   ----------------------------------------------------------------------------
+   Three renderings sharing the .ct-progress namespace:
+     · linear     — track + __fill (neon primary→accent gradient, diag stripes)
+     · --circular — SVG ring helper (__track + __bar stroke, center __pct)
+     · --ascii    — monospace gauge text like [#####-----] 50%
+   Accessible text is mandatory: pair with role="progressbar" + aria-valuenow,
+   and surface __label / __value so the percentage is readable, not just drawn.
+   Status variants: --success | --warning | --danger    Modifier: --indeterminate
+   ============================================================================ */
+
+/* header row above the bar (optional) */
+.ct-progress__label,
+.ct-progress__value {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  line-height: 1;
+}
+.ct-progress__label { color: var(--color-text-subtle); }
+.ct-progress__value { color: var(--color-primary-bright); font-variant-numeric: tabular-nums; }
+.ct-progress__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+/* ---- linear track -------------------------------------------------------- */
+.ct-progress {
+  --_from: var(--color-primary);
+  --_to:   var(--color-accent);
+  --_glow: var(--glow-primary);
+  position: relative;
+  width: 100%;
+  height: 8px;
+  background: var(--input-bg);
+  border: var(--border-1) solid var(--color-border);
+  border-radius: var(--radius-0);
+  overflow: hidden;
+}
+
+/* neon gradient fill; width is set inline by JS (style="width:NN%") */
+.ct-progress__fill {
+  position: relative;
+  height: 100%;
+  width: 0%;
+  background:
+    repeating-linear-gradient(            /* animated diagonal hazard stripes */
+      45deg,
+      rgba(var(--rgb-ink) / .18) 0,
+      rgba(var(--rgb-ink) / .18) 6px,
+      transparent 6px,
+      transparent 12px),
+    linear-gradient(90deg, var(--_from), var(--_to));
+  box-shadow: var(--_glow);
+  transition: width var(--duration-base) var(--ease-out);
+}
+.ct-progress__fill::after {        /* bright leading edge tick */
+  content: "";
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 2px;
+  background: var(--color-primary-bright);
+  box-shadow: var(--glow-cyan-strong);
+}
+
+/* ---- indeterminate: a single neon segment sweeping the track ------------- */
+.ct-progress--indeterminate .ct-progress__fill {
+  width: 38%;
+  transition: none;
+  animation: ct-sweep 1.4s var(--ease-in-out) infinite;
+}
+.ct-progress--indeterminate .ct-progress__fill::after { display: none; }
+/* frozen + legible when motion is reduced (parked segment reads as partial) */
+@media (prefers-reduced-motion: reduce) {
+  .ct-progress--indeterminate .ct-progress__fill { animation: none; transform: none; width: 38%; }
+}
+
+/* ---- status variants (linear + circular share the channel vars) ---------- */
+.ct-progress--success { --_from: var(--color-success); --_to: var(--green-200);  --_glow: var(--glow-green); }
+.ct-progress--warning { --_from: var(--color-warning); --_to: var(--amber-200);  --_glow: var(--glow-amber); }
+.ct-progress--danger  { --_from: var(--color-danger);  --_to: var(--red-200);    --_glow: var(--glow-red); }
+.ct-progress--success .ct-progress__value { color: var(--color-success-text); }
+.ct-progress--warning .ct-progress__value { color: var(--color-warning-text); }
+.ct-progress--danger  .ct-progress__value { color: var(--color-danger-text); }
+
+/* ---- size modifiers (linear) --------------------------------------------- */
+.ct-progress--thin  { height: 4px; }
+.ct-progress--thick { height: 14px; }
+
+/* ==== 5b. CIRCULAR — SVG ring helper ====================================== */
+.ct-progress--circular {
+  /* the outer block is no longer a bar; reset linear track styling */
+  display: inline-grid;
+  place-items: center;
+  width: auto;
+  height: auto;
+  background: none;
+  border: none;
+  overflow: visible;
+}
+.ct-progress__ring {
+  display: block;
+  width: 88px;
+  height: 88px;
+  transform: rotate(-90deg);   /* start the arc at 12 o'clock */
+  overflow: visible;
+}
+/* faint full-circle rail */
+.ct-progress__track {
+  fill: none;
+  stroke: var(--color-border);
+  stroke-width: 6;
+}
+/* the neon progress arc — JS sets stroke-dashoffset from the value */
+.ct-progress__bar {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 6;
+  stroke-linecap: butt;        /* hard terminal cap */
+  filter: drop-shadow(0 0 4px rgba(var(--rgb-cyan) / .65));
+  transition: stroke-dashoffset var(--duration-slow) var(--ease-out);
+}
+.ct-progress--success .ct-progress__bar { stroke: var(--color-success); filter: drop-shadow(0 0 4px rgba(var(--rgb-green) / .6)); }
+.ct-progress--warning .ct-progress__bar { stroke: var(--color-warning); filter: drop-shadow(0 0 4px rgba(var(--rgb-amber) / .6)); }
+.ct-progress--danger  .ct-progress__bar { stroke: var(--color-danger);  filter: drop-shadow(0 0 4px rgba(var(--rgb-red) / .65)); }
+
+/* centered percentage readout (absolute over the ring) */
+.ct-progress__pct {
+  position: absolute;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+/* indeterminate circular = spin the whole ring (single arc, no flash) */
+.ct-progress--circular.ct-progress--indeterminate .ct-progress__bar {
+  animation: ct-spin 1.1s linear infinite;
+  transform-origin: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ct-progress--circular.ct-progress--indeterminate .ct-progress__bar { animation: none; }
+}
+
+/* ==== 5c. ASCII — monospace gauge ========================================= */
+/* renders like:  [#####-----] 50%  — JS fills __ascii with the bar text.
+   Style the filled vs empty glyph runs by wrapping them; keep mono + tabular. */
+.ct-progress--ascii {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: auto;
+  height: auto;
+  background: none;
+  border: none;
+  overflow: visible;
+}
+.ct-progress__ascii {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  letter-spacing: 0.08em;
+  white-space: pre;            /* preserve the gauge spacing exactly */
+  color: var(--color-text-subtle);    /* default = the empty/dim run */
+  line-height: 1;
+}
+.ct-progress__ascii .is-filled,         /* neon filled chars (#) */
+.ct-progress__ascii b {
+  color: var(--color-primary);
+  text-shadow: var(--glow-primary);
+  font-weight: var(--weight-regular);
+}
+.ct-progress__ascii .ct-progress__pct,
+.ct-progress--ascii .ct-progress__value {
+  color: var(--color-primary-bright);
+  position: static;
+}
+.ct-progress--ascii.ct-progress--success .ct-progress__ascii .is-filled { color: var(--color-success-text); text-shadow: var(--glow-green); }
+.ct-progress--ascii.ct-progress--warning .ct-progress__ascii .is-filled { color: var(--color-warning-text); text-shadow: var(--glow-amber); }
+.ct-progress--ascii.ct-progress--danger  .ct-progress__ascii .is-filled { color: var(--color-danger-text);  text-shadow: var(--glow-red); }
+
+
+/* ============================================================================
+   6. SPINNER — .ct-spinner
+   ----------------------------------------------------------------------------
+   Primary form is an ASCII/braille glyph that JS cycles into __glyph — CSS
+   only sizes + colors + glows it. Two CSS-only fallbacks ship for no-JS use:
+     · --ring : a rotating neon arc (border + ct-spin)
+     · --dots : 3 pulsing squares with staggered, SLOW (non-strobing) delays
+   Sizes: --sm | --md (default) | --lg.  All freeze under reduced motion (base);
+   the parked frame stays a legible neon mark.
+   ============================================================================ */
+.ct-spinner {
+  --_size: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  vertical-align: middle;
+}
+.ct-spinner--sm { --_size: 1rem; }
+.ct-spinner--md { --_size: 1.25rem; }
+.ct-spinner--lg { --_size: 2rem; }
+
+/* ASCII / braille glyph slot (JS swaps frames, e.g. ⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏) */
+.ct-spinner__glyph {
+  font-family: var(--font-mono);
+  font-size: var(--_size);
+  line-height: 1;
+  color: var(--color-primary);
+  text-shadow: var(--glow-primary);
+}
+
+/* ---- --ring : rotating neon arc (CSS-only) ------------------------------- */
+.ct-spinner--ring .ct-spinner__glyph { display: none; }
+.ct-spinner--ring::before {
+  content: "";
+  width: var(--_size);
+  height: var(--_size);
+  border: var(--border-2) solid rgba(var(--rgb-cyan) / .18);
+  border-top-color: var(--color-primary);
+  border-right-color: var(--color-primary-bright);
+  border-radius: var(--radius-full);
+  box-shadow: var(--glow-cyan);
+  animation: ct-spin .8s linear infinite;
+}
+
+/* ---- --dots : 3 pulsing squares, staggered + slow ------------------------ */
+.ct-spinner--dots {
+  gap: calc(var(--_size) * 0.35);
+}
+.ct-spinner--dots .ct-spinner__glyph { display: none; }
+.ct-spinner--dots::before,
+.ct-spinner--dots::after,
+.ct-spinner--dots > i {
+  content: "";
+  width: calc(var(--_size) * 0.42);
+  height: calc(var(--_size) * 0.42);
+  background: var(--color-primary);
+  box-shadow: var(--glow-primary);
+  border-radius: var(--radius-0);          /* square dots = terminal feel */
+  /* 1.05s cycle, never below ~3 Hz; opacity-only pulse (no strobe) */
+  animation: ct-pulse 1.05s var(--ease-in-out) infinite;
+}
+.ct-spinner--dots::before { animation-delay: 0s; }
+.ct-spinner--dots > i     { animation-delay: .18s; }
+.ct-spinner--dots::after  { animation-delay: .36s; }
+
+/* under reduced motion the ring/dots park as a solid neon mark (base also
+   neutralizes the animation; this guarantees the arc remains a full ring) */
+@media (prefers-reduced-motion: reduce) {
+  .ct-spinner--ring::before { border-color: var(--color-primary); animation: none; }
+  .ct-spinner--dots::before,
+  .ct-spinner--dots::after,
+  .ct-spinner--dots > i { animation: none; opacity: 1; }
+}
+
+
+/* ============================================================================
+   7. INLINE NOTE — .ct-inline-note
+   ----------------------------------------------------------------------------
+   Compact, single-row status message — smaller and lighter than .ct-alert.
+   For form-field and table-row level feedback. Leading status glyph + text,
+   optional dismiss. Uses the -weak background + -text status color.
+   Variants: --info (default) | --success | --warning | --danger
+   ============================================================================ */
+.ct-inline-note {
+  --_accent: var(--color-info);
+  --_text:   var(--color-info-text);
+  --_weak:   var(--color-info-weak);
+  --_glow:   var(--glow-cyan);
+
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  max-width: 100%;
+  background: var(--_weak);
+  color: var(--_text);
+  border: var(--border-1) solid transparent;
+  border-left: var(--border-2) solid var(--_accent);
+  border-radius: var(--radius-0);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+}
+.ct-inline-note--block { display: flex; }
+
+.ct-inline-note__icon {
+  display: grid;
+  place-items: center;
+  width: 1rem;
+  height: 1rem;
+  color: var(--_accent);
+  text-shadow: var(--_glow);
+  font-size: var(--text-sm);
+  line-height: 1;
+  flex-shrink: 0;
+}
+.ct-inline-note__icon svg { width: .9rem; height: .9rem; }
+
+.ct-inline-note__text {
+  min-width: 0;
+  color: var(--color-text-muted);
+  overflow-wrap: break-word;
+}
+.ct-inline-note__text b,
+.ct-inline-note__text strong { color: var(--_text); font-weight: var(--weight-bold); }
+
+.ct-inline-note__close {
+  display: grid;
+  place-items: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-left: var(--space-1);
+  color: var(--color-text-subtle);
+  background: transparent;
+  border: none;
+  font-size: var(--text-sm);
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+.ct-inline-note__close::before { content: "\00D7"; }
+.ct-inline-note__close:hover { color: var(--_accent); }
+
+/* ---- status variants ----------------------------------------------------- */
+.ct-inline-note--info {
+  --_accent: var(--color-info);    --_text: var(--color-info-text);    --_weak: var(--color-info-weak);    --_glow: var(--glow-cyan);
+}
+.ct-inline-note--success {
+  --_accent: var(--color-success); --_text: var(--color-success-text); --_weak: var(--color-success-weak); --_glow: var(--glow-green);
+}
+.ct-inline-note--warning {
+  --_accent: var(--color-warning); --_text: var(--color-warning-text); --_weak: var(--color-warning-weak); --_glow: var(--glow-amber);
+}
+.ct-inline-note--danger {
+  --_accent: var(--color-danger);  --_text: var(--color-danger-text);  --_weak: var(--color-danger-weak);  --_glow: var(--glow-red);
+}

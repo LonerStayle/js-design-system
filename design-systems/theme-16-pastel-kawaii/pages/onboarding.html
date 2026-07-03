@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>온보딩 위저드 ♡ Pastel Kawaii</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../theme.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23FF8FBC' d='M12 21s-7.5-4.9-10-9.3C.3 8.6 1.6 5 5 5c2 0 3.3 1.1 4 2.3C9.7 6.1 11 5 13 5c3.4 0 4.7 3.6 3 6.7C19.5 16.1 12 21 12 21z'/%3E%3C/svg%3E">
+<style>
+  /* ── 온보딩 전용 셸 (컴포넌트 클래스 재사용 + 배경/카드 정렬만 보강) ── */
+  .ob-wrap {
+    position: relative; min-height: 100vh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .ob-stage {
+    flex: 1 1 auto;
+    display: flex; align-items: center; justify-content: center;
+    padding: var(--space-8) var(--space-4) var(--space-10);
+    position: relative; z-index: 1;
+  }
+  .ob-card {
+    width: 100%; max-width: 720px; margin: 0 auto;
+  }
+  .ob-card .card-body { gap: var(--space-6); }
+
+  /* 단계별 패널: 한 번에 1개 */
+  .ob-panel { display: none; }
+  .ob-panel.is-current { display: block; animation: obPanelIn var(--duration-base) var(--ease-emphasized); }
+  @keyframes obPanelIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .ob-panel-head { text-align: center; margin-bottom: var(--space-6); }
+  .ob-panel-head h2 { font-family: var(--font-display); font-size: var(--text-2xl); margin-bottom: var(--space-2); }
+  .ob-panel-head p { color: var(--color-text-muted); }
+
+  /* 아바타 선택 */
+  .ob-avatars { display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: center; }
+  .ob-avatar-btn {
+    position: relative; border: var(--border-2) solid transparent; background: transparent;
+    padding: 4px; border-radius: var(--radius-full); cursor: pointer;
+    transition: transform var(--duration-fast) var(--ease-emphasized), border-color var(--duration-fast) var(--ease-soft);
+  }
+  .ob-avatar-btn:hover { transform: translateY(-3px) scale(1.04); }
+  .ob-avatar-btn[aria-pressed="true"] { border-color: var(--pink-400); box-shadow: var(--glow-pink); }
+  .ob-avatar-btn .ob-check {
+    position: absolute; right: -2px; bottom: -2px;
+    width: 1.4rem; height: 1.4rem; border-radius: 50%;
+    background: var(--grad-primary); color: var(--pink-900);
+    display: none; place-items: center; box-shadow: var(--shadow-sm);
+  }
+  .ob-avatar-btn[aria-pressed="true"] .ob-check { display: grid; }
+  .ob-avatar-btn .ob-check svg { width: 0.9rem; height: 0.9rem; }
+
+  /* 취향 칩(토글 배지) */
+  .ob-taste { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-3); }
+  .ob-taste-btn {
+    display: flex; align-items: center; gap: var(--space-3); text-align: left;
+    padding: var(--space-4); border-radius: var(--radius-xl);
+    border: var(--border-2) dashed var(--color-border-strong);
+    background: var(--color-surface); cursor: pointer; width: 100%;
+    transition: transform var(--duration-fast) var(--ease-emphasized), border-color var(--duration-fast) var(--ease-soft), background var(--duration-fast) var(--ease-soft);
+  }
+  .ob-taste-btn:hover { transform: translateY(-2px); border-color: var(--pink-300); }
+  .ob-taste-btn[aria-pressed="true"] {
+    border-style: solid; border-color: var(--pink-400);
+    background: var(--grad-candy); box-shadow: var(--glow-pink);
+  }
+  .ob-taste-emoji { font-size: 1.6rem; line-height: 1; flex-shrink: 0; }
+  .ob-taste-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .ob-taste-txt b { font-family: var(--font-display); font-weight: var(--weight-bold); }
+  .ob-taste-txt span { font-size: var(--text-xs); color: var(--color-text-muted); }
+  .ob-taste-tick {
+    margin-left: auto; flex-shrink: 0; width: 1.3rem; height: 1.3rem;
+    border-radius: 50%; display: grid; place-items: center;
+    background: var(--grad-primary); color: var(--pink-900); opacity: 0; transform: scale(0.5);
+    transition: all var(--duration-fast) var(--ease-emphasized);
+  }
+  .ob-taste-btn[aria-pressed="true"] .ob-taste-tick { opacity: 1; transform: scale(1); }
+  .ob-taste-tick svg { width: 0.85rem; height: 0.85rem; }
+
+  /* 완료 일러스트 */
+  .ob-done { text-align: center; }
+  .ob-done .es-art { margin: 0 auto var(--space-4); }
+  .ob-summary {
+    display: flex; flex-wrap: wrap; gap: var(--space-2);
+    justify-content: center; margin-top: var(--space-4);
+  }
+
+  /* 하단 네비 + 진행률 */
+  .ob-foot { margin-top: var(--space-6); }
+  .ob-nav { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+
+  @media (max-width: 680px) {
+    .ob-stage { padding: var(--space-5) var(--space-3) var(--space-8); }
+    .ob-taste { grid-template-columns: 1fr; }
+    .ob-card { max-width: 100%; }
+    .ob-card.card { border-radius: var(--radius-2xl); }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
+
+<div class="ob-wrap bg-hero">
+  <!-- 반짝이 데코 (장식) -->
+  <span class="sparkle-deco" style="top:8%;left:6%" aria-hidden="true"></span>
+  <span class="sparkle-deco" style="top:18%;right:9%" aria-hidden="true"></span>
+  <span class="star-deco" style="top:64%;left:11%" aria-hidden="true"></span>
+  <span class="heart-deco" style="top:74%;right:13%" aria-hidden="true"></span>
+  <span class="sparkle-deco" style="bottom:8%;left:42%" aria-hidden="true"></span>
+
+  <!-- 상단 네비 -->
+  <nav class="navbar" aria-label="주요">
+    <a class="brand" href="../index.html">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 21s-7.5-4.9-10-9.3C.3 8.6 1.6 5 5 5c2 0 3.3 1.1 4 2.3C9.7 6.1 11 5 13 5c3.4 0 4.7 3.6 3 6.7C19.5 16.1 12 21 12 21z"/></svg>
+      </span>
+      <span>Mochi ♡</span>
+    </a>
+    <div class="nav-right">
+      <span class="badge badge--lav badge--dot">베타 가입</span>
+      <a class="btn btn--ghost btn--sm" href="../index.html">← 홈</a>
+    </div>
+  </nav>
+
+  <main id="main" class="ob-stage">
+    <section class="card ob-card shadow-lg" data-reveal="1" aria-labelledby="ob-title" data-wizard>
+      <span class="sticker" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2l2.4 5.3L20 8l-4 4 1 6-5-2.8L7 18l1-6-4-4 5.6-.7z"/></svg>
+      </span>
+
+      <div class="card-head" style="justify-content:center; text-align:center; flex-direction:column; gap:var(--space-2);">
+        <h1 id="ob-title" class="card-title" style="font-size:var(--text-2xl)">모찌에 오신 걸 환영해요 ♡</h1>
+        <p class="card-sub">4단계만 거치면 나만의 큐트 공간이 완성돼요!</p>
+      </div>
+
+      <!-- 단계 표시 -->
+      <ol class="steps" data-steps role="list" aria-label="가입 진행 단계">
+        <li class="step is-active" data-step="0">
+          <span class="step-dot" aria-hidden="true">1</span>
+          <span class="step-label">계정</span>
+          <span class="step-sub">이메일·비밀번호</span>
+        </li>
+        <li class="step" data-step="1">
+          <span class="step-dot" aria-hidden="true">2</span>
+          <span class="step-label">프로필</span>
+          <span class="step-sub">아바타·이름</span>
+        </li>
+        <li class="step" data-step="2">
+          <span class="step-dot" aria-hidden="true">3</span>
+          <span class="step-label">취향</span>
+          <span class="step-sub">관심사 선택</span>
+        </li>
+        <li class="step" data-step="3">
+          <span class="step-dot" aria-hidden="true">4</span>
+          <span class="step-label">완료</span>
+          <span class="step-sub">시작하기</span>
+        </li>
+      </ol>
+
+      <div class="card-body">
+
+        <!-- ── STEP 1 · 계정 ── -->
+        <section class="ob-panel is-current" data-panel="0" role="group" aria-labelledby="ob-p0-h">
+          <div class="ob-panel-head">
+            <h2 id="ob-p0-h">계정 만들기 🍓</h2>
+            <p>로그인에 쓸 이메일과 비밀번호를 정해 주세요.</p>
+          </div>
+          <div class="stack stack-4">
+            <div class="field">
+              <label class="field-label" for="ob-email">이메일 <span class="req" aria-hidden="true">*</span></label>
+              <div class="input-wrap">
+                <span class="input-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 7l9 6 9-6"/></svg>
+                </span>
+                <input class="input" id="ob-email" type="email" inputmode="email" autocomplete="email" placeholder="mochi@example.com" value="hana.kawaii@example.com">
+              </div>
+              <span class="field-hint">인증 메일을 보내드려요. 스팸함도 확인해 주세요!</span>
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="ob-pw">비밀번호 <span class="req" aria-hidden="true">*</span></label>
+              <div class="input-wrap">
+                <span class="input-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+                </span>
+                <input class="input" id="ob-pw" type="password" autocomplete="new-password" placeholder="8자 이상, 숫자 포함" value="sweet-mochi-77">
+              </div>
+              <div class="progress progress--mint" aria-hidden="true"><span class="bar" style="width:78%"></span></div>
+              <span class="field-hint">비밀번호 강도: <b style="color:var(--mint-700)">튼튼해요</b> 💪</span>
+            </div>
+
+            <label class="check">
+              <input type="checkbox" checked>
+              <span class="box" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+              </span>
+              <span><b>이용약관</b> 및 <b>개인정보 처리방침</b>에 동의해요</span>
+            </label>
+            <label class="check check--heart">
+              <input type="checkbox">
+              <span class="box" aria-hidden="true"></span>
+              <span>큐트한 소식·이벤트 알림을 받을래요 (선택)</span>
+            </label>
+          </div>
+        </section>
+
+        <!-- ── STEP 2 · 프로필 ── -->
+        <section class="ob-panel" data-panel="1" role="group" aria-labelledby="ob-p1-h" hidden>
+          <div class="ob-panel-head">
+            <h2 id="ob-p1-h">프로필 꾸미기 🎀</h2>
+            <p>마음에 드는 아바타 색을 고르고 이름을 알려 주세요.</p>
+          </div>
+          <div class="stack stack-5">
+            <div class="field" role="group" aria-label="아바타 선택">
+              <span class="field-label">아바타 색상</span>
+              <div class="ob-avatars">
+                <button type="button" class="ob-avatar-btn" data-avatar aria-pressed="true" aria-label="핑크 아바타">
+                  <span class="avatar avatar--lg" aria-hidden="true">하</span>
+                  <span class="ob-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>
+                </button>
+                <button type="button" class="ob-avatar-btn" data-avatar aria-pressed="false" aria-label="민트 아바타">
+                  <span class="avatar avatar--lg avatar--mint" aria-hidden="true">하</span>
+                  <span class="ob-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>
+                </button>
+                <button type="button" class="ob-avatar-btn" data-avatar aria-pressed="false" aria-label="라벤더 아바타">
+                  <span class="avatar avatar--lg avatar--lav" aria-hidden="true">하</span>
+                  <span class="ob-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>
+                </button>
+                <button type="button" class="ob-avatar-btn" data-avatar aria-pressed="false" aria-label="스카이 아바타">
+                  <span class="avatar avatar--lg avatar--sky" aria-hidden="true">하</span>
+                  <span class="ob-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>
+                </button>
+                <button type="button" class="ob-avatar-btn" data-avatar aria-pressed="false" aria-label="피치 아바타">
+                  <span class="avatar avatar--lg avatar--peach" aria-hidden="true">하</span>
+                  <span class="ob-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-2">
+              <div class="field">
+                <label class="field-label" for="ob-name">이름 <span class="req" aria-hidden="true">*</span></label>
+                <input class="input" id="ob-name" type="text" autocomplete="name" placeholder="이름" value="김하나">
+              </div>
+              <div class="field">
+                <label class="field-label" for="ob-username">사용자명 <span class="req" aria-hidden="true">*</span></label>
+                <div class="input-wrap">
+                  <span class="input-icon" aria-hidden="true">@</span>
+                  <input class="input" id="ob-username" type="text" autocomplete="username" placeholder="username" value="hana_mochi">
+                </div>
+                <span class="field-hint">프로필 주소: mochi.app/@hana_mochi</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="ob-bio">한 줄 소개 <span class="text-muted">(선택)</span></label>
+              <input class="input" id="ob-bio" type="text" placeholder="나를 한 줄로 표현하면?" value="달달한 디저트와 고양이를 사랑하는 사람 ♡">
+            </div>
+          </div>
+        </section>
+
+        <!-- ── STEP 3 · 취향 ── -->
+        <section class="ob-panel" data-panel="2" role="group" aria-labelledby="ob-p2-h" hidden>
+          <div class="ob-panel-head">
+            <h2 id="ob-p2-h">취향 선택 🌈</h2>
+            <p>좋아하는 카테고리를 골라 주세요. 피드를 큐트하게 채워 드릴게요!</p>
+          </div>
+          <div class="ob-taste" role="group" aria-label="관심사 다중 선택">
+            <button type="button" class="ob-taste-btn" data-taste="디저트" aria-pressed="true">
+              <span class="ob-taste-emoji" aria-hidden="true">🍰</span>
+              <span class="ob-taste-txt"><b>디저트 & 베이킹</b><span>마카롱부터 휘낭시에까지</span></span>
+              <span class="ob-taste-tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>
+            </button>
+            <button type="button" class="ob-taste-btn" data-taste="냥이" aria-pressed="true">
+              <span class="ob-taste-emoji" aria-hidden="true">🐱</span>
+              <span class="ob-taste-txt"><b>냥이 & 댕댕이</b><span>말랑 동물 친구들</span></span>
+              <span class="ob-taste-tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>
+            </button>
+            <button type="button" class="ob-taste-btn" data-taste="문구" aria-pressed="false">
+              <span class="ob-taste-emoji" aria-hidden="true">✏️</span>
+              <span class="ob-taste-txt"><b>팬시 & 문구</b><span>스티커·다이어리 덕질</span></span>
+              <span class="ob-taste-tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>
+            </button>
+            <button type="button" class="ob-taste-btn" data-taste="패션" aria-pressed="false">
+              <span class="ob-taste-emoji" aria-hidden="true">👗</span>
+              <span class="ob-taste-txt"><b>파스텔 패션</b><span>러블리 코디 룩북</span></span>
+              <span class="ob-taste-tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>
+            </button>
+            <button type="button" class="ob-taste-btn" data-taste="여행" aria-pressed="true">
+              <span class="ob-taste-emoji" aria-hidden="true">🧳</span>
+              <span class="ob-taste-txt"><b>아기자기 여행</b><span>감성 카페 투어</span></span>
+              <span class="ob-taste-tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>
+            </button>
+            <button type="button" class="ob-taste-btn" data-taste="공예" aria-pressed="false">
+              <span class="ob-taste-emoji" aria-hidden="true">🧶</span>
+              <span class="ob-taste-txt"><b>핸드메이드 공예</b><span>뜨개·비즈·키링</span></span>
+              <span class="ob-taste-tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>
+            </button>
+            <button type="button" class="ob-taste-btn" data-taste="음악" aria-pressed="false">
+              <span class="ob-taste-emoji" aria-hidden="true">🎧</span>
+              <span class="ob-taste-txt"><b>로파이 & 음악</b><span>잔잔한 플레이리스트</span></span>
+              <span class="ob-taste-tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>
+            </button>
+            <button type="button" class="ob-taste-btn" data-taste="게임" aria-pressed="false">
+              <span class="ob-taste-emoji" aria-hidden="true">🎮</span>
+              <span class="ob-taste-txt"><b>코지 게임</b><span>힐링 인디 게임</span></span>
+              <span class="ob-taste-tick" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></span>
+            </button>
+          </div>
+          <p class="text-center text-sm text-muted mt-4">선택한 관심사: <b data-taste-count style="color:var(--pink-700)">3</b>개 (최소 1개)</p>
+        </section>
+
+        <!-- ── STEP 4 · 완료 ── -->
+        <section class="ob-panel" data-panel="3" role="group" aria-labelledby="ob-p3-h" hidden>
+          <div class="ob-done empty-state">
+            <div class="es-art" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 21s-7.2-4.6-9.6-9C.9 8.7 2.1 5.3 5.2 5.3c1.9 0 3.1 1 3.8 2.2C9.8 6.3 11 5.3 12.9 5.3c3.1 0 4.3 3.4 2.6 6.4"/>
+                <path d="M16.5 13.5l1.2 2.6 2.8.3-2.1 1.9.6 2.8-2.5-1.4-2.5 1.4.6-2.8-2.1-1.9 2.8-.3z"/>
+              </svg>
+            </div>
+            <h2 id="ob-p3-h">환영해요, 하나님 ♡</h2>
+            <p>모든 준비가 끝났어요! 골라 주신 취향에 딱 맞는 큐트한 피드를 준비해 뒀답니다. 이제 말랑말랑한 모찌 월드로 떠나 볼까요?</p>
+            <div class="ob-summary" aria-label="가입 요약">
+              <span class="badge badge--solid">@hana_mochi</span>
+              <span class="badge badge--peach">디저트 & 베이킹</span>
+              <span class="badge badge--mint">냥이 & 댕댕이</span>
+              <span class="badge badge--lav">아기자기 여행</span>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- 하단: 진행률 + 네비 -->
+      <div class="ob-foot card-foot" style="flex-direction:column; align-items:stretch; gap:var(--space-5); margin-top:var(--space-2);">
+        <div>
+          <div class="progress-label">
+            <span data-progress-text>1 / 4 단계 · 계정</span>
+            <span data-progress-pct>25%</span>
+          </div>
+          <div class="progress progress--lg" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="25" aria-label="가입 진행률" data-progress>
+            <span class="bar" style="width:25%"></span>
+          </div>
+        </div>
+
+        <div class="ob-nav">
+          <button type="button" class="btn btn--ghost" data-prev disabled>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+            이전
+          </button>
+
+          <button type="button" class="btn btn--primary" data-next>
+            다음
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+          </button>
+
+          <button type="button" class="btn btn--primary" data-finish hidden
+                  data-sparkle="16"
+                  data-toast="success"
+                  data-toast-title="가입 완료! ♡"
+                  data-toast-msg="모찌 월드에 오신 걸 환영해요. 즐거운 시간 되세요!">
+            시작하기
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 5.3L20 8l-4 4 1 6-5-2.8L7 18l1-6-4-4 5.6-.7z"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <p class="text-center text-sm text-muted" style="padding-bottom:var(--space-6); position:relative; z-index:1;">
+    이미 계정이 있나요? <a href="../index.html" style="color:var(--pink-700); font-weight:var(--weight-bold)">로그인하기</a>
+  </p>
+</div>
+
+<script>
+/* ── 온보딩 위저드 고유 로직 (단계 전환 · steps 상태 · 진행률) ── */
+(function () {
+  var root     = document.querySelector("[data-wizard]");
+  if (!root) return;
+
+  var STEPS    = ["계정", "프로필", "취향", "완료"];
+  var TOTAL    = STEPS.length;
+  var current  = 0;
+
+  var steps    = Array.prototype.slice.call(root.querySelectorAll("[data-steps] .step"));
+  var panels   = Array.prototype.slice.call(root.querySelectorAll(".ob-panel"));
+  var btnPrev  = root.querySelector("[data-prev]");
+  var btnNext  = root.querySelector("[data-next]");
+  var btnFin   = root.querySelector("[data-finish]");
+  var bar      = root.querySelector("[data-progress] .bar");
+  var pbar     = root.querySelector("[data-progress]");
+  var pText    = root.querySelector("[data-progress-text]");
+  var pPct     = root.querySelector("[data-progress-pct]");
+
+  function render() {
+    // 패널 1개만 노출 (키보드/스크린리더용 hidden 토글)
+    panels.forEach(function (p, i) {
+      var on = i === current;
+      p.classList.toggle("is-current", on);
+      if (on) { p.removeAttribute("hidden"); } else { p.setAttribute("hidden", ""); }
+    });
+
+    // steps 상태: 지난 단계 is-done, 현재 is-active
+    steps.forEach(function (s, i) {
+      s.classList.toggle("is-done",   i < current);
+      s.classList.toggle("is-active", i === current);
+      s.setAttribute("aria-current", i === current ? "step" : "false");
+      var dot = s.querySelector(".step-dot");
+      if (dot) {
+        dot.innerHTML = (i < current)
+          ? '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>'
+          : String(i + 1);
+      }
+    });
+
+    // 진행률 (단계 비례)
+    var pct = Math.round(((current + 1) / TOTAL) * 100);
+    if (bar)  bar.style.width = pct + "%";
+    if (pbar) pbar.setAttribute("aria-valuenow", String(pct));
+    if (pText) pText.textContent = (current + 1) + " / " + TOTAL + " 단계 · " + STEPS[current];
+    if (pPct)  pPct.textContent = pct + "%";
+
+    // 네비 버튼 상태
+    btnPrev.disabled = current === 0;
+    var last = current === TOTAL - 1;
+    btnNext.hidden = last;
+    btnFin.hidden  = !last;
+
+    // 새 패널의 첫 포커서블로 포커스 이동 (키보드 접근)
+    var live = panels[current];
+    var focusable = live.querySelector("input, button, select, textarea, [tabindex]");
+    if (focusable && typeof focusable.focus === "function") {
+      try { focusable.focus({ preventScroll: true }); } catch (e) { focusable.focus(); }
+    }
+  }
+
+  function go(delta) {
+    var next = Math.min(TOTAL - 1, Math.max(0, current + delta));
+    if (next !== current) { current = next; render(); }
+  }
+
+  btnNext.addEventListener("click", function () { go(1); });
+  btnPrev.addEventListener("click", function () { go(-1); });
+  // 시작하기: 토스트/반짝이는 app.js 가 data-속성으로 처리 → 여기선 페이지 락만
+  btnFin.addEventListener("click", function () {
+    btnFin.classList.add("is-loading");
+    btnFin.setAttribute("aria-busy", "true");
+  });
+
+  // ── 아바타 선택 (단일) ──
+  var avatars = Array.prototype.slice.call(root.querySelectorAll("[data-avatar]"));
+  avatars.forEach(function (a) {
+    a.addEventListener("click", function () {
+      avatars.forEach(function (x) { x.setAttribute("aria-pressed", "false"); });
+      a.setAttribute("aria-pressed", "true");
+    });
+  });
+
+  // ── 취향 토글 (다중) + 카운트 ──
+  var tastes = Array.prototype.slice.call(root.querySelectorAll("[data-taste]"));
+  var tasteCount = root.querySelector("[data-taste-count]");
+  function updateTasteCount() {
+    var n = tastes.filter(function (t) { return t.getAttribute("aria-pressed") === "true"; }).length;
+    if (tasteCount) tasteCount.textContent = String(n);
+  }
+  tastes.forEach(function (t) {
+    t.addEventListener("click", function () {
+      t.setAttribute("aria-pressed", t.getAttribute("aria-pressed") === "true" ? "false" : "true");
+      updateTasteCount();
+    });
+  });
+  updateTasteCount();
+
+  render();
+})();
+</script>
+
+<script src="../app.js"></script>
+</body>
+</html>

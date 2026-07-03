@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Kanban Board — Q3 Product Roadmap · Swiss International</title>
+<meta name="description" content="A grid-aligned Kanban board in the International Typographic Style: four columns, draggable hairline cards, one Swiss-red accent.">
+<!-- No-flash theme boot -->
+<script>(function(){try{var t=localStorage.getItem('swiss-theme');if(t)document.documentElement.setAttribute('data-theme',t);else if(matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../theme.css">
+<style>
+  /* ---- Kanban page layout (token-based, DNA-compliant: no shadow/radius/gradient) ---- */
+  .board-wrap {
+    margin-block: var(--space-7) var(--space-9);
+    border: var(--border-1) solid var(--color-border-strong);
+    overflow: hidden;
+  }
+  .board {
+    display: flex;
+    align-items: stretch;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+  .kcol {
+    flex: 1 0 300px;
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+    scroll-snap-align: start;
+    background: var(--color-bg);
+  }
+  .kcol + .kcol { border-left: var(--border-1) solid var(--color-border-strong); }
+  .kcol__head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    border-bottom: var(--border-1) solid var(--color-border-strong);
+    position: sticky;
+    top: 0;
+    background: var(--color-bg);
+    z-index: 1;
+  }
+  .kcol__title {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+    font-weight: var(--weight-semibold);
+  }
+  .kcol__add { margin-left: auto; }
+  .kcol__list {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: var(--color-surface-2);
+    min-height: 8rem;
+  }
+  .kcol__list.is-drop { outline: var(--border-2) dashed var(--color-accent); outline-offset: -4px; }
+  /* card foot bits */
+  .kcard__due { font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+  .kcard__who { display: inline-flex; align-items: center; gap: var(--space-2); }
+  .kanban-card__foot { gap: var(--space-2); }
+  /* page-head toolbar */
+  .ph-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); margin-top: var(--space-5); }
+  .ph-toolbar .searchbar { min-width: 12rem; max-width: 18rem; }
+  .ph-toolbar__spacer { flex: 1 1 auto; }
+  @media (max-width: 640px){
+    .ph-toolbar { gap: var(--space-3); }
+    .ph-toolbar .searchbar { flex: 1 1 100%; max-width: none; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<!-- ===================== NAVBAR ===================== -->
+<header class="navbar">
+  <a class="navbar__brand" href="../index.html"><span class="navbar__mark" aria-hidden="true"></span> SWISS&nbsp;INT'L</a>
+  <nav class="navbar__nav" aria-label="Primary">
+    <a class="navbar__link" href="../index.html#foundations">Foundations</a>
+    <a class="navbar__link" href="../index.html#components">Components</a>
+    <a class="navbar__link" href="../index.html#screens" aria-current="page">Screens</a>
+    <a class="navbar__link" href="../README.md">Docs</a>
+  </nav>
+  <span class="navbar__spacer"></span>
+  <div class="navbar__actions">
+    <button class="btn btn--ghost btn--sm" data-action="open-cmdk" aria-label="Open command palette">
+      <svg viewBox="0 0 16 16" width="14" height="14" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg>
+      <span class="hide-md">Search</span><kbd class="kbd hide-md">⌘K</kbd>
+    </button>
+    <button class="btn--icon btn btn--secondary btn--sm" data-action="toggle-grid" aria-pressed="false" aria-label="Toggle 12-column grid overlay" title="Toggle grid (g)">
+      <svg viewBox="0 0 16 16" width="15" height="15" stroke="currentColor" stroke-width="1.2"><path d="M1 1h14v14H1zM5.66 1v14M10.33 1v14M1 5.66h14M1 10.33h14"/></svg>
+    </button>
+    <button class="btn--icon btn btn--secondary btn--sm" data-action="toggle-theme" aria-pressed="false" aria-label="Toggle dark mode">
+      <svg viewBox="0 0 16 16" width="15" height="15" stroke="currentColor" stroke-width="1.3" fill="none"><path d="M13.5 9.5A5.5 5.5 0 016.5 2.5a5.5 5.5 0 100 11 5.5 5.5 0 007-4z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main" class="app-main">
+<div class="container container--wide">
+
+  <!-- ===================== PAGE HEAD ===================== -->
+  <div class="page-head">
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      <a class="breadcrumb__item" href="../index.html">Home</a>
+      <span class="breadcrumb__sep">/</span>
+      <a class="breadcrumb__item" href="../index.html#screens">Boards</a>
+      <span class="breadcrumb__sep">/</span>
+      <span class="breadcrumb__item" aria-current="page">Q3 Roadmap</span>
+    </nav>
+    <h1 class="page-head__title" style="margin-top:var(--space-4)">Q3 Product Roadmap</h1>
+
+    <div class="ph-toolbar">
+      <div class="segmented" role="tablist" aria-label="Board view">
+        <button class="segmented__item is-active" role="tab" aria-selected="true">Board</button>
+        <button class="segmented__item" role="tab" aria-selected="false">Timeline</button>
+        <button class="segmented__item" role="tab" aria-selected="false">Table</button>
+      </div>
+
+      <div class="input-group searchbar">
+        <span class="input-group__addon input-group__addon--start"><svg viewBox="0 0 16 16" width="14" height="14" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg></span>
+        <input class="input" type="search" placeholder="Filter cards…" aria-label="Filter cards">
+      </div>
+
+      <div class="ph-toolbar__spacer"></div>
+
+      <div class="avatar-group" role="img" aria-label="5 board members: Max Bill, Josef Müller, Armin Hofmann, Emil Ruder, Karl Gerstner">
+        <span class="avatar avatar--sm">MB</span>
+        <span class="avatar avatar--sm">JM</span>
+        <span class="avatar avatar--sm">AH</span>
+        <span class="avatar avatar--sm avatar--ghost">ER</span>
+        <span class="avatar avatar--sm avatar-group__more">KG</span>
+      </div>
+
+      <button class="btn btn--primary" data-open-modal="#add-card-modal">
+        <svg viewBox="0 0 16 16" width="14" height="14" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M3 8h10"/></svg>
+        Add card
+      </button>
+    </div>
+  </div>
+
+  <!-- ===================== BOARD ===================== -->
+  <section class="board-wrap" aria-label="Q3 Roadmap board">
+    <div class="board" data-kanban>
+
+      <!-- ===== BACKLOG ===== -->
+      <section class="kcol" data-kanban-col aria-label="Backlog column">
+        <header class="kcol__head">
+          <h2 class="kcol__title">Backlog</h2>
+          <span class="badge badge--muted"><span data-kanban-count>5</span></span>
+          <button class="btn--icon btn btn--ghost btn--sm kcol__add" data-open-modal="#add-card-modal" aria-label="Add card to Backlog">
+            <svg viewBox="0 0 16 16" width="14" height="14" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M3 8h10"/></svg>
+          </button>
+        </header>
+        <div class="kcol__list" data-kanban-list>
+
+          <article class="kanban-card" draggable="true" data-id="ROAD-101">
+            <div class="kanban-card__top">
+              <span class="kanban-card__id">ROAD-101</span>
+              <span class="badge badge--muted">Low · Tokens</span>
+            </div>
+            <p class="kanban-card__title">Re-baseline 8px vertical rhythm across all components</p>
+            <div class="kanban-card__foot">
+              <div class="kanban-card__tags"><span class="badge">spacing</span></div>
+              <span class="kcard__who"><span class="avatar avatar--xs">MB</span><span class="kcard__due">Aug 04</span></span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" data-id="ROAD-104">
+            <div class="kanban-card__top">
+              <span class="kanban-card__id">ROAD-104</span>
+              <span class="badge badge--warning">Med · Type</span>
+            </div>
+            <p class="kanban-card__title">Draft a tabular-numerals utility for all data tables</p>
+            <div class="kanban-card__foot">
+              <div class="kanban-card__tags"><span class="badge">type</span><span class="badge">a11y</span></div>
+              <span class="kcard__who"><span class="avatar avatar--xs">AH</span><span class="kcard__due">Aug 11</span></span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" data-id="ROAD-109">
+            <div class="kanban-card__top">
+              <span class="kanban-card__id">ROAD-109</span>
+              <span class="badge badge--muted">Low · Docs</span>
+            </div>
+            <p class="kanban-card__title">Write usage guidance for the hairline rule system</p>
+            <div class="kanban-card__foot">
+              <div class="kanban-card__tags"><span class="badge">docs</span></div>
+              <span class="kcard__who"><span class="avatar avatar--xs">ER</span><span class="kcard__due">Aug 18</span></span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" data-id="ROAD-112">
+            <div class="kanban-card__accent"></div>
+            <div class="kanban-card__top">
+              <span class="kanban-card__id">ROAD-112</span>
+              <span class="badge badge--danger">High · Motion</span>
+            </div>
+            <p class="kanban-card__title">Spec reduced-motion fallbacks for every interactive widget</p>
+            <div class="kanban-card__foot">
+              <div class="kanban-card__tags"><span class="badge">motion</span><span class="badge">a11y</span></div>
+              <span class="kcard__who"><span class="avatar avatar--xs">JM</span><span class="kcard__due">Aug 22</span></span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" data-id="ROAD-118">
+            <div class="kanban-card__top">
+              <span class="kanban-card__id">ROAD-118</span>
+              <span class="badge badge--warning">Med · Icons</span>
+            </div>
+            <p class="kanban-card__title">Standardise thin-line SVG icon stroke to 1.4px</p>
+            <div class="kanban-card__foot">
+              <div class="kanban-card__tags"><span class="badge">icons</span></div>
+              <span class="kcard__who"><span class="avatar avatar--xs">KG</span><span class="kcard__due">Sep 01</span></span>
+            </div>
+          </article>
+
+        </div>
+      </section>
+
+      <!-- ===== IN PROGRESS ===== -->
+      <section class="kcol" data-kanban-col aria-label="In progress column">
+        <header class="kcol__head">
+          <h2 class="kcol__title">In Progress</h2>
+          <span class="badge badge--muted"><span data-kanban-count>4</span></span>
+          <button class="btn--icon btn btn--ghost btn--sm kcol__add" data-open-modal="#add-card-modal" aria-label="Add card to In Progress">
+            <svg viewBox="0 0 16 16" width="14" height="14" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M3 8h10"/></svg>
+          </button>
+        </header>
+        <div class="kcol__list" data-kanban-list>
+
+          <article class="kanban-card" draggable="true" data-id="ROAD-203">
+            <div class="kanban-card__accent"></div>
+            <div class="kanban-card__top">
+              <span class="kanban-card__id">ROAD-203</span>
+              <span class="badge badge--danger">High · A11y</span>
+            </div>
+            <p class="kanban-card__title">Audit colour contrast to 4.5:1 on every text token</p>
+            <div class="kanban-card__foot">
+              <div class="kanban-card__tags"><span class="badge">a11y</span><span class="badge badge--success"><span class="badge__dot"></span>WIP</span></div>
+              <span class="kcard__who"><span class="avatar avatar--xs">JM</span><span class="kcard__due">Aug 08</span></span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" data-id="ROAD-207">
+            <div class="kanban-card__top">
+              <span class="kanban-card__id">ROAD-207</span>
+              <span class="badge badge--warning">Med · Grid</span>
+            </div>
+            <p class="kanban-card__title">Migrate dashboard layout to strict 12-column grid</p>
+            <div class="kanban-card__foot">
+              <div class="kanban-card__tags"><span class="badge">grid</span><span class="badge">layout</span></div>
+              <span class="kcard__who"><span class="avatar avatar--xs">MB</span><span class="kcard__due">Aug 14</span></span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" data-id="ROAD-211">
+            <div class="kanban-card__top">
+              <span class="kanban-card__id">ROAD-211</span>
+              <span class="badge badge--muted">Low · Forms</span>
+            </div>
+            <p class="kanban-card__title">Wire combobox keyboard navigation to ARIA listbox spec</p>
+            <div class="kanban-card__foot">
+              <div class="kanban-card__tags"><span class="badge">forms</span></div>
+              <span class="kcard__who"><span class="avatar avatar--xs">AH</span><span class="kcard__due">Aug 19</span></span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" data-id="ROAD-215">
+            <div class="kanban-card__top">
+              <span class="kanban-card__id">ROAD-215</span>
+              <span class="badge badge--warning">Med · Dark</span>
+            </div>
+            <p class="kanban-card__title">Verify dark-mode neutral ramp keeps hairline separation</p>
+            <div class="kanban-card__foot">
+              <div class="kanban-card__tags"><span class="badge">dark-mode</span></div>
+              <span class="kcard__who"><span class="avatar avatar--xs">ER</span><span class="kcard__due">Aug 25</span></span>
+            </div>
+          </article>
+
+        </div>
+      </section>
+
+      <!-- ===== REVIEW ===== -->
+      <section class="kcol" data-kanban-col aria-label="Review column">
+        <header class="kcol__head">
+          <h2 class="kcol__title">Review</h2>
+          <span class="badge badge--muted"><span data-kanban-count>3</span></span>
+          <button class="btn--icon btn btn--ghost btn--sm kcol__add" data-open-modal="#add-card-modal" aria-label="Add card to Review">
+            <svg viewBox="0 0 16 16" width="14" height="14" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M3 8h10"/></svg>
+          </button>
+        </header>
+        <div class="kcol__list" data-kanban-list>
+
+          <article class="kanban-card" draggable="true" data-id="ROAD-302">
+            <div class="kanban-card__accent"></div>
+            <div class="kanban-card__top">
+              <span class="kanban-card__id">ROAD-302</span>
+              <span class="badge badge--danger">High · Charts</span>
+            </div>
+            <p class="kanban-card__title">Ship hairline chart component with tabular axis labels</p>
+            <div class="kanban-card__foot">
+              <div class="kanban-card__tags"><span class="badge">charts</span><span class="badge badge--warning">PR open</span></div>
+              <span class="kcard__who"><span class="avatar avatar--xs">KG</span><span class="kcard__due">Aug 06</span></span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" data-id="ROAD-305">
+            <div class="kanban-card__top">
+              <span class="kanban-card__id">ROAD-305</span>
+              <span class="badge badge--warning">Med · Nav</span>
+            </div>
+            <p class="kanban-card__title">Review breadcrumb truncation behaviour at 360px</p>
+            <div class="kanban-card__foot">
+              <div class="kanban-card__tags"><span class="badge">nav</span><span class="badge">responsive</span></div>
+              <span class="kcard__who"><span class="avatar avatar--xs">MB</span><span class="kcard__due">Aug 10</span></span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" data-id="ROAD-308">
+            <div class="kanban-card__top">
+              <span class="kanban-card__id">ROAD-308</span>
+              <span class="badge badge--muted">Low · Code</span>
+            </div>
+            <p class="kanban-card__title">Proofread code-block copy-to-clipboard affordance copy</p>
+            <div class="kanban-card__foot">
+              <div class="kanban-card__tags"><span class="badge">code</span></div>
+              <span class="kcard__who"><span class="avatar avatar--xs">ER</span><span class="kcard__due">Aug 13</span></span>
+            </div>
+          </article>
+
+        </div>
+      </section>
+
+      <!-- ===== DONE ===== -->
+      <section class="kcol" data-kanban-col aria-label="Done column">
+        <header class="kcol__head">
+          <h2 class="kcol__title">Done</h2>
+          <span class="badge badge--muted"><span data-kanban-count>4</span></span>
+          <button class="btn--icon btn btn--ghost btn--sm kcol__add" data-open-modal="#add-card-modal" aria-label="Add card to Done">
+            <svg viewBox="0 0 16 16" width="14" height="14" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M3 8h10"/></svg>
+          </button>
+        </header>
+        <div class="kcol__list" data-kanban-list>
+
+          <article class="kanban-card" draggable="true" data-id="ROAD-401">
+            <div class="kanban-card__top">
+              <span class="kanban-card__id">ROAD-401</span>
+              <span class="badge badge--muted">Low · Tokens</span>
+            </div>
+            <p class="kanban-card__title">Lock the neutral 50→900 ramp as the single greyscale source</p>
+            <div class="kanban-card__foot">
+              <div class="kanban-card__tags"><span class="badge badge--success"><span class="badge__dot"></span>Merged</span></div>
+              <span class="kcard__who"><span class="avatar avatar--xs">AH</span><span class="kcard__due">Jul 28</span></span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" data-id="ROAD-404">
+            <div class="kanban-card__top">
+              <span class="kanban-card__id">ROAD-404</span>
+              <span class="badge badge--warning">Med · Build</span>
+            </div>
+            <p class="kanban-card__title">Strip all box-shadows and border-radius from legacy CSS</p>
+            <div class="kanban-card__foot">
+              <div class="kanban-card__tags"><span class="badge badge--success"><span class="badge__dot"></span>Merged</span></div>
+              <span class="kcard__who"><span class="avatar avatar--xs">MB</span><span class="kcard__due">Jul 30</span></span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" data-id="ROAD-407">
+            <div class="kanban-card__top">
+              <span class="kanban-card__id">ROAD-407</span>
+              <span class="badge badge--muted">Low · Type</span>
+            </div>
+            <p class="kanban-card__title">Adopt Inter + JetBrains Mono as the type pairing</p>
+            <div class="kanban-card__foot">
+              <div class="kanban-card__tags"><span class="badge badge--success"><span class="badge__dot"></span>Merged</span></div>
+              <span class="kcard__who"><span class="avatar avatar--xs">KG</span><span class="kcard__due">Aug 01</span></span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" data-id="ROAD-412">
+            <div class="kanban-card__accent"></div>
+            <div class="kanban-card__top">
+              <span class="kanban-card__id">ROAD-412</span>
+              <span class="badge badge--danger">High · Accent</span>
+            </div>
+            <p class="kanban-card__title">Restrict the palette to one Swiss-red accent (#E2231A)</p>
+            <div class="kanban-card__foot">
+              <div class="kanban-card__tags"><span class="badge badge--success"><span class="badge__dot"></span>Merged</span></div>
+              <span class="kcard__who"><span class="avatar avatar--xs">JM</span><span class="kcard__due">Aug 03</span></span>
+            </div>
+          </article>
+
+        </div>
+      </section>
+
+    </div>
+  </section>
+
+</div>
+</main>
+
+<!-- ===================== FOOTER ===================== -->
+<footer class="border-t-strong" style="margin-top:var(--space-9)">
+  <div class="container container--wide py-8">
+    <div class="grid">
+      <div class="col-12 md-col-6"><p class="display" style="font-size:var(--text-2xl)">Q3 Product Roadmap</p><p class="text-muted small mt-2">16 cards · 4 columns · drag a card between columns to re-stage it.</p></div>
+      <div class="col-6 md-col-3"><p class="overline mb-3">Board</p><a class="link" href="../index.html#screens" style="display:block">All screens</a><a class="link" href="dashboard.html" style="display:block">Dashboard</a><a class="link" href="../README.md" style="display:block">README</a></div>
+      <div class="col-6 md-col-3"><p class="overline mb-3">Theme</p><button class="link" data-action="toggle-theme" style="display:block">Toggle dark</button><button class="link" data-action="toggle-grid" style="display:block">Toggle grid</button><button class="link" data-action="open-cmdk" style="display:block">Command ⌘K</button></div>
+    </div>
+    <p class="caption mt-8">Hierarchy from type, separation from rules, accent from one red. © 2026.</p>
+  </div>
+</footer>
+
+<!-- ===================== ADD CARD MODAL ===================== -->
+<div class="modal" id="add-card-modal" role="dialog" aria-modal="true" aria-labelledby="add-card-title">
+  <div class="modal__panel">
+    <div class="modal__header">
+      <div><p class="modal__eyebrow">New card</p><h2 class="modal__title" id="add-card-title">Add card to Q3 Roadmap</h2></div>
+      <button class="modal__close" data-close-modal aria-label="Close"><svg viewBox="0 0 16 16" width="16" stroke="currentColor" stroke-width="1.4"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+    </div>
+    <div class="modal__body flow">
+      <div class="field">
+        <label class="field__label" for="ac-title">Title <span class="field__req">*</span></label>
+        <input class="input" id="ac-title" placeholder="e.g. Audit focus rings on all inputs">
+      </div>
+
+      <div class="grid grid--tight">
+        <div class="col-12 md-col-6">
+          <div class="field">
+            <label class="field__label" for="ac-col">Column</label>
+            <select class="select" id="ac-col">
+              <option>Backlog</option>
+              <option>In Progress</option>
+              <option>Review</option>
+              <option>Done</option>
+            </select>
+          </div>
+        </div>
+        <div class="col-12 md-col-6">
+          <div class="field">
+            <label class="field__label" for="ac-assignee">Assignee</label>
+            <select class="select" id="ac-assignee">
+              <option>Max Bill</option>
+              <option>Josef Müller</option>
+              <option>Armin Hofmann</option>
+              <option>Emil Ruder</option>
+              <option>Karl Gerstner</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="field__label">Priority</span>
+        <div class="segmented" role="tablist" aria-label="Priority">
+          <button class="segmented__item" role="tab" aria-selected="false" type="button">Low</button>
+          <button class="segmented__item is-active" role="tab" aria-selected="true" type="button">Med</button>
+          <button class="segmented__item" role="tab" aria-selected="false" type="button">High</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="ac-due">Due date</label>
+        <div class="datepicker" data-datepicker>
+          <div class="input-group" style="max-width:16rem">
+            <span class="input-group__addon input-group__addon--start"><svg viewBox="0 0 16 16" width="14" height="14" stroke="currentColor" stroke-width="1.3"><rect x="2" y="3" width="12" height="11"/><path d="M2 6h12M5 1v3M11 1v3"/></svg></span>
+            <input class="input" id="ac-due" placeholder="YYYY-MM-DD" data-datepicker-trigger readonly aria-label="Due date">
+          </div>
+          <div class="datepicker__pop"><div class="calendar" data-calendar-pop></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn--ghost" data-close-modal>Cancel</button>
+      <button class="btn btn--primary" data-close-modal data-toast data-variant="success" data-title="Card created" data-text="Added to the Q3 Roadmap board.">Create card</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== COMMAND PALETTE ===================== -->
+<div class="cmdk" id="command-palette" role="dialog" aria-modal="true" aria-label="Command palette">
+  <div class="cmdk__panel">
+    <div class="cmdk__search"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg><input class="cmdk__input" data-autofocus placeholder="Type a command or search…" aria-label="Command"></div>
+    <div class="cmdk__list">
+      <p class="cmdk__group-label">Navigate</p>
+      <a class="cmdk__item" data-href="dashboard.html"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3"><rect x="2" y="2" width="5" height="5"/><rect x="9" y="2" width="5" height="5"/><rect x="2" y="9" width="5" height="5"/></svg>Go to Dashboard<span class="trail">↵</span></a>
+      <a class="cmdk__item" data-href="kanban.html"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3"><rect x="2" y="2" width="3" height="12"/><rect x="6.5" y="2" width="3" height="8"/><rect x="11" y="2" width="3" height="10"/></svg>Go to Kanban</a>
+      <a class="cmdk__item" data-href="pricing.html"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3"><rect x="2" y="2" width="12" height="12"/><path d="M2 6h12"/></svg>Go to Pricing</a>
+      <p class="cmdk__group-label">Actions</p>
+      <button class="cmdk__item" data-action="toggle-theme"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3"><path d="M13.5 9.5A5.5 5.5 0 116.5 2.5a5.5 5.5 0 007 7z"/></svg>Toggle dark mode<span class="trail">⇧D</span></button>
+      <button class="cmdk__item" data-action="toggle-grid"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.2"><path d="M1 1h14v14H1zM5.66 1v14M10.33 1v14M1 5.66h14M1 10.33h14"/></svg>Toggle grid overlay<span class="trail">G</span></button>
+      <button class="cmdk__item" data-action="toast" data-title="Copied link"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3"><path d="M6 10a3 3 0 004 0l2-2a3 3 0 00-4-4M10 6a3 3 0 00-4 0L4 8a3 3 0 004 4"/></svg>Copy current URL</button>
+    </div>
+    <div class="cmdk__empty" hidden>No commands found.</div>
+    <div class="cmdk__foot"><span><kbd class="kbd">↑↓</kbd> Navigate</span><span><kbd class="kbd">↵</kbd> Select</span><span><kbd class="kbd">Esc</kbd> Close</span></div>
+  </div>
+</div>
+
+<script src="../app.js"></script>
+</body>
+</html>

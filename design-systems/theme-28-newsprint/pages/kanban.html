@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Story Board — The Ledger</title>
+<link rel="stylesheet" href="../theme.css">
+<style>
+  /* page-local layout only — tokens, never hardcoded values */
+  .board { margin-top: var(--space-7); }
+
+  /* 5-column board; horizontal scroll on narrow screens */
+  .board__columns {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(248px, 1fr));
+    gap: 0;
+    overflow-x: auto;
+    border-top: var(--rule-heavy) solid var(--color-rule-heavy);
+    border-bottom: var(--rule-heavy) solid var(--color-rule-heavy);
+    scroll-snap-type: x proximity;
+  }
+  @media (max-width: 1100px){
+    .board__columns { grid-template-columns: repeat(5, minmax(248px, 280px)); }
+  }
+
+  .kcol {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border-right: var(--column-rule);
+    border-top: var(--rule-banner) solid var(--color-ink);
+    padding: var(--space-5) var(--space-5) var(--space-6);
+    scroll-snap-align: start;
+    transition: background-color .15s var(--ease-out);
+  }
+  .kcol:last-child { border-right: 0; }
+  .kcol--accent { border-top-color: var(--color-accent); }
+  .kcol.is-dropzone { background: var(--color-surface-sunken, var(--color-paper-2, transparent)); }
+
+  .kcol__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding-bottom: var(--space-3);
+    margin-bottom: var(--space-4);
+    border-bottom: var(--rule-medium) solid var(--color-border);
+  }
+  .kcol__title {
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: var(--text-base);
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    margin: 0;
+  }
+  .kcol__stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    flex: 1;
+    min-height: var(--space-9);
+  }
+
+  .kanban-card { cursor: grab; }
+  .kanban-card.is-dragging { opacity: .45; cursor: grabbing; }
+  .kanban-card:focus-visible { outline: var(--rule-medium) solid var(--color-accent); outline-offset: 2px; }
+
+  .board__head-actions { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
+  .board__filter { min-width: 16rem; }
+
+  [data-reveal]{ opacity:0; transform: translateY(12px); transition: opacity .5s var(--ease-out), transform .5s var(--ease-out); }
+  [data-reveal].is-revealed{ opacity:1; transform:none; }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<nav class="navbar no-print" aria-label="Primary">
+  <a class="navbar__brand" href="../index.html">THE&nbsp;<span class="spot">LEDGER</span></a>
+  <div class="navbar__sections" id="primary-nav">
+    <a class="navbar__link" href="dashboard.html">Desk</a>
+    <a class="navbar__link" href="kanban.html" aria-current="page">Board</a>
+    <a class="navbar__link" href="inbox.html">Wire</a>
+    <a class="navbar__link" href="pricing.html">Plans</a>
+    <a class="navbar__link" href="front-page.html">Front Page</a>
+  </div>
+  <div class="navbar__actions">
+    <button class="btn btn--ghost btn--sm" data-command-open aria-label="Search">⌘K</button>
+    <button class="btn btn--icon btn--sm" data-theme-toggle aria-pressed="false" aria-label="Toggle edition">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
+    </button>
+    <button class="btn btn--icon btn--sm navbar__toggle" data-nav-toggle="primary-nav" aria-label="Menu" aria-expanded="false">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+  </div>
+</nav>
+
+<main id="main">
+<div class="container-broadsheet">
+
+  <!-- Header -->
+  <header class="section-head" data-reveal>
+    <h1 class="section-head__title">The Story Board — Newsroom Assignments</h1>
+    <div class="section-head__meta board__head-actions">
+      <div class="searchbar board__filter">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" id="board-filter" placeholder="Filter stories…" aria-label="Filter stories">
+        <kbd>/</kbd>
+      </div>
+      <button class="btn btn--primary btn--sm" data-drawer-open="new-story">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        New Story
+      </button>
+      <div class="avatar-group" aria-label="Editors on duty">
+        <span class="avatar avatar--sm" title="Margaret Reyes"><span class="avatar__initials">MR</span></span>
+        <span class="avatar avatar--sm" title="Dele Okonkwo"><span class="avatar__initials">DO</span></span>
+        <span class="avatar avatar--sm" title="Lena Tanaka"><span class="avatar__initials">LT</span></span>
+        <span class="avatar avatar--sm" title="Sam Whitfield"><span class="avatar__initials">SW</span></span>
+        <span class="avatar-group__more">+5</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Board -->
+  <section class="board" aria-label="Story board" data-reveal>
+    <div class="board__columns" id="board">
+
+      <!-- PITCHED -->
+      <div class="kcol" data-col="Pitched" aria-label="Pitched stories">
+        <div class="kcol__head">
+          <h2 class="kcol__title">Pitched</h2>
+          <span class="count count--ink" data-count>3</span>
+        </div>
+        <div class="kcol__stack" data-stack>
+
+          <article class="kanban-card" draggable="true" tabindex="0">
+            <div class="kanban-card__id">STORY-498</div>
+            <h3 class="kanban-card__title">Inside the City’s Stalled Bridge Repairs</h3>
+            <div class="kanban-card__meta">
+              <span class="badge">City Hall</span>
+              <span class="avatar avatar--sm" title="Lena Tanaka"><span class="avatar__initials">LT</span></span>
+              <span class="dateline">Due Jun 28</span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" tabindex="0">
+            <div class="kanban-card__id">STORY-501</div>
+            <h3 class="kanban-card__title">Q&amp;A: The Harbor District’s New Planner</h3>
+            <div class="kanban-card__meta">
+              <span class="badge badge--muted">Culture</span>
+              <span class="avatar avatar--sm" title="Ruth Okafor"><span class="avatar__initials">RO</span></span>
+              <span class="dateline">Due Jul 02</span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" tabindex="0">
+            <div class="kanban-card__id">STORY-505</div>
+            <h3 class="kanban-card__title">Explainer: What the Rate Hold Means for You</h3>
+            <div class="kanban-card__meta">
+              <span class="badge badge--info">Business</span>
+              <span class="avatar avatar--sm" title="Dele Okonkwo"><span class="avatar__initials">DO</span></span>
+              <span class="dateline">Due Jul 05</span>
+            </div>
+          </article>
+
+        </div>
+      </div>
+
+      <!-- REPORTING -->
+      <div class="kcol" data-col="Reporting" aria-label="Reporting stories">
+        <div class="kcol__head">
+          <h2 class="kcol__title">Reporting</h2>
+          <span class="count count--ink" data-count>4</span>
+        </div>
+        <div class="kcol__stack" data-stack>
+
+          <article class="kanban-card kanban-card--urgent" draggable="true" tabindex="0">
+            <div class="kanban-card__id">STORY-412</div>
+            <h3 class="kanban-card__title">Breaking: Transit Overhaul Clears Council 7–2</h3>
+            <div class="kanban-card__meta">
+              <span class="badge badge--accent">City Hall</span>
+              <span class="avatar avatar--sm" title="Lena Tanaka"><span class="avatar__initials">LT</span></span>
+              <span class="dateline">Due Today</span>
+            </div>
+          </article>
+
+          <article class="kanban-card kanban-card--urgent" draggable="true" tabindex="0">
+            <div class="kanban-card__id">STORY-417</div>
+            <h3 class="kanban-card__title">Senate Reform Vote: On-the-Ground from the Gallery</h3>
+            <div class="kanban-card__meta">
+              <span class="badge badge--accent">National</span>
+              <span class="avatar avatar--sm" title="Margaret Reyes"><span class="avatar__initials">MR</span></span>
+              <span class="dateline">Due 6 p.m.</span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" tabindex="0">
+            <div class="kanban-card__id">STORY-423</div>
+            <h3 class="kanban-card__title">Harbor United’s Road to the Final</h3>
+            <div class="kanban-card__meta">
+              <span class="badge">Sports</span>
+              <span class="avatar avatar--sm" title="Sam Whitfield"><span class="avatar__initials">SW</span></span>
+              <span class="dateline">Due Jun 24</span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" tabindex="0">
+            <div class="kanban-card__id">STORY-431</div>
+            <h3 class="kanban-card__title">Record Quarter for Independent Press Tooling</h3>
+            <div class="kanban-card__meta">
+              <span class="badge badge--info">Technology</span>
+              <span class="avatar avatar--sm" title="Ruth Okafor"><span class="avatar__initials">RO</span></span>
+              <span class="dateline">Due Jun 26</span>
+            </div>
+          </article>
+
+        </div>
+      </div>
+
+      <!-- EDITING -->
+      <div class="kcol" data-col="Editing" aria-label="Editing stories">
+        <div class="kcol__head">
+          <h2 class="kcol__title">Editing</h2>
+          <span class="count count--ink" data-count>3</span>
+        </div>
+        <div class="kcol__stack" data-stack>
+
+          <article class="kanban-card kanban-card--review" draggable="true" tabindex="0">
+            <div class="kanban-card__id">STORY-388</div>
+            <h3 class="kanban-card__title">In Defense of Density: A Newsroom Manifesto</h3>
+            <div class="kanban-card__meta">
+              <span class="badge badge--warning">Opinion</span>
+              <span class="avatar avatar--sm" title="Editorial Board"><span class="avatar__initials">EB</span></span>
+              <span class="dateline">Due Jun 23</span>
+            </div>
+          </article>
+
+          <article class="kanban-card kanban-card--review" draggable="true" tabindex="0">
+            <div class="kanban-card__id">STORY-394</div>
+            <h3 class="kanban-card__title">A Revival of the Slab: Type at the Newsstand</h3>
+            <div class="kanban-card__meta">
+              <span class="badge badge--muted">Culture</span>
+              <span class="avatar avatar--sm" title="Ruth Okafor"><span class="avatar__initials">RO</span></span>
+              <span class="dateline">Due Jun 25</span>
+            </div>
+          </article>
+
+          <article class="kanban-card kanban-card--review" draggable="true" tabindex="0">
+            <div class="kanban-card__id">STORY-401</div>
+            <h3 class="kanban-card__title">Markets Close Broadly Higher Across Indices</h3>
+            <div class="kanban-card__meta">
+              <span class="badge badge--info">Business</span>
+              <span class="avatar avatar--sm" title="Dele Okonkwo"><span class="avatar__initials">DO</span></span>
+              <span class="dateline">Due Jun 22</span>
+            </div>
+          </article>
+
+        </div>
+      </div>
+
+      <!-- READY -->
+      <div class="kcol" data-col="Ready" aria-label="Ready stories">
+        <div class="kcol__head">
+          <h2 class="kcol__title">Ready</h2>
+          <span class="count count--ink" data-count>2</span>
+        </div>
+        <div class="kcol__stack" data-stack>
+
+          <article class="kanban-card" draggable="true" tabindex="0">
+            <div class="kanban-card__id">STORY-377</div>
+            <h3 class="kanban-card__title">Weather: Rain to Clear by Morning Edition</h3>
+            <div class="kanban-card__meta">
+              <span class="badge badge--success">Weather</span>
+              <span class="avatar avatar--sm" title="Sam Whitfield"><span class="avatar__initials">SW</span></span>
+              <span class="dateline">Slotted C8</span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" tabindex="0">
+            <div class="kanban-card__id">STORY-380</div>
+            <h3 class="kanban-card__title">The Lost Art of the Kicker</h3>
+            <div class="kanban-card__meta">
+              <span class="badge badge--muted">Culture</span>
+              <span class="avatar avatar--sm" title="Margaret Reyes"><span class="avatar__initials">MR</span></span>
+              <span class="dateline">Slotted D5</span>
+            </div>
+          </article>
+
+        </div>
+      </div>
+
+      <!-- PUBLISHED -->
+      <div class="kcol kcol--accent" data-col="Published" aria-label="Published stories">
+        <div class="kcol__head">
+          <h2 class="kcol__title">Published</h2>
+          <span class="count count--ink" data-count>3</span>
+        </div>
+        <div class="kcol__stack" data-stack>
+
+          <article class="kanban-card kanban-card--done" draggable="true" tabindex="0">
+            <div class="kanban-card__id">STORY-342</div>
+            <h3 class="kanban-card__title">Council Backs Transit Plan in Late Vote</h3>
+            <div class="kanban-card__meta">
+              <span class="badge badge--success">City Hall</span>
+              <span class="avatar avatar--sm" title="Lena Tanaka"><span class="avatar__initials">LT</span></span>
+              <span class="dateline">Ran A3</span>
+            </div>
+          </article>
+
+          <article class="kanban-card kanban-card--done" draggable="true" tabindex="0">
+            <div class="kanban-card__id">STORY-355</div>
+            <h3 class="kanban-card__title">Halftone, by Hand: Dots That Made Photos Print</h3>
+            <div class="kanban-card__meta">
+              <span class="badge badge--muted">Culture</span>
+              <span class="avatar avatar--sm" title="Ruth Okafor"><span class="avatar__initials">RO</span></span>
+              <span class="dateline">Ran D6</span>
+            </div>
+          </article>
+
+          <article class="kanban-card kanban-card--done" draggable="true" tabindex="0">
+            <div class="kanban-card__id">STORY-361</div>
+            <h3 class="kanban-card__title">Independent Tooling Posts Record Quarter</h3>
+            <div class="kanban-card__meta">
+              <span class="badge badge--success">Technology</span>
+              <span class="avatar avatar--sm" title="Dele Okonkwo"><span class="avatar__initials">DO</span></span>
+              <span class="dateline">Ran B1</span>
+            </div>
+          </article>
+
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <footer class="container-broadsheet"><div class="folio"><span>The Ledger · Theme 28 “Newsprint”</span><span>The Story Board</span><span>— 30 —</span></div></footer>
+
+</div>
+</main>
+
+<!-- New Story drawer -->
+<div class="drawer" id="new-story" hidden>
+  <div class="drawer__head">
+    <h2 class="drawer__title">File a New Story</h2>
+    <button class="btn btn--icon btn--sm" data-drawer-close aria-label="Close drawer">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="drawer__body">
+    <form class="stack" onsubmit="return false">
+      <div class="field">
+        <label class="field__label" for="ns-headline">Headline <span class="req">*</span></label>
+        <input class="input" id="ns-headline" type="text" placeholder="e.g. Council Backs Transit Plan in Late Vote">
+        <div class="field__hint">Write it as it would run in print — sentence case, no period.</div>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="ns-section">Section</label>
+        <select class="select" id="ns-section">
+          <option>City Hall</option>
+          <option>National</option>
+          <option>Business</option>
+          <option>Technology</option>
+          <option>Sports</option>
+          <option>Culture</option>
+          <option>Opinion</option>
+          <option>Weather</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="ns-assignee">Assignee</label>
+        <select class="select" id="ns-assignee">
+          <option>Margaret Reyes</option>
+          <option>Dele Okonkwo</option>
+          <option>Lena Tanaka</option>
+          <option>Sam Whitfield</option>
+          <option>Ruth Okafor</option>
+          <option>Editorial Board</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <span class="field__label">Priority</span>
+        <div class="segmented" data-segmented role="group" aria-label="Priority">
+          <button type="button" aria-selected="false" data-value="routine">Routine</button>
+          <button type="button" aria-selected="true" data-value="standard">Standard</button>
+          <button type="button" aria-selected="false" data-value="breaking">Breaking</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="ns-tags">Tags</label>
+        <div class="chipinput">
+          <span class="chip">city <button type="button" aria-label="Remove tag city">×</button></span>
+          <span class="chip">transit <button type="button" aria-label="Remove tag transit">×</button></span>
+          <input id="ns-tags" type="text" placeholder="Add a tag…">
+        </div>
+        <div class="field__hint">Press Enter to add. Tags route the story to the right desk.</div>
+      </div>
+    </form>
+  </div>
+  <div class="drawer__foot">
+    <button class="btn btn--ghost" data-drawer-close>Cancel</button>
+    <button class="btn btn--primary" data-drawer-close
+      data-toast="Story filed to Pitched" data-toast-title="Saved" data-toast-variant="success">Save Story</button>
+  </div>
+</div>
+
+<!-- Command palette -->
+<div class="command" data-command role="dialog" aria-modal="true" aria-label="Command palette" hidden>
+  <div class="command__search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="Search…" aria-label="Command input"><kbd>ESC</kbd></div>
+  <div class="command__list">
+    <div class="command__group-label">Navigate</div>
+    <button class="command__item" data-href="../index.html">Back to Hub</button>
+    <button class="command__item" data-href="dashboard.html">Analytics Desk</button>
+    <button class="command__item" data-href="inbox.html">The Wire (Inbox)</button>
+    <button class="command__item" data-href="front-page.html">Front Page</button>
+    <div class="command__group-label">Commands</div>
+    <button class="command__item" data-action="toggle-theme">Toggle Day / Night Edition</button>
+  </div>
+  <div class="command__empty" hidden>No matching entry.</div>
+  <div class="command__foot"><span><kbd>↑</kbd><kbd>↓</kbd> nav</span><span><kbd>↵</kbd> select</span><span><kbd>esc</kbd> close</span></div>
+</div>
+
+<script src="../app.js" defer></script>
+<script>
+(function () {
+  var board = document.getElementById('board');
+  if (!board) return;
+
+  var dragging = null;
+
+  function updateCounts() {
+    var cols = board.querySelectorAll('.kcol');
+    cols.forEach(function (col) {
+      var stack = col.querySelector('[data-stack]');
+      var count = col.querySelector('[data-count]');
+      if (stack && count) {
+        count.textContent = String(stack.querySelectorAll('.kanban-card').length);
+      }
+    });
+  }
+
+  // Cards
+  board.querySelectorAll('.kanban-card').forEach(function (card) {
+    card.addEventListener('dragstart', function (e) {
+      dragging = card;
+      card.classList.add('is-dragging');
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('text/plain', card.querySelector('.kanban-card__id') ? card.querySelector('.kanban-card__id').textContent : ''); } catch (err) {}
+      }
+    });
+    card.addEventListener('dragend', function () {
+      if (dragging) dragging.classList.remove('is-dragging');
+      dragging = null;
+      board.querySelectorAll('.kcol.is-dropzone').forEach(function (c) { c.classList.remove('is-dropzone'); });
+    });
+  });
+
+  // Columns
+  board.querySelectorAll('.kcol').forEach(function (col) {
+    var stack = col.querySelector('[data-stack]');
+
+    col.addEventListener('dragover', function (e) {
+      if (!dragging) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      col.classList.add('is-dropzone');
+    });
+
+    col.addEventListener('dragleave', function (e) {
+      // only clear when leaving the column entirely
+      if (!col.contains(e.relatedTarget)) col.classList.remove('is-dropzone');
+    });
+
+    col.addEventListener('drop', function (e) {
+      e.preventDefault();
+      col.classList.remove('is-dropzone');
+      if (!dragging || !stack) return;
+      if (dragging.parentNode === stack) return; // dropped in same column
+
+      stack.appendChild(dragging);
+      updateCounts();
+
+      var name = col.getAttribute('data-col') || 'a column';
+      if (window.Ledger && typeof window.Ledger.toast === 'function') {
+        window.Ledger.toast({ title: 'Moved', text: 'Story moved to ' + name, variant: 'info' });
+      }
+    });
+  });
+
+  // Lightweight filter (header searchbar)
+  var filter = document.getElementById('board-filter');
+  if (filter) {
+    filter.addEventListener('input', function () {
+      var q = filter.value.trim().toLowerCase();
+      board.querySelectorAll('.kanban-card').forEach(function (card) {
+        var txt = card.textContent.toLowerCase();
+        card.style.display = (!q || txt.indexOf(q) !== -1) ? '' : 'none';
+      });
+    });
+  }
+
+  updateCounts();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analytics dashboard — Botanical Journal</title>
+<meta name="description" content="Greenhouse overview: a herbarium operations dashboard — pressings, drawers, dry-times and curator activity, pressed onto cream parchment.">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../semantic.css">
+<link rel="stylesheet" href="../base.css">
+<link rel="stylesheet" href="../components/index.css">
+<style>
+  /* ---- page-local app-shell layout (composes with tokens) ---- */
+  .app { display: flex; min-height: 100vh; }
+  .app__main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+  /* sidebar gets a sticky full-height column */
+  .app > .sidebar { position: sticky; top: 0; height: 100vh; z-index: var(--z-sticky); }
+
+  /* top bar inside the main column */
+  .topbar {
+    display: flex; align-items: center; gap: var(--space-4);
+    padding: var(--space-4) var(--space-6);
+    background: color-mix(in srgb, var(--nav-bg) 90%, transparent);
+    border-bottom: var(--border-1) solid var(--nav-border);
+    backdrop-filter: blur(8px);
+    position: sticky; top: 0; z-index: var(--z-raised);
+    min-height: 68px;
+  }
+  .topbar__title { font-family: var(--font-display); font-size: var(--text-xl); color: var(--color-text-strong); line-height: 1.1; white-space: nowrap; }
+  .topbar .searchbar { width: clamp(160px, 26vw, 320px); }
+  .topbar__tools { display: flex; align-items: center; gap: var(--space-3); margin-left: auto; }
+  .iconbtn {
+    width: 2.5rem; height: 2.5rem; display: grid; place-items: center;
+    border: var(--border-1) solid var(--color-border-strong);
+    border-radius: var(--radius-md); background: var(--color-surface);
+    color: var(--color-text); flex-shrink: 0;
+  }
+  .iconbtn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .iconbtn svg { width: 1.15rem; height: 1.15rem; }
+
+  /* content canvas */
+  .canvas { padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-6); flex: 1; background: var(--color-bg-tint); }
+  .canvas__grid { display: grid; grid-template-columns: 2fr 1fr; gap: var(--space-6); align-items: start; }
+  .canvas__split { display: grid; grid-template-columns: 1.4fr 1fr; gap: var(--space-6); align-items: start; }
+
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-5); }
+
+  /* generic panel card padding (the bars / donut / table sit in these) */
+  .panel { background: var(--card-bg); border: var(--card-border); border-radius: var(--card-radius); box-shadow: var(--card-shadow); padding: var(--space-6); position: relative; overflow: hidden; }
+  .panel__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-5); }
+  .panel__title { font-family: var(--font-display); font-size: var(--text-lg); color: var(--color-text-strong); line-height: 1.1; }
+
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); align-items: center; }
+  .donut-wrap { display: flex; align-items: center; justify-content: center; padding-block: var(--space-3); }
+
+  .meters { display: flex; flex-direction: column; gap: var(--space-4); }
+
+  .families { display: flex; flex-direction: column; gap: var(--space-3); }
+  .fam-row { display: flex; align-items: center; gap: var(--space-3); font-size: var(--text-sm); }
+  .fam-row .grow { min-width: 0; }
+  .fam-row .val { font-variant-numeric: tabular-nums; color: var(--color-text-muted); }
+
+  .menu-toggle { display: none; }
+
+  /* ---- responsive: collapse sidebar to a top strip under ~860px ---- */
+  @media (max-width: 1100px) { .canvas__grid { grid-template-columns: 1fr; } .canvas__split { grid-template-columns: 1fr; } .stats-row { grid-template-columns: repeat(2, 1fr); } .chart-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 860px) {
+    .app { flex-direction: column; }
+    .app > .sidebar { position: static; height: auto; width: 100%; border-right: 0; border-bottom: var(--border-1) solid var(--color-border); flex-direction: row; align-items: center; overflow-x: auto; }
+    .app > .sidebar.is-collapsed { width: 100%; }
+    .sidebar__head { border-bottom: 0; border-right: var(--border-1) solid var(--color-divider); white-space: nowrap; }
+    .sidebar__nav { flex-direction: row; padding: var(--space-2) var(--space-3); gap: var(--space-1); }
+    .sidebar__label, .sidebar__foot { display: none; }
+    .nav-item { white-space: nowrap; }
+    .nav-item.is-active::before { display: none; }
+    .menu-toggle { display: inline-flex; }
+    .topbar { flex-wrap: wrap; padding: var(--space-3) var(--space-4); }
+    .topbar .searchbar { order: 3; width: 100%; }
+    .topbar__crumb { display: none; }
+  }
+  @media (max-width: 560px) { .stats-row { grid-template-columns: 1fr; } .canvas { padding: var(--space-4); gap: var(--space-4); } }
+</style>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+
+<div class="app">
+
+  <!-- ============================ SIDEBAR ============================ -->
+  <aside class="sidebar" id="sidebar" aria-label="Primary">
+    <div class="sidebar__head">
+      <a href="../index.html" class="navbar__brand" style="font-size:var(--text-md);gap:var(--space-2)" aria-label="Botanical Journal — home">
+        <svg viewBox="0 0 32 32" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M16 29C16 19 14 9 19 3"/><path d="M16 22c-5 0-9-4-9-9M17 15c5 0 8-3 8-8"/></svg>
+        <span class="sidebar__brand">Herbarium</span>
+      </a>
+    </div>
+
+    <nav class="sidebar__nav" aria-label="Sections">
+      <span class="sidebar__label">Collection</span>
+
+      <a href="#" class="nav-item is-active" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M12 21C7 17 4 13 4 9a4 4 0 018 0 4 4 0 018 0c0 4-3 8-8 12Z" opacity=".0"/><path d="M12 3C8 7 6 11 6 15a6 6 0 0012 0c0-4-2-8-6-12Z"/><path d="M12 6c-2 3-3 6-3 9"/></svg>
+        <span>Overview</span>
+      </a>
+
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M12 21c-1-7-4-11-8-13 4-1 7 0 9 3"/><path d="M12 21c1-7 4-11 8-13-4-1-7 0-9 3"/><path d="M12 11v10"/></svg>
+        <span>Specimens</span>
+        <span class="badge badge--primary">2,480</span>
+      </a>
+
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M3 12h18M9 8.5v3M15 8.5v3"/></svg>
+        <span>Drawers</span>
+        <span class="badge badge--neutral">18</span>
+      </a>
+
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><path d="M8 14l2 2 4-4"/></svg>
+        <span>Calendar</span>
+        <span class="badge badge--accent">4</span>
+      </a>
+
+      <span class="sidebar__label">Team</span>
+
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0111 0"/><path d="M16 6.5a3 3 0 010 6M20.5 20a5 5 0 00-3.5-4.7"/></svg>
+        <span>Curators</span>
+        <span class="badge badge--neutral">7</span>
+      </a>
+
+      <a href="#" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19 12a7 7 0 00-.1-1.3l2-1.5-2-3.4-2.3.9a7 7 0 00-2.3-1.3L13.7 2h-3.4l-.3 2.4a7 7 0 00-2.3 1.3L5.4 4.8l-2 3.4 2 1.5A7 7 0 005 12c0 .4 0 .9.1 1.3l-2 1.5 2 3.4 2.3-.9a7 7 0 002.3 1.3l.3 2.4h3.4l.3-2.4a7 7 0 002.3-1.3l2.3.9 2-3.4-2-1.5c.1-.4.1-.9.1-1.3Z"/></svg>
+        <span>Settings</span>
+      </a>
+    </nav>
+
+    <div class="sidebar__foot">
+      <div class="row" style="gap:var(--space-3);align-items:center">
+        <span class="avatar avatar--sm avatar-status" aria-hidden="true">RP</span>
+        <div class="grow truncate">
+          <div class="text-sm text-strong truncate">R. Pressley</div>
+          <div class="text-xs text-muted truncate">Lead curator</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============================ MAIN ============================ -->
+  <div class="app__main">
+
+    <!-- ----------------- top bar ----------------- -->
+    <header class="topbar">
+      <button class="iconbtn menu-toggle" data-sidebar-toggle aria-label="Collapse sidebar" title="Collapse sidebar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+
+      <div>
+        <h1 class="topbar__title">Greenhouse overview</h1>
+        <nav class="breadcrumb topbar__crumb" aria-label="Breadcrumb">
+          <a href="../index.html">Herbarium</a>
+          <span class="breadcrumb__sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 6l6 6-6 6"/></svg></span>
+          <a href="#">Operations</a>
+          <span class="breadcrumb__sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 6l6 6-6 6"/></svg></span>
+          <span aria-current="page">Overview</span>
+        </nav>
+      </div>
+
+      <div class="topbar__tools">
+        <label class="searchbar" aria-label="Search the herbarium">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+          <input type="search" placeholder="Search specimens, drawers…">
+          <kbd>⌘K</kbd>
+        </label>
+
+        <button class="iconbtn" data-cmdk-open aria-label="Open command palette" title="Command palette">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M8 4H6a2 2 0 00-2 2v2m16 0V6a2 2 0 00-2-2h-2M4 16v2a2 2 0 002 2h2m8 0h2a2 2 0 002-2v-2"/></svg>
+        </button>
+
+        <button class="btn btn--icon" data-theme-toggle aria-pressed="false" aria-label="Toggle day / dusk theme">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+
+        <span class="avatar avatar-status" title="R. Pressley — Lead curator">RP</span>
+      </div>
+    </header>
+
+    <!-- ----------------- content canvas ----------------- -->
+    <main class="canvas" id="main">
+
+      <!-- ===== 4 stat cards ===== -->
+      <section class="stats-row" aria-label="Key figures">
+        <div class="stat" data-reveal>
+          <span class="stat__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 21c-1-7-4-11-8-13 4-1 7 0 9 3M12 21c1-7 4-11 8-13-4-1-7 0-9 3M12 8v13"/></svg></span>
+          <p class="stat__label">Specimens pressed</p>
+          <p class="stat__value"><span data-reveal data-countup="2480" data-decimals="0">0</span></p>
+          <p class="stat__delta stat__delta--up"><svg viewBox="0 0 24 24" width="14" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg> 12% this season</p>
+        </div>
+
+        <div class="stat" data-reveal>
+          <span class="stat__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M3 12h18M9 8.5v3M15 8.5v3"/></svg></span>
+          <p class="stat__label">Active drawers</p>
+          <p class="stat__value"><span data-reveal data-countup="18" data-decimals="0">0</span></p>
+          <p class="stat__delta stat__delta--up"><svg viewBox="0 0 24 24" width="14" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg> 2 added</p>
+        </div>
+
+        <div class="stat" data-reveal>
+          <span class="stat__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg></span>
+          <p class="stat__label">Avg dry time</p>
+          <p class="stat__value"><span data-reveal data-countup="6.4" data-decimals="1" data-suffix=" d">0</span></p>
+          <p class="stat__delta stat__delta--down"><svg viewBox="0 0 24 24" width="14" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg> 0.7 d faster</p>
+        </div>
+
+        <div class="stat" data-reveal>
+          <span class="stat__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.2 1 5.9L12 16.9 6.8 19.3l1-5.9L3.5 9.2l5.9-.9Z"/></svg></span>
+          <p class="stat__label">Curator rating</p>
+          <p class="stat__value"><span data-reveal data-countup="4.9" data-decimals="1">0</span></p>
+          <p class="stat__delta stat__delta--up"><svg viewBox="0 0 24 24" width="14" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg> 0.2 vs last yr</p>
+        </div>
+      </section>
+
+      <!-- ===== bar chart + donut/meters ===== -->
+      <section class="canvas__grid">
+
+        <!-- bar chart card -->
+        <article class="panel has-corner-sprig" data-reveal>
+          <span class="corner-sprig corner-sprig--tr corner-sprig--leaf" aria-hidden="true"></span>
+          <div class="panel__head">
+            <div>
+              <span class="label">Pressings by month</span>
+              <h2 class="panel__title">Pressings by month</h2>
+            </div>
+            <div class="segmented" role="group" data-segmented aria-label="Range">
+              <button class="segmented__option" aria-pressed="false" data-value="week" data-target="week">Week</button>
+              <button class="segmented__option" aria-pressed="true" data-value="month" data-target="month">Month</button>
+              <button class="segmented__option" aria-pressed="false" data-value="quarter" data-target="quarter">Quarter</button>
+            </div>
+          </div>
+
+          <!-- Month view (default) -->
+          <div data-seg-panel="month">
+            <div class="bars" aria-hidden="true">
+              <div class="bars__col"><div class="bars__bar" style="height:42%"></div><span class="bars__label">Jan</span></div>
+              <div class="bars__col"><div class="bars__bar" style="height:55%"></div><span class="bars__label">Feb</span></div>
+              <div class="bars__col"><div class="bars__bar" style="height:38%"></div><span class="bars__label">Mar</span></div>
+              <div class="bars__col"><div class="bars__bar" style="height:68%"></div><span class="bars__label">Apr</span></div>
+              <div class="bars__col"><div class="bars__bar" style="height:82%"></div><span class="bars__label">May</span></div>
+              <div class="bars__col"><div class="bars__bar bars__bar--accent" style="height:100%"></div><span class="bars__label">Jun</span></div>
+              <div class="bars__col"><div class="bars__bar" style="height:74%"></div><span class="bars__label">Jul</span></div>
+              <div class="bars__col"><div class="bars__bar" style="height:61%"></div><span class="bars__label">Aug</span></div>
+            </div>
+          </div>
+
+          <!-- Week view -->
+          <div data-seg-panel="week" hidden>
+            <div class="bars" aria-hidden="true">
+              <div class="bars__col"><div class="bars__bar" style="height:30%"></div><span class="bars__label">Mon</span></div>
+              <div class="bars__col"><div class="bars__bar" style="height:52%"></div><span class="bars__label">Tue</span></div>
+              <div class="bars__col"><div class="bars__bar" style="height:46%"></div><span class="bars__label">Wed</span></div>
+              <div class="bars__col"><div class="bars__bar bars__bar--accent" style="height:100%"></div><span class="bars__label">Thu</span></div>
+              <div class="bars__col"><div class="bars__bar" style="height:71%"></div><span class="bars__label">Fri</span></div>
+              <div class="bars__col"><div class="bars__bar" style="height:34%"></div><span class="bars__label">Sat</span></div>
+              <div class="bars__col"><div class="bars__bar" style="height:18%"></div><span class="bars__label">Sun</span></div>
+              <div class="bars__col"><div class="bars__bar" style="height:0%"></div><span class="bars__label">—</span></div>
+            </div>
+          </div>
+
+          <!-- Quarter view -->
+          <div data-seg-panel="quarter" hidden>
+            <div class="bars" aria-hidden="true">
+              <div class="bars__col"><div class="bars__bar" style="height:48%"></div><span class="bars__label">Q1·24</span></div>
+              <div class="bars__col"><div class="bars__bar" style="height:66%"></div><span class="bars__label">Q2·24</span></div>
+              <div class="bars__col"><div class="bars__bar" style="height:58%"></div><span class="bars__label">Q3·24</span></div>
+              <div class="bars__col"><div class="bars__bar" style="height:72%"></div><span class="bars__label">Q4·24</span></div>
+              <div class="bars__col"><div class="bars__bar" style="height:84%"></div><span class="bars__label">Q1·25</span></div>
+              <div class="bars__col"><div class="bars__bar bars__bar--accent" style="height:100%"></div><span class="bars__label">Q2·25</span></div>
+              <div class="bars__col"><div class="bars__bar" style="height:90%"></div><span class="bars__label">Q3·25</span></div>
+              <div class="bars__col"><div class="bars__bar" style="height:64%"></div><span class="bars__label">Q4·25</span></div>
+            </div>
+          </div>
+
+          <hr class="rule mt-4 mb-4">
+          <div class="legend">
+            <span class="legend__item"><span class="legend__swatch" style="background:var(--color-primary)"></span> Monthly pressings</span>
+            <span class="legend__item"><span class="legend__swatch" style="background:var(--color-accent)"></span> Peak month (Jun · 312)</span>
+            <span class="legend__item text-muted">Total this year · <strong class="text-strong">2,480</strong></span>
+          </div>
+        </article>
+
+        <!-- donut + meters card -->
+        <article class="panel" data-reveal>
+          <div class="panel__head">
+            <div>
+              <span class="label">Collection by family</span>
+              <h2 class="panel__title">Collection by family</h2>
+            </div>
+          </div>
+
+          <div class="donut-wrap">
+            <div class="donut" style="--p1:38;--p2:64" role="img" aria-label="Collection by family: Asteraceae 38 percent, Rosaceae 26 percent, Fabaceae 36 percent">
+              <div class="donut__center"><strong>2,480</strong><span>specimens</span></div>
+            </div>
+          </div>
+
+          <div class="families mt-4">
+            <div class="fam-row"><span class="legend__swatch" style="background:var(--chart-1)"></span><span class="binomial grow truncate">Asteraceae</span><span class="val">38%</span></div>
+            <div class="fam-row"><span class="legend__swatch" style="background:var(--chart-2)"></span><span class="binomial grow truncate">Rosaceae</span><span class="val">26%</span></div>
+            <div class="fam-row"><span class="legend__swatch" style="background:var(--chart-3)"></span><span class="binomial grow truncate">Fabaceae</span><span class="val">22%</span></div>
+            <div class="fam-row"><span class="legend__swatch" style="background:var(--chart-5)"></span><span class="binomial grow truncate">Lamiaceae &amp; other</span><span class="val">14%</span></div>
+          </div>
+
+          <hr class="rule-double mt-5 mb-5">
+
+          <span class="label">Drawer capacity</span>
+          <div class="meters mt-3">
+            <div class="meter">
+              <div class="meter__head"><span>Cabinet A · ferns</span><span class="val">88%</span></div>
+              <div class="progress"><div class="progress__bar" style="width:88%"></div></div>
+            </div>
+            <div class="meter">
+              <div class="meter__head"><span>Cabinet B · blooms</span><span class="val">61%</span></div>
+              <div class="progress"><div class="progress__bar progress__bar--accent" style="width:61%"></div></div>
+            </div>
+            <div class="meter">
+              <div class="meter__head"><span>Cabinet C · grasses</span><span class="val">34%</span></div>
+              <div class="progress"><div class="progress__bar" style="width:34%"></div></div>
+            </div>
+            <div class="meter">
+              <div class="meter__head"><span>Quarantine drawer</span><span class="val">96%</span></div>
+              <div class="progress"><div class="progress__bar progress__bar--striped" style="width:96%;background:var(--color-warning)"></div></div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- ===== ledger table + (activity / calendar) ===== -->
+      <section class="canvas__split">
+
+        <!-- sortable ledger -->
+        <article data-reveal>
+          <div class="table-wrap">
+            <div class="row between wrap" style="gap:var(--space-3);padding:var(--space-5) var(--space-5) var(--space-4)">
+              <div>
+                <span class="label">Accession ledger</span>
+                <h2 class="panel__title" style="font-size:var(--text-lg)">Recent specimens</h2>
+              </div>
+              <span class="badge badge--neutral">Click a heading to sort</span>
+            </div>
+
+            <div class="table-scroll">
+              <table class="table table--striped" data-sortable aria-label="Recent specimens ledger">
+                <thead>
+                  <tr>
+                    <th class="sortable" aria-sort="none">Specimen <span class="sort-ind" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M6 11l6-6 6 6"/></svg></span></th>
+                    <th class="sortable" aria-sort="none">Family <span class="sort-ind" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M6 11l6-6 6 6"/></svg></span></th>
+                    <th class="sortable" aria-sort="none">Collected <span class="sort-ind" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M6 11l6-6 6 6"/></svg></span></th>
+                    <th class="sortable" aria-sort="none">Curator <span class="sort-ind" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M6 11l6-6 6 6"/></svg></span></th>
+                    <th>Status</th>
+                    <th class="sortable num" aria-sort="none">Pressed <span class="sort-ind" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M6 11l6-6 6 6"/></svg></span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="binomial">Digitalis purpurea</span><div class="text-xs text-muted">Foxglove · HB-2480</div></td>
+                    <td class="text-muted">Plantaginaceae</td>
+                    <td data-sort="2026-06-18">18 Jun 2026</td>
+                    <td>R. Pressley</td>
+                    <td><span class="badge badge--success badge--dot">Pressed</span></td>
+                    <td class="num">312</td>
+                  </tr>
+                  <tr>
+                    <td><span class="binomial">Lavandula angustifolia</span><div class="text-xs text-muted">English lavender · HB-2477</div></td>
+                    <td class="text-muted">Lamiaceae</td>
+                    <td data-sort="2026-06-15">15 Jun 2026</td>
+                    <td>M. Holloway</td>
+                    <td><span class="badge badge--warning badge--dot">Drying</span></td>
+                    <td class="num">148</td>
+                  </tr>
+                  <tr>
+                    <td><span class="binomial">Achillea millefolium</span><div class="text-xs text-muted">Yarrow · HB-2471</div></td>
+                    <td class="text-muted">Asteraceae</td>
+                    <td data-sort="2026-06-11">11 Jun 2026</td>
+                    <td>S. Okafor</td>
+                    <td><span class="badge badge--success badge--dot">Pressed</span></td>
+                    <td class="num">204</td>
+                  </tr>
+                  <tr>
+                    <td><span class="binomial">Rosa canina</span><div class="text-xs text-muted">Dog rose · HB-2466</div></td>
+                    <td class="text-muted">Rosaceae</td>
+                    <td data-sort="2026-06-07">7 Jun 2026</td>
+                    <td>R. Pressley</td>
+                    <td><span class="badge badge--info badge--dot">Mounted</span></td>
+                    <td class="num">96</td>
+                  </tr>
+                  <tr>
+                    <td><span class="binomial">Trifolium pratense</span><div class="text-xs text-muted">Red clover · HB-2459</div></td>
+                    <td class="text-muted">Fabaceae</td>
+                    <td data-sort="2026-05-30">30 May 2026</td>
+                    <td>J. Castellano</td>
+                    <td><span class="badge badge--danger badge--dot">Needs repress</span></td>
+                    <td class="num">61</td>
+                  </tr>
+                  <tr>
+                    <td><span class="binomial">Pteridium aquilinum</span><div class="text-xs text-muted">Bracken fern · HB-2451</div></td>
+                    <td class="text-muted">Dennstaedtiaceae</td>
+                    <td data-sort="2026-05-24">24 May 2026</td>
+                    <td>M. Holloway</td>
+                    <td><span class="badge badge--success badge--dot">Pressed</span></td>
+                    <td class="num">277</td>
+                  </tr>
+                  <tr>
+                    <td><span class="binomial">Calendula officinalis</span><div class="text-xs text-muted">Pot marigold · HB-2448</div></td>
+                    <td class="text-muted">Asteraceae</td>
+                    <td data-sort="2026-05-19">19 May 2026</td>
+                    <td>S. Okafor</td>
+                    <td><span class="badge badge--warning badge--dot">Drying</span></td>
+                    <td class="num">133</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="table-foot">
+              <span>Showing <strong class="text-strong">1–7</strong> of 248 accessions</span>
+              <nav class="pagination" aria-label="Ledger pages">
+                <button class="pagination__btn" disabled aria-label="Previous page"><svg viewBox="0 0 24 24" width="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+                <button class="pagination__btn is-active" aria-current="page">1</button>
+                <button class="pagination__btn">2</button>
+                <button class="pagination__btn">3</button>
+                <span class="pagination__ellipsis">…</span>
+                <button class="pagination__btn">36</button>
+                <button class="pagination__btn" aria-label="Next page"><svg viewBox="0 0 24 24" width="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+              </nav>
+            </div>
+          </div>
+        </article>
+
+        <!-- activity timeline + calendar -->
+        <div class="stack-6">
+          <article class="panel" data-reveal>
+            <div class="panel__head" style="margin-bottom:var(--space-4)">
+              <div>
+                <span class="label">Activity</span>
+                <h2 class="panel__title" style="font-size:var(--text-lg)">Press room log</h2>
+              </div>
+            </div>
+            <ol class="timeline">
+              <li class="timeline__item">
+                <span class="timeline__dot timeline__dot--done" aria-hidden="true"></span>
+                <div class="timeline__time">Today · 09:14</div>
+                <div class="timeline__title">312 Foxglove sheets pressed</div>
+                <p class="text-sm text-muted">Cabinet A · drawer 04 — by R. Pressley</p>
+              </li>
+              <li class="timeline__item">
+                <span class="timeline__dot timeline__dot--accent" aria-hidden="true"></span>
+                <div class="timeline__time">Today · 08:02</div>
+                <div class="timeline__title">Quarantine drawer near full</div>
+                <p class="text-sm text-muted">96% capacity — schedule a re-mount</p>
+              </li>
+              <li class="timeline__item">
+                <span class="timeline__dot" aria-hidden="true"></span>
+                <div class="timeline__time">Yesterday · 16:40</div>
+                <div class="timeline__title">New accession logged</div>
+                <p class="text-sm text-muted"><span class="binomial">Lavandula angustifolia</span> · HB-2477</p>
+              </li>
+              <li class="timeline__item">
+                <span class="timeline__dot" aria-hidden="true"></span>
+                <div class="timeline__time">15 Jun · 11:20</div>
+                <div class="timeline__title">Curator review complete</div>
+                <p class="text-sm text-muted">7 sheets approved by S. Okafor</p>
+              </li>
+            </ol>
+          </article>
+
+          <article class="calendar" data-reveal aria-label="Pressing calendar — June 2026">
+            <div class="calendar__head">
+              <button class="iconbtn" style="width:2rem;height:2rem" aria-label="Previous month"><svg viewBox="0 0 24 24" width="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>
+              <span class="calendar__month">June 2026</span>
+              <button class="iconbtn" style="width:2rem;height:2rem" aria-label="Next month"><svg viewBox="0 0 24 24" width="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+            </div>
+            <div class="calendar__grid">
+              <span class="calendar__dow">Su</span><span class="calendar__dow">Mo</span><span class="calendar__dow">Tu</span><span class="calendar__dow">We</span><span class="calendar__dow">Th</span><span class="calendar__dow">Fr</span><span class="calendar__dow">Sa</span>
+              <span class="calendar__day is-muted">31</span>
+              <span class="calendar__day">1</span>
+              <span class="calendar__day">2</span>
+              <span class="calendar__day has-event">3</span>
+              <span class="calendar__day">4</span>
+              <span class="calendar__day">5</span>
+              <span class="calendar__day">6</span>
+              <span class="calendar__day has-event">7</span>
+              <span class="calendar__day">8</span>
+              <span class="calendar__day">9</span>
+              <span class="calendar__day">10</span>
+              <span class="calendar__day has-event">11</span>
+              <span class="calendar__day">12</span>
+              <span class="calendar__day">13</span>
+              <span class="calendar__day">14</span>
+              <span class="calendar__day has-event">15</span>
+              <span class="calendar__day">16</span>
+              <span class="calendar__day">17</span>
+              <span class="calendar__day is-today">18</span>
+              <span class="calendar__day">19</span>
+              <span class="calendar__day">20</span>
+              <span class="calendar__day is-selected">21</span>
+              <span class="calendar__day">22</span>
+              <span class="calendar__day">23</span>
+              <span class="calendar__day">24</span>
+              <span class="calendar__day has-event">25</span>
+              <span class="calendar__day">26</span>
+              <span class="calendar__day">27</span>
+              <span class="calendar__day">28</span>
+              <span class="calendar__day">29</span>
+              <span class="calendar__day">30</span>
+              <span class="calendar__day is-muted">1</span>
+              <span class="calendar__day is-muted">2</span>
+              <span class="calendar__day is-muted">3</span>
+              <span class="calendar__day is-muted">4</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- footer -->
+      <footer class="text-faint text-xs" style="padding-top:var(--space-4)">
+        <hr class="rule-double mb-4">
+        <p>№ 17 · Botanical Journal · greenhouse operations pressed &amp; catalogued <span data-year>2026</span> · Herbarium digitalis</p>
+      </footer>
+    </main>
+  </div>
+</div>
+
+<!-- ============================ COMMAND PALETTE ============================ -->
+<div class="cmdk-backdrop" data-cmdk aria-hidden="true">
+  <div class="cmdk" role="dialog" aria-modal="true" aria-label="Command palette">
+    <div class="cmdk__input-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input class="cmdk__input" placeholder="Search specimens, pages, actions…" aria-label="Command input"></div>
+    <div class="cmdk__list">
+      <div class="cmdk__group" data-group="Pages"><div class="cmdk__group-label">Pages</div>
+        <div class="cmdk__item" href="../index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg> Herbarium home</div>
+        <div class="cmdk__item" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg> Analytics dashboard <kbd>G D</kbd></div>
+      </div>
+      <div class="cmdk__group" data-group="Actions"><div class="cmdk__group-label">Actions</div>
+        <div class="cmdk__item" data-action="toggle-theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"/></svg> Toggle day / dusk <kbd>⌘ J</kbd></div>
+        <div class="cmdk__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> New specimen</div>
+        <div class="cmdk__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Export collection</div>
+      </div>
+      <div class="cmdk__empty" style="display:none">No matches in the herbarium.</div>
+    </div>
+  </div>
+</div>
+
+<script src="../app.js"></script>
+</body>
+</html>

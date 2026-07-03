@@ -1,0 +1,1111 @@
+/* ============================================================================
+   THEME 07 — CYBERPUNK TERMINAL · components/nav.css
+   ----------------------------------------------------------------------------
+   NAVIGATION SYSTEM. Mirrors the canonical patterns from button.css:
+     · BEM-ish naming:  .ct-<block>  ·  __part  ·  --variant  ·  .is-state
+     · hard corners (radius 0), uppercase tracked mono labels
+     · neon glow is DECORATION; solid color carries the contrast (>=4.5:1)
+     · directory-tree / command-line / path metaphors throughout
+     · neon focus ring inherited from base.css; reduced-motion frozen globally
+   SEMANTIC tokens only — never the raw color ramps.
+
+   BLOCKS
+     1. .ct-navbar        sticky translucent top bar (brand · nav · actions)
+     2. .ct-sidebar       directory-tree vertical nav, collapsible to icons
+     3. .ct-breadcrumb    ~/path/style trail joined by "/" separators
+     4. .ct-pagination    [ n ] terminal-bracket page buttons
+     5. .ct-menu          dropdown panel  [role=menu] / [role=menuitem]
+     6. .ct-context-menu  fixed floating menu (JS-positioned) reusing .ct-menu
+     7. .ct-steps         boot-sequence wizard / stepper (h + vertical)
+     8. .ct-kbd           keycap glyph (shared by menus + command palette)
+     9. .ct-cmdk          command palette (⌘K) — terminal window overlay
+   ============================================================================ */
+
+
+/* ============================================================================
+   1. NAVBAR — sticky top bar
+   ----------------------------------------------------------------------------
+   Translucent --nav-bg + backdrop blur, bottom neon border. Brand sports a
+   blinking cursor accent; links are uppercase tracked with a neon underline
+   when current. Collapses into a hamburger panel under 768px.
+   ============================================================================ */
+.ct-navbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  min-height: 56px;
+  padding: 0 var(--space-6);
+  background: var(--nav-bg);
+  border-bottom: var(--border-1) solid var(--nav-border);
+  /* neon hairline glow sitting on the bottom border */
+  box-shadow: 0 1px 0 0 rgba(var(--rgb-cyan) / .12), 0 6px 18px rgba(0 0 0 / .35);
+  backdrop-filter: blur(10px) saturate(1.2);
+  -webkit-backdrop-filter: blur(10px) saturate(1.2);
+  font-family: var(--font-mono);
+}
+
+/* ---- brand: logo / wordmark with blinking cursor accent ------------------ */
+.ct-navbar__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+.ct-navbar__brand:hover { text-decoration: none; }
+/* leading prompt glyph in neon */
+.ct-navbar__brand::before {
+  content: "> ";
+  color: var(--color-primary);
+  text-shadow: var(--glow-primary);
+}
+/* a blinking cursor block trailing the wordmark */
+.ct-navbar__brand-cursor {
+  display: inline-block;
+  width: 0.55em;
+  height: 1.05em;
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  background: var(--color-primary);
+  box-shadow: var(--glow-primary);
+  animation: ct-cursor-blink 1.06s steps(1) infinite;
+}
+.ct-navbar__brand svg { width: 1.2em; height: 1.2em; flex-shrink: 0; }
+
+/* ---- horizontal link list ------------------------------------------------ */
+.ct-navbar__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 100%;
+  flex: 1 1 auto;
+}
+
+.ct-navbar__link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 56px;
+  padding: 0 var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+.ct-navbar__link:hover {
+  color: var(--color-primary-bright);
+  text-decoration: none;
+}
+/* underline accent — grows from center on hover, locked when current */
+.ct-navbar__link::after {
+  content: "";
+  position: absolute;
+  left: var(--space-3);
+  right: var(--space-3);
+  bottom: 0;
+  height: 2px;
+  background: var(--color-primary);
+  box-shadow: var(--glow-primary);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform var(--duration-base) var(--ease-out);
+}
+.ct-navbar__link:hover::after { transform: scaleX(0.6); }
+
+/* active / current page */
+.ct-navbar__link.is-active,
+.ct-navbar__link[aria-current="page"] {
+  color: var(--color-primary);
+  text-shadow: var(--glow-primary);
+}
+.ct-navbar__link.is-active::after,
+.ct-navbar__link[aria-current="page"]::after { transform: scaleX(1); }
+
+/* disabled link */
+.ct-navbar__link.is-disabled,
+.ct-navbar__link[aria-disabled="true"] {
+  color: var(--color-text-subtle);
+  pointer-events: none;
+  opacity: .6;
+}
+
+/* ---- right-hand action slot (buttons, avatar, status) -------------------- */
+.ct-navbar__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* ---- mobile hamburger toggle (hidden on desktop) ------------------------- */
+.ct-navbar__toggle {
+  display: none;           /* shown via media query < 768px */
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  color: var(--color-primary);
+  border: var(--border-1) solid var(--color-border);
+  background: transparent;
+  transition: border-color var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-fast) var(--ease-standard);
+}
+.ct-navbar__toggle:hover { border-color: var(--color-primary); box-shadow: var(--shadow-glow-sm); }
+.ct-navbar__toggle svg { width: 1.2em; height: 1.2em; }
+
+/* ---- responsive: collapse nav into a panel under 768px ------------------- */
+@media (max-width: 768px) {
+  .ct-navbar { gap: var(--space-3); padding-inline: var(--space-4); }
+  .ct-navbar__toggle { display: inline-flex; order: 3; margin-left: auto; }
+  .ct-navbar__actions { margin-left: 0; }
+
+  /* nav becomes a full-width drop panel below the bar */
+  .ct-navbar__nav {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    height: auto;
+    padding: var(--space-2);
+    background: var(--nav-bg);
+    border-bottom: var(--border-1) solid var(--nav-border);
+    box-shadow: var(--shadow-glow-md);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    /* collapsed by default; .is-open reveals */
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(-6px);
+    pointer-events: none;
+    transition: opacity var(--duration-fast) var(--ease-out),
+                transform var(--duration-fast) var(--ease-out),
+                visibility 0s linear var(--duration-fast);
+  }
+  .ct-navbar__nav.is-open {
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+    transition-delay: 0s;
+  }
+  .ct-navbar__link {
+    height: 44px;
+    padding-inline: var(--space-4);
+    border-left: var(--border-2) solid transparent;
+  }
+  .ct-navbar__link::after { content: none; }   /* underline → left tick on mobile */
+  .ct-navbar__link.is-active,
+  .ct-navbar__link[aria-current="page"] {
+    border-left-color: var(--color-primary);
+    background: var(--color-primary-weak);
+  }
+}
+
+
+/* ============================================================================
+   2. SIDEBAR — directory-tree vertical nav
+   ----------------------------------------------------------------------------
+   --sidebar-bg, right neon border. Sections read like path headers (~/APP).
+   Items get a prompt glyph (›), hover wash and a neon LEFT border + glow when
+   active. Nested trees indent with a faint vertical guide line. Collapses to a
+   56px icon-only rail via .is-collapsed.
+   ============================================================================ */
+.ct-sidebar {
+  --_sidebar-w: 248px;
+  display: flex;
+  flex-direction: column;
+  width: var(--_sidebar-w);
+  flex-shrink: 0;
+  height: 100%;
+  padding: var(--space-3) 0;
+  background: var(--sidebar-bg);
+  border-right: var(--border-1) solid var(--color-border);
+  box-shadow: 1px 0 0 0 rgba(var(--rgb-cyan) / .08);
+  font-family: var(--font-mono);
+  overflow-y: auto;
+  transition: width var(--duration-base) var(--ease-standard);
+}
+
+/* ---- section group ------------------------------------------------------- */
+.ct-sidebar__section { padding-block: var(--space-2); }
+.ct-sidebar__section + .ct-sidebar__section {
+  margin-top: var(--space-2);
+  border-top: var(--border-1) solid var(--color-divider);
+  padding-top: var(--space-3);
+}
+.ct-sidebar__section-label {
+  display: block;
+  padding: var(--space-1) var(--space-4) var(--space-2);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--color-text-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* path-header flavor — prefix with ~/ when the consumer omits it */
+.ct-sidebar__section-label--path::before {
+  content: "~/";
+  opacity: .7;
+}
+
+/* ---- nav item ------------------------------------------------------------ */
+.ct-sidebar__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-left: var(--border-thick) solid transparent;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-standard),
+              color var(--duration-fast) var(--ease-standard),
+              border-color var(--duration-fast) var(--ease-standard);
+}
+/* subtle prompt glyph leads every item */
+.ct-sidebar__item::before {
+  content: "›";
+  flex-shrink: 0;
+  width: 0.8em;
+  color: var(--color-text-subtle);
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+.ct-sidebar__item:hover {
+  background: var(--sidebar-item-hover);
+  color: var(--color-text);
+  text-decoration: none;
+}
+.ct-sidebar__item:hover::before { color: var(--color-primary); }
+
+/* active item — neon left rail + glow */
+.ct-sidebar__item.is-active,
+.ct-sidebar__item[aria-current="page"] {
+  background: var(--sidebar-item-active);
+  border-left-color: var(--color-primary);
+  color: var(--color-primary-bright);
+  box-shadow: inset 0 0 18px rgba(var(--rgb-cyan) / .08);
+}
+.ct-sidebar__item.is-active::before,
+.ct-sidebar__item[aria-current="page"]::before {
+  color: var(--color-primary);
+  text-shadow: var(--glow-primary);
+}
+
+/* disabled item */
+.ct-sidebar__item.is-disabled,
+.ct-sidebar__item[aria-disabled="true"] {
+  color: var(--color-text-subtle);
+  opacity: .55;
+  pointer-events: none;
+}
+
+.ct-sidebar__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 1.1em;
+  height: 1.1em;
+}
+.ct-sidebar__icon svg { width: 100%; height: 100%; }
+
+.ct-sidebar__label {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* trailing count / status badge */
+.ct-sidebar__badge {
+  flex-shrink: 0;
+  min-width: 1.5em;
+  padding: 0 var(--space-1);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  text-align: center;
+  color: var(--color-primary);
+  background: var(--color-primary-weak);
+  border: var(--border-1) solid rgba(var(--rgb-cyan) / .3);
+}
+.ct-sidebar__badge--accent {
+  color: var(--color-accent);
+  background: var(--color-accent-weak);
+  border-color: rgba(var(--rgb-magenta) / .3);
+}
+
+/* ---- nested tree --------------------------------------------------------- */
+.ct-sidebar__tree {
+  position: relative;
+  margin-left: var(--space-6);   /* indent under parent */
+}
+/* faint vertical guide line down the left of the nested group */
+.ct-sidebar__tree::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: var(--space-2);
+  left: 0;
+  width: 1px;
+  background: var(--color-divider);
+}
+.ct-sidebar__tree .ct-sidebar__item {
+  padding-left: var(--space-3);
+  font-size: var(--text-xs);
+}
+/* horizontal connector tick into each nested item */
+.ct-sidebar__tree .ct-sidebar__item::after {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--space-3));
+  top: 50%;
+  width: var(--space-2);
+  height: 1px;
+  background: var(--color-divider);
+}
+
+/* expand/collapse chevron on parent rows */
+.ct-sidebar__caret {
+  flex-shrink: 0;
+  width: 0.8em;
+  color: var(--color-text-subtle);
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+.ct-sidebar__item[aria-expanded="true"] .ct-sidebar__caret { transform: rotate(90deg); }
+
+/* ---- sidebar toggle (collapse rail) -------------------------------------- */
+.ct-sidebar__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) var(--space-3) 0;
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text-subtle);
+  border: var(--border-1) solid var(--color-border);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  transition: color var(--duration-fast) var(--ease-standard),
+              border-color var(--duration-fast) var(--ease-standard);
+}
+.ct-sidebar__toggle:hover { color: var(--color-primary); border-color: var(--color-primary); }
+.ct-sidebar__toggle svg { width: 1em; height: 1em; }
+
+/* ---- collapsed (icon-only) rail ------------------------------------------ */
+.ct-sidebar.is-collapsed { --_sidebar-w: 56px; }
+.ct-sidebar.is-collapsed .ct-sidebar__label,
+.ct-sidebar.is-collapsed .ct-sidebar__badge,
+.ct-sidebar.is-collapsed .ct-sidebar__caret,
+.ct-sidebar.is-collapsed .ct-sidebar__section-label,
+.ct-sidebar.is-collapsed .ct-sidebar__toggle span {
+  display: none;
+}
+.ct-sidebar.is-collapsed .ct-sidebar__item {
+  justify-content: center;
+  padding-inline: var(--space-2);
+}
+.ct-sidebar.is-collapsed .ct-sidebar__item::before { content: none; }
+/* nested trees flatten in the rail (no room to indent) */
+.ct-sidebar.is-collapsed .ct-sidebar__tree { margin-left: 0; }
+.ct-sidebar.is-collapsed .ct-sidebar__tree::before,
+.ct-sidebar.is-collapsed .ct-sidebar__tree .ct-sidebar__item::after { content: none; }
+.ct-sidebar.is-collapsed .ct-sidebar__toggle { justify-content: center; }
+
+
+/* ============================================================================
+   3. BREADCRUMB — ~/path/style trail
+   ----------------------------------------------------------------------------
+   Items joined by "/" separators; root renders "~". Current item is neon and
+   non-interactive. Mono, small, muted intermediate links.
+   ============================================================================ */
+.ct-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}
+
+.ct-breadcrumb__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  text-transform: lowercase;
+  letter-spacing: var(--tracking-wide);
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+.ct-breadcrumb__item:hover {
+  color: var(--color-primary-bright);
+  text-decoration: none;
+}
+
+/* root marker — render the home glyph */
+.ct-breadcrumb__item--root::before {
+  content: "~";
+  color: var(--color-primary);
+  margin-right: 2px;
+}
+
+/* separator — either an explicit __sep element or generated after items */
+.ct-breadcrumb__sep,
+.ct-breadcrumb__item:not(:last-child)::after {
+  content: "/";
+  margin-inline: var(--space-1);
+  color: var(--color-text-subtle);
+  opacity: .7;
+  pointer-events: none;
+}
+/* if a literal __sep element is supplied, suppress the generated one */
+.ct-breadcrumb__item:has(+ .ct-breadcrumb__sep)::after { content: none; }
+.ct-breadcrumb__sep {
+  margin-inline: 0;       /* element already provides spacing */
+}
+
+/* current page — neon, no link affordance */
+.ct-breadcrumb__item.is-current,
+.ct-breadcrumb__item[aria-current="page"] {
+  color: var(--color-primary);
+  text-shadow: var(--glow-primary);
+  pointer-events: none;
+  font-weight: var(--weight-medium);
+}
+
+.ct-breadcrumb__icon { width: 1em; height: 1em; flex-shrink: 0; }
+
+
+/* ============================================================================
+   4. PAGINATION — [ n ] terminal-bracket page buttons
+   ----------------------------------------------------------------------------
+   Square hard-cornered cells with neon hover borders. Active page is a neon
+   fill with dark text. Prev/next use chevrons; disabled ends and ellipsis are
+   non-interactive. Bracket flavor via ::before/::after on the active cell.
+   ============================================================================ */
+.ct-pagination {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-mono);
+}
+
+.ct-pagination__item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  background: transparent;
+  border: var(--border-1) solid var(--color-border);
+  transition: color var(--duration-fast) var(--ease-standard),
+              border-color var(--duration-fast) var(--ease-standard),
+              background var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-fast) var(--ease-standard);
+}
+.ct-pagination__item:hover {
+  color: var(--color-primary-bright);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-glow-sm);
+  text-decoration: none;
+}
+
+/* active page — neon fill + dark text + bracket flourish */
+.ct-pagination__item.is-active,
+.ct-pagination__item[aria-current="page"] {
+  position: relative;
+  color: var(--color-text-on-neon);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  font-weight: var(--weight-bold);
+  box-shadow: var(--shadow-glow-sm);
+}
+.ct-pagination__item.is-active::before { content: "["; margin-right: 1px; opacity: .55; }
+.ct-pagination__item.is-active::after  { content: "]"; margin-left: 1px; opacity: .55; }
+
+/* prev / next chevron cells */
+.ct-pagination__prev,
+.ct-pagination__next {
+  color: var(--color-text-subtle);
+  gap: var(--space-1);
+}
+.ct-pagination__prev::before { content: "‹"; font-size: 1.2em; }
+.ct-pagination__next::after  { content: "›"; font-size: 1.2em; }
+.ct-pagination__prev svg,
+.ct-pagination__next svg { width: 1em; height: 1em; }
+
+/* ellipsis — inert gap marker */
+.ct-pagination__ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 34px;
+  color: var(--color-text-subtle);
+  border: none;
+  pointer-events: none;
+  user-select: none;
+}
+.ct-pagination__ellipsis::before { content: "…"; }
+
+/* disabled (typically the prev/next ends) */
+.ct-pagination__item.is-disabled,
+.ct-pagination__item[aria-disabled="true"],
+.ct-pagination__item:disabled {
+  color: var(--color-text-subtle);
+  border-color: var(--color-border-muted);
+  background: transparent;
+  opacity: .45;
+  pointer-events: none;
+  box-shadow: none;
+}
+
+/* compact variant */
+.ct-pagination--sm .ct-pagination__item,
+.ct-pagination--sm .ct-pagination__ellipsis {
+  min-width: 26px;
+  height: 26px;
+  font-size: var(--text-2xs);
+  padding-inline: var(--space-1);
+}
+
+
+/* ============================================================================
+   8. KBD — keycap glyph (defined before menus, which consume it)
+   ----------------------------------------------------------------------------
+   Small mono keycap: surface-2 bg, neon-tinted border, subtle inset depth,
+   uppercase. Used by menu shortcuts and the command palette footer.
+   ============================================================================ */
+.ct-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6em;
+  height: 1.55em;
+  padding: 0 var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text-muted);
+  background: var(--color-surface-2);
+  border: var(--border-1) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 -2px 0 0 rgba(0 0 0 / .35), 0 1px 0 0 rgba(var(--rgb-cyan) / .08);
+  white-space: nowrap;
+}
+.ct-kbd + .ct-kbd { margin-left: 2px; }
+
+
+/* ============================================================================
+   5. MENU / DROPDOWN — terminal panel  [role=menu] / [role=menuitem]
+   ----------------------------------------------------------------------------
+   .ct-dropdown wraps a trigger + panel. The .ct-menu panel uses --color-surface,
+   neon border, shadow-glow-md, z var(--z-dropdown); toggled via .is-open with a
+   short rise. Items get a neon left tick on hover; danger variant in red.
+   ============================================================================ */
+.ct-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.ct-menu {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  z-index: var(--z-dropdown);
+  min-width: 200px;
+  max-width: 320px;
+  padding: var(--space-1);
+  background: var(--color-surface);
+  border: var(--border-1) solid var(--color-border-strong);
+  box-shadow: var(--shadow-glow-md);
+  font-family: var(--font-mono);
+  /* closed by default */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out),
+              visibility 0s linear var(--duration-fast);
+}
+.ct-menu.is-open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+  animation: ct-rise var(--duration-fast) var(--ease-out);
+  transition-delay: 0s;
+}
+/* right-aligned variant (panel hugs the right edge of the trigger) */
+.ct-menu--end { left: auto; right: 0; }
+
+/* group header inside the menu */
+.ct-menu__label {
+  display: block;
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--color-text-subtle);
+}
+
+/* menu item */
+.ct-menu__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-left: var(--border-2) solid transparent;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-standard),
+              color var(--duration-fast) var(--ease-standard),
+              border-color var(--duration-fast) var(--ease-standard);
+}
+.ct-menu__item:hover,
+.ct-menu__item:focus-visible,
+.ct-menu__item.is-active {
+  background: var(--color-surface-2);
+  border-left-color: var(--color-primary);
+  color: var(--color-primary-bright);
+  text-decoration: none;
+}
+
+.ct-menu__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 1.1em;
+  height: 1.1em;
+  color: var(--color-text-muted);
+}
+.ct-menu__icon svg { width: 100%; height: 100%; }
+.ct-menu__item:hover .ct-menu__icon { color: var(--color-primary); }
+
+.ct-menu__text { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; }
+
+/* trailing keyboard shortcut */
+.ct-menu__shortcut {
+  flex-shrink: 0;
+  margin-left: var(--space-4);
+  color: var(--color-text-subtle);
+  font-size: var(--text-2xs);
+}
+
+/* divider */
+.ct-menu__sep {
+  height: 0;
+  margin: var(--space-1) 0;
+  border: none;
+  border-top: var(--border-1) solid var(--color-divider);
+}
+
+/* danger item */
+.ct-menu__item--danger {
+  color: var(--color-danger-text);
+}
+.ct-menu__item--danger .ct-menu__icon { color: var(--color-danger-text); }
+.ct-menu__item--danger:hover,
+.ct-menu__item--danger:focus-visible,
+.ct-menu__item--danger.is-active {
+  background: var(--color-danger-weak);
+  border-left-color: var(--color-danger);
+  color: var(--color-danger);
+}
+.ct-menu__item--danger:hover .ct-menu__icon { color: var(--color-danger); }
+
+/* disabled item */
+.ct-menu__item.is-disabled,
+.ct-menu__item[aria-disabled="true"],
+.ct-menu__item:disabled {
+  color: var(--color-text-subtle);
+  opacity: .5;
+  pointer-events: none;
+}
+
+
+/* ============================================================================
+   6. CONTEXT MENU — fixed floating menu (JS-positioned)
+   ----------------------------------------------------------------------------
+   Reuses the .ct-menu visual language but is fixed-positioned; JS sets inline
+   top/left. Pair the markup with .ct-menu to inherit item/label/sep styles.
+   ============================================================================ */
+.ct-context-menu {
+  position: fixed;
+  top: 0;            /* JS overrides via inline top/left */
+  left: 0;
+  z-index: var(--z-popover);
+  min-width: 180px;
+  max-width: 320px;
+  padding: var(--space-1);
+  background: var(--color-surface);
+  border: var(--border-1) solid var(--color-border-strong);
+  box-shadow: var(--shadow-glow-md), var(--shadow-3);
+  font-family: var(--font-mono);
+  /* closed by default */
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(.98);
+  transform-origin: top left;
+  pointer-events: none;
+  transition: opacity var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out),
+              visibility 0s linear var(--duration-fast);
+}
+.ct-context-menu.is-open {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+  pointer-events: auto;
+  animation: ct-rise var(--duration-fast) var(--ease-out);
+  transition-delay: 0s;
+}
+
+
+/* ============================================================================
+   7. STEPS / WIZARD — boot-sequence stepper
+   ----------------------------------------------------------------------------
+   Horizontal by default. Each step has a square index badge (number, or ✓ when
+   complete) + label + optional desc. A connector line lights neon once passed.
+   States: .is-complete (filled + ✓ + lit line) · .is-current (neon ring + glow
+   + gentle non-strobing pulse) · .is-upcoming (muted). Variant --vertical.
+   ============================================================================ */
+.ct-steps {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  font-family: var(--font-mono);
+  counter-reset: ct-step;
+}
+
+.ct-steps__step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1 1 0%;
+  min-width: 0;
+  text-align: center;
+  padding-inline: var(--space-2);
+}
+
+/* connector line drawn to the LEFT of every step except the first */
+.ct-steps__step::before {
+  content: "";
+  position: absolute;
+  top: 16px;                 /* vertically centered on the 32px index badge */
+  right: 50%;
+  left: -50%;
+  height: 2px;
+  background: var(--color-border);
+  z-index: 0;
+}
+.ct-steps__step:first-child::before { content: none; }
+
+/* square index badge */
+.ct-steps__index {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-subtle);
+  background: var(--color-surface);
+  border: var(--border-1) solid var(--color-border);
+  transition: color var(--duration-base) var(--ease-standard),
+              border-color var(--duration-base) var(--ease-standard),
+              background var(--duration-base) var(--ease-standard),
+              box-shadow var(--duration-base) var(--ease-standard);
+}
+
+.ct-steps__label {
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text-muted);
+}
+.ct-steps__desc {
+  margin-top: var(--space-1);
+  font-size: var(--text-2xs);
+  color: var(--color-text-subtle);
+}
+
+/* ---- complete: neon-filled index, ✓, lit incoming connector ------------- */
+.ct-steps__step.is-complete .ct-steps__index {
+  color: var(--color-text-on-neon);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-glow-sm);
+}
+.ct-steps__step.is-complete .ct-steps__index::after { content: "✓"; }
+.ct-steps__step.is-complete .ct-steps__label { color: var(--color-text); }
+/* connector entering a complete OR current step is lit */
+.ct-steps__step.is-complete::before,
+.ct-steps__step.is-current::before {
+  background: var(--color-primary);
+  box-shadow: var(--glow-primary);
+}
+
+/* ---- current: neon ring + glow + gentle pulse (non-strobing) ------------ */
+.ct-steps__step.is-current .ct-steps__index {
+  color: var(--color-primary);
+  background: var(--color-surface);
+  border-color: var(--color-primary);
+  text-shadow: var(--glow-primary);
+  box-shadow: 0 0 0 1px var(--color-primary), var(--shadow-glow-md);
+  animation: ct-pulse 2s var(--ease-in-out) infinite;   /* slow, frozen by reduced-motion */
+}
+.ct-steps__step.is-current .ct-steps__label {
+  color: var(--color-primary);
+  text-shadow: var(--glow-primary);
+}
+
+/* ---- upcoming: muted (explicit, also the default look) ------------------ */
+.ct-steps__step.is-upcoming .ct-steps__index { color: var(--color-text-subtle); }
+
+/* hide a numeric child when ✓ is injected for completed steps */
+.ct-steps__step.is-complete .ct-steps__index > * { display: none; }
+
+/* ---- vertical variant ---------------------------------------------------- */
+.ct-steps--vertical {
+  flex-direction: column;
+  align-items: stretch;
+}
+.ct-steps--vertical .ct-steps__step {
+  flex: 0 0 auto;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--space-3);
+  text-align: left;
+  padding-inline: 0;
+  padding-bottom: var(--space-6);
+}
+.ct-steps--vertical .ct-steps__step:last-child { padding-bottom: 0; }
+/* connector becomes a vertical line on the left, below the badge */
+.ct-steps--vertical .ct-steps__step::before {
+  top: 32px;
+  bottom: -2px;
+  left: 16px;             /* centered on the 32px badge */
+  right: auto;
+  width: 2px;
+  height: auto;
+}
+.ct-steps--vertical .ct-steps__step:first-child::before { content: ""; }
+.ct-steps--vertical .ct-steps__step:last-child::before { content: none; }
+/* in vertical mode, a complete/current step lights the connector LEAVING it */
+.ct-steps--vertical .ct-steps__body { padding-top: var(--space-1); }
+.ct-steps--vertical .ct-steps__label { margin-top: 0; }
+
+
+/* ============================================================================
+   9. CMDK — command palette (⌘K)
+   ----------------------------------------------------------------------------
+   Full-screen overlay (z var(--z-cmdk)) anchoring a terminal window panel near
+   the top. >_ prompt + borderless big mono input with neon caret. Grouped
+   result list; highlighted item gets primary-weak bg + neon left bar + glow.
+   Empty + footer key-hint rows use .ct-kbd.
+   ============================================================================ */
+.ct-cmdk__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-cmdk);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12vh var(--space-4) var(--space-6);
+  background: var(--color-overlay);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  /* closed by default */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--duration-base) var(--ease-out),
+              visibility 0s linear var(--duration-base);
+}
+.ct-cmdk__overlay.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+
+/* the terminal window panel */
+.ct-cmdk__panel {
+  width: 100%;
+  max-width: 640px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--cmdk-bg);
+  border: var(--border-1) solid var(--color-border-strong);
+  box-shadow: var(--shadow-3), var(--shadow-glow-lg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-family: var(--font-mono);
+}
+.ct-cmdk__overlay.is-open .ct-cmdk__panel {
+  animation: ct-rise var(--duration-base) var(--ease-out);
+}
+
+/* ---- input row: >_ prompt + borderless input + ESC hint ------------------ */
+.ct-cmdk__input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: var(--border-1) solid var(--color-border);
+}
+.ct-cmdk__prompt {
+  flex-shrink: 0;
+  color: var(--color-primary);
+  text-shadow: var(--glow-primary);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  user-select: none;
+}
+.ct-cmdk__prompt::before { content: ">_"; }
+
+.ct-cmdk__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  color: var(--color-text);
+  background: transparent;
+  border: none;
+  outline: none;
+  caret-color: var(--input-caret);
+}
+.ct-cmdk__input::placeholder { color: var(--color-text-subtle); }
+
+.ct-cmdk__hint { flex-shrink: 0; }
+
+/* ---- result list --------------------------------------------------------- */
+.ct-cmdk__list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--space-2);
+}
+
+.ct-cmdk__group + .ct-cmdk__group { margin-top: var(--space-2); }
+.ct-cmdk__group-label {
+  display: block;
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--color-text-subtle);
+}
+
+.ct-cmdk__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-left: var(--border-2) solid transparent;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-standard),
+              color var(--duration-fast) var(--ease-standard),
+              border-color var(--duration-fast) var(--ease-standard);
+}
+/* highlighted (keyboard-selected) item */
+.ct-cmdk__item:hover,
+.ct-cmdk__item.is-active,
+.ct-cmdk__item[aria-selected="true"] {
+  background: var(--color-primary-weak);
+  border-left-color: var(--color-primary);
+  color: var(--color-primary-bright);
+  box-shadow: inset 0 0 18px rgba(var(--rgb-cyan) / .06);
+  text-decoration: none;
+}
+
+.ct-cmdk__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 1.15em;
+  height: 1.15em;
+  color: var(--color-text-subtle);
+}
+.ct-cmdk__icon svg { width: 100%; height: 100%; }
+.ct-cmdk__item.is-active .ct-cmdk__icon,
+.ct-cmdk__item[aria-selected="true"] .ct-cmdk__icon { color: var(--color-primary); }
+
+.ct-cmdk__label { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; }
+.ct-cmdk__shortcut { flex-shrink: 0; margin-left: var(--space-4); }
+
+/* ---- empty state --------------------------------------------------------- */
+.ct-cmdk__empty {
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+.ct-cmdk__empty::before {
+  content: "NO MATCHES :: ";
+  color: var(--color-warning-text);
+}
+
+/* ---- footer key-hint row ------------------------------------------------- */
+.ct-cmdk__footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-5);
+  border-top: var(--border-1) solid var(--color-border);
+  background: rgba(var(--rgb-ink) / .4);
+  font-size: var(--text-2xs);
+  color: var(--color-text-subtle);
+}
+.ct-cmdk__footer-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}

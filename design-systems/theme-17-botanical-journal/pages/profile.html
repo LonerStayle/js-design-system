@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profile & account — Botanical Journal</title>
+<meta name="description" content="The public herbarium profile of Marguerite Fenwick — fern specialist and curator at the Botanical Journal community. Specimens, drawers, activity, and contributions.">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../semantic.css">
+<link rel="stylesheet" href="../base.css">
+<link rel="stylesheet" href="../components/index.css">
+<style>
+  /* ===== page-local layout — composes with tokens only ===== */
+
+  /* Cover band */
+  .cover {
+    position: relative;
+    border: var(--border-1) solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background:
+      radial-gradient(120% 140% at 80% -10%, color-mix(in srgb, var(--color-primary) 22%, transparent), transparent 60%),
+      linear-gradient(160deg, color-mix(in srgb, var(--green-200) 60%, var(--color-bg)) 0%, var(--color-bg-tint) 70%);
+    box-shadow: var(--shadow-paper);
+  }
+  [data-theme="dark"] .cover {
+    background:
+      radial-gradient(120% 140% at 80% -10%, color-mix(in srgb, var(--color-primary) 26%, transparent), transparent 60%),
+      linear-gradient(160deg, color-mix(in srgb, var(--green-900) 70%, var(--color-bg)) 0%, var(--color-bg-tint) 75%);
+  }
+  .cover__scene { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .cover__band { position: relative; height: 230px; }
+  .cover__tag { position: absolute; top: var(--space-5); right: var(--space-6); z-index: 2; }
+
+  /* Identity strip overlapping the cover bottom edge */
+  .profile-id {
+    position: relative;
+    padding: 0 var(--space-6) var(--space-6);
+    margin-top: calc(-1 * var(--space-9));
+  }
+  .profile-id__top { display: flex; align-items: flex-end; gap: var(--space-5); flex-wrap: wrap; }
+  .profile-id__avatar { position: relative; z-index: 3; }
+  .profile-id__avatar .avatar { font-size: var(--text-3xl); background: var(--green-100); color: var(--green-800); }
+  .profile-id__meta { flex: 1 1 320px; min-width: 0; padding-bottom: var(--space-1); }
+  .profile-id__name { font-family: var(--font-display); font-size: var(--text-3xl); line-height: 1.02; color: var(--color-text-strong); font-weight: var(--weight-semibold); }
+  .profile-id__actions { display: flex; gap: var(--space-2); align-items: center; padding-bottom: var(--space-2); flex-wrap: wrap; }
+  .meta-row { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; color: var(--color-text-muted); font-size: var(--text-sm); margin-top: var(--space-2); }
+  .meta-row span { display: inline-flex; align-items: center; gap: var(--space-1); }
+  .meta-row svg { width: 1em; height: 1em; opacity: 0.8; }
+
+  /* Two-column body grid */
+  .profile-grid {
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    gap: var(--space-6);
+    align-items: start;
+  }
+  .profile-grid > aside { display: flex; flex-direction: column; gap: var(--space-5); position: sticky; top: 80px; }
+
+  /* Medallion achievement cards */
+  .medallions { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
+  .medallion {
+    text-align: center;
+    border: var(--border-1) solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    padding: var(--space-3) var(--space-2);
+    box-shadow: var(--shadow-xs);
+  }
+  .medallion__disc {
+    width: 2.6rem; height: 2.6rem; margin: 0 auto var(--space-2);
+    border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--color-accent-soft);
+    color: var(--color-accent-soft-fg);
+    border: var(--border-1) solid color-mix(in srgb, var(--color-accent) 35%, transparent);
+  }
+  .medallion__disc.is-green { background: var(--color-primary-soft); color: var(--color-primary-soft-fg); border-color: color-mix(in srgb, var(--color-primary) 30%, transparent); }
+  .medallion__disc.is-rose { background: var(--color-rose-soft); color: var(--color-rose-soft-fg); border-color: color-mix(in srgb, var(--color-rose) 35%, transparent); }
+  .medallion__disc svg { width: 1.35rem; height: 1.35rem; }
+  .medallion__name { font-family: var(--font-label); font-variant: small-caps; letter-spacing: var(--tracking-wide); font-size: var(--text-2xs); color: var(--color-text); line-height: 1.2; }
+
+  /* specimen mini-illustration in collection cards */
+  .specimen-plate { aspect-ratio: 16/11; background: var(--parchment-200); display: grid; place-items: center; position: relative; }
+  [data-theme="dark"] .specimen-plate { background: var(--color-bg-tint); }
+  .specimen-plate svg { width: 64%; height: 78%; color: var(--color-primary); }
+  .specimen-plate::after { content: ""; position: absolute; inset: 0; background: var(--paper-texture); opacity: 0.5; pointer-events: none; }
+
+  .contributions { display: flex; flex-direction: column; gap: var(--space-3); }
+  .contributions .bars { height: 150px; }
+
+  .contact-list { display: flex; flex-direction: column; gap: var(--space-2); }
+  .contact-list a { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--color-text); font-size: var(--text-sm); }
+  .contact-list a svg { width: 1.1em; height: 1.1em; color: var(--color-primary); }
+  .contact-list a:hover { color: var(--color-primary); }
+
+  /* Responsive */
+  @media (max-width: 860px) {
+    .profile-grid { grid-template-columns: 1fr; }
+    .profile-grid > aside { position: static; }
+    .cover__band { height: 180px; }
+    .profile-id { padding-inline: var(--space-4); }
+    .profile-id__name { font-size: var(--text-2xl); }
+    .medallions { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 520px) {
+    .profile-id__actions { width: 100%; }
+    .cover__tag { right: var(--space-3); top: var(--space-3); transform: scale(0.9); }
+  }
+</style>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+
+<!-- ============================ NAVBAR ============================ -->
+<header class="navbar">
+  <a class="navbar__brand" href="../index.html" aria-label="Botanical Journal home">
+    <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
+      <path d="M16 29C16 19 14 9 19 3"/><path d="M16 22c-5 0-9-4-9-9M17 15c5 0 8-3 8-8M16 18c-4-1-6-4-6-8"/>
+    </svg>
+    <span>Botanical Journal<br><span class="binomial">Herbarium digitalis</span></span>
+  </a>
+  <div class="navbar__spacer"></div>
+  <nav class="navbar__links" aria-label="Primary">
+    <a class="navbar__link" href="../index.html#components">Components</a>
+    <a class="navbar__link" href="dashboard.html">Dashboard</a>
+    <a class="navbar__link" href="kanban.html">Drawers</a>
+    <a class="navbar__link is-active" href="profile.html">Curators</a>
+  </nav>
+  <button class="btn btn--secondary btn--sm" data-cmdk-open aria-label="Open command palette">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+    <span>Search</span><kbd style="font-family:var(--font-mono);font-size:10px">⌘K</kbd>
+  </button>
+  <button class="btn btn--icon" data-theme-toggle aria-pressed="false" aria-label="Toggle day / dusk theme">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+  </button>
+  <div class="dropdown">
+    <button class="btn btn--icon" data-dropdown-trigger aria-haspopup="true" aria-label="Account settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    </button>
+    <div class="dropdown__panel">
+      <div class="menu">
+        <div class="menu__label">Marguerite Fenwick</div>
+        <button class="menu__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 21a8 8 0 10-16 0"/><circle cx="12" cy="7" r="4"/></svg> Edit profile</button>
+        <button class="menu__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.2-6.3-4.6L5.7 21 8 13.8 2 9.4h7.6z"/></svg> Saved collections</button>
+        <button class="menu__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4h16v12H5.2L4 18z"/></svg> Account settings</button>
+        <div class="menu__sep"></div>
+        <button class="menu__item" data-action="toggle-theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"/></svg> Toggle day / dusk</button>
+        <button class="menu__item menu__item--danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M16 17l5-5-5-5M21 12H9M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/></svg> Sign out</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+<section class="section" style="padding-block: var(--space-7) var(--space-9)">
+  <div class="container container--lg stack-6">
+
+    <!-- ============================ COVER + IDENTITY ============================ -->
+    <div class="cover" data-reveal>
+      <div class="cover__band">
+        <!-- layered botanical cover scene (decorative) -->
+        <svg class="cover__scene" viewBox="0 0 1200 230" preserveAspectRatio="xMidYMid slice" fill="none" aria-hidden="true">
+          <!-- far ferns, faint -->
+          <g stroke="var(--color-primary)" stroke-width="1" stroke-linecap="round" opacity="0.18">
+            <path d="M120 230C120 150 110 90 150 30"/>
+            <path d="M126 190c-20-4-34-18-40-40M132 190c18-7 28-24 28-46M130 150c-16-4-28-15-32-34M134 150c14-6 22-19 22-38"/>
+            <path d="M1080 230C1080 150 1090 90 1050 30"/>
+            <path d="M1074 190c20-4 34-18 40-40M1068 190c-18-7-28-24-28-46M1070 150c16-4 28-15 32-34M1066 150c-14-6-22-19-22-38"/>
+          </g>
+          <!-- mid trailing vine -->
+          <g stroke="var(--color-primary)" stroke-width="1.4" stroke-linecap="round" opacity="0.4">
+            <path d="M-20 70C140 30 220 120 380 80S680 20 840 70s260 60 380 12"/>
+            <path d="M210 56c-6-16 0-28 6-32 4 6 4 22-6 32ZM470 92c6 16 0 28-6 32-4-6-4-22 6-32ZM760 50c-6-16 0-28 6-32 4 6 4 22-6 32Z"/>
+          </g>
+          <!-- foreground large leaf + blooms -->
+          <g stroke="var(--color-primary)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity="0.85">
+            <path d="M600 250C600 170 560 110 640 50C700 90 700 170 660 240"/>
+            <path d="M640 210c-22-6-40-22-44-46M648 200c20-8 32-26 32-50M644 170c-20-4-36-18-40-40"/>
+          </g>
+          <g fill="var(--color-accent)" opacity="0.8">
+            <circle cx="500" cy="60" r="6"/><circle cx="512" cy="72" r="4"/><circle cx="488" cy="72" r="4"/><circle cx="500" cy="84" r="4"/>
+          </g>
+          <g fill="none" stroke="var(--color-rose)" stroke-width="1.4" opacity="0.7">
+            <path d="M900 120c-16-8-20-26-9-38 10 9 14 26 9 38Z"/>
+            <path d="M340 160c16-8 20-26 9-38-10 9-14 26-9 38Z"/>
+          </g>
+        </svg>
+        <span class="specimen-tag cover__tag">
+          <span class="specimen-tag__name">Polystichum munitum</span><br>
+          <span class="specimen-tag__meta">curator · drawer no. 017</span>
+        </span>
+      </div>
+
+      <div class="profile-id">
+        <div class="profile-id__top">
+          <div class="profile-id__avatar">
+            <span class="avatar avatar--xl avatar__ring" aria-hidden="true">MF</span>
+          </div>
+          <div class="profile-id__meta">
+            <h1 class="profile-id__name">Marguerite Fenwick</h1>
+            <p class="binomial" style="font-size:var(--text-md)">@fern.fenwick · she/her</p>
+            <div class="meta-row">
+              <span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                Portland, Oregon · Pacific Northwest
+              </span>
+              <span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="17" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg>
+                Joined 2023
+              </span>
+              <span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                Verified herbarium curator
+              </span>
+            </div>
+          </div>
+          <div class="profile-id__actions">
+            <button class="btn btn--primary" data-toast="You are now following Marguerite Fenwick" data-toast-title="Following" data-toast-variant="success">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+              Follow
+            </button>
+            <button class="btn btn--secondary" data-toast="Draft opened in your outbox" data-toast-title="Message" data-toast-variant="info">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              Message
+            </button>
+            <div class="dropdown">
+              <button class="btn btn--icon" data-dropdown-trigger aria-haspopup="true" aria-label="More actions">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+              </button>
+              <div class="dropdown__panel">
+                <div class="menu">
+                  <button class="menu__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><path d="M16 6l-4-4-4 4M12 2v13"/></svg> Share profile</button>
+                  <button class="menu__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg> Add to drawer</button>
+                  <button class="menu__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg> Mute updates</button>
+                  <div class="menu__sep"></div>
+                  <button class="menu__item menu__item--danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 22V4a1 1 0 011-1h13l-2 5 2 5H5"/></svg> Report</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row wrap" style="gap:var(--space-2); margin-top:var(--space-4)">
+          <span class="badge badge--primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 22C12 14 11 6 14 2M12 16c-3 0-5-2-5-5M13 12c3 0 4-2 4-5"/></svg> Fern specialist</span>
+          <span class="badge badge--accent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.2-6.3-4.6L5.7 21 8 13.8 2 9.4h7.6z"/></svg> Top curator 2025</span>
+          <span class="badge badge--success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg> Verified</span>
+          <span class="badge badge--neutral badge--dot">1,284 specimens</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================ STATS ============================ -->
+    <div class="grid grid-4" data-reveal>
+      <div class="stat">
+        <div class="stat__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 22C12 14 11 6 14 2M12 16c-3 0-5-2-5-5M13 12c3 0 4-2 4-5"/></svg></div>
+        <div class="stat__label">Specimens pressed</div>
+        <div class="stat__value"><span data-reveal data-countup="1284" data-prefix="" data-suffix="" data-decimals="0">0</span></div>
+        <div class="stat__delta stat__delta--up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg> 38 this season</div>
+      </div>
+      <div class="stat">
+        <div class="stat__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v6M9 14h.01"/></svg></div>
+        <div class="stat__label">Curated drawers</div>
+        <div class="stat__value"><span data-reveal data-countup="32" data-decimals="0">0</span></div>
+        <div class="stat__delta stat__delta--up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg> 2 new drawers</div>
+      </div>
+      <div class="stat">
+        <div class="stat__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13A4 4 0 0116 11"/></svg></div>
+        <div class="stat__label">Followers</div>
+        <div class="stat__value"><span data-reveal data-countup="4910" data-decimals="0">0</span></div>
+        <div class="stat__delta stat__delta--up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg> 214 this month</div>
+      </div>
+      <div class="stat">
+        <div class="stat__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.2-6.3-4.6L5.7 21 8 13.8 2 9.4h7.6z"/></svg></div>
+        <div class="stat__label">Curator rating</div>
+        <div class="stat__value"><span data-reveal data-countup="4.9" data-decimals="1">0</span></div>
+        <div class="stat__delta stat__delta--up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg> 482 reviews</div>
+      </div>
+    </div>
+
+    <!-- ============================ BODY GRID ============================ -->
+    <div class="profile-grid">
+
+      <!-- ---------- LEFT SIDEBAR ---------- -->
+      <aside>
+        <!-- About card -->
+        <section class="paper has-corner-sprig" style="padding:var(--space-5)" data-reveal aria-labelledby="about-h">
+          <span class="corner-sprig corner-sprig--tr corner-sprig--leaf" aria-hidden="true"></span>
+          <h2 id="about-h" class="label" style="margin-bottom:var(--space-2)">About</h2>
+          <p style="line-height:var(--leading-relaxed)">Pteridologist and field collector tending the journal's fern archive. I press, mount, and key out hardy ferns of temperate rainforests — with a soft spot for the leathery sword ferns that carpet the Cascades.</p>
+          <hr class="rule mt-4 mb-4">
+          <ul class="list list--leaf">
+            <li class="list__item"><span class="label" style="width:5.5rem">Focus</span><span class="grow">Pteridophytes &amp; bryophytes</span></li>
+            <li class="list__item"><span class="label" style="width:5.5rem">Region</span><span class="grow">Cascadia &amp; coastal temperate</span></li>
+            <li class="list__item"><span class="label" style="width:5.5rem">Tools</span><span class="grow">Plant press · 10× loupe · acid-free mounts</span></li>
+            <li class="list__item"><span class="label" style="width:5.5rem">Society</span><span class="grow">American Fern Society, no. 4471</span></li>
+          </ul>
+        </section>
+
+        <!-- Specialties card -->
+        <section class="paper" style="padding:var(--space-5)" data-reveal aria-labelledby="spec-h">
+          <h2 id="spec-h" class="label" style="margin-bottom:var(--space-3)">Specialties</h2>
+          <div class="chips" style="border:0; padding:0; gap:var(--space-2)">
+            <span class="chip">Sword ferns</span>
+            <span class="chip">Maidenhair</span>
+            <span class="chip">Bracken</span>
+            <span class="chip">Spleenworts</span>
+            <span class="chip">Polypody</span>
+            <span class="chip">Liverworts</span>
+            <span class="chip">Spore keys</span>
+            <span class="chip">Field pressing</span>
+          </div>
+        </section>
+
+        <!-- Achievements / medallions -->
+        <section class="paper" style="padding:var(--space-5)" data-reveal aria-labelledby="ach-h">
+          <h2 id="ach-h" class="label" style="margin-bottom:var(--space-3)">Achievements</h2>
+          <div class="medallions">
+            <div class="medallion">
+              <div class="medallion__disc is-green" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 22C12 14 11 6 14 2M12 16c-3 0-5-2-5-5"/></svg></div>
+              <div class="medallion__name">1k Pressed</div>
+            </div>
+            <div class="medallion">
+              <div class="medallion__disc" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l2.4 7.4H22l-6 4.4 2.3 7.2-6.3-4.6L5.7 21 8 13.8 2 9.4h7.6z"/></svg></div>
+              <div class="medallion__name">Top Curator</div>
+            </div>
+            <div class="medallion">
+              <div class="medallion__disc is-rose" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="6"/><path d="M8.2 13.5L7 22l5-3 5 3-1.2-8.5"/></svg></div>
+              <div class="medallion__name">Type Find</div>
+            </div>
+            <div class="medallion">
+              <div class="medallion__disc is-green" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 6L9 17l-5-5"/></svg></div>
+              <div class="medallion__name">Verified</div>
+            </div>
+            <div class="medallion">
+              <div class="medallion__disc" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2v6M12 16v6M2 12h6M16 12h6"/><circle cx="12" cy="12" r="3"/></svg></div>
+              <div class="medallion__name">100 Day Streak</div>
+            </div>
+            <div class="medallion">
+              <div class="medallion__disc is-rose" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-9-8.4A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/><path d="M8 12l3 3 5-6"/></svg></div>
+              <div class="medallion__name">Mentor</div>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <!-- ---------- RIGHT MAIN ---------- -->
+      <div data-tabs data-reveal>
+        <div class="tabs">
+          <div class="tabs__list" role="tablist" aria-label="Curator sections">
+            <button class="tab" role="tab" id="tab-collection" aria-controls="panel-collection" aria-selected="true" tabindex="0">Collection</button>
+            <button class="tab" role="tab" id="tab-activity" aria-controls="panel-activity" aria-selected="false" tabindex="-1">Activity</button>
+            <button class="tab" role="tab" id="tab-about" aria-controls="panel-about" aria-selected="false" tabindex="-1">About</button>
+          </div>
+
+          <!-- COLLECTION PANEL -->
+          <div class="tabs__panel" role="tabpanel" id="panel-collection" aria-labelledby="tab-collection" tabindex="0">
+            <div class="row between wrap items-end mb-4" style="gap:var(--space-3)">
+              <p class="text-muted text-sm">Showing 6 of 1,284 pressed specimens · drawer “Cascadian ferns”</p>
+              <span class="badge badge--neutral">Most recent</span>
+            </div>
+            <div class="grid grid-3">
+
+              <!-- specimen 1 -->
+              <article class="card card--specimen has-corner-sprig">
+                <span class="corner-sprig corner-sprig--bl" aria-hidden="true"></span>
+                <div class="card__media specimen-plate">
+                  <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" aria-hidden="true"><path d="M32 60C32 40 30 20 36 6"/><path d="M33 50c-6-1-10-5-12-11M34 50c5-2 8-7 8-13M33 40c-5-1-9-4-10-10M34 40c4-2 7-6 7-12M34 30c-4-1-7-4-8-9M35 30c4-2 6-5 6-10M35 21c-3-1-5-3-6-7M36 21c3-1 4-4 4-8"/></svg>
+                </div>
+                <div class="card__header">
+                  <h3 class="card__title">Western sword fern</h3>
+                  <p class="binomial card__sub">Polystichum munitum</p>
+                </div>
+                <div class="card__body">
+                  <div class="row between items-center"><span class="badge badge--primary">Dryopteridaceae</span><span class="text-xs text-faint">pressed 14 May 2026</span></div>
+                  <span class="rating rating--readonly" aria-label="Specimen quality: 5 of 5 leaves">
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                  </span>
+                </div>
+              </article>
+
+              <!-- specimen 2 -->
+              <article class="card card--specimen has-corner-sprig">
+                <span class="corner-sprig corner-sprig--bl corner-sprig--leaf" aria-hidden="true"></span>
+                <div class="card__media specimen-plate">
+                  <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" aria-hidden="true"><path d="M32 6C18 18 14 34 18 52c14-2 26-12 30-30C46 12 40 8 32 6Z"/><path d="M30 14C28 28 24 40 19 50"/><path d="M30 22c4 2 8 1 12-2M28 32c5 2 10 1 15-3M26 42c5 1 10-1 14-5"/></svg>
+                </div>
+                <div class="card__header">
+                  <h3 class="card__title">Northern maidenhair</h3>
+                  <p class="binomial card__sub">Adiantum pedatum</p>
+                </div>
+                <div class="card__body">
+                  <div class="row between items-center"><span class="badge badge--primary">Pteridaceae</span><span class="text-xs text-faint">pressed 28 Apr 2026</span></div>
+                  <span class="rating rating--readonly" aria-label="Specimen quality: 5 of 5 leaves">
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                  </span>
+                </div>
+              </article>
+
+              <!-- specimen 3 -->
+              <article class="card card--specimen has-corner-sprig">
+                <span class="corner-sprig corner-sprig--bl" aria-hidden="true"></span>
+                <div class="card__media specimen-plate">
+                  <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" aria-hidden="true"><path d="M32 60C32 38 34 18 32 6"/><path d="M32 48c-9 0-16-7-17-18M32 48c9 0 16-7 17-18M32 34c-7 0-12-5-13-13M32 34c7 0 12-5 13-13M32 22c-5 0-8-3-9-8M32 22c5 0 8-3 9-8"/></svg>
+                </div>
+                <div class="card__header">
+                  <h3 class="card__title">Western brackenfern</h3>
+                  <p class="binomial card__sub">Pteridium aquilinum</p>
+                </div>
+                <div class="card__body">
+                  <div class="row between items-center"><span class="badge badge--primary">Dennstaedtiaceae</span><span class="text-xs text-faint">pressed 09 Apr 2026</span></div>
+                  <span class="rating rating--readonly" aria-label="Specimen quality: 4 of 5 leaves">
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                  </span>
+                </div>
+              </article>
+
+              <!-- specimen 4 -->
+              <article class="card card--specimen has-corner-sprig">
+                <span class="corner-sprig corner-sprig--bl corner-sprig--leaf" aria-hidden="true"></span>
+                <div class="card__media specimen-plate">
+                  <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" aria-hidden="true"><path d="M32 60C32 42 31 22 34 6"/><path d="M33 50c-7-2-11-7-12-15M34 50c6-3 9-9 9-17M33 38c-6-2-9-6-10-12M34 38c5-2 7-7 7-13"/></svg>
+                </div>
+                <div class="card__header">
+                  <h3 class="card__title">Deer fern</h3>
+                  <p class="binomial card__sub">Struthiopteris spicant</p>
+                </div>
+                <div class="card__body">
+                  <div class="row between items-center"><span class="badge badge--primary">Blechnaceae</span><span class="text-xs text-faint">pressed 22 Mar 2026</span></div>
+                  <span class="rating rating--readonly" aria-label="Specimen quality: 5 of 5 leaves">
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                  </span>
+                </div>
+              </article>
+
+              <!-- specimen 5 -->
+              <article class="card card--specimen has-corner-sprig">
+                <span class="corner-sprig corner-sprig--bl" aria-hidden="true"></span>
+                <div class="card__media specimen-plate">
+                  <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" aria-hidden="true"><path d="M22 58C28 44 28 24 20 8"/><path d="M42 58C36 44 36 24 44 8"/><path d="M24 44c-6-2-9-7-9-14M40 44c6-2 9-7 9-14M26 28c-5-2-7-6-7-11M38 28c5-2 7-6 7-11"/></svg>
+                </div>
+                <div class="card__header">
+                  <h3 class="card__title">Licorice fern</h3>
+                  <p class="binomial card__sub">Polypodium glycyrrhiza</p>
+                </div>
+                <div class="card__body">
+                  <div class="row between items-center"><span class="badge badge--primary">Polypodiaceae</span><span class="text-xs text-faint">pressed 03 Mar 2026</span></div>
+                  <span class="rating rating--readonly" aria-label="Specimen quality: 4 of 5 leaves">
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                  </span>
+                </div>
+              </article>
+
+              <!-- specimen 6 -->
+              <article class="card card--specimen has-corner-sprig">
+                <span class="corner-sprig corner-sprig--bl corner-sprig--leaf" aria-hidden="true"></span>
+                <div class="card__media specimen-plate">
+                  <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" aria-hidden="true"><path d="M32 60C32 40 30 22 36 6"/><path d="M33 48c-8-1-13-7-14-16M34 48c7-2 11-8 11-17M33 36c-6-1-10-5-11-12M34 36c5-2 8-6 8-12"/></svg>
+                </div>
+                <div class="card__header">
+                  <h3 class="card__title">Lady fern</h3>
+                  <p class="binomial card__sub">Athyrium filix-femina</p>
+                </div>
+                <div class="card__body">
+                  <div class="row between items-center"><span class="badge badge--primary">Athyriaceae</span><span class="text-xs text-faint">pressed 18 Feb 2026</span></div>
+                  <span class="rating rating--readonly" aria-label="Specimen quality: 5 of 5 leaves">
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                    <svg class="is-filled" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg>
+                  </span>
+                </div>
+              </article>
+
+            </div>
+            <div class="center mt-6">
+              <a class="btn btn--secondary" href="dashboard.html">View all 1,284 specimens
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              </a>
+            </div>
+          </div>
+
+          <!-- ACTIVITY PANEL -->
+          <div class="tabs__panel" role="tabpanel" id="panel-activity" aria-labelledby="tab-activity" tabindex="0" hidden>
+            <div class="paper" style="padding:var(--space-6)">
+              <h2 class="label mb-4">Recent activity</h2>
+              <ol class="timeline">
+                <li class="timeline__item">
+                  <span class="timeline__dot timeline__dot--done" aria-hidden="true"></span>
+                  <div class="timeline__time">Today · 09:42</div>
+                  <div class="timeline__title">Pressed a new specimen</div>
+                  <p class="text-muted text-sm">Added <span class="binomial">Polystichum munitum</span> to the “Cascadian ferns” drawer, keyed from a Forest Park collection.</p>
+                </li>
+                <li class="timeline__item">
+                  <span class="timeline__dot timeline__dot--accent" aria-hidden="true"></span>
+                  <div class="timeline__time">Yesterday · 16:05</div>
+                  <div class="timeline__title">Mounted &amp; verified</div>
+                  <p class="text-muted text-sm">Mounted <span class="binomial">Adiantum pedatum</span> on acid-free stock and confirmed the family determination as Pteridaceae.</p>
+                </li>
+                <li class="timeline__item">
+                  <span class="timeline__dot timeline__dot--done" aria-hidden="true"></span>
+                  <div class="timeline__time">3 days ago · 11:20</div>
+                  <div class="timeline__title">Followed a curator</div>
+                  <p class="text-muted text-sm">Started following <a class="link" href="profile.html">Edmund Thornwood</a>, moss specialist at the Olympic herbarium.</p>
+                </li>
+                <li class="timeline__item">
+                  <span class="timeline__dot" aria-hidden="true"></span>
+                  <div class="timeline__time">5 days ago · 14:48</div>
+                  <div class="timeline__title">Commented on a determination</div>
+                  <p class="text-muted text-sm">“Sori arrangement points to <span class="binomial">Struthiopteris</span> rather than <span class="binomial">Blechnum</span> — note the dimorphic fronds.”</p>
+                </li>
+                <li class="timeline__item">
+                  <span class="timeline__dot timeline__dot--accent" aria-hidden="true"></span>
+                  <div class="timeline__time">1 week ago · 08:30</div>
+                  <div class="timeline__title">Opened a new drawer</div>
+                  <p class="text-muted text-sm">Created the drawer “Coastal liverworts” and seeded it with 14 bryophyte sheets.</p>
+                </li>
+                <li class="timeline__item">
+                  <span class="timeline__dot timeline__dot--done" aria-hidden="true"></span>
+                  <div class="timeline__time">2 weeks ago · 19:12</div>
+                  <div class="timeline__title">Earned a badge</div>
+                  <p class="text-muted text-sm">Reached <strong>1,000 pressed specimens</strong> — unlocked the “1k Pressed” medallion.</p>
+                </li>
+              </ol>
+            </div>
+          </div>
+
+          <!-- ABOUT PANEL -->
+          <div class="tabs__panel" role="tabpanel" id="panel-about" aria-labelledby="tab-about" tabindex="0" hidden>
+            <div class="stack-6">
+              <section class="paper has-corner-sprig" style="padding:var(--space-6)" aria-labelledby="bio-h">
+                <span class="corner-sprig corner-sprig--tr corner-sprig--vine" aria-hidden="true"></span>
+                <h2 id="bio-h" class="h3 serif-display" style="font-family:var(--font-display);font-size:var(--text-xl);color:var(--color-text-strong)">A note from the curator</h2>
+                <p class="lead mt-3" style="max-width:62ch">I came to ferns the slow way — kneeling on wet basalt with a hand lens, trying to tell one delicate frond from another.</p>
+                <p class="mt-3" style="line-height:var(--leading-relaxed);max-width:64ch">Eleven years on, the journal's fern archive holds more than twelve hundred pressed sheets, each keyed, mounted, and cross-referenced against the regional flora. My work focuses on the pteridophytes of Cascadia: the sword ferns that shingle the forest floor, the maidenhairs that hang from seeping cliffs, and the licorice ferns that ride the mossy backs of bigleaf maples. Every sheet here carries a locality, a collection date, and an honest note on how confident I am about the determination.</p>
+                <div class="rule-sprig mt-5 mb-5"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" aria-hidden="true"><path d="M16 30C16 20 15 10 18 3"/><path d="M16 22c-4 0-7-3-7-7M17 16c4 0 6-3 6-7"/></svg></div>
+                <p style="line-height:var(--leading-relaxed);max-width:64ch">If you are new to keying ferns, message me — I keep a running set of field notes on spore arrangement and frond dimorphism, and I am always glad to look over a tricky sheet.</p>
+              </section>
+
+              <section class="paper" style="padding:var(--space-6)" aria-labelledby="contrib-h">
+                <div class="row between items-end mb-4 wrap" style="gap:var(--space-3)">
+                  <h2 id="contrib-h" class="label">Contributions by month</h2>
+                  <span class="badge badge--accent badge--dot">2025 – 2026 season</span>
+                </div>
+                <div class="contributions">
+                  <div class="bars" role="img" aria-label="Specimens pressed per month: Aug 18, Sep 24, Oct 31, Nov 22, Dec 14, Jan 9, Feb 27, Mar 35, Apr 41, May 38, Jun 29, with a peak of 41 in April.">
+                    <div class="bars__col"><div class="bars__bar" style="height:44%"></div><span class="bars__label">Aug</span></div>
+                    <div class="bars__col"><div class="bars__bar" style="height:59%"></div><span class="bars__label">Sep</span></div>
+                    <div class="bars__col"><div class="bars__bar" style="height:76%"></div><span class="bars__label">Oct</span></div>
+                    <div class="bars__col"><div class="bars__bar" style="height:54%"></div><span class="bars__label">Nov</span></div>
+                    <div class="bars__col"><div class="bars__bar" style="height:34%"></div><span class="bars__label">Dec</span></div>
+                    <div class="bars__col"><div class="bars__bar" style="height:22%"></div><span class="bars__label">Jan</span></div>
+                    <div class="bars__col"><div class="bars__bar" style="height:66%"></div><span class="bars__label">Feb</span></div>
+                    <div class="bars__col"><div class="bars__bar bars__bar--accent" style="height:85%"></div><span class="bars__label">Mar</span></div>
+                    <div class="bars__col"><div class="bars__bar bars__bar--accent" style="height:100%"></div><span class="bars__label">Apr</span></div>
+                    <div class="bars__col"><div class="bars__bar bars__bar--accent" style="height:93%"></div><span class="bars__label">May</span></div>
+                    <div class="bars__col"><div class="bars__bar" style="height:71%"></div><span class="bars__label">Jun</span></div>
+                  </div>
+                  <div class="legend mt-3">
+                    <span class="legend__item"><span class="legend__swatch" style="background:var(--color-primary)"></span> Off-season pressings</span>
+                    <span class="legend__item"><span class="legend__swatch" style="background:var(--color-accent)"></span> Spring collecting peak</span>
+                  </div>
+                </div>
+              </section>
+
+              <section class="paper" style="padding:var(--space-6)" aria-labelledby="contact-h">
+                <h2 id="contact-h" class="label mb-3">Contact &amp; links</h2>
+                <div class="contact-list">
+                  <a href="mailto:m.fenwick@herbarium.example"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg> m.fenwick@herbarium.example</a>
+                  <a href="../index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg> fenwick-ferns.example</a>
+                  <a href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 22C12 14 11 6 14 2M12 16c-3 0-5-2-5-5"/></svg> American Fern Society · member 4471</a>
+                  <a href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/></svg> Public collection catalogue</a>
+                </div>
+              </section>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+</main>
+
+<!-- ============================ FOOTER ============================ -->
+<footer class="footer" style="border-top: var(--border-2) double var(--color-border-strong); padding-block: var(--space-8); margin-top: var(--space-8)">
+  <div class="container">
+    <div class="row between wrap" style="gap:var(--space-5)">
+      <div class="stack-2">
+        <div class="navbar__brand" style="font-size:var(--text-lg)"><svg viewBox="0 0 32 32" width="24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M16 29C16 19 14 9 19 3"/><path d="M16 22c-5 0-9-4-9-9M17 15c5 0 8-3 8-8"/></svg> Botanical Journal</div>
+        <p class="text-muted text-sm" style="max-width:46ch">A field-journal design system. This is the public profile of a curator in the herbarium community — pure CSS, renders from <code class="mono text-xs">file://</code>.</p>
+      </div>
+      <div class="row row-5 wrap items-start">
+        <div class="stack-2"><span class="label">Curator</span><a class="link text-sm" href="profile.html">Collection</a><a class="link text-sm" href="profile.html">Drawers</a><a class="link text-sm" href="dashboard.html">Catalogue</a></div>
+        <div class="stack-2"><span class="label">Community</span><a class="link text-sm" href="../index.html">Herbarium home</a><a class="link text-sm" href="kanban.html">Boards</a><a class="link text-sm" href="inbox.html">Messages</a></div>
+      </div>
+    </div>
+    <hr class="rule-double mt-6 mb-4">
+    <p class="text-faint text-xs">№ 17 · Botanical Journal · curator profile · pressed &amp; catalogued <span data-year>2026</span> · Herbarium digitalis</p>
+  </div>
+</footer>
+
+<!-- ============================ COMMAND PALETTE ============================ -->
+<div class="cmdk-backdrop" data-cmdk aria-hidden="true">
+  <div class="cmdk" role="dialog" aria-modal="true" aria-label="Command palette">
+    <div class="cmdk__input-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input class="cmdk__input" placeholder="Search specimens, curators, actions…" aria-label="Command input"></div>
+    <div class="cmdk__list">
+      <div class="cmdk__group" data-group="Pages"><div class="cmdk__group-label">Pages</div>
+        <div class="cmdk__item" href="../index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg> Herbarium home</div>
+        <div class="cmdk__item" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg> Collection dashboard <kbd>G D</kbd></div>
+        <div class="cmdk__item" href="kanban.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="10" rx="1"/><rect x="17" y="4" width="4" height="14" rx="1"/></svg> Drawer board</div>
+      </div>
+      <div class="cmdk__group" data-group="Actions"><div class="cmdk__group-label">Actions</div>
+        <div class="cmdk__item" data-action="toggle-theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"/></svg> Toggle day / dusk <kbd>⌘ J</kbd></div>
+        <div class="cmdk__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg> Follow this curator</div>
+        <div class="cmdk__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Export collection</div>
+      </div>
+      <div class="cmdk__empty" style="display:none">No matches in the herbarium.</div>
+    </div>
+  </div>
+</div>
+
+<script src="../app.js"></script>
+</body>
+</html>

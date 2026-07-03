@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ONBOARDING // CYBER.TERM</title>
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../semantic.css">
+<link rel="stylesheet" href="../base.css">
+<link rel="stylesheet" href="../components/button.css">
+<link rel="stylesheet" href="../components/forms.css">
+<link rel="stylesheet" href="../components/card.css">
+<link rel="stylesheet" href="../components/display.css">
+<link rel="stylesheet" href="../components/table.css">
+<link rel="stylesheet" href="../components/feedback.css">
+<link rel="stylesheet" href="../components/nav.css">
+<style>
+  /* ---- onboarding-only layout — tokens only ---- */
+  .ob {
+    position: relative;
+    max-width: 860px;
+    margin-inline: auto;
+    padding: var(--space-10) var(--space-4) var(--space-12);
+  }
+  .ob__glow {
+    position: absolute; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(55% 45% at 18% 0%, rgba(var(--rgb-cyan) / .12), transparent 70%),
+      radial-gradient(45% 45% at 88% 12%, rgba(var(--rgb-magenta) / .10), transparent 70%);
+  }
+  .ob__inner { position: relative; z-index: 1; }
+
+  .ob__kicker { color: var(--color-primary); text-shadow: var(--glow-primary); }
+  .ob__head h1 {
+    font-size: clamp(1.9rem, 5vw, 3rem);
+    line-height: 1.05;
+    margin: var(--space-2) 0 var(--space-1);
+  }
+  .ob__head h1 .accent { color: var(--color-accent); text-shadow: var(--glow-accent); }
+
+  /* progress steps wrapper */
+  .ob__steps {
+    margin: var(--space-7) 0 var(--space-6);
+    padding: var(--space-4) var(--space-3);
+    background: var(--color-bg-2);
+    border: var(--border-1) solid var(--color-border);
+  }
+
+  /* terminal-window wizard card */
+  .ob__card { box-shadow: var(--shadow-glow-md); }
+  .ob__panel-meta {
+    display: flex; align-items: center; gap: var(--space-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-5);
+    padding-bottom: var(--space-4);
+    border-bottom: var(--border-1) dashed var(--color-divider);
+  }
+  .ob__panel-meta h2 {
+    font-size: var(--text-lg);
+    color: var(--color-text);
+    margin: 0;
+  }
+  .ob__panel-desc { font-size: var(--text-xs); color: var(--color-text-muted); }
+  .ob__panel-tag { margin-left: auto; }
+
+  /* integration toggle grid */
+  .ob__integrations {
+    display: grid;
+    gap: var(--space-3);
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .ob-int {
+    padding: var(--space-4);
+    background: var(--color-surface);
+    border: var(--border-1) solid var(--color-border);
+    transition: border-color var(--duration-fast) var(--ease-standard),
+                box-shadow var(--duration-fast) var(--ease-standard);
+  }
+  .ob-int:has(.ct-switch__input:checked) {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-glow-sm);
+  }
+  .ob-int__top { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
+  .ob-int__icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px; flex-shrink: 0;
+    color: var(--color-primary);
+    background: var(--color-bg-2);
+    border: var(--border-1) solid var(--color-border);
+  }
+  .ob-int:has(.ct-switch__input:checked) .ob-int__icon {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-glow-sm);
+  }
+  .ob-int__icon svg { width: 20px; height: 20px; }
+  .ob-int__name { font-size: var(--text-sm); color: var(--color-text); font-weight: var(--weight-bold); }
+  .ob-int__cat { font-size: var(--text-2xs); color: var(--color-text-subtle); letter-spacing: var(--tracking-wide); text-transform: uppercase; }
+  .ob-int__desc { font-size: var(--text-2xs); color: var(--color-text-muted); }
+  .ob-int__row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+
+  /* boot review (step 4) */
+  .ob-boot {
+    background: var(--color-bg-2);
+    border: var(--border-1) solid var(--color-border);
+    padding: var(--space-4);
+    font-size: var(--text-xs);
+    min-height: 150px;
+    margin-bottom: var(--space-5);
+  }
+  .ob-boot .ct-bootline { color: var(--color-text-muted); padding: 1px 0; }
+  .ob-boot__reveal { opacity: 0; transition: opacity .45s var(--ease-out); margin-top: var(--space-3); }
+
+  .ob__summary-h {
+    font-size: var(--text-2xs); letter-spacing: var(--tracking-widest);
+    text-transform: uppercase; color: var(--color-primary);
+    margin: 0 0 var(--space-2);
+  }
+
+  /* nav footer */
+  .ob__nav { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+  .ob__nav-status { font-size: var(--text-2xs); color: var(--color-text-subtle); letter-spacing: var(--tracking-wide); }
+
+  @media (max-width: 600px) {
+    .ob { padding-inline: var(--space-3); }
+    .ob__integrations { grid-template-columns: 1fr; }
+    .ob__steps { padding: var(--space-3) var(--space-2); }
+    /* steps shrink: hide desc + tighten labels on small screens */
+    .ct-steps__desc { display: none; }
+    .ct-steps__label { font-size: var(--text-2xs); letter-spacing: var(--tracking-tight); }
+    .ob__panel-tag { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">CONTENT 로 건너뛰기</a>
+<div class="crt-overlay" aria-hidden="true"></div>
+
+<header class="ct-navbar">
+  <div class="container flex items-center justify-between" style="height:60px;">
+    <a class="ct-navbar__brand" href="../index.html"><span class="t-accent">◢</span> CYBER<span class="t-primary">.</span>TERM</a>
+    <nav class="ct-navbar__nav" aria-label="주요">
+      <a class="ct-navbar__link" href="../index.html">HOME</a>
+      <a class="ct-navbar__link" href="dashboard.html">DASH</a>
+      <a class="ct-navbar__link" href="kanban.html">KANBAN</a>
+      <a class="ct-navbar__link" href="inbox.html">INBOX</a>
+      <a class="ct-navbar__link" href="settings.html">SETTINGS</a>
+    </nav>
+    <div class="ct-navbar__actions flex items-center gap-2">
+      <button class="ct-btn ct-btn--secondary ct-btn--sm" data-cmdk-open>SEARCH <span class="ct-kbd">⌘K</span></button>
+      <button class="ct-btn ct-btn--icon ct-btn--sm" data-theme-toggle aria-label="테마 전환"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+      <button class="ct-navbar__toggle" data-nav-toggle aria-label="메뉴" aria-expanded="false">≡</button>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="site-main">
+  <div class="ob">
+    <div class="ob__glow" aria-hidden="true"></div>
+    <div class="ob__inner">
+
+      <!-- ===================== HEAD ===================== -->
+      <header class="ob__head">
+        <span class="label ob__kicker">// SYSTEM INITIALIZATION · setup.init</span>
+        <h1 class="t-display">OPERATOR <span class="accent">ONBOARDING</span></h1>
+        <p class="t-muted" style="font-size:var(--text-sm);max-width:60ch">
+          새 워크스페이스를 부팅합니다. 네 단계를 거쳐 자격증명을 등록하고, 환경을 프로비저닝하고,
+          통합을 연결한 뒤 클러스터를 배포하세요.
+        </p>
+      </header>
+
+      <!-- ===================== STEPS (progress indicator only) ===================== -->
+      <nav class="ob__steps clip-corner-tr" aria-label="설치 진행">
+        <ol class="ct-steps" data-ob-steps>
+          <li class="ct-steps__step is-current">
+            <span class="ct-steps__index">1</span>
+            <span class="ct-steps__label">IDENTITY</span>
+            <span class="ct-steps__desc">자격증명</span>
+          </li>
+          <li class="ct-steps__step is-upcoming">
+            <span class="ct-steps__index">2</span>
+            <span class="ct-steps__label">WORKSPACE</span>
+            <span class="ct-steps__desc">환경 구성</span>
+          </li>
+          <li class="ct-steps__step is-upcoming">
+            <span class="ct-steps__index">3</span>
+            <span class="ct-steps__label">INTEGRATIONS</span>
+            <span class="ct-steps__desc">서비스 연결</span>
+          </li>
+          <li class="ct-steps__step is-upcoming">
+            <span class="ct-steps__index">4</span>
+            <span class="ct-steps__label">DEPLOY</span>
+            <span class="ct-steps__desc">부팅 · 배포</span>
+          </li>
+        </ol>
+      </nav>
+
+      <!-- ===================== WIZARD CARD ===================== -->
+      <section class="ct-card ct-card--glow ob__card" aria-label="설치 마법사">
+        <div class="ct-card__chrome">
+          <div class="ct-card__dots"><span class="ct-card__dot"></span><span class="ct-card__dot"></span><span class="ct-card__dot"></span></div>
+          <span class="ct-card__title ct-card__title--prompt">setup.init</span>
+          <span class="ct-card__actions label" data-ob-counter>01 / 04</span>
+        </div>
+
+        <div class="ct-card__body">
+
+          <!-- ============ STEP 1 · IDENTITY ============ -->
+          <div data-ob-panel="0">
+            <div class="ob__panel-meta">
+              <h2>IDENTITY</h2>
+              <span class="ob__panel-desc">운영자 자격증명을 등록하세요.</span>
+              <span class="ct-badge ct-badge--primary ct-badge--outline ob__panel-tag">STEP 01</span>
+            </div>
+
+            <div class="stack-6">
+              <div class="ct-field">
+                <label class="ct-field__label" for="ob-handle">OPERATOR HANDLE <span class="ct-field__req">*</span></label>
+                <div class="ct-input-wrap ct-input-wrap--prompt">
+                  <input id="ob-handle" class="ct-input ct-input--prompt" placeholder="root" value="ko_minseok" autocomplete="off">
+                </div>
+                <span class="ct-field__hint">3–24자 · 소문자/숫자/언더스코어</span>
+              </div>
+
+              <div class="ct-form-row ct-form-row--2">
+                <div class="ct-field">
+                  <label class="ct-field__label" for="ob-email">EMAIL <span class="ct-field__req">*</span></label>
+                  <input id="ob-email" class="ct-input" type="email" placeholder="ops@domain.io" value="minseok.ko@nexalabs.io" autocomplete="off">
+                </div>
+                <div class="ct-field">
+                  <label class="ct-field__label" for="ob-name">DISPLAY NAME</label>
+                  <input id="ob-name" class="ct-input" placeholder="표시 이름" value="고민석" autocomplete="off">
+                </div>
+              </div>
+
+              <div class="ct-field">
+                <label class="ct-field__label" for="ob-role">ROLE</label>
+                <div class="ct-select-wrap">
+                  <select id="ob-role" class="ct-select">
+                    <option>Platform Engineer</option>
+                    <option selected>Site Reliability Engineer</option>
+                    <option>Backend Developer</option>
+                    <option>DevOps Lead</option>
+                    <option>Security Analyst</option>
+                    <option>Founder / Admin</option>
+                  </select>
+                </div>
+                <span class="ct-field__hint">권한 프리셋이 역할에 따라 자동 적용됩니다.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============ STEP 2 · WORKSPACE ============ -->
+          <div data-ob-panel="1" hidden>
+            <div class="ob__panel-meta">
+              <h2>WORKSPACE</h2>
+              <span class="ob__panel-desc">팀이 거주할 환경을 구성합니다.</span>
+              <span class="ct-badge ct-badge--primary ct-badge--outline ob__panel-tag">STEP 02</span>
+            </div>
+
+            <div class="stack-6">
+              <div class="ct-form-row ct-form-row--2">
+                <div class="ct-field">
+                  <label class="ct-field__label" for="ob-ws">WORKSPACE NAME <span class="ct-field__req">*</span></label>
+                  <div class="ct-input-group">
+                    <input id="ob-ws" class="ct-input" placeholder="nexa-core" value="nexa-core" autocomplete="off">
+                    <span class="ct-input-group__addon ct-input-group__addon--suffix">.cyber.term</span>
+                  </div>
+                  <span class="ct-field__hint">팀 전용 서브도메인으로 사용됩니다.</span>
+                </div>
+                <div class="ct-field">
+                  <label class="ct-field__label" for="ob-region">REGION</label>
+                  <div class="ct-select-wrap">
+                    <select id="ob-region" class="ct-select">
+                      <option selected>ap-northeast-2 · Seoul</option>
+                      <option>ap-northeast-1 · Tokyo</option>
+                      <option>us-east-1 · N. Virginia</option>
+                      <option>eu-central-1 · Frankfurt</option>
+                      <option>ap-southeast-1 · Singapore</option>
+                    </select>
+                  </div>
+                  <span class="ct-field__hint">데이터 레지던시가 결정됩니다.</span>
+                </div>
+              </div>
+
+              <div class="ct-field">
+                <span class="ct-field__label" id="ob-team-lbl">TEAM SIZE</span>
+                <div class="ct-segmented ct-segmented--block" role="group" aria-labelledby="ob-team-lbl">
+                  <label class="ct-segmented__option"><input class="ct-segmented__input" type="radio" name="ob-team"> 1–5</label>
+                  <label class="ct-segmented__option"><input class="ct-segmented__input" type="radio" name="ob-team" checked> 6–20</label>
+                  <label class="ct-segmented__option"><input class="ct-segmented__input" type="radio" name="ob-team"> 21–50</label>
+                  <label class="ct-segmented__option"><input class="ct-segmented__input" type="radio" name="ob-team"> 50+</label>
+                </div>
+              </div>
+
+              <div class="ct-field">
+                <label class="ct-field__label" for="ob-invite">INVITE TEAM <span class="ct-field__req">*</span></label>
+                <div class="ct-chipinput" data-chipinput>
+                  <span class="ct-chipinput__chip">jiwon@nexalabs.io <button type="button" class="ct-chipinput__remove" aria-label="제거"></button></span>
+                  <span class="ct-chipinput__chip">han.dev@nexalabs.io <button type="button" class="ct-chipinput__remove" aria-label="제거"></button></span>
+                  <span class="ct-chipinput__chip">sre-oncall@nexalabs.io <button type="button" class="ct-chipinput__remove" aria-label="제거"></button></span>
+                  <input class="ct-chipinput__input" placeholder="이메일 입력 후 Enter" aria-label="초대 이메일 추가">
+                </div>
+                <span class="ct-field__hint">Enter 또는 쉼표로 추가 · Backspace 로 삭제</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============ STEP 3 · INTEGRATIONS ============ -->
+          <div data-ob-panel="2" hidden>
+            <div class="ob__panel-meta">
+              <h2>INTEGRATIONS</h2>
+              <span class="ob__panel-desc">파이프라인에 연결할 서비스를 활성화하세요.</span>
+              <span class="ct-badge ct-badge--primary ct-badge--outline ob__panel-tag">STEP 03</span>
+            </div>
+
+            <div class="ob__integrations">
+
+              <div class="ob-int">
+                <div class="ob-int__top">
+                  <span class="ob-int__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.92c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.53-1.34-1.3-1.7-1.3-1.7-1.06-.72.08-.71.08-.71 1.17.08 1.79 1.2 1.79 1.2 1.04 1.79 2.73 1.27 3.4.97.1-.76.41-1.27.74-1.56-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.43-2.69 5.41-5.25 5.69.42.36.8 1.08.8 2.18v3.23c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5z"/></svg></span>
+                  <div>
+                    <div class="ob-int__name">GitHub</div>
+                    <div class="ob-int__cat">SOURCE</div>
+                  </div>
+                </div>
+                <p class="ob-int__desc">PR 상태 동기화 · 커밋 트리거 · 코드 오너 매핑.</p>
+                <div class="ob-int__row" style="margin-top:var(--space-3)">
+                  <span class="ct-badge ct-badge--success ct-badge--dot ct-badge--sm">CONNECTED</span>
+                  <label class="ct-switch"><input class="ct-switch__input" type="checkbox" checked aria-label="GitHub 연결"><span class="ct-switch__track"><span class="ct-switch__knob"></span></span></label>
+                </div>
+              </div>
+
+              <div class="ob-int">
+                <div class="ob-int__top">
+                  <span class="ob-int__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5.04 15.12a2.52 2.52 0 0 1-2.52 2.52A2.52 2.52 0 0 1 0 15.12a2.52 2.52 0 0 1 2.52-2.52h2.52v2.52zm1.26 0a2.52 2.52 0 0 1 2.52-2.52 2.52 2.52 0 0 1 2.52 2.52v6.3A2.52 2.52 0 0 1 8.82 24a2.52 2.52 0 0 1-2.52-2.52v-6.3zM8.82 5.04A2.52 2.52 0 0 1 6.3 2.52 2.52 2.52 0 0 1 8.82 0a2.52 2.52 0 0 1 2.52 2.52v2.52H8.82zm0 1.26a2.52 2.52 0 0 1 2.52 2.52 2.52 2.52 0 0 1-2.52 2.52h-6.3A2.52 2.52 0 0 1 0 8.82 2.52 2.52 0 0 1 2.52 6.3h6.3zm10.14 2.52a2.52 2.52 0 0 1 2.52-2.52A2.52 2.52 0 0 1 24 8.82a2.52 2.52 0 0 1-2.52 2.52h-2.52V8.82zm-1.26 0a2.52 2.52 0 0 1-2.52 2.52 2.52 2.52 0 0 1-2.52-2.52v-6.3A2.52 2.52 0 0 1 15.18 0a2.52 2.52 0 0 1 2.52 2.52v6.3zm-2.52 10.14a2.52 2.52 0 0 1 2.52 2.52A2.52 2.52 0 0 1 15.18 24a2.52 2.52 0 0 1-2.52-2.52v-2.52h2.52zm0-1.26a2.52 2.52 0 0 1-2.52-2.52 2.52 2.52 0 0 1 2.52-2.52h6.3A2.52 2.52 0 0 1 24 15.18a2.52 2.52 0 0 1-2.52 2.52h-6.3z"/></svg></span>
+                  <div>
+                    <div class="ob-int__name">Slack</div>
+                    <div class="ob-int__cat">COMMS</div>
+                  </div>
+                </div>
+                <p class="ob-int__desc">알림 라우팅 · 배포 브로드캐스트 · /term 슬래시 커맨드.</p>
+                <div class="ob-int__row" style="margin-top:var(--space-3)">
+                  <span class="ct-badge ct-badge--success ct-badge--dot ct-badge--sm">CONNECTED</span>
+                  <label class="ct-switch"><input class="ct-switch__input" type="checkbox" checked aria-label="Slack 연결"><span class="ct-switch__track"><span class="ct-switch__knob"></span></span></label>
+                </div>
+              </div>
+
+              <div class="ob-int">
+                <div class="ob-int__top">
+                  <span class="ob-int__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 2.5 9 15.5a1.8 1.8 0 0 1-1.6 2.7H6.1a1.8 1.8 0 0 1-1.6-2.7l9-15.5"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
+                  <div>
+                    <div class="ob-int__name">Sentry</div>
+                    <div class="ob-int__cat">OBSERVABILITY</div>
+                  </div>
+                </div>
+                <p class="ob-int__desc">예외 캡처 · 릴리스 트래킹 · 소스맵 업로드.</p>
+                <div class="ob-int__row" style="margin-top:var(--space-3)">
+                  <span class="ct-badge ct-badge--neutral ct-badge--sm">OFF</span>
+                  <label class="ct-switch"><input class="ct-switch__input" type="checkbox" aria-label="Sentry 연결"><span class="ct-switch__track"><span class="ct-switch__knob"></span></span></label>
+                </div>
+              </div>
+
+              <div class="ob-int">
+                <div class="ob-int__top">
+                  <span class="ob-int__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 22 20H2L12 2z"/></svg></span>
+                  <div>
+                    <div class="ob-int__name">Vercel</div>
+                    <div class="ob-int__cat">DEPLOY</div>
+                  </div>
+                </div>
+                <p class="ob-int__desc">프리뷰 URL · 엣지 배포 · 빌드 로그 스트림.</p>
+                <div class="ob-int__row" style="margin-top:var(--space-3)">
+                  <span class="ct-badge ct-badge--success ct-badge--dot ct-badge--sm">CONNECTED</span>
+                  <label class="ct-switch"><input class="ct-switch__input" type="checkbox" checked aria-label="Vercel 연결"><span class="ct-switch__track"><span class="ct-switch__knob"></span></span></label>
+                </div>
+              </div>
+
+              <div class="ob-int">
+                <div class="ob-int__top">
+                  <span class="ob-int__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+                  <div>
+                    <div class="ob-int__name">PagerDuty</div>
+                    <div class="ob-int__cat">ON-CALL</div>
+                  </div>
+                </div>
+                <p class="ob-int__desc">인시던트 에스컬레이션 · 온콜 로테이션 동기화.</p>
+                <div class="ob-int__row" style="margin-top:var(--space-3)">
+                  <span class="ct-badge ct-badge--neutral ct-badge--sm">OFF</span>
+                  <label class="ct-switch"><input class="ct-switch__input" type="checkbox" aria-label="PagerDuty 연결"><span class="ct-switch__track"><span class="ct-switch__knob"></span></span></label>
+                </div>
+              </div>
+
+              <div class="ob-int">
+                <div class="ob-int__top">
+                  <span class="ob-int__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M8 8h8v8"/><path d="M8 16 16 8"/></svg></span>
+                  <div>
+                    <div class="ob-int__name">Linear</div>
+                    <div class="ob-int__cat">ISSUES</div>
+                  </div>
+                </div>
+                <p class="ob-int__desc">이슈 ↔ 커밋 링크 · 사이클 자동 진행 업데이트.</p>
+                <div class="ob-int__row" style="margin-top:var(--space-3)">
+                  <span class="ct-badge ct-badge--success ct-badge--dot ct-badge--sm">CONNECTED</span>
+                  <label class="ct-switch"><input class="ct-switch__input" type="checkbox" checked aria-label="Linear 연결"><span class="ct-switch__track"><span class="ct-switch__knob"></span></span></label>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ============ STEP 4 · DEPLOY ============ -->
+          <div data-ob-panel="3" hidden>
+            <div class="ob__panel-meta">
+              <h2>DEPLOY</h2>
+              <span class="ob__panel-desc">최종 검토 후 클러스터를 부팅합니다.</span>
+              <span class="ct-badge ct-badge--accent ct-badge--outline ob__panel-tag">STEP 04</span>
+            </div>
+
+            <!-- boot sequence (renders when this panel first becomes visible) -->
+            <div class="ob-boot t-mono" role="img" aria-label="프로비저닝 부팅 시퀀스">
+              <div data-ob-boot data-boot="allocating namespace :: nexa-core.cyber.term|provisioning region ap-northeast-2 [seoul]|mounting 4 operator credentials|linking integrations [github · slack · vercel · linear]|compiling pipeline manifest|warming edge nodes [12/12]|cluster handshake complete">
+                <div data-boot-out></div>
+              </div>
+              <div data-ob-boot-reveal class="ob-boot__reveal">
+                <span class="prompt"></span><span data-ob-typing data-text="all systems nominal — ready to initialize_" data-delay="400"></span>
+              </div>
+            </div>
+
+            <p class="ob__summary-h">// CONFIGURATION SUMMARY</p>
+            <ul class="ct-list ct-list--bordered">
+              <li class="ct-list__item">
+                <div class="ct-list__content"><div class="ct-list__title">OPERATOR</div><div class="ct-list__sub">ko_minseok · minseok.ko@nexalabs.io</div></div>
+                <span class="ct-list__meta"><span class="ct-badge ct-badge--primary ct-badge--sm">SRE</span></span>
+              </li>
+              <li class="ct-list__item">
+                <div class="ct-list__content"><div class="ct-list__title">WORKSPACE</div><div class="ct-list__sub">nexa-core.cyber.term · 6–20 seats</div></div>
+                <span class="ct-list__meta t-primary">ap-northeast-2</span>
+              </li>
+              <li class="ct-list__item">
+                <div class="ct-list__content"><div class="ct-list__title">TEAM INVITES</div><div class="ct-list__sub">jiwon · han.dev · sre-oncall</div></div>
+                <span class="ct-list__meta"><span class="ct-badge ct-badge--accent ct-badge--count">3</span></span>
+              </li>
+              <li class="ct-list__item">
+                <div class="ct-list__content"><div class="ct-list__title">INTEGRATIONS</div><div class="ct-list__sub">GitHub · Slack · Vercel · Linear</div></div>
+                <span class="ct-list__meta"><span class="ct-badge ct-badge--success ct-badge--dot ct-badge--sm">4 ACTIVE</span></span>
+              </li>
+            </ul>
+
+            <div class="ct-inline-note ct-inline-note--info mt-4">
+              <span class="ct-inline-note__icon">ℹ</span>
+              <span class="ct-inline-note__text">INITIALIZE 를 실행하면 워크스페이스가 프로비저닝되고 팀원에게 초대 메일이 발송됩니다.</span>
+            </div>
+          </div>
+
+        </div><!-- /card body -->
+
+        <!-- ===================== NAV FOOTER ===================== -->
+        <div class="ct-card__footer">
+          <div class="ob__nav">
+            <button class="ct-btn ct-btn--ghost" data-ob-back disabled>‹ BACK</button>
+            <span class="ob__nav-status" data-ob-status>IDENTITY 단계 — 1/4</span>
+            <button class="ct-btn ct-btn--primary" data-ob-next>NEXT ›</button>
+            <button class="ct-btn ct-btn--primary ct-btn--lg" data-ob-init hidden
+                    data-toast="워크스페이스 nexa-core 부팅 완료 · 초대 메일 3건 발송됨"
+                    data-toast-title="INITIALIZED"
+                    data-toast-variant="success">INITIALIZE ▸</button>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /inner -->
+  </div><!-- /ob -->
+</main>
+
+<script src="../app.js"></script>
+<script>
+  /* ---- onboarding wizard step controller (dependency-free) ---- */
+  (function () {
+    'use strict';
+    var stepsList = document.querySelector('[data-ob-steps]');
+    if (!stepsList) return;
+    var steps   = Array.prototype.slice.call(stepsList.querySelectorAll('.ct-steps__step'));
+    var panels  = Array.prototype.slice.call(document.querySelectorAll('[data-ob-panel]'));
+    var back    = document.querySelector('[data-ob-back]');
+    var next    = document.querySelector('[data-ob-next]');
+    var init    = document.querySelector('[data-ob-init]');
+    var counter = document.querySelector('[data-ob-counter]');
+    var status  = document.querySelector('[data-ob-status]');
+    var TOTAL   = panels.length;
+    var bootDone = false;
+    var cur = 0;
+
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+    // run the step-4 boot sequence once, on first reveal, using the same
+    // engine app.js exposes (data-boot semantics) but scoped to this panel.
+    function runBoot() {
+      if (bootDone) return; bootDone = true;
+      var box = document.querySelector('[data-ob-boot]');
+      var reveal = document.querySelector('[data-ob-boot-reveal]');
+      var typingEl = document.querySelector('[data-ob-typing]');
+      if (!box) return;
+      var out = box.querySelector('[data-boot-out]') || box;
+      var lines = (box.getAttribute('data-boot') || '').split('|').filter(Boolean);
+      var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var showReveal = function () {
+        if (reveal) reveal.style.opacity = '1';
+        if (typingEl) {
+          var text = typingEl.getAttribute('data-text') || '';
+          if (reduced) { typingEl.textContent = text; return; }
+          typingEl.textContent = ''; typingEl.classList.add('cursor');
+          var i = 0;
+          (function tick() {
+            if (i <= text.length) { typingEl.textContent = text.slice(0, i); i++; setTimeout(tick, 34); }
+            else { typingEl.classList.remove('cursor'); }
+          })();
+        }
+      };
+      if (reduced || !lines.length) {
+        out.innerHTML = lines.map(function (l) { return '<div class="ct-bootline"><span class="t-success">OK</span> ' + l + '</div>'; }).join('');
+        showReveal(); return;
+      }
+      out.innerHTML = '';
+      var n = 0;
+      (function tick() {
+        if (n < lines.length) {
+          var d = document.createElement('div');
+          d.className = 'ct-bootline';
+          d.innerHTML = '<span class="t-success">OK</span> ' + lines[n];
+          out.appendChild(d); n++;
+          setTimeout(tick, 150 + Math.random() * 130);
+        } else { setTimeout(showReveal, 260); }
+      })();
+    }
+
+    function render() {
+      // panels
+      panels.forEach(function (p, i) { p.hidden = (i !== cur); });
+      // steps: passed = complete, active = current, ahead = upcoming
+      steps.forEach(function (s, i) {
+        s.classList.remove('is-complete', 'is-current', 'is-upcoming');
+        if (i < cur) s.classList.add('is-complete');
+        else if (i === cur) s.classList.add('is-current');
+        else s.classList.add('is-upcoming');
+      });
+      // nav buttons
+      back.disabled = (cur === 0);
+      var last = (cur === TOTAL - 1);
+      next.hidden = last;
+      init.hidden = !last;
+      // chrome counter + status line
+      var labels = ['IDENTITY', 'WORKSPACE', 'INTEGRATIONS', 'DEPLOY'];
+      if (counter) counter.textContent = pad(cur + 1) + ' / ' + pad(TOTAL);
+      if (status) status.textContent = labels[cur] + ' 단계 — ' + (cur + 1) + '/' + TOTAL;
+      if (last) runBoot();
+    }
+
+    if (next) next.addEventListener('click', function () {
+      if (cur < TOTAL - 1) { cur++; render();
+        var card = document.querySelector('.ob__card');
+        if (card) card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    });
+    if (back) back.addEventListener('click', function () {
+      if (cur > 0) { cur--; render(); }
+    });
+
+    render();
+  })();
+</script>
+</body>
+</html>

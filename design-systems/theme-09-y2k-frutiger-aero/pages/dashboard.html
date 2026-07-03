@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>분석 대시보드 · Aero</title>
+  <link rel="stylesheet" href="../tokens.css" />
+  <link rel="stylesheet" href="../semantic.css" />
+  <link rel="stylesheet" href="../base.css" />
+  <link rel="stylesheet" href="../components/buttons.css" />
+  <link rel="stylesheet" href="../components/forms.css" />
+  <link rel="stylesheet" href="../components/forms-advanced.css" />
+  <link rel="stylesheet" href="../components/card.css" />
+  <link rel="stylesheet" href="../components/badge.css" />
+  <link rel="stylesheet" href="../components/data-display.css" />
+  <link rel="stylesheet" href="../components/overlay.css" />
+  <link rel="stylesheet" href="../components/feedback.css" />
+  <link rel="stylesheet" href="../components/nav.css" />
+  <link rel="stylesheet" href="../components/carousel.css" />
+
+  <style>
+    /* =====================================================================
+       PAGE-LOCAL LAYOUT — Aero Cloud 분석 대시보드 (tokens only)
+       ===================================================================== */
+
+    /* App shell: sidebar column + content column */
+    .app-shell {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-5);
+      max-width: var(--container-wide);
+      margin-inline: auto;
+      padding: var(--space-5) var(--space-6) var(--space-8);
+    }
+    .app-shell .sidebar {
+      position: sticky;
+      top: var(--space-5);
+      height: calc(100vh - var(--space-8));
+    }
+    .app-main {
+      flex: 1 1 auto;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+    }
+
+    /* Page title row */
+    .page-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+    }
+    .page-head__title {
+      font-family: var(--font-display);
+      font-size: var(--text-3xl);
+      font-weight: var(--weight-extrabold);
+      letter-spacing: var(--tracking-tight);
+      color: var(--color-text);
+      line-height: var(--leading-tight);
+    }
+    .page-head__sub {
+      margin-top: var(--space-1);
+      color: var(--color-text-muted);
+      font-size: var(--text-sm);
+    }
+    .page-head__actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      flex-wrap: wrap;
+    }
+
+    /* Date-range segmented button group as a real <form>-ish toggle */
+    .range-group .btn.is-active {
+      color: var(--color-primary-fg);
+      background: var(--btn-primary-bg);
+      text-shadow: 0 1px 1px rgba(10, 59, 97, 0.35);
+    }
+    .range-group .btn.is-active::before { opacity: 1; }
+
+    /* Stat grid */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-5);
+    }
+
+    /* Charts row: big chart + side cards */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1.7fr 1fr;
+      gap: var(--space-5);
+    }
+    .side-stack {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+    }
+
+    /* Generic card head used inside .card bodies */
+    .panel-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--space-3);
+      margin-bottom: var(--space-4);
+    }
+    .panel-head__title {
+      font-family: var(--font-display);
+      font-size: var(--text-xl);
+      font-weight: var(--weight-bold);
+      letter-spacing: var(--tracking-tight);
+      color: var(--color-text);
+    }
+    .panel-head__meta {
+      font-size: var(--text-xs);
+      font-weight: var(--weight-semibold);
+      color: var(--color-text-subtle);
+    }
+
+    /* Revenue chart */
+    .chart {
+      width: 100%;
+      height: 280px;
+      display: block;
+      overflow: visible;
+    }
+    .chart-legend {
+      display: flex;
+      gap: var(--space-5);
+      margin-top: var(--space-3);
+      font-size: var(--text-xs);
+      font-weight: var(--weight-semibold);
+      color: var(--color-text-muted);
+    }
+    .chart-legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .chart-legend i {
+      width: 0.85rem;
+      height: 0.85rem;
+      border-radius: var(--radius-full);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    }
+
+    /* Channel bar list */
+    .channels { display: flex; flex-direction: column; gap: var(--space-4); }
+    .channel-row {
+      display: grid;
+      grid-template-columns: 7.5rem 1fr 3.25rem;
+      align-items: center;
+      gap: var(--space-3);
+    }
+    .channel-row__label {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--text-sm);
+      font-weight: var(--weight-semibold);
+      color: var(--color-text);
+    }
+    .channel-row__label svg { width: 1.05rem; height: 1.05rem; color: var(--color-primary); flex: none; }
+    .channel-row__value {
+      text-align: right;
+      font-size: var(--text-sm);
+      font-weight: var(--weight-bold);
+      font-variant-numeric: tabular-nums;
+      color: var(--color-text);
+    }
+
+    /* Goal ring KPI */
+    .ring-kpi {
+      display: flex;
+      align-items: center;
+      gap: var(--space-5);
+    }
+    .ring-kpi__wrap { position: relative; flex: none; width: 132px; height: 132px; }
+    .ring-kpi__num {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+    }
+    .ring-kpi__pct {
+      font-family: var(--font-display);
+      font-size: var(--text-3xl);
+      font-weight: var(--weight-extrabold);
+      line-height: 1;
+      color: var(--color-text);
+    }
+    .ring-kpi__cap {
+      font-size: var(--text-2xs);
+      font-weight: var(--weight-bold);
+      letter-spacing: var(--tracking-wider);
+      text-transform: uppercase;
+      color: var(--color-text-subtle);
+    }
+    .ring-kpi__body { min-width: 0; }
+    .ring-kpi__body p { color: var(--color-text-muted); font-size: var(--text-sm); }
+
+    /* Table toolbar */
+    .table-card { display: flex; flex-direction: column; gap: var(--space-4); }
+    .table-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+      flex-wrap: wrap;
+    }
+    .table .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .table .cust { display: inline-flex; align-items: center; gap: var(--space-2); }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .charts-grid { grid-template-columns: 1fr; }
+      .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .app-shell {
+        flex-direction: column;
+        padding-inline: var(--space-4);
+      }
+      .app-shell .sidebar {
+        position: static;
+        width: 100%;
+        height: auto;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .app-main { width: 100%; }
+    }
+    @media (max-width: 560px) {
+      .stat-grid { grid-template-columns: 1fr; }
+      .channel-row { grid-template-columns: 6rem 1fr 3rem; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+  <div class="aero-sky" aria-hidden="true"></div>
+  <div class="aero-bubbles" data-bubbles="14" aria-hidden="true"></div>
+
+  <!-- ===================================================================
+       TOP NAVBAR (shared shell)
+       =================================================================== -->
+  <div class="container-wide" style="padding-inline:var(--space-6);padding-top:var(--space-4)">
+    <header class="navbar navbar--sticky" role="banner">
+      <a class="navbar__brand" href="../index.html">
+        <span class="navbar__logo" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
+            <defs>
+              <linearGradient id="logoG" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#5CC2FF"/><stop offset="1" stop-color="#00D6C8"/>
+              </linearGradient>
+            </defs>
+            <circle cx="16" cy="16" r="13" fill="url(#logoG)"/>
+            <ellipse cx="12" cy="11" rx="5" ry="3.4" fill="rgba(255,255,255,.7)"/>
+            <path d="M9 21c3 2.6 11 2.6 14 0" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <strong>Aero</strong>
+      </a>
+      <nav class="navbar__nav" aria-label="주요 메뉴">
+        <a class="navbar__link is-active" href="dashboard.html" aria-current="page">대시보드</a>
+        <a class="navbar__link" href="kanban.html">칸반</a>
+        <a class="navbar__link" href="inbox.html">인박스</a>
+        <a class="navbar__link" href="pricing.html">가격</a>
+      </nav>
+      <div class="navbar__actions">
+        <button class="btn btn--ghost btn--sm" data-command-open aria-label="명령 팔레트 열기">⌘K</button>
+        <button class="btn btn--secondary btn--sm" data-theme-toggle aria-pressed="false">
+          <span data-theme-label>Dark</span>
+        </button>
+        <button class="navbar__toggle" data-nav-toggle aria-label="메뉴 열기" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
+    </header>
+  </div>
+
+  <!-- ===================================================================
+       APP SHELL — sidebar + content
+       =================================================================== -->
+  <div class="app-shell">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" aria-label="사이드 내비게이션">
+      <a class="sidebar__brand" href="../index.html">
+        <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="sbLogo" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#5CC2FF"/><stop offset="1" stop-color="#00D6C8"/>
+            </linearGradient>
+          </defs>
+          <circle cx="16" cy="16" r="13" fill="url(#sbLogo)"/>
+          <ellipse cx="12" cy="11" rx="5" ry="3.4" fill="rgba(255,255,255,.7)"/>
+        </svg>
+        <span class="sidebar__brand-text">Aero Cloud</span>
+      </a>
+
+      <div class="sidebar__section">
+        <span class="sidebar__section-label">분석</span>
+        <a class="sidebar__item is-active" href="dashboard.html" aria-current="page" data-tooltip="개요">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 13h8V3H3zM13 21h8V8h-8zM3 21h8v-5H3zM13 5h8V3h-8z"/></svg>
+          <span class="sidebar__item-label">개요</span>
+        </a>
+        <a class="sidebar__item" href="#" data-tooltip="리포트">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
+          <span class="sidebar__item-label">리포트</span>
+          <span class="sidebar__badge">3</span>
+        </a>
+        <a class="sidebar__item" href="#" data-tooltip="사용자">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 6.5a3 3 0 0 1 0 6"/><path d="M20.5 20a5 5 0 0 0-4-4.9"/></svg>
+          <span class="sidebar__item-label">사용자</span>
+        </a>
+      </div>
+
+      <div class="sidebar__section">
+        <span class="sidebar__section-label">운영</span>
+        <a class="sidebar__item" href="#" data-tooltip="주문">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6h15l-1.5 9h-12z"/><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M6 6 5 3H2"/></svg>
+          <span class="sidebar__item-label">주문</span>
+          <span class="sidebar__badge">12</span>
+        </a>
+        <a class="sidebar__item" href="#" data-tooltip="결제">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 9.5h19"/></svg>
+          <span class="sidebar__item-label">결제</span>
+        </a>
+        <a class="sidebar__item" href="inbox.html" data-tooltip="인박스">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m4 7 8 6 8-6"/></svg>
+          <span class="sidebar__item-label">인박스</span>
+          <span class="sidebar__badge">5</span>
+        </a>
+      </div>
+
+      <div class="sidebar__section">
+        <span class="sidebar__section-label">시스템</span>
+        <a class="sidebar__item" href="settings.html" data-tooltip="설정">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1M18.4 18.4l-2.1-2.1M7.7 7.7 5.6 5.6"/></svg>
+          <span class="sidebar__item-label">설정</span>
+        </a>
+      </div>
+
+      <button class="sidebar__toggle" data-sidebar-toggle aria-label="사이드바 접기/펼치기">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+        <span class="sidebar__toggle-text">접기</span>
+      </button>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="app-main" id="main">
+
+      <!-- Breadcrumb -->
+      <nav aria-label="현재 위치">
+        <ol class="breadcrumb">
+          <li class="breadcrumb__item"><a href="../index.html" style="color:inherit;text-decoration:none">홈</a></li>
+          <li class="breadcrumb__sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></li>
+          <li class="breadcrumb__item"><a href="#" style="color:inherit;text-decoration:none">분석</a></li>
+          <li class="breadcrumb__sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></li>
+          <li class="breadcrumb__item" aria-current="page">개요</li>
+        </ol>
+      </nav>
+
+      <!-- Title row -->
+      <div class="page-head">
+        <div>
+          <h1 class="page-head__title">분석 개요</h1>
+          <p class="page-head__sub">Aero Cloud · 2026년 6월 21일 기준 · 실시간 동기화</p>
+        </div>
+        <div class="page-head__actions">
+          <div class="btn-group range-group" role="group" aria-label="기간 선택">
+            <button type="button" class="btn btn--secondary btn--sm" aria-pressed="false">오늘</button>
+            <button type="button" class="btn btn--secondary btn--sm is-active" aria-pressed="true">주</button>
+            <button type="button" class="btn btn--secondary btn--sm" aria-pressed="false">월</button>
+          </div>
+          <button type="button" class="btn btn--primary btn--sm"
+                  data-toast data-toast-msg="리포트를 내보내는 중입니다…" data-toast-variant="info">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>
+            리포트 내보내기
+          </button>
+        </div>
+      </div>
+
+      <!-- =============================================================
+           STAT CARDS
+           ============================================================= -->
+      <section class="stat-grid" aria-label="핵심 지표">
+        <article class="stat-card">
+          <span class="stat-card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </span>
+          <span class="stat-card__label">매출</span>
+          <span class="stat-card__value">₩ 4.82억</span>
+          <span class="stat-card__delta is-up">12.4% <span class="sr-only">증가</span></span>
+        </article>
+
+        <article class="stat-card">
+          <span class="stat-card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="8" r="3.3"/><path d="M4 20a6 6 0 0 1 12 0"/><path d="M19 8v6M22 11h-6"/></svg>
+          </span>
+          <span class="stat-card__label">신규 가입</span>
+          <span class="stat-card__value">1,284</span>
+          <span class="stat-card__delta is-up">8.1% <span class="sr-only">증가</span></span>
+        </article>
+
+        <article class="stat-card">
+          <span class="stat-card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0Z"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+          </span>
+          <span class="stat-card__label">활성 사용자</span>
+          <span class="stat-card__value">38,902</span>
+          <span class="stat-card__delta is-up">4.6% <span class="sr-only">증가</span></span>
+        </article>
+
+        <article class="stat-card">
+          <span class="stat-card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19 20 5M9 5h11v11"/></svg>
+          </span>
+          <span class="stat-card__label">전환율</span>
+          <span class="stat-card__value">3.74%</span>
+          <span class="stat-card__delta is-down">0.3% <span class="sr-only">감소</span></span>
+        </article>
+      </section>
+
+      <!-- =============================================================
+           CHARTS ROW
+           ============================================================= -->
+      <section class="charts-grid" aria-label="추이 및 유입">
+
+        <!-- Revenue area/line chart -->
+        <article class="card">
+          <div class="card__body">
+            <div class="panel-head">
+              <h2 class="panel-head__title">매출 추이</h2>
+              <span class="panel-head__meta">최근 12개월 · 단위 백만원</span>
+            </div>
+
+            <svg class="chart" viewBox="0 0 720 280" role="img"
+                 aria-label="2025년 7월부터 2026년 6월까지 월별 매출 추이. 38백만원에서 시작해 등락을 거쳐 6월 82백만원으로 상승.">
+              <defs>
+                <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#39B6FF" stop-opacity="0.55"/>
+                  <stop offset="0.55" stop-color="#00D6C8" stop-opacity="0.22"/>
+                  <stop offset="1" stop-color="#00D6C8" stop-opacity="0.02"/>
+                </linearGradient>
+                <linearGradient id="lineStroke" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0" stop-color="#1E94E6"/>
+                  <stop offset="1" stop-color="#00D6C8"/>
+                </linearGradient>
+              </defs>
+
+              <!-- gridlines + y labels (0,25,50,75,100) -->
+              <g stroke="currentColor" stroke-opacity="0.14" stroke-width="1" color="var(--color-text-subtle)">
+                <line x1="48" y1="30"  x2="700" y2="30"/>
+                <line x1="48" y1="85"  x2="700" y2="85"/>
+                <line x1="48" y1="140" x2="700" y2="140"/>
+                <line x1="48" y1="195" x2="700" y2="195"/>
+                <line x1="48" y1="240" x2="700" y2="240"/>
+              </g>
+              <g fill="var(--color-text-subtle)" font-size="11" font-weight="600" text-anchor="end">
+                <text x="40" y="34">100</text>
+                <text x="40" y="89">75</text>
+                <text x="40" y="144">50</text>
+                <text x="40" y="199">25</text>
+                <text x="40" y="244">0</text>
+              </g>
+
+              <!-- smoothed area fill (12 points) -->
+              <path d="M48 156
+                       C 78 156 78 168 108 168
+                       C 138 168 138 130 168 130
+                       C 198 130 198 148 228 148
+                       C 258 148 258 112 288 112
+                       C 318 112 318 124 348 124
+                       C 378 124 378 96 408 96
+                       C 438 96 438 108 468 108
+                       C 498 108 498 84 528 84
+                       C 558 84 558 92 588 92
+                       C 618 92 618 70 648 70
+                       C 678 70 678 60 700 60
+                       L 700 240 L 48 240 Z"
+                    fill="url(#areaFill)"/>
+
+              <!-- smoothed line on top -->
+              <path d="M48 156
+                       C 78 156 78 168 108 168
+                       C 138 168 138 130 168 130
+                       C 198 130 198 148 228 148
+                       C 258 148 258 112 288 112
+                       C 318 112 318 124 348 124
+                       C 378 124 378 96 408 96
+                       C 438 96 438 108 468 108
+                       C 498 108 498 84 528 84
+                       C 558 84 558 92 588 92
+                       C 618 92 618 70 648 70
+                       C 678 70 678 60 700 60"
+                    fill="none" stroke="url(#lineStroke)" stroke-width="3"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+
+              <!-- data dots (highlighted months) -->
+              <g fill="#fff" stroke="#1E94E6" stroke-width="2.5">
+                <circle cx="48"  cy="156" r="4"/>
+                <circle cx="288" cy="112" r="4"/>
+                <circle cx="528" cy="84"  r="4"/>
+                <circle cx="700" cy="60"  r="5" stroke="#00AFA4"/>
+              </g>
+
+              <!-- x-axis month labels -->
+              <g fill="var(--color-text-subtle)" font-size="11" font-weight="600" text-anchor="middle">
+                <text x="48"  y="262">7월</text>
+                <text x="108" y="262">8월</text>
+                <text x="168" y="262">9월</text>
+                <text x="228" y="262">10월</text>
+                <text x="288" y="262">11월</text>
+                <text x="348" y="262">12월</text>
+                <text x="408" y="262">1월</text>
+                <text x="468" y="262">2월</text>
+                <text x="528" y="262">3월</text>
+                <text x="588" y="262">4월</text>
+                <text x="648" y="262">5월</text>
+                <text x="700" y="262">6월</text>
+              </g>
+            </svg>
+
+            <div class="chart-legend">
+              <span><i style="background:linear-gradient(180deg,#5CC2FF,#1E94E6)"></i> 월 매출</span>
+              <span><i style="background:linear-gradient(180deg,#1CE0D1,#00AFA4)"></i> 누적 추세</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Side stack: channels + goal ring -->
+        <div class="side-stack">
+
+          <!-- Channels -->
+          <article class="card">
+            <div class="card__body">
+              <div class="panel-head">
+                <h2 class="panel-head__title">채널별 유입</h2>
+                <span class="panel-head__meta">이번 주</span>
+              </div>
+              <div class="channels">
+                <div class="channel-row">
+                  <span class="channel-row__label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+                    검색
+                  </span>
+                  <div class="progress" role="progressbar" aria-label="검색 유입 비중" aria-valuenow="42" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress__fill" style="width:42%"></div>
+                  </div>
+                  <span class="channel-row__value">42%</span>
+                </div>
+                <div class="channel-row">
+                  <span class="channel-row__label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 4h16v12H8l-4 4z"/></svg>
+                    소셜
+                  </span>
+                  <div class="progress" role="progressbar" aria-label="소셜 유입 비중" aria-valuenow="27" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress__fill" style="width:27%"></div>
+                  </div>
+                  <span class="channel-row__value">27%</span>
+                </div>
+                <div class="channel-row">
+                  <span class="channel-row__label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg>
+                    이메일
+                  </span>
+                  <div class="progress" role="progressbar" aria-label="이메일 유입 비중" aria-valuenow="16" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress__fill" style="width:16%"></div>
+                  </div>
+                  <span class="channel-row__value">16%</span>
+                </div>
+                <div class="channel-row">
+                  <span class="channel-row__label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 11l18-7-7 18-3-7z"/></svg>
+                    추천
+                  </span>
+                  <div class="progress" role="progressbar" aria-label="추천 유입 비중" aria-valuenow="9" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress__fill" style="width:9%"></div>
+                  </div>
+                  <span class="channel-row__value">9%</span>
+                </div>
+                <div class="channel-row">
+                  <span class="channel-row__label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    직접
+                  </span>
+                  <div class="progress" role="progressbar" aria-label="직접 유입 비중" aria-valuenow="6" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress__fill" style="width:6%"></div>
+                  </div>
+                  <span class="channel-row__value">6%</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Goal ring -->
+          <article class="card">
+            <div class="card__body">
+              <div class="panel-head">
+                <h2 class="panel-head__title">목표 달성률</h2>
+                <span class="panel-head__meta">분기 KPI</span>
+              </div>
+              <div class="ring-kpi">
+                <div class="ring-kpi__wrap">
+                  <!-- r=54 → C=339.29; offset for 72% = 339.29*(1-0.72)=95 -->
+                  <svg class="progress-ring" width="132" height="132" viewBox="0 0 132 132"
+                       role="img" aria-label="목표 달성률 72 퍼센트">
+                    <circle class="progress-ring__track" cx="66" cy="66" r="54"/>
+                    <circle class="progress-ring__bar" cx="66" cy="66" r="54"
+                            stroke-dasharray="339.29" stroke-dashoffset="95"/>
+                  </svg>
+                  <div class="ring-kpi__num">
+                    <span class="ring-kpi__pct">72%</span>
+                    <span class="ring-kpi__cap">달성</span>
+                  </div>
+                </div>
+                <div class="ring-kpi__body">
+                  <p>분기 목표 <strong>6.7억</strong> 중 <strong>4.82억</strong> 달성. 남은 18일 내 목표 도달 예상.</p>
+                  <span class="inline-note inline-note--success" role="status" style="margin-top:var(--space-3)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>
+                    순항 중
+                  </span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+        </div>
+      </section>
+
+      <!-- =============================================================
+           RECENT ORDERS TABLE
+           ============================================================= -->
+      <section class="table-card" aria-label="최근 주문">
+        <div class="table-toolbar">
+          <h2 class="panel-head__title">최근 주문</h2>
+          <div class="row row-2">
+            <span class="badge badge--info">총 248건</span>
+            <button class="btn btn--ghost btn--sm" data-toast data-toast-msg="필터를 적용했습니다." data-toast-variant="success">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 5h18l-7 8v5l-4 2v-7z"/></svg>
+              필터
+            </button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table table--hover table--striped">
+            <caption class="sr-only">최근 주문 목록 — 주문번호, 고객, 금액, 상태, 날짜 기준 정렬 가능</caption>
+            <thead>
+              <tr>
+                <th scope="col" style="width:2.5rem">
+                  <input type="checkbox" data-select-all aria-label="전체 행 선택" />
+                </th>
+                <th scope="col" data-sort="string">주문번호</th>
+                <th scope="col" data-sort="string">고객</th>
+                <th scope="col" data-sort="number" class="num">금액</th>
+                <th scope="col" data-sort="string">상태</th>
+                <th scope="col" data-sort="string">날짜</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><input type="checkbox" data-row-select aria-label="ORD-20614 선택" /></td>
+                <td>ORD-20614</td>
+                <td><span class="cust"><span class="avatar avatar--sm" aria-hidden="true">김</span>김서연</span></td>
+                <td class="num" data-value="184000">₩184,000</td>
+                <td><span class="badge badge--success badge--dot">성공</span></td>
+                <td data-value="2026-06-21">2026-06-21</td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" data-row-select aria-label="ORD-20613 선택" /></td>
+                <td>ORD-20613</td>
+                <td><span class="cust"><span class="avatar avatar--sm" aria-hidden="true">박</span>박준호</span></td>
+                <td class="num" data-value="59900">₩59,900</td>
+                <td><span class="badge badge--warning badge--dot">대기</span></td>
+                <td data-value="2026-06-21">2026-06-21</td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" data-row-select aria-label="ORD-20611 선택" /></td>
+                <td>ORD-20611</td>
+                <td><span class="cust"><span class="avatar avatar--sm" aria-hidden="true">이</span>이하늘</span></td>
+                <td class="num" data-value="320000">₩320,000</td>
+                <td><span class="badge badge--success badge--dot">성공</span></td>
+                <td data-value="2026-06-20">2026-06-20</td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" data-row-select aria-label="ORD-20609 선택" /></td>
+                <td>ORD-20609</td>
+                <td><span class="cust"><span class="avatar avatar--sm" aria-hidden="true">최</span>최민재</span></td>
+                <td class="num" data-value="12000">₩12,000</td>
+                <td><span class="badge badge--danger badge--dot">취소</span></td>
+                <td data-value="2026-06-20">2026-06-20</td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" data-row-select aria-label="ORD-20607 선택" /></td>
+                <td>ORD-20607</td>
+                <td><span class="cust"><span class="avatar avatar--sm" aria-hidden="true">정</span>정유진</span></td>
+                <td class="num" data-value="248500">₩248,500</td>
+                <td><span class="badge badge--success badge--dot">성공</span></td>
+                <td data-value="2026-06-19">2026-06-19</td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" data-row-select aria-label="ORD-20604 선택" /></td>
+                <td>ORD-20604</td>
+                <td><span class="cust"><span class="avatar avatar--sm" aria-hidden="true">한</span>한도윤</span></td>
+                <td class="num" data-value="89000">₩89,000</td>
+                <td><span class="badge badge--warning badge--dot">대기</span></td>
+                <td data-value="2026-06-19">2026-06-19</td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" data-row-select aria-label="ORD-20601 선택" /></td>
+                <td>ORD-20601</td>
+                <td><span class="cust"><span class="avatar avatar--sm" aria-hidden="true">윤</span>윤채원</span></td>
+                <td class="num" data-value="540000">₩540,000</td>
+                <td><span class="badge badge--success badge--dot">성공</span></td>
+                <td data-value="2026-06-18">2026-06-18</td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" data-row-select aria-label="ORD-20598 선택" /></td>
+                <td>ORD-20598</td>
+                <td><span class="cust"><span class="avatar avatar--sm" aria-hidden="true">강</span>강태경</span></td>
+                <td class="num" data-value="37500">₩37,500</td>
+                <td><span class="badge badge--danger badge--dot">취소</span></td>
+                <td data-value="2026-06-18">2026-06-18</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ===================================================================
+       FOOTER
+       =================================================================== -->
+  <footer class="site-footer container" style="padding-block:var(--space-9);text-align:center;color:var(--color-text-muted)">
+    <p>Aero · Y2K / Frutiger Aero 디자인 시스템 — <a class="link" href="../index.html">컴포넌트 허브로 돌아가기</a></p>
+  </footer>
+
+  <!-- ===================================================================
+       COMMAND PALETTE (⌘K)
+       =================================================================== -->
+  <div class="command-palette" data-command-palette aria-hidden="true" role="dialog" aria-modal="true" aria-label="명령 팔레트">
+    <div class="command-palette__backdrop"></div>
+    <div class="command-palette__panel">
+      <div class="command-palette__search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" placeholder="명령 또는 페이지 검색…" aria-label="명령 검색" />
+      </div>
+      <div class="command-palette__list" role="listbox">
+        <button class="command-palette__item" role="option" onclick="location.href='dashboard.html'">📊 분석 대시보드</button>
+        <button class="command-palette__item" role="option" onclick="location.href='kanban.html'">🗂️ 칸반 보드</button>
+        <button class="command-palette__item" role="option" onclick="location.href='inbox.html'">✉️ 이메일 인박스</button>
+        <button class="command-palette__item" role="option" onclick="location.href='product.html'">🛍️ 상품 상세</button>
+        <button class="command-palette__item" role="option" onclick="location.href='pricing.html'">💎 가격표</button>
+        <button class="command-palette__item" role="option" onclick="location.href='settings.html'">⚙️ 설정</button>
+        <button class="command-palette__item" role="option" onclick="location.href='../index.html'">🏠 홈으로</button>
+        <button class="command-palette__item" role="option" data-theme-toggle>🌙 테마 전환</button>
+      </div>
+      <div class="command-palette__empty" hidden>일치하는 결과가 없습니다.</div>
+    </div>
+  </div>
+
+  <script src="../app.js"></script>
+  <script>
+    /* Page-local: date-range segmented toggle (visual only; no contract hook needed) */
+    (function () {
+      var group = document.querySelector('.range-group');
+      if (!group) return;
+      group.addEventListener('click', function (e) {
+        var btn = e.target.closest('.btn');
+        if (!btn) return;
+        group.querySelectorAll('.btn').forEach(function (b) {
+          b.classList.remove('is-active');
+          b.setAttribute('aria-pressed', 'false');
+        });
+        btn.classList.add('is-active');
+        btn.setAttribute('aria-pressed', 'true');
+      });
+    })();
+  </script>
+</body>
+</html>

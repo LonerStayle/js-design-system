@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>이메일 인박스 · Maison Déco</title>
+<meta name="description" content="3패널 메일 인박스 — 폴더 · 목록 · 읽기 패널로 구성한 우아한 Art Deco 이메일 화면." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Poiret+One&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../tokens.css" />
+<link rel="stylesheet" href="../semantic.css" />
+<link rel="stylesheet" href="../base.css" />
+<link rel="stylesheet" href="../components/index.css" />
+<style>
+  /* ── 페이지 전용 보조 레이아웃 ── */
+  .mail {
+    display: grid;
+    grid-template-columns: 240px 360px 1fr;
+    height: calc(100vh - var(--navbar-h));
+    overflow: hidden;
+  }
+  .mail-pane { min-width: 0; overflow-y: auto; display: flex; flex-direction: column; }
+  .mail-folders { border-right: 1px solid var(--color-divider); padding: var(--space-4); gap: var(--space-4); background: var(--color-bg-elevated); }
+  .mail-list { border-right: 1px solid var(--color-divider); }
+  .mail-read { background: var(--color-bg-elevated); }
+
+  /* 폴더 패널 라벨 목록 */
+  .folder-labels { margin-top: var(--space-2); }
+  .label-link {
+    display: flex; align-items: center; gap: var(--space-3);
+    padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm);
+    color: var(--color-text-muted); text-decoration: none; font-size: var(--text-sm);
+  }
+  .label-link:hover { background: var(--table-row-hover); color: var(--color-text); }
+  .label-link .swatch-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .label-link .count { margin-left: auto; font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--color-text-subtle); }
+
+  /* 목록 툴바 */
+  .list-toolbar {
+    position: sticky; top: 0; z-index: 2;
+    display: flex; align-items: center; gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-divider);
+    background: var(--color-bg);
+  }
+  .list-toolbar .select { width: auto; min-width: 7rem; }
+
+  /* 메일 항목 */
+  .mail-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 2px var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-border-muted);
+    cursor: pointer; position: relative; width: 100%; text-align: left;
+    background: transparent; color: inherit; font: inherit; border-left: 0; border-right: 0; border-top: 0;
+    transition: background var(--duration-fast);
+  }
+  .mail-item:hover { background: var(--table-row-hover); }
+  .mail-item.is-active { background: var(--color-primary-soft); }
+  .mail-item.is-active::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
+    background: var(--color-primary);
+  }
+  .mail-item .mi-avatar { grid-row: 1 / 3; align-self: start; }
+  .mail-item .mi-from { font-size: var(--text-sm); color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mail-item .mi-time { font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--color-text-subtle); white-space: nowrap; align-self: center; }
+  .mail-item .mi-subject { grid-column: 2 / 3; font-size: var(--text-sm); color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mail-item .mi-preview { grid-column: 2 / 4; font-size: var(--text-xs); color: var(--color-text-subtle); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mail-item .mi-icons { grid-column: 3 / 4; grid-row: 2 / 3; display: flex; gap: 6px; align-items: center; justify-self: end; align-self: center; color: var(--color-text-subtle); }
+  .mail-item .mi-icons svg { width: 14px; height: 14px; }
+  .mail-item .mi-icons .star.is-on { color: var(--color-primary); }
+  /* 안읽음 강조 */
+  .mail-item.is-unread .mi-from,
+  .mail-item.is-unread .mi-subject { font-weight: 700; color: var(--color-text-strong); }
+  .mail-item .mi-unread-dot { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); width: 7px; height: 7px; border-radius: 50%; background: var(--color-primary); box-shadow: var(--glow-gold-sm); }
+  .mail-item:not(.is-unread) .mi-unread-dot { display: none; }
+
+  /* 읽기 패널 */
+  .read-wrap { display: flex; flex-direction: column; height: 100%; }
+  .read-scroll { flex: 1 1 auto; overflow-y: auto; padding: var(--space-7) var(--space-8); }
+  .read-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
+  .read-actions { display: flex; gap: 4px; flex: none; }
+  .read-body p { color: var(--color-text-muted); line-height: 1.75; margin-bottom: var(--space-4); }
+  .read-body blockquote {
+    border-left: 2px solid var(--color-primary-border);
+    padding: var(--space-2) var(--space-4); margin: var(--space-4) 0;
+    color: var(--color-text-subtle); font-style: italic; font-family: var(--font-serif);
+  }
+  .read-sign { color: var(--color-text-muted); margin-top: var(--space-6); }
+  .read-reply { flex: none; border-top: 1px solid var(--color-divider); padding: var(--space-5) var(--space-8); background: var(--color-bg); }
+
+  @media (max-width: 1024px) {
+    .mail { grid-template-columns: 1fr; }
+    .mail-folders { display: none; }
+    .mail-list { display: none; }
+  }
+  @media (max-width: 768px) {
+    .mail { grid-template-columns: 1fr; height: auto; }
+    .mail-list { display: flex; border-right: 0; border-bottom: 1px solid var(--color-divider); }
+    .mail-read { display: flex; }
+    .read-scroll, .read-reply { padding-inline: var(--space-5); }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
+
+<!-- ============================ NAVBAR ============================ -->
+<header class="navbar">
+  <a class="navbar-brand" href="../index.html">
+    <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 1 31 16 16 31 1 16Z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M16 6 26 16 16 26 6 16Z" fill="none" stroke="currentColor" stroke-width="1"/><path d="M16 11v10M11 16h10" stroke="currentColor" stroke-width="1"/></svg>
+    Maison&nbsp;Déco
+  </a>
+  <div class="navbar-actions">
+    <div class="searchbar" style="width:260px">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="1.6"/></svg>
+      <input placeholder="메일 검색…" aria-label="메일 검색" />
+      <kbd>⌘K</kbd>
+    </div>
+    <button class="btn btn--icon btn--bare" data-theme-toggle aria-label="테마 전환" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+    </button>
+    <button class="btn btn--primary btn--sm" data-modal-open="composeModal">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2"/></svg>
+      메일 작성
+    </button>
+    <span class="avatar avatar--sm avatar--ring" aria-label="내 계정: 진 데 라 발리에르">JD</span>
+  </div>
+</header>
+
+<main id="main">
+  <div class="mail">
+
+    <!-- ════════ 패널 1 · 폴더 ════════ -->
+    <nav class="mail-pane mail-folders" aria-label="메일 폴더">
+      <button class="btn btn--primary btn--block" data-modal-open="composeModal">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2"/></svg>
+        메일 작성
+      </button>
+
+      <div class="sidebar-section" style="padding:0">
+        <p class="heading" style="padding-left:var(--space-3)">폴더</p>
+        <a class="sidebar-link" aria-current="page" href="#main">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7l9 6 9-6M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+          <span class="lbl">받은편지함</span><span class="count">12</span>
+        </a>
+        <a class="sidebar-link" href="#main">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3 7 7 .5-5.5 4.5L18 21l-6-3.8L6 21l1.5-7L2 9.5 9 9z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          <span class="lbl">별표</span><span class="count">5</span>
+        </a>
+        <a class="sidebar-link" href="#main">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5l9 8 9-8M3 5v14h18V5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          <span class="lbl">보낸함</span><span class="count">48</span>
+        </a>
+        <a class="sidebar-link" href="#main">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h11l3 3v15H5zM16 3v4h4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          <span class="lbl">임시</span><span class="count">3</span>
+        </a>
+        <a class="sidebar-link" href="#main">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9A9 9 0 0 0 12 3Zm0 5v4m0 3v.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span class="lbl">스팸</span><span class="count">7</span>
+        </a>
+        <a class="sidebar-link" href="#main">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+          <span class="lbl">휴지통</span><span class="count">2</span>
+        </a>
+      </div>
+
+      <div class="folder-labels">
+        <p class="heading" style="padding-left:var(--space-3);font-family:var(--font-sans);font-size:var(--text-2xs);text-transform:uppercase;letter-spacing:var(--tracking-widest);color:var(--color-text-subtle)">라벨</p>
+        <a class="label-link" href="#main"><span class="swatch-dot" style="background:var(--gold-400)"></span> 갈라 &amp; 행사 <span class="count">9</span></a>
+        <a class="label-link" href="#main"><span class="swatch-dot" style="background:var(--emerald-400)"></span> 거래처 <span class="count">14</span></a>
+        <a class="label-link" href="#main"><span class="swatch-dot" style="background:var(--navy-300)"></span> 청구서 <span class="count">6</span></a>
+        <a class="label-link" href="#main"><span class="swatch-dot" style="background:var(--color-danger)"></span> 긴급 <span class="count">2</span></a>
+      </div>
+
+      <div class="sidebar-foot" style="margin-top:auto;border-top:1px solid var(--color-divider);padding-top:var(--space-4)">
+        <div class="progress progress--emerald progress--sm"><span class="bar" style="width:42%"></span></div>
+        <p class="fs-2xs text-subtle mt-2">저장공간 6.3GB / 15GB 사용</p>
+      </div>
+    </nav>
+
+    <!-- ════════ 패널 2 · 목록 ════════ -->
+    <section class="mail-pane mail-list" aria-label="받은편지함 목록">
+      <div class="list-toolbar">
+        <label class="check" aria-label="전체 선택"><input type="checkbox" /><span class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span></label>
+        <select class="select" aria-label="정렬">
+          <option>최신순</option>
+          <option>오래된순</option>
+          <option>안읽음 먼저</option>
+          <option>별표 먼저</option>
+        </select>
+        <span class="grow"></span>
+        <button class="btn btn--icon btn--bare" aria-label="새로고침" data-toast="info" data-toast-title="동기화 완료" data-toast-msg="새 메일 2통을 받았습니다.">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 4v5h-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+
+      <div class="mail-items" id="mailItems">
+        <!-- 1 (선택+안읽음) -->
+        <button class="mail-item is-unread is-active" type="button"
+          data-from="조던 베이커" data-email="jordan.baker@theplaza-events.com" data-time="오전 9:42 · 6월 21일"
+          data-subject="갈라 디너 좌석 배치 — 최종 확인 요청"
+          data-initials="JB" data-emerald="0">
+          <span class="mi-unread-dot" aria-hidden="true"></span>
+          <span class="avatar avatar--sm mi-avatar" aria-hidden="true">JB</span>
+          <span class="mi-from">조던 베이커</span>
+          <span class="mi-time">9:42</span>
+          <span class="mi-subject">갈라 디너 좌석 배치 — 최종 확인 요청</span>
+          <span class="mi-preview text-muted">대표님, 토요일 갈라의 메인 테이블 배치를 다시 정리했습니다. 첨부의 도면을 검토하시고…</span>
+          <span class="mi-icons" aria-hidden="true">
+            <svg class="star is-on" viewBox="0 0 24 24"><path d="M12 2l3 7 7 .5-5.5 4.5L18 21l-6-3.8L6 21l1.5-7L2 9.5 9 9z" fill="currentColor"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M21 12l-9 9a3 3 0 0 1-4-4l9-9a2 2 0 0 1 3 3l-8 8" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+          </span>
+        </button>
+
+        <!-- 2 (안읽음) -->
+        <button class="mail-item is-unread" type="button"
+          data-from="다니엘 부캐넌" data-email="d.buchanan@egg-capital.co" data-time="오전 8:15 · 6월 21일"
+          data-subject="2분기 투자 보고서 및 배당 일정"
+          data-initials="DB" data-emerald="1">
+          <span class="mi-unread-dot" aria-hidden="true"></span>
+          <span class="avatar avatar--sm avatar--emerald mi-avatar" aria-hidden="true">DB</span>
+          <span class="mi-from">다니엘 부캐넌</span>
+          <span class="mi-time">8:15</span>
+          <span class="mi-subject">2분기 투자 보고서 및 배당 일정</span>
+          <span class="mi-preview text-muted">첨부드린 보고서대로 2분기 수익률은 전 분기 대비 12.4% 상승했습니다. 배당 지급은…</span>
+          <span class="mi-icons" aria-hidden="true">
+            <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7 7 .5-5.5 4.5L18 21l-6-3.8L6 21l1.5-7L2 9.5 9 9z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M21 12l-9 9a3 3 0 0 1-4-4l9-9a2 2 0 0 1 3 3l-8 8" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+          </span>
+        </button>
+
+        <!-- 3 (안읽음) -->
+        <button class="mail-item is-unread" type="button"
+          data-from="니콜라스 캐러웨이" data-email="nick@westegg-realty.com" data-time="오전 7:03 · 6월 21일"
+          data-subject="웨스트 에그 부지 임대 계약서 검토본"
+          data-initials="NC" data-emerald="0">
+          <span class="mi-unread-dot" aria-hidden="true"></span>
+          <span class="avatar avatar--sm mi-avatar" aria-hidden="true">NC</span>
+          <span class="mi-from">니콜라스 캐러웨이</span>
+          <span class="mi-time">7:03</span>
+          <span class="mi-subject">웨스트 에그 부지 임대 계약서 검토본</span>
+          <span class="mi-preview text-muted">법무팀 검토를 거친 계약서 v3 입니다. 11조 위약 조항을 수정했으니 확인 부탁드립니다.</span>
+          <span class="mi-icons" aria-hidden="true">
+            <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7 7 .5-5.5 4.5L18 21l-6-3.8L6 21l1.5-7L2 9.5 9 9z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+          </span>
+        </button>
+
+        <!-- 4 -->
+        <button class="mail-item" type="button"
+          data-from="메종 르 봉" data-email="atelier@maison-lebon.fr" data-time="어제 · 6월 20일"
+          data-subject="맞춤 턱시도 1차 가봉 일정 안내"
+          data-initials="LB" data-emerald="0">
+          <span class="mi-unread-dot" aria-hidden="true"></span>
+          <span class="avatar avatar--sm mi-avatar" aria-hidden="true">LB</span>
+          <span class="mi-from">메종 르 봉</span>
+          <span class="mi-time">6/20</span>
+          <span class="mi-subject">맞춤 턱시도 1차 가봉 일정 안내</span>
+          <span class="mi-preview text-muted">주문하신 블랙 타이 한 벌의 1차 가봉이 준비되었습니다. 6월 25일 오후 3시 어떠신지요.</span>
+          <span class="mi-icons" aria-hidden="true">
+            <svg class="star is-on" viewBox="0 0 24 24"><path d="M12 2l3 7 7 .5-5.5 4.5L18 21l-6-3.8L6 21l1.5-7L2 9.5 9 9z" fill="currentColor"/></svg>
+          </span>
+        </button>
+
+        <!-- 5 -->
+        <button class="mail-item" type="button"
+          data-from="더 플라자 호텔" data-email="reservations@theplaza.com" data-time="어제 · 6월 20일"
+          data-subject="스위트 예약 확정 — 6월 28일 체크인"
+          data-initials="PH" data-emerald="1">
+          <span class="mi-unread-dot" aria-hidden="true"></span>
+          <span class="avatar avatar--sm avatar--emerald mi-avatar" aria-hidden="true">PH</span>
+          <span class="mi-from">더 플라자 호텔</span>
+          <span class="mi-time">6/20</span>
+          <span class="mi-subject">스위트 예약 확정 — 6월 28일 체크인</span>
+          <span class="mi-preview text-muted">로열 테라스 스위트 2박 예약이 확정되었습니다. 예약번호 PLZ-20817 을 안내드립니다.</span>
+          <span class="mi-icons" aria-hidden="true">
+            <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7 7 .5-5.5 4.5L18 21l-6-3.8L6 21l1.5-7L2 9.5 9 9z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M21 12l-9 9a3 3 0 0 1-4-4l9-9a2 2 0 0 1 3 3l-8 8" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+          </span>
+        </button>
+
+        <!-- 6 -->
+        <button class="mail-item" type="button"
+          data-from="마이라 화이트" data-email="myra@valhalla-press.com" data-time="6월 19일"
+          data-subject="발할라 프레스 — 표지 시안 3종 회신"
+          data-initials="MW" data-emerald="0">
+          <span class="mi-unread-dot" aria-hidden="true"></span>
+          <span class="avatar avatar--sm mi-avatar" aria-hidden="true">MW</span>
+          <span class="mi-from">마이라 화이트</span>
+          <span class="mi-time">6/19</span>
+          <span class="mi-subject">발할라 프레스 — 표지 시안 3종 회신</span>
+          <span class="mi-preview text-muted">선버스트 모티프를 활용한 표지 세 가지를 보내드립니다. 골드 포일 가공을 추천드립니다.</span>
+          <span class="mi-icons" aria-hidden="true">
+            <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7 7 .5-5.5 4.5L18 21l-6-3.8L6 21l1.5-7L2 9.5 9 9z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+          </span>
+        </button>
+
+        <!-- 7 -->
+        <button class="mail-item" type="button"
+          data-from="아서 골드스미스" data-email="arthur@goldsmith-vintners.com" data-time="6월 18일"
+          data-subject="1925 빈티지 샴페인 12병 입고 알림"
+          data-initials="AG" data-emerald="0">
+          <span class="mi-unread-dot" aria-hidden="true"></span>
+          <span class="avatar avatar--sm mi-avatar" aria-hidden="true">AG</span>
+          <span class="mi-from">아서 골드스미스</span>
+          <span class="mi-time">6/18</span>
+          <span class="mi-subject">1925 빈티지 샴페인 12병 입고 알림</span>
+          <span class="mi-preview text-muted">요청하신 뵈브 클리코 1925 가 셀러에 입고되었습니다. 갈라 전 배송을 추천드립니다.</span>
+          <span class="mi-icons" aria-hidden="true">
+            <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7 7 .5-5.5 4.5L18 21l-6-3.8L6 21l1.5-7L2 9.5 9 9z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M21 12l-9 9a3 3 0 0 1-4-4l9-9a2 2 0 0 1 3 3l-8 8" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+          </span>
+        </button>
+
+        <!-- 8 -->
+        <button class="mail-item" type="button"
+          data-from="이사벨 듀몽" data-email="isabel@dumont-strings.org" data-time="6월 17일"
+          data-subject="현악 4중주 — 갈라 연주 곡목 제안"
+          data-initials="ID" data-emerald="1">
+          <span class="mi-unread-dot" aria-hidden="true"></span>
+          <span class="avatar avatar--sm avatar--emerald mi-avatar" aria-hidden="true">ID</span>
+          <span class="mi-from">이사벨 듀몽</span>
+          <span class="mi-time">6/17</span>
+          <span class="mi-subject">현악 4중주 — 갈라 연주 곡목 제안</span>
+          <span class="mi-preview text-muted">저녁 연주를 위한 곡목 7곡을 추렸습니다. 거슈윈 랩소디 인 블루를 메인으로 제안드립니다.</span>
+          <span class="mi-icons" aria-hidden="true">
+            <svg class="star is-on" viewBox="0 0 24 24"><path d="M12 2l3 7 7 .5-5.5 4.5L18 21l-6-3.8L6 21l1.5-7L2 9.5 9 9z" fill="currentColor"/></svg>
+          </span>
+        </button>
+
+        <!-- 9 -->
+        <button class="mail-item" type="button"
+          data-from="컨시어지 데스크" data-email="concierge@maisondeco.app" data-time="6월 16일"
+          data-subject="6월 일정 요약 및 미처리 항목 3건"
+          data-initials="CD" data-emerald="0">
+          <span class="mi-unread-dot" aria-hidden="true"></span>
+          <span class="avatar avatar--sm mi-avatar" aria-hidden="true">CD</span>
+          <span class="mi-from">컨시어지 데스크</span>
+          <span class="mi-time">6/16</span>
+          <span class="mi-subject">6월 일정 요약 및 미처리 항목 3건</span>
+          <span class="mi-preview text-muted">이번 주 캘린더 요약입니다. 서명 대기 2건, 결제 대기 1건이 남아 있습니다.</span>
+          <span class="mi-icons" aria-hidden="true">
+            <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7 7 .5-5.5 4.5L18 21l-6-3.8L6 21l1.5-7L2 9.5 9 9z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+          </span>
+        </button>
+
+        <!-- 10 -->
+        <button class="mail-item" type="button"
+          data-from="토마스 윌슨" data-email="t.wilson@cog-motors.com" data-time="6월 14일"
+          data-subject="자동차 정비 견적 및 픽업 일정 조율"
+          data-initials="TW" data-emerald="0">
+          <span class="mi-unread-dot" aria-hidden="true"></span>
+          <span class="avatar avatar--sm mi-avatar" aria-hidden="true">TW</span>
+          <span class="mi-from">토마스 윌슨</span>
+          <span class="mi-time">6/14</span>
+          <span class="mi-subject">자동차 정비 견적 및 픽업 일정 조율</span>
+          <span class="mi-preview text-muted">롤스로이스 점검 견적서를 첨부합니다. 엔진 정비 포함 $640, 목요일 픽업 가능합니다.</span>
+          <span class="mi-icons" aria-hidden="true">
+            <svg class="star" viewBox="0 0 24 24"><path d="M12 2l3 7 7 .5-5.5 4.5L18 21l-6-3.8L6 21l1.5-7L2 9.5 9 9z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+          </span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ════════ 패널 3 · 읽기 ════════ -->
+    <article class="mail-pane mail-read" aria-label="메일 읽기" aria-live="polite">
+      <div class="read-wrap">
+        <div class="read-scroll">
+          <div class="read-header">
+            <div class="stack-2" style="min-width:0">
+              <p class="eyebrow">받은편지함 · 갈라 &amp; 행사</p>
+              <h1 class="display fs-2xl text-gold" id="readSubject" style="line-height:1.15">갈라 디너 좌석 배치 — 최종 확인 요청</h1>
+              <div class="row gap-3 mt-2">
+                <span class="avatar mi-read-avatar" aria-hidden="true" id="readAvatar">JB</span>
+                <div class="stack-2" style="gap:1px">
+                  <span class="fs-sm" style="color:var(--color-text-strong)" id="readFrom">조던 베이커</span>
+                  <span class="fs-xs text-subtle text-mono" id="readEmail">jordan.baker@theplaza-events.com</span>
+                </div>
+                <span class="grow"></span>
+                <span class="fs-xs text-subtle text-mono nowrap" id="readTime">오전 9:42 · 6월 21일</span>
+              </div>
+            </div>
+            <div class="read-actions">
+              <span class="tip"><button class="btn btn--icon btn--bare" aria-label="답장" onclick="document.getElementById('replyBox').focus()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h11a5 5 0 0 1 5 5v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="tip-bubble">답장</span></span>
+              <span class="tip"><button class="btn btn--icon btn--bare" aria-label="전달"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 14 5-5-5-5M20 9H9a5 5 0 0 0-5 5v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="tip-bubble">전달</span></span>
+              <span class="tip"><button class="btn btn--icon btn--bare" aria-label="보관" data-toast="success" data-toast-title="보관됨" data-toast-msg="메일을 보관함으로 이동했습니다."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v3H3zM5 10v10h14V10M9 14h6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button><span class="tip-bubble">보관</span></span>
+              <span class="tip"><button class="btn btn--icon btn--bare" aria-label="삭제" data-toast="danger" data-toast-title="삭제됨" data-toast-msg="메일을 휴지통으로 이동했습니다."><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></button><span class="tip-bubble">삭제</span></span>
+            </div>
+          </div>
+
+          <hr class="deco-rule" aria-hidden="true" style="margin:var(--space-6) 0" />
+
+          <div class="read-body text-serif fs-lg" id="readBody">
+            <p>대표님, 안녕하세요.</p>
+            <p>토요일 저녁 웨스트 에그 갈라 디너의 메인 테이블 배치를 다시 정리하여 보내드립니다. 지난 회의에서 말씀하신 대로 귀빈석을 무대 정면 중앙으로 옮기고, 현악 4중주의 동선을 고려해 좌측 통로를 한 뼘 넓혔습니다.</p>
+            <p>특히 부캐넌 부부와 캐러웨이 씨의 좌석은 서로 마주 보지 않도록 분산했으며, 데이지 여사님 테이블에는 골드 캔들 센터피스를 별도로 배정했습니다.</p>
+            <blockquote>"좋은 파티의 비밀은 손님이 길을 잃지 않게 하는 것." — 지난 회의 메모 중에서</blockquote>
+            <p>첨부된 도면(2종)을 검토하신 뒤, 변경이 필요한 부분을 회신 주시면 금요일 정오까지 인쇄소에 최종본을 넘기겠습니다. 시간이 촉박하니 가급적 목요일 오후까지 확인 부탁드립니다.</p>
+            <p class="read-sign">감사합니다.<br />조던 베이커<br /><span class="text-subtle fs-sm">더 플라자 이벤트 · 수석 플래너</span></p>
+          </div>
+
+          <div class="row-wrap gap-2 mt-6">
+            <span class="badge badge--gold"><svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" style="margin-right:4px"><path d="M21.4 11.6 12.4 2.6A2 2 0 0 0 11 2H5a3 3 0 0 0-3 3v6a2 2 0 0 0 .6 1.4l9 9a2 2 0 0 0 2.8 0l7-7a2 2 0 0 0 0-2.8Z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>갈라 &amp; 행사</span>
+            <span class="badge"><svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" style="margin-right:4px"><path d="M21 12l-9 9a3 3 0 0 1-4-4l9-9a2 2 0 0 1 3 3l-8 8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>좌석배치_도면_v4.pdf</span>
+            <span class="badge"><svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" style="margin-right:4px"><path d="M21 12l-9 9a3 3 0 0 1-4-4l9-9a2 2 0 0 1 3 3l-8 8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>센터피스_시안.png</span>
+          </div>
+        </div>
+
+        <!-- 답장 영역 -->
+        <div class="read-reply">
+          <p class="eyebrow mb-2">답장</p>
+          <div class="field">
+            <label class="label sr-only" for="replyBox">답장 내용</label>
+            <textarea class="textarea" id="replyBox" rows="3" placeholder="조던 베이커 님에게 답장 작성…"></textarea>
+          </div>
+          <div class="row between mt-3 wrap gap-3">
+            <label class="btn btn--secondary btn--sm" style="cursor:pointer">
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M21 12l-9 9a3 3 0 0 1-4-4l9-9a2 2 0 0 1 3 3l-8 8" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+              첨부
+              <input type="file" hidden multiple />
+            </label>
+            <button class="btn btn--primary btn--sm" data-toast="success" data-toast-title="전송 완료" data-toast-msg="조던 베이커 님에게 답장을 보냈습니다.">
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M4 12 20 4l-6 16-3-7-7-1Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+              보내기
+            </button>
+          </div>
+        </div>
+      </div>
+    </article>
+
+  </div>
+</main>
+
+<!-- ============================ COMPOSE MODAL ============================ -->
+<div class="overlay" id="composeModal" hidden>
+  <div class="modal deco-rays" role="dialog" aria-modal="true" aria-labelledby="composeTitle">
+    <button class="modal-close" data-modal-close aria-label="닫기"><svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.6"/></svg></button>
+    <div class="modal-head">
+      <p class="eyebrow">New Message</p>
+      <h3 class="modal-title" id="composeTitle">메일 작성</h3>
+      <p class="modal-sub">받는 사람을 추가하고 내용을 입력하세요</p>
+    </div>
+    <div class="modal-body stack">
+      <div class="field">
+        <label class="label" for="composeTo">받는 사람</label>
+        <div class="chip-input">
+          <span class="chip">조던 베이커 <button aria-label="제거"><svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2"/></svg></button></span>
+          <span class="chip">다니엘 부캐넌 <button aria-label="제거"><svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2"/></svg></button></span>
+          <input id="composeTo" placeholder="이메일 입력 후 Enter" aria-label="받는 사람" />
+        </div>
+      </div>
+      <div class="field">
+        <label class="label" for="composeSubject">제목</label>
+        <input class="input" id="composeSubject" placeholder="제목을 입력하세요" />
+      </div>
+      <div class="field">
+        <label class="label" for="composeBody">내용</label>
+        <textarea class="textarea" id="composeBody" rows="6" placeholder="내용을 입력하세요…"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn--ghost" data-modal-close>임시 저장</button>
+      <button class="btn btn--primary" data-modal-close data-toast="success" data-toast-title="전송 완료" data-toast-msg="메일이 발송되었습니다.">보내기</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-region" aria-live="polite" aria-atomic="false"></div>
+
+<script src="../app.js"></script>
+<script>
+  /* 메일 항목 클릭 → 읽기 패널 갱신 */
+  (function () {
+    var items = document.querySelectorAll('#mailItems .mail-item');
+    // 발신자별 본문 변주 (실제 같은 데이터)
+    var bodies = {
+      '갈라 디너 좌석 배치 — 최종 확인 요청':
+        '<p>대표님, 안녕하세요.</p>'
+        + '<p>토요일 저녁 웨스트 에그 갈라 디너의 메인 테이블 배치를 다시 정리하여 보내드립니다. 지난 회의에서 말씀하신 대로 귀빈석을 무대 정면 중앙으로 옮기고, 현악 4중주의 동선을 고려해 좌측 통로를 한 뼘 넓혔습니다.</p>'
+        + '<p>특히 부캐넌 부부와 캐러웨이 씨의 좌석은 서로 마주 보지 않도록 분산했으며, 데이지 여사님 테이블에는 골드 캔들 센터피스를 별도로 배정했습니다.</p>'
+        + '<blockquote>"좋은 파티의 비밀은 손님이 길을 잃지 않게 하는 것." — 지난 회의 메모 중에서</blockquote>'
+        + '<p>첨부된 도면(2종)을 검토하신 뒤, 변경이 필요한 부분을 회신 주시면 금요일 정오까지 인쇄소에 최종본을 넘기겠습니다.</p>'
+        + '<p class="read-sign">감사합니다.<br />조던 베이커<br /><span class="text-subtle fs-sm">더 플라자 이벤트 · 수석 플래너</span></p>',
+      '2분기 투자 보고서 및 배당 일정':
+        '<p>대표님께,</p>'
+        + '<p>첨부드린 보고서대로 2분기 수익률은 전 분기 대비 12.4% 상승했습니다. 채권 비중을 낮추고 우량주를 늘린 전략이 주효했습니다.</p>'
+        + '<blockquote>분기 배당은 7월 첫째 주 화요일에 지급될 예정입니다.</blockquote>'
+        + '<p>다음 분기 포트폴리오 리밸런싱 회의는 다음 주 목요일 오전 10시로 제안드립니다. 가능 여부를 회신 부탁드립니다.</p>'
+        + '<p class="read-sign">존경을 담아,<br />다니엘 부캐넌<br /><span class="text-subtle fs-sm">에그 캐피털 · 자산운용 본부장</span></p>',
+      '웨스트 에그 부지 임대 계약서 검토본':
+        '<p>안녕하세요, 대표님.</p>'
+        + '<p>법무팀 검토를 거친 계약서 v3 를 첨부합니다. 가장 중요한 변경은 11조 위약 조항으로, 불가항력 사유의 범위를 명확히 했습니다.</p>'
+        + '<p>또한 임대 기간을 5년에서 7년으로 연장하는 옵션 조항을 부속서에 추가했으니 함께 살펴봐 주세요.</p>'
+        + '<p class="read-sign">감사합니다.<br />니콜라스 캐러웨이<br /><span class="text-subtle fs-sm">웨스트 에그 부동산 · 중개인</span></p>',
+      '맞춤 턱시도 1차 가봉 일정 안내':
+        '<p>대표님, 메종 르 봉입니다.</p>'
+        + '<p>주문하신 미드나잇 블랙 턱시도 한 벌의 1차 가봉이 준비되었습니다. 어깨선과 라펠 폭을 직접 확인하시는 자리입니다.</p>'
+        + '<p>6월 25일 오후 3시 또는 26일 오전 11시 중 편하신 시간을 알려주시면 아틀리에를 비워두겠습니다.</p>'
+        + '<p class="read-sign">정중히,<br />메종 르 봉 아틀리에</p>',
+      '스위트 예약 확정 — 6월 28일 체크인':
+        '<p>고객님, 안녕하세요.</p>'
+        + '<p>로열 테라스 스위트 2박(6월 28일~30일) 예약이 확정되었습니다. 예약번호는 <strong>PLZ-20817</strong> 입니다.</p>'
+        + '<p>체크인 시 발레파킹과 컨시어지 서비스가 자동 제공되며, 환영 샴페인을 객실에 준비해 두겠습니다.</p>'
+        + '<p class="read-sign">더 플라자 호텔<br /><span class="text-subtle fs-sm">예약 데스크</span></p>',
+      '발할라 프레스 — 표지 시안 3종 회신':
+        '<p>대표님, 안녕하세요.</p>'
+        + '<p>선버스트 모티프를 활용한 표지 세 가지를 보내드립니다. 개인적으로는 두 번째 시안의 대칭 구도에 골드 포일 가공을 더하는 방향을 추천드립니다.</p>'
+        + '<p>인쇄 부수와 종이 두께를 확정해 주시면 견적을 다시 정리하겠습니다.</p>'
+        + '<p class="read-sign">마이라 화이트<br /><span class="text-subtle fs-sm">발할라 프레스 · 아트 디렉터</span></p>',
+      '1925 빈티지 샴페인 12병 입고 알림':
+        '<p>대표님께,</p>'
+        + '<p>요청하신 뵈브 클리코 1925 빈티지 12병이 셀러에 입고되었습니다. 보관 온도와 상태 모두 최상입니다.</p>'
+        + '<p>토요일 갈라 전에 받으시려면 늦어도 금요일 오전까지 배송을 시작해야 합니다. 배송 일정을 회신 부탁드립니다.</p>'
+        + '<p class="read-sign">아서 골드스미스<br /><span class="text-subtle fs-sm">골드스미스 빈트너스</span></p>',
+      '현악 4중주 — 갈라 연주 곡목 제안':
+        '<p>대표님, 안녕하세요.</p>'
+        + '<p>저녁 연주를 위한 곡목 7곡을 추렸습니다. 거슈윈의 <em>랩소디 인 블루</em>를 메인으로, 식전에는 드뷔시를 배치하는 구성을 제안드립니다.</p>'
+        + '<blockquote>리허설은 행사 당일 오후 4시, 무대에서 30분이면 충분합니다.</blockquote>'
+        + '<p class="read-sign">음악과 함께,<br />이사벨 듀몽<br /><span class="text-subtle fs-sm">듀몽 스트링 콰르텟</span></p>',
+      '6월 일정 요약 및 미처리 항목 3건':
+        '<p>대표님, 컨시어지 데스크입니다.</p>'
+        + '<p>이번 주 캘린더 요약입니다. 서명 대기 2건(임대 계약서, 표지 발주서), 결제 대기 1건(샴페인 입고분)이 남아 있습니다.</p>'
+        + '<p>각 항목은 상단 메뉴에서 바로 처리하실 수 있습니다. 마감이 임박한 항목부터 안내드렸습니다.</p>'
+        + '<p class="read-sign">컨시어지 데스크<br /><span class="text-subtle fs-sm">Maison Déco</span></p>',
+      '자동차 정비 견적 및 픽업 일정 조율':
+        '<p>대표님, 안녕하세요.</p>'
+        + '<p>롤스로이스 팬텀 점검 견적서를 첨부합니다. 엔진 정비와 도장 광택을 포함해 <strong>$640</strong> 으로 산정되었습니다.</p>'
+        + '<p>목요일 오전에 자택으로 픽업이 가능하며, 정비는 2일 내 완료 예정입니다.</p>'
+        + '<p class="read-sign">토마스 윌슨<br /><span class="text-subtle fs-sm">콕 모터스 · 정비반장</span></p>'
+    };
+
+    var elSubject = document.getElementById('readSubject');
+    var elFrom = document.getElementById('readFrom');
+    var elEmail = document.getElementById('readEmail');
+    var elTime = document.getElementById('readTime');
+    var elAvatar = document.getElementById('readAvatar');
+    var elBody = document.getElementById('readBody');
+    var elReply = document.getElementById('replyBox');
+
+    items.forEach(function (item) {
+      item.addEventListener('click', function () {
+        items.forEach(function (i) { i.classList.remove('is-active'); });
+        item.classList.add('is-active');
+        item.classList.remove('is-unread'); // 읽음 처리
+
+        var subject = item.getAttribute('data-subject');
+        var from = item.getAttribute('data-from');
+        elSubject.textContent = subject;
+        elFrom.textContent = from;
+        elEmail.textContent = item.getAttribute('data-email');
+        elTime.textContent = item.getAttribute('data-time');
+        elAvatar.textContent = item.getAttribute('data-initials');
+        if (item.getAttribute('data-emerald') === '1') {
+          elAvatar.classList.add('avatar--emerald');
+        } else {
+          elAvatar.classList.remove('avatar--emerald');
+        }
+        elBody.innerHTML = bodies[subject] || '<p>' + subject + '</p>';
+        elReply.placeholder = from + ' 님에게 답장 작성…';
+        elReply.value = '';
+      });
+    });
+  })();
+</script>
+</body>
+</html>

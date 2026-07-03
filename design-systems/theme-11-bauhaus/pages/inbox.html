@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Inbox — BAUHAUS</title>
+<link rel="stylesheet" href="../tokens.css" />
+<link rel="stylesheet" href="../semantic.css" />
+<link rel="stylesheet" href="../base.css" />
+<link rel="stylesheet" href="../components/shapes.css" />
+<link rel="stylesheet" href="../components/buttons.css" />
+<link rel="stylesheet" href="../components/forms.css" />
+<link rel="stylesheet" href="../components/cards.css" />
+<link rel="stylesheet" href="../components/data-display.css" />
+<link rel="stylesheet" href="../components/feedback.css" />
+<link rel="stylesheet" href="../components/overlays.css" />
+<link rel="stylesheet" href="../components/navigation.css" />
+<style>
+  /* ── Inbox layout ── */
+  .inbox-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+  .inbox-body {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 240px minmax(280px,1fr) 1.4fr;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* LEFT pane */
+  .inbox-folders {
+    border-right: 2px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: var(--space-4) 0;
+    background: var(--color-surface);
+  }
+  .inbox-folders__compose {
+    padding: 0 var(--space-4) var(--space-4);
+  }
+  .inbox-folders__section {
+    padding: var(--space-3) var(--space-4) var(--space-1);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+  .folder-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .folder-list__item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--color-text);
+    transition: background 0.12s;
+    user-select: none;
+  }
+  .folder-list__item:hover {
+    background: var(--color-surface-raised);
+  }
+  .folder-list__item.is-active {
+    background: var(--color-primary);
+    color: var(--color-text-on-primary);
+  }
+  .folder-list__item.is-active .ico {
+    color: var(--color-text-on-primary);
+  }
+  .folder-list__name {
+    flex: 1;
+  }
+
+  /* Label dots */
+  .label-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .label-dot--red   { background: var(--color-red, #E63027); }
+  .label-dot--yellow { background: var(--color-yellow, #F7C200); border: 1px solid #cca800; }
+  .label-dot--blue  { background: var(--color-blue, #1E4FCC); }
+
+  /* MIDDLE pane */
+  .inbox-list {
+    border-right: 2px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--color-bg);
+  }
+  .inbox-list__toolbar {
+    padding: var(--space-3) var(--space-3) var(--space-2);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    border-bottom: 2px solid var(--color-border);
+    background: var(--color-surface);
+  }
+  .inbox-list__messages {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  /* Message list items */
+  .msg-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-3);
+    border-bottom: 1px solid var(--color-border);
+    cursor: pointer;
+    transition: background 0.1s;
+    position: relative;
+  }
+  .msg-item:hover {
+    background: var(--color-surface-raised);
+  }
+  .msg-item.is-active {
+    background: var(--color-primary);
+    color: var(--color-text-on-primary);
+  }
+  .msg-item.is-active .msg-item__sender,
+  .msg-item.is-active .msg-item__subject,
+  .msg-item.is-active .msg-item__preview,
+  .msg-item.is-active .msg-item__time {
+    color: var(--color-text-on-primary) !important;
+  }
+  .msg-item__avatar {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .msg-item__body {
+    flex: 1;
+    min-width: 0;
+  }
+  .msg-item__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+  .msg-item__sender {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .msg-item__time {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .msg-item__subject {
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 1px;
+  }
+  .msg-item__subject.is-unread {
+    font-weight: 700;
+  }
+  .msg-item__preview {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+  }
+  .msg-item__trail {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-1);
+    flex-shrink: 0;
+  }
+  .unread-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    display: inline-block;
+  }
+  .msg-item.is-active .unread-dot {
+    background: #fff;
+  }
+  .star-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    color: var(--color-text-muted);
+  }
+  .star-btn.is-starred {
+    color: #F7C200;
+  }
+  .msg-item.is-active .star-btn {
+    color: rgba(255,255,255,0.7);
+  }
+  .msg-item.is-active .star-btn.is-starred {
+    color: #F7C200;
+  }
+
+  /* RIGHT reading pane */
+  .inbox-reading {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--color-bg);
+  }
+  .reading-header {
+    padding: var(--space-5) var(--space-6) var(--space-4);
+    border-bottom: 2px solid var(--color-border);
+    background: var(--color-surface);
+  }
+  .reading-subject {
+    font-size: var(--text-xl);
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    margin-bottom: var(--space-3);
+    line-height: 1.2;
+  }
+  .reading-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+  .reading-sender-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .reading-sender-name {
+    font-weight: 700;
+    font-size: var(--text-sm);
+  }
+  .reading-sender-email {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+  .reading-time {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    white-space: nowrap;
+  }
+  .reading-actions {
+    display: flex;
+    gap: var(--space-1);
+    flex-shrink: 0;
+  }
+  .reading-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-6);
+  }
+  .reading-body p {
+    margin-bottom: var(--space-4);
+    line-height: 1.7;
+    color: var(--color-text);
+  }
+  .reading-reply {
+    border-top: 2px solid var(--color-border);
+    padding: var(--space-4) var(--space-5);
+    background: var(--color-surface);
+  }
+  .reading-reply__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: var(--space-2);
+  }
+  .reading-reply__tools {
+    display: flex;
+    gap: var(--space-1);
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .inbox-body {
+      grid-template-columns: 200px minmax(240px,1fr) 1fr;
+    }
+  }
+  @media (max-width: 700px) {
+    .inbox-body {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr;
+      overflow-y: auto;
+    }
+    .inbox-folders {
+      display: none;
+    }
+    .inbox-list {
+      border-right: none;
+      border-bottom: 2px solid var(--color-border);
+      max-height: 45vh;
+    }
+    .inbox-reading {
+      min-height: 50vh;
+    }
+  }
+  @media (max-width: 480px) {
+    .reading-header {
+      padding: var(--space-4);
+    }
+    .reading-body {
+      padding: var(--space-4);
+    }
+    .reading-reply {
+      padding: var(--space-3) var(--space-4);
+    }
+  }
+</style>
+</head>
+<body>
+<a href="#main" class="sr-only">Skip to content</a>
+
+<div class="inbox-shell">
+
+  <!-- NAVBAR -->
+  <header class="navbar no-print">
+    <a class="navbar__brand" href="../index.html"><span class="logomark"><span class="mark"><i></i><i></i><i></i></span> BAUHAUS</span></a>
+    <nav class="navbar__nav" aria-label="Primary">
+      <a class="navbar__link" href="../index.html">Home</a>
+      <a class="navbar__link is-active" href="#">Inbox</a>
+    </nav>
+    <span class="navbar__spacer"></span>
+    <div class="navbar__actions">
+      <button class="btn btn-primary btn-sm" data-open-modal="compose-modal" aria-label="Compose new email">
+        <span class="ico ico-plus"></span> Compose
+      </button>
+      <button class="btn-icon" data-theme-toggle aria-label="Toggle theme" aria-pressed="false">
+        <span class="ico ico-gear"></span>
+      </button>
+      <span class="avatar avatar--sm avatar--blue">MK</span>
+    </div>
+  </header>
+
+  <!-- INBOX BODY -->
+  <div class="inbox-body" id="main">
+
+    <!-- LEFT PANE: Folders -->
+    <aside class="inbox-folders" aria-label="Folders">
+      <div class="inbox-folders__compose">
+        <button class="btn btn-primary btn-block" data-open-modal="compose-modal">
+          <span class="ico ico-plus"></span> Compose
+        </button>
+      </div>
+
+      <div class="inbox-folders__section">Folders</div>
+      <ul class="folder-list" role="list">
+        <li class="folder-list__item is-active" role="listitem" tabindex="0">
+          <span class="ico ico-mail"></span>
+          <span class="folder-list__name">Inbox</span>
+          <span class="badge badge--blue">12</span>
+        </li>
+        <li class="folder-list__item" role="listitem" tabindex="0">
+          <span class="ico ico-star"></span>
+          <span class="folder-list__name">Starred</span>
+        </li>
+        <li class="folder-list__item" role="listitem" tabindex="0">
+          <span class="ico ico-arrow-r"></span>
+          <span class="folder-list__name">Sent</span>
+        </li>
+        <li class="folder-list__item" role="listitem" tabindex="0">
+          <span class="ico ico-grid"></span>
+          <span class="folder-list__name">Drafts</span>
+          <span class="badge badge--black">3</span>
+        </li>
+        <li class="folder-list__item" role="listitem" tabindex="0">
+          <span class="ico ico-chart"></span>
+          <span class="folder-list__name">Archive</span>
+        </li>
+        <li class="folder-list__item" role="listitem" tabindex="0">
+          <span class="ico ico-trash"></span>
+          <span class="folder-list__name">Trash</span>
+        </li>
+        <li class="folder-list__item" role="listitem" tabindex="0">
+          <span class="ico ico-x"></span>
+          <span class="folder-list__name">Spam</span>
+        </li>
+      </ul>
+
+      <div class="inbox-folders__section">Labels</div>
+      <ul class="folder-list" role="list">
+        <li class="folder-list__item" role="listitem" tabindex="0">
+          <span class="label-dot label-dot--red"></span>
+          <span class="folder-list__name">Work</span>
+        </li>
+        <li class="folder-list__item" role="listitem" tabindex="0">
+          <span class="label-dot label-dot--yellow"></span>
+          <span class="folder-list__name">Personal</span>
+        </li>
+        <li class="folder-list__item" role="listitem" tabindex="0">
+          <span class="label-dot label-dot--blue"></span>
+          <span class="folder-list__name">Design</span>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- MIDDLE PANE: Message list -->
+    <section class="inbox-list" aria-label="Messages">
+      <div class="inbox-list__toolbar">
+        <div class="searchbar">
+          <span class="ico ico-search"></span>
+          <input type="search" class="input pad-left" placeholder="Search mail…" aria-label="Search messages" />
+          <button class="searchbar__clear" aria-label="Clear search"><span class="ico ico-x ico-sm"></span></button>
+        </div>
+        <div class="segmented" role="group" aria-label="Filter messages">
+          <button class="segmented__option" aria-pressed="true" data-value="all">All</button>
+          <button class="segmented__option" aria-pressed="false" data-value="unread">Unread</button>
+        </div>
+      </div>
+
+      <div class="inbox-list__messages" role="list" id="msg-list">
+
+        <!-- Message 1 — ACTIVE, unread -->
+        <div class="msg-item is-active" role="listitem" tabindex="0"
+          data-msg-id="1"
+          data-sender="Sophie Laurent"
+          data-email="s.laurent@studio-arc.com"
+          data-time="Today, 10:42 AM"
+          data-subject="Q3 Design Review — Feedback Required"
+          data-avatar-color="red"
+          data-avatar-initials="SL"
+          data-body="msg-body-1">
+          <div class="msg-item__avatar">
+            <span class="avatar avatar--sm avatar--red">SL</span>
+          </div>
+          <div class="msg-item__body">
+            <div class="msg-item__row">
+              <span class="msg-item__sender">Sophie Laurent</span>
+              <span class="msg-item__time">10:42 AM</span>
+            </div>
+            <div class="msg-item__subject is-unread">Q3 Design Review — Feedback Required</div>
+            <div class="msg-item__preview">Hi team, I've attached the revised component specs from this week's review session…</div>
+          </div>
+          <div class="msg-item__trail">
+            <button class="star-btn is-starred" aria-label="Starred"><span class="ico ico-star ico-sm"></span></button>
+            <span class="unread-dot" aria-label="Unread"></span>
+          </div>
+        </div>
+
+        <!-- Message 2 — unread -->
+        <div class="msg-item" role="listitem" tabindex="0"
+          data-msg-id="2"
+          data-sender="Marcus Webb"
+          data-email="marcus@devteam.io"
+          data-time="Today, 9:15 AM"
+          data-subject="Sprint 24 Kickoff — Action Items"
+          data-avatar-color="blue"
+          data-avatar-initials="MW"
+          data-body="msg-body-2">
+          <div class="msg-item__avatar">
+            <span class="avatar avatar--sm avatar--blue">MW</span>
+          </div>
+          <div class="msg-item__body">
+            <div class="msg-item__row">
+              <span class="msg-item__sender">Marcus Webb</span>
+              <span class="msg-item__time">9:15 AM</span>
+            </div>
+            <div class="msg-item__subject is-unread">Sprint 24 Kickoff — Action Items</div>
+            <div class="msg-item__preview">Following our standup, here are the confirmed action items for each pod…</div>
+          </div>
+          <div class="msg-item__trail">
+            <button class="star-btn" aria-label="Not starred"><span class="ico ico-star ico-sm"></span></button>
+            <span class="unread-dot" aria-label="Unread"></span>
+          </div>
+        </div>
+
+        <!-- Message 3 -->
+        <div class="msg-item" role="listitem" tabindex="0"
+          data-msg-id="3"
+          data-sender="Nadia Okonkwo"
+          data-email="n.okonkwo@brandlab.co"
+          data-time="Yesterday"
+          data-subject="Re: Bauhaus Typography Scale"
+          data-avatar-color="black"
+          data-avatar-initials="NO"
+          data-body="msg-body-3">
+          <div class="msg-item__avatar">
+            <span class="avatar avatar--sm avatar--black">NO</span>
+          </div>
+          <div class="msg-item__body">
+            <div class="msg-item__row">
+              <span class="msg-item__sender">Nadia Okonkwo</span>
+              <span class="msg-item__time">Yesterday</span>
+            </div>
+            <div class="msg-item__subject">Re: Bauhaus Typography Scale</div>
+            <div class="msg-item__preview">Agreed — the display sizes feel right but the body tracking at 14px needs a tweak…</div>
+          </div>
+          <div class="msg-item__trail">
+            <button class="star-btn is-starred" aria-label="Starred"><span class="ico ico-star ico-sm"></span></button>
+          </div>
+        </div>
+
+        <!-- Message 4 — unread -->
+        <div class="msg-item" role="listitem" tabindex="0"
+          data-msg-id="4"
+          data-sender="Lena Fischer"
+          data-email="lena.fischer@grid-works.de"
+          data-time="Yesterday"
+          data-subject="Component Token Audit Complete"
+          data-avatar-color="yellow"
+          data-avatar-initials="LF"
+          data-body="msg-body-4">
+          <div class="msg-item__avatar">
+            <span class="avatar avatar--sm avatar--yellow">LF</span>
+          </div>
+          <div class="msg-item__body">
+            <div class="msg-item__row">
+              <span class="msg-item__sender">Lena Fischer</span>
+              <span class="msg-item__time">Yesterday</span>
+            </div>
+            <div class="msg-item__subject is-unread">Component Token Audit Complete</div>
+            <div class="msg-item__preview">I've finished mapping all 47 semantic tokens to their primitive counterparts. See attached spreadsheet…</div>
+          </div>
+          <div class="msg-item__trail">
+            <button class="star-btn" aria-label="Not starred"><span class="ico ico-star ico-sm"></span></button>
+            <span class="unread-dot" aria-label="Unread"></span>
+          </div>
+        </div>
+
+        <!-- Message 5 -->
+        <div class="msg-item" role="listitem" tabindex="0"
+          data-msg-id="5"
+          data-sender="James Okafor"
+          data-email="james@uxcraft.co"
+          data-time="Mon"
+          data-subject="Accessibility Checklist — WCAG 2.2"
+          data-avatar-color="red"
+          data-avatar-initials="JO"
+          data-body="msg-body-5">
+          <div class="msg-item__avatar">
+            <span class="avatar avatar--sm avatar--red">JO</span>
+          </div>
+          <div class="msg-item__body">
+            <div class="msg-item__row">
+              <span class="msg-item__sender">James Okafor</span>
+              <span class="msg-item__time">Mon</span>
+            </div>
+            <div class="msg-item__subject">Accessibility Checklist — WCAG 2.2</div>
+            <div class="msg-item__preview">Sharing the updated checklist we discussed. Focus indicators and color contrast flagged…</div>
+          </div>
+          <div class="msg-item__trail">
+            <button class="star-btn" aria-label="Not starred"><span class="ico ico-star ico-sm"></span></button>
+          </div>
+        </div>
+
+        <!-- Message 6 -->
+        <div class="msg-item" role="listitem" tabindex="0"
+          data-msg-id="6"
+          data-sender="Priya Sharma"
+          data-email="priya.sharma@indiestudio.in"
+          data-time="Mon"
+          data-subject="New Figma Library Sync Request"
+          data-avatar-color="blue"
+          data-avatar-initials="PS"
+          data-body="msg-body-6">
+          <div class="msg-item__avatar">
+            <span class="avatar avatar--sm avatar--blue">PS</span>
+          </div>
+          <div class="msg-item__body">
+            <div class="msg-item__row">
+              <span class="msg-item__sender">Priya Sharma</span>
+              <span class="msg-item__time">Mon</span>
+            </div>
+            <div class="msg-item__subject">New Figma Library Sync Request</div>
+            <div class="msg-item__preview">I've published the latest component set to the shared library. Can you accept and verify?</div>
+          </div>
+          <div class="msg-item__trail">
+            <button class="star-btn" aria-label="Not starred"><span class="ico ico-star ico-sm"></span></button>
+          </div>
+        </div>
+
+        <!-- Message 7 — unread -->
+        <div class="msg-item" role="listitem" tabindex="0"
+          data-msg-id="7"
+          data-sender="Design Systems HQ"
+          data-email="news@ds-weekly.com"
+          data-time="Sun"
+          data-subject="DS Weekly — Issue #119"
+          data-avatar-color="black"
+          data-avatar-initials="DS"
+          data-body="msg-body-7">
+          <div class="msg-item__avatar">
+            <span class="avatar avatar--sm avatar--black">DS</span>
+          </div>
+          <div class="msg-item__body">
+            <div class="msg-item__row">
+              <span class="msg-item__sender">Design Systems HQ</span>
+              <span class="msg-item__time">Sun</span>
+            </div>
+            <div class="msg-item__subject is-unread">DS Weekly — Issue #119</div>
+            <div class="msg-item__preview">This week: CSS custom properties in 2025, new ARIA patterns, token naming best practices…</div>
+          </div>
+          <div class="msg-item__trail">
+            <button class="star-btn" aria-label="Not starred"><span class="ico ico-star ico-sm"></span></button>
+            <span class="unread-dot" aria-label="Unread"></span>
+          </div>
+        </div>
+
+        <!-- Message 8 -->
+        <div class="msg-item" role="listitem" tabindex="0"
+          data-msg-id="8"
+          data-sender="Thomas Braun"
+          data-email="t.braun@archhaus.com"
+          data-time="Sat"
+          data-subject="Re: Modular Grid System Proposal"
+          data-avatar-color="yellow"
+          data-avatar-initials="TB"
+          data-body="msg-body-8">
+          <div class="msg-item__avatar">
+            <span class="avatar avatar--sm avatar--yellow">TB</span>
+          </div>
+          <div class="msg-item__body">
+            <div class="msg-item__row">
+              <span class="msg-item__sender">Thomas Braun</span>
+              <span class="msg-item__time">Sat</span>
+            </div>
+            <div class="msg-item__subject">Re: Modular Grid System Proposal</div>
+            <div class="msg-item__preview">I love the 12-col base but I think we should explore a 4-col fallback for mobile…</div>
+          </div>
+          <div class="msg-item__trail">
+            <button class="star-btn" aria-label="Not starred"><span class="ico ico-star ico-sm"></span></button>
+          </div>
+        </div>
+
+        <!-- Message 9 -->
+        <div class="msg-item" role="listitem" tabindex="0"
+          data-msg-id="9"
+          data-sender="Clara Hoffmann"
+          data-email="clara@designops.eu"
+          data-time="Fri"
+          data-subject="Q2 Retrospective Notes"
+          data-avatar-color="red"
+          data-avatar-initials="CH"
+          data-body="msg-body-9">
+          <div class="msg-item__avatar">
+            <span class="avatar avatar--sm avatar--red">CH</span>
+          </div>
+          <div class="msg-item__body">
+            <div class="msg-item__row">
+              <span class="msg-item__sender">Clara Hoffmann</span>
+              <span class="msg-item__time">Fri</span>
+            </div>
+            <div class="msg-item__subject">Q2 Retrospective Notes</div>
+            <div class="msg-item__preview">Notes from Friday's retro are now in Notion. Key wins: token adoption up 40%, docs coverage…</div>
+          </div>
+          <div class="msg-item__trail">
+            <button class="star-btn" aria-label="Not starred"><span class="ico ico-star ico-sm"></span></button>
+          </div>
+        </div>
+
+        <!-- Message 10 -->
+        <div class="msg-item" role="listitem" tabindex="0"
+          data-msg-id="10"
+          data-sender="Alex Chen"
+          data-email="alex.chen@pixelstudio.io"
+          data-time="Thu"
+          data-subject="Dark Mode — Final Sign-Off Needed"
+          data-avatar-color="blue"
+          data-avatar-initials="AC"
+          data-body="msg-body-10">
+          <div class="msg-item__avatar">
+            <span class="avatar avatar--sm avatar--blue">AC</span>
+          </div>
+          <div class="msg-item__body">
+            <div class="msg-item__row">
+              <span class="msg-item__sender">Alex Chen</span>
+              <span class="msg-item__time">Thu</span>
+            </div>
+            <div class="msg-item__subject">Dark Mode — Final Sign-Off Needed</div>
+            <div class="msg-item__preview">The dark theme palette is ready for review. All contrast ratios pass WCAG AA. Awaiting…</div>
+          </div>
+          <div class="msg-item__trail">
+            <button class="star-btn" aria-label="Not starred"><span class="ico ico-star ico-sm"></span></button>
+          </div>
+        </div>
+
+      </div><!-- /inbox-list__messages -->
+    </section>
+
+    <!-- RIGHT PANE: Reading pane -->
+    <main class="inbox-reading" id="reading-pane" aria-label="Reading pane">
+      <div class="reading-header">
+        <h1 class="reading-subject" id="reading-subject">Q3 Design Review — Feedback Required</h1>
+        <div class="reading-meta">
+          <span class="avatar avatar--sm avatar--red" id="reading-avatar">SL</span>
+          <div class="reading-sender-info">
+            <div class="reading-sender-name" id="reading-sender-name">Sophie Laurent</div>
+            <div class="reading-sender-email" id="reading-sender-email">s.laurent@studio-arc.com</div>
+          </div>
+          <span class="reading-time" id="reading-time">Today, 10:42 AM</span>
+          <div class="reading-actions">
+            <button class="btn-icon" aria-label="Star this email"><span class="ico ico-star"></span></button>
+            <button class="btn-icon" aria-label="Reply"><span class="ico ico-arrow-r"></span></button>
+            <div class="menu">
+              <button class="btn-icon" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-label="More options">
+                <span class="ico ico-dots"></span>
+              </button>
+              <div class="menu__panel" hidden role="menu">
+                <button class="menu__item"><span class="ico ico-arrow-l ico-sm"></span> Forward</button>
+                <button class="menu__item"><span class="ico ico-chart ico-sm"></span> Archive</button>
+                <div class="menu__sep"></div>
+                <button class="menu__item menu__item--danger"><span class="ico ico-trash ico-sm"></span> Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="reading-body" id="reading-body">
+        <!-- Hidden body templates -->
+        <div id="msg-body-1" class="reading-body-content">
+          <p>Hi team,</p>
+          <p>I've attached the revised component specifications from this week's Q3 design review session. We covered a lot of ground — button states, form field variants, and the updated color token mapping from the Bauhaus audit.</p>
+          <p>Key feedback from the review:</p>
+          <p><strong>1. Primary buttons</strong> — The flat shadow offset should remain at 3px across all breakpoints. No gradient, ever. The Bauhaus principle of honest materials applies here too.</p>
+          <p><strong>2. Form inputs</strong> — Error states need both a color change (red border) and a shape cue (the error icon). Relying on color alone fails WCAG 1.4.1. I've added the inline-note component to the field error pattern.</p>
+          <p><strong>3. Typography</strong> — The display class at 64px feels strong on desktop. On mobile (< 480px), cap it at 40px. The Jost typeface handles the weight well at both sizes.</p>
+          <p>Please review the attached specs by end of day Thursday and leave your comments in Figma. I'll consolidate everything before the Friday handoff to engineering.</p>
+          <p>Looking forward to your thoughts,<br><strong>Sophie</strong></p>
+        </div>
+        <div id="msg-body-2" class="reading-body-content" hidden>
+          <p>Hi all,</p>
+          <p>Following our Monday standup, here are the confirmed action items for Sprint 24. Each pod lead is responsible for updating Jira before EOD Wednesday.</p>
+          <p><strong>Design Pod (Sophie, Lena):</strong> Finalize component token audit, publish Figma library update, review WCAG checklist with James.</p>
+          <p><strong>Frontend Pod (Alex, Thomas):</strong> Implement dark mode theme switch, wire up accordion and tabs with data-attributes, complete carousel autoplay fix.</p>
+          <p><strong>Ops Pod (Clara, Priya):</strong> Update Notion documentation for all new components, schedule Q3 retrospective, coordinate with stakeholders on sign-off.</p>
+          <p>Velocity target this sprint: 48 points. We're tracking well — last sprint we hit 52. Let's keep the momentum.</p>
+          <p>Stand-up is at 9:30 AM daily. See you there.<br><strong>Marcus</strong></p>
+        </div>
+        <div id="msg-body-3" class="reading-body-content" hidden>
+          <p>Hi,</p>
+          <p>Agreed — the display sizes feel right but I think the body tracking at 14px needs a small tweak. Currently it's at 0.01em which creates a slight heaviness on the smaller scale. I'd suggest dropping it to 0 for body text and reserving letter-spacing for eyebrow labels and uppercase headings.</p>
+          <p>Also, the Jost typeface doesn't ship with a true italic variant — we're relying on the browser to synthesize it. Should we address this in the font stack fallback?</p>
+          <p>Happy to jump on a quick call to walk through the scale together if that's easier.<br><strong>Nadia</strong></p>
+        </div>
+        <div id="msg-body-4" class="reading-body-content" hidden>
+          <p>Hi,</p>
+          <p>I've finished mapping all 47 semantic tokens to their primitive counterparts. The attached spreadsheet covers color, spacing, radius, shadow, and typography tokens across both light and dark themes.</p>
+          <p>Highlights from the audit:</p>
+          <p>— 6 tokens were duplicated and have been consolidated.<br>— 3 radius tokens referenced hardcoded px values instead of the scale variables.<br>— The `--color-surface-raised` token was missing from dark theme entirely.</p>
+          <p>All issues have been logged in the design-tokens GitHub repo as issues. I'll begin the PR for the fixes tomorrow morning.</p>
+          <p>Let me know if you spot anything I missed.<br><strong>Lena</strong></p>
+        </div>
+        <div id="msg-body-5" class="reading-body-content" hidden>
+          <p>Hey,</p>
+          <p>Sharing the updated WCAG 2.2 checklist we discussed at last week's all-hands. I've gone through each component in the current design system and flagged issues.</p>
+          <p><strong>Focus indicators:</strong> The default browser outline is being suppressed in base.css without an equivalent replacement. This fails 2.4.11 (Focus Appearance). We need a visible 2px offset ring on all interactive elements.</p>
+          <p><strong>Color contrast:</strong> Yellow backgrounds with white text are a hard fail at 1.07:1. Confirmed the design spec now mandates black text on yellow (`--color-text-on-accent`). Good.</p>
+          <p><strong>Touch targets:</strong> Several icon buttons are 32×32px — below the WCAG 2.2 minimum of 24×24px. The `.btn-icon` class needs a minimum 44×44px clickable area via padding.</p>
+          <p>Full annotated checklist attached. Happy to do a walk-through session.<br><strong>James</strong></p>
+        </div>
+        <div id="msg-body-6" class="reading-body-content" hidden>
+          <p>Hi,</p>
+          <p>I've published the latest component set to the Figma shared library (v2.4.1). The update includes all the changes from the Q3 review plus the token audit fixes.</p>
+          <p>To accept the library update in your Figma files: open the Assets panel → Libraries → find "BAUHAUS Design System" → click "Review Update" → accept all changes.</p>
+          <p>Please do this before Thursday so the engineering handoff uses the correct specs. If you run into any detached instances, ping me directly and I'll help resolve them.</p>
+          <p>Thanks,<br><strong>Priya</strong></p>
+        </div>
+        <div id="msg-body-7" class="reading-body-content" hidden>
+          <p><strong>Design Systems Weekly — Issue #119</strong></p>
+          <p>This week's top picks from the design systems community:</p>
+          <p><strong>CSS Custom Properties in 2025:</strong> A deep dive into using @property for animation-friendly tokens, typed custom properties, and inheritance control. Finally, robust design tokens in pure CSS.</p>
+          <p><strong>New ARIA Patterns:</strong> APG has released updated patterns for combobox, listbox, and tree components. The new combobox pattern deprecates the role="combobox" on the container — worth auditing your current implementations.</p>
+          <p><strong>Token Naming Best Practices:</strong> Nathan Curtis on why semantic token names should express intent, not appearance. `--color-action-primary` beats `--color-blue-600` every time.</p>
+          <p>See you next week.<br><strong>DS Weekly</strong></p>
+        </div>
+        <div id="msg-body-8" class="reading-body-content" hidden>
+          <p>Hey,</p>
+          <p>I love the 12-column base — it gives us the asymmetric layout freedom that's core to the Bauhaus aesthetic. But I think we should seriously explore a 4-column fallback for mobile.</p>
+          <p>12 columns at 375px with 16px gutters leaves only about 17px per column — barely usable. A 4-column grid at mobile gives us proper breathing room and still supports the modular structure.</p>
+          <p>I've mocked up a few screens at both breakpoints. The 4-col version looks much cleaner and stays true to the rational, geometric approach. Happy to share the Figma file if useful.</p>
+          <p>What do you think?<br><strong>Thomas</strong></p>
+        </div>
+        <div id="msg-body-9" class="reading-body-content" hidden>
+          <p>Hi team,</p>
+          <p>Notes from Friday's retrospective are now live in Notion (link below). Here are the key highlights:</p>
+          <p><strong>Wins:</strong> Token adoption is up 40% across the org. Documentation coverage hit 78% — our highest ever. The new data-attribute pattern for JS interactions is being used consistently by frontend.</p>
+          <p><strong>Pain points:</strong> Figma → code handoff still has friction around spacing tokens. The component contribution process needs clearer guidelines for external contributors.</p>
+          <p><strong>Next steps:</strong> I'll draft a contribution guide by next Wednesday. Sophie will create a spacing token visual reference in Figma. Marcus will set up a bi-weekly sync between design and frontend leads.</p>
+          <p>Great sprint everyone.<br><strong>Clara</strong></p>
+        </div>
+        <div id="msg-body-10" class="reading-body-content" hidden>
+          <p>Hi,</p>
+          <p>The dark mode palette is ready for final review and sign-off. All 47 semantic tokens have been mapped to their dark-theme counterparts and every combination passes WCAG AA contrast (4.5:1 for normal text, 3:1 for large text).</p>
+          <p>The one area I'd flag for attention: the `--color-yellow` on dark backgrounds. I've desaturated it slightly to #E6B400 in dark mode — this maintains readability while preserving the Bauhaus primary palette feel. The original #F7C200 was too close to white at dark background luminance levels.</p>
+          <p>Figma prototype with light/dark toggle is ready for your review. Click "Approve" in the Figma comment thread once you're satisfied and I'll merge the PR.</p>
+          <p>Thanks,<br><strong>Alex</strong></p>
+        </div>
+      </div>
+
+      <div class="reading-reply">
+        <textarea class="textarea" rows="3" placeholder="Write a reply…" aria-label="Reply body"></textarea>
+        <div class="reading-reply__toolbar">
+          <div class="reading-reply__tools">
+            <button class="btn-icon" aria-label="Attach file"><span class="ico ico-upload"></span></button>
+            <button class="btn-icon" aria-label="Insert link"><span class="ico ico-info"></span></button>
+            <button class="btn-icon" aria-label="Format text"><span class="ico ico-grid"></span></button>
+          </div>
+          <button class="btn btn-primary btn-sm" id="send-reply-btn"
+            data-toast-title="Reply sent"
+            data-toast-text="Your reply has been delivered."
+            data-toast-variant="success">
+            <span class="ico ico-mail"></span> Send
+          </button>
+        </div>
+      </div>
+    </main>
+
+  </div><!-- /inbox-body -->
+</div><!-- /inbox-shell -->
+
+<!-- COMPOSE MODAL -->
+<div class="modal" id="compose-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="compose-modal-title">
+  <div class="modal__dialog modal__dialog--lg">
+    <div class="modal__header">
+      <span class="modal__title" id="compose-modal-title">New Message</span>
+      <button class="modal__close" data-close-modal aria-label="Close compose">
+        <span class="ico ico-x"></span>
+      </button>
+    </div>
+    <div class="modal__body">
+      <div class="field">
+        <label class="field__label req" for="compose-to">To</label>
+        <div class="chipinput" data-chipinput>
+          <input class="chipinput__field" id="compose-to" type="text" placeholder="Add recipients…" aria-label="Recipients" />
+        </div>
+      </div>
+      <div class="field">
+        <label class="field__label" for="compose-subject">Subject</label>
+        <input class="input" id="compose-subject" type="text" placeholder="Subject…" aria-label="Email subject" />
+      </div>
+      <div class="field">
+        <label class="field__label" for="compose-body">Message</label>
+        <textarea class="textarea" id="compose-body" rows="8" placeholder="Write your message…" aria-label="Message body"></textarea>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn-ghost" data-close-modal>Discard</button>
+      <button class="btn btn-primary" id="compose-send-btn">
+        <span class="ico ico-mail"></span> Send Message
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Inline JS: message selection + reading pane update -->
+<script>
+(function () {
+  var avatarColorMap = {
+    red:    'avatar--red',
+    yellow: 'avatar--yellow',
+    blue:   'avatar--blue',
+    black:  'avatar--black'
+  };
+
+  function showBody(bodyId) {
+    document.querySelectorAll('.reading-body-content').forEach(function (el) {
+      el.hidden = true;
+    });
+    var target = document.getElementById(bodyId);
+    if (target) target.hidden = false;
+  }
+
+  function updateReadingPane(item) {
+    var sender   = item.dataset.sender    || '';
+    var email    = item.dataset.email     || '';
+    var time     = item.dataset.time      || '';
+    var subject  = item.dataset.subject   || '';
+    var color    = item.dataset.avatarColor  || 'blue';
+    var initials = item.dataset.avatarInitials || '?';
+    var bodyId   = item.dataset.body      || '';
+
+    document.getElementById('reading-subject').textContent   = subject;
+    document.getElementById('reading-sender-name').textContent = sender;
+    document.getElementById('reading-sender-email').textContent = email;
+    document.getElementById('reading-time').textContent      = time;
+
+    var avatarEl = document.getElementById('reading-avatar');
+    if (avatarEl) {
+      avatarEl.textContent = initials;
+      // Remove all color classes then add the right one
+      Object.values(avatarColorMap).forEach(function (cls) { avatarEl.classList.remove(cls); });
+      avatarEl.classList.add(avatarColorMap[color] || 'avatar--blue');
+    }
+
+    if (bodyId) showBody(bodyId);
+  }
+
+  // Wire message list items
+  var msgList = document.getElementById('msg-list');
+  if (msgList) {
+    msgList.addEventListener('click', function (e) {
+      var item = e.target.closest('.msg-item');
+      if (!item) return;
+
+      // Star button — toggle only, don't switch message
+      if (e.target.closest('.star-btn')) {
+        var starBtn = e.target.closest('.star-btn');
+        starBtn.classList.toggle('is-starred');
+        var isStarred = starBtn.classList.contains('is-starred');
+        starBtn.setAttribute('aria-label', isStarred ? 'Starred' : 'Not starred');
+        return;
+      }
+
+      // Mark active
+      msgList.querySelectorAll('.msg-item').forEach(function (el) {
+        el.classList.remove('is-active');
+      });
+      item.classList.add('is-active');
+
+      // Remove unread dot on open
+      var dot = item.querySelector('.unread-dot');
+      if (dot) dot.remove();
+      var subjectEl = item.querySelector('.msg-item__subject');
+      if (subjectEl) subjectEl.classList.remove('is-unread');
+
+      updateReadingPane(item);
+    });
+
+    // Keyboard navigation
+    msgList.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        var item = e.target.closest('.msg-item');
+        if (item) item.click();
+      }
+    });
+  }
+
+  // Compose send button
+  var composeSendBtn = document.getElementById('compose-send-btn');
+  if (composeSendBtn) {
+    composeSendBtn.addEventListener('click', function () {
+      // Close modal
+      var modal = document.getElementById('compose-modal');
+      if (modal) {
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+      }
+      // Trigger toast via Bauhaus
+      if (window.Bauhaus && window.Bauhaus.toast) {
+        window.Bauhaus.toast({ title: 'Message sent', text: 'Your message has been delivered.', variant: 'success' });
+      }
+    });
+  }
+
+  // Send reply button
+  var sendReplyBtn = document.getElementById('send-reply-btn');
+  if (sendReplyBtn) {
+    sendReplyBtn.addEventListener('click', function () {
+      if (window.Bauhaus && window.Bauhaus.toast) {
+        window.Bauhaus.toast({ title: 'Reply sent', text: 'Your reply has been delivered.', variant: 'success' });
+      }
+      // Clear reply textarea
+      var replyArea = document.querySelector('.reading-reply .textarea');
+      if (replyArea) replyArea.value = '';
+    });
+  }
+
+  // Initialise reading pane with first active message
+  var firstActive = msgList && msgList.querySelector('.msg-item.is-active');
+  if (firstActive) {
+    showBody(firstActive.dataset.body || '');
+  }
+})();
+</script>
+
+<script src="../app.js"></script>
+</body>
+</html>

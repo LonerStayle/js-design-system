@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inbox — Botanical Journal</title>
+<meta name="description" content="A three-pane mailbox for the Verdant Society seed-exchange — folders, message list, and a reading pane of foraging notes and seed-swap correspondence.">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../semantic.css">
+<link rel="stylesheet" href="../base.css">
+<link rel="stylesheet" href="../components/index.css">
+<style>
+  /* ====== page-local layout — composes with tokens ====== */
+  html, body { height: 100%; }
+  body { display: flex; flex-direction: column; overflow: hidden; }
+
+  .mail-top {
+    flex-shrink: 0;
+    height: 60px;
+    display: flex; align-items: center; gap: var(--space-4);
+    padding-inline: var(--space-5);
+    background: color-mix(in srgb, var(--nav-bg) 92%, transparent);
+    border-bottom: var(--border-1) solid var(--nav-border);
+    backdrop-filter: blur(8px);
+  }
+  .mail-top__brand { display: flex; align-items: center; gap: var(--space-3); font-family: var(--font-display); font-size: var(--text-lg); color: var(--color-text-strong); white-space: nowrap; }
+  .mail-top__brand svg { width: 1.6rem; height: 1.6rem; color: var(--color-primary); flex-shrink: 0; }
+  .mail-top__brand .binomial { font-size: var(--text-2xs); display: block; line-height: 1.1; }
+
+  /* the 3-pane grid fills the remaining height */
+  .mail { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--sidebar-w) minmax(320px, 0.9fr) minmax(0, 1.4fr); }
+
+  /* ---------- 1) FOLDERS RAIL ---------- */
+  .folders {
+    grid-column: 1;
+    background: var(--sidebar-bg);
+    border-right: var(--border-1) solid var(--color-border);
+    display: flex; flex-direction: column; min-height: 0;
+  }
+  .folders__compose { padding: var(--space-4) var(--space-4) var(--space-2); }
+  .folders__nav { padding: var(--space-1) var(--space-3) var(--space-4); overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .dot-label { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 40%, transparent); }
+
+  /* ---------- 2) MESSAGE LIST ---------- */
+  .list-pane { grid-column: 2; display: flex; flex-direction: column; min-height: 0; border-right: var(--border-1) solid var(--color-border); background: var(--color-bg); }
+  .list-pane__head { flex-shrink: 0; padding: var(--space-4) var(--space-4) var(--space-3); border-bottom: var(--border-1) solid var(--color-divider); display: flex; flex-direction: column; gap: var(--space-3); }
+  .list-pane__scroll { overflow-y: auto; flex: 1; }
+
+  .msg-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 2px var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    width: 100%; text-align: left;
+    border-bottom: var(--border-1) solid var(--color-divider);
+    cursor: pointer; position: relative;
+    transition: background var(--duration-fast);
+  }
+  .msg-row:hover { background: var(--color-bg-tint); }
+  .msg-row.is-active { background: var(--color-surface); box-shadow: inset 3px 0 0 var(--color-primary); }
+  .msg-row__avatar { grid-row: 1 / 3; align-self: start; }
+  .msg-row__line1 { grid-column: 2; display: flex; align-items: baseline; gap: var(--space-2); min-width: 0; }
+  .msg-row__sender { font-family: var(--font-display); font-size: var(--text-md); color: var(--color-text-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .msg-row.is-unread .msg-row__sender { font-weight: var(--weight-bold); }
+  .msg-row__time { grid-column: 3; grid-row: 1; font-size: var(--text-2xs); color: var(--color-text-faint); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .msg-row__subject { grid-column: 2; font-size: var(--text-sm); color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .msg-row.is-unread .msg-row__subject { color: var(--color-text-strong); font-weight: var(--weight-medium); }
+  .msg-row__snippet { grid-column: 2 / 4; font-size: var(--text-xs); color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+  .msg-row__meta { grid-column: 3; grid-row: 2; display: flex; align-items: center; gap: var(--space-2); justify-self: end; }
+  .msg-row__star { color: var(--color-text-faint); display: inline-flex; padding: 2px; border-radius: var(--radius-sm); }
+  .msg-row__star svg { width: 1rem; height: 1rem; }
+  .msg-row__star.is-starred { color: var(--color-accent); }
+  .msg-row__star.is-starred svg { fill: currentColor; }
+  .msg-row__star:hover { color: var(--color-accent); background: var(--color-bg-tint); }
+  .msg-row__unread-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-primary); flex-shrink: 0; }
+  .msg-row .badge { margin-top: var(--space-1); }
+
+  /* ---------- 3) READING PANE ---------- */
+  .read-pane { grid-column: 3; min-height: 0; display: flex; flex-direction: column; background: var(--color-bg); position: relative; }
+  .read-pane__scroll { overflow-y: auto; flex: 1; }
+  .read-toolbar {
+    flex-shrink: 0;
+    display: flex; align-items: center; gap: var(--space-1);
+    padding: var(--space-3) var(--space-5);
+    border-bottom: var(--border-1) solid var(--color-divider);
+    background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+  }
+  .read-toolbar__sep { width: 1px; height: 22px; background: var(--color-divider); margin-inline: var(--space-2); }
+  .read-head { padding: var(--space-6) var(--space-7) var(--space-4); }
+  .read-head__subject { font-family: var(--font-display); font-size: var(--text-3xl); line-height: 1.12; color: var(--color-text-strong); }
+  .read-from { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-4); }
+  .read-from__meta { min-width: 0; }
+  .read-from__name { font-size: var(--text-md); color: var(--color-text-strong); }
+  .read-from__addr { font-size: var(--text-xs); color: var(--color-text-muted); }
+  .read-from__to { font-size: var(--text-xs); color: var(--color-text-faint); margin-top: 2px; }
+  .read-body { padding: 0 var(--space-7) var(--space-6); color: var(--color-text); line-height: var(--leading-relaxed); }
+  .read-body p { margin-top: var(--space-4); max-width: 64ch; }
+  .read-body p:first-child { margin-top: 0; }
+  .read-sig { margin-top: var(--space-5); font-family: var(--font-display); font-style: italic; color: var(--color-text-muted); }
+  .read-reply { flex-shrink: 0; border-top: var(--border-1) solid var(--color-divider); padding: var(--space-4) var(--space-7) var(--space-5); background: var(--color-surface); }
+  [data-message] { display: none; }
+  [data-message].is-shown { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+
+  .read-watermark { position: absolute; top: var(--space-6); right: var(--space-6); width: 150px; opacity: 0.05; pointer-events: none; color: var(--color-primary); }
+  .read-watermark svg { width: 100%; height: 100%; }
+
+  /* mobile drawer trigger — hidden on desktop */
+  .mail-top__menu { display: none; }
+
+  /* ---------- RESPONSIVE ---------- */
+  @media (max-width: 1100px) {
+    .mail { grid-template-columns: var(--sidebar-w) minmax(300px, 1fr); }
+    .read-pane { display: none; }
+  }
+  @media (max-width: 900px) {
+    .mail { grid-template-columns: 1fr; }
+    .folders { display: none; }          /* moves behind the drawer */
+    .mail-top__menu { display: inline-flex; }
+    .read-pane { display: none; }
+  }
+  /* the folders rail, when used as a drawer body, should fill it */
+  .drawer .folders { display: flex; border: 0; height: 100%; background: transparent; }
+</style>
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+
+<!-- ============================ TOP BAR ============================ -->
+<header class="mail-top">
+  <button class="btn btn--icon mail-top__menu" data-modal-open="folders-drawer" aria-label="Open folders">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+  </button>
+  <a class="mail-top__brand" href="../index.html" aria-label="Botanical Journal home">
+    <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M16 29C16 19 14 9 19 3"/><path d="M16 22c-5 0-9-4-9-9M17 15c5 0 8-3 8-8M16 18c-4-1-6-4-6-8"/></svg>
+    <span>Verdant Society<span class="binomial">Seed exchange · post room</span></span>
+  </a>
+  <div style="flex:1"></div>
+  <div class="row row-3 wrap items-center" style="gap:var(--space-3)">
+    <span class="badge badge--primary badge--dot">7 unread</span>
+    <span class="avatar avatar--sm avatar-status" aria-label="Iris Hawthorne">IH</span>
+    <button class="btn btn--icon" data-theme-toggle aria-pressed="false" aria-label="Toggle day / dusk theme">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- ============================ 3-PANE ============================ -->
+<main id="main" class="mail">
+
+  <!-- ---------- 1) FOLDERS RAIL ---------- -->
+  <aside class="folders" aria-label="Mailboxes">
+    <div class="folders__compose">
+      <button class="btn btn--primary btn--block" data-modal-open="compose-drawer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+        Compose
+      </button>
+    </div>
+    <nav class="folders__nav" aria-label="Folders">
+      <a class="nav-item is-active" href="#main" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 7l9 6 9-6"/><rect x="3" y="5" width="18" height="14" rx="2"/></svg>
+        <span>Inbox</span><span class="badge badge--primary">7</span>
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.4 6.3 6.6.4-5.1 4.2 1.7 6.4L12 16.9 6.4 20.3l1.7-6.4L3 9.7l6.6-.4z"/></svg>
+        <span>Starred</span>
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+        <span>Sent</span>
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+        <span>Drafts</span><span class="badge badge--neutral">2</span>
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M20 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9z"/><circle cx="14" cy="20" r="2"/></svg>
+        <span>Seed exchange</span><span class="badge badge--accent">4</span>
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22V4a2 2 0 012-2h10l4 4v16zM16 2v4h4M8 11h8M8 15h6"/></svg>
+        <span>Society news</span>
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="5" rx="1"/><path d="M4 9v9a2 2 0 002 2h12a2 2 0 002-2V9M9 13h6"/></svg>
+        <span>Archive</span>
+      </a>
+      <a class="nav-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg>
+        <span>Trash</span>
+      </a>
+
+      <p class="sidebar__label" style="margin-top:var(--space-3)">Labels</p>
+      <a class="nav-item" href="#">
+        <span class="dot-label" style="background:var(--color-primary)" aria-hidden="true"></span>
+        <span>Foraging</span>
+      </a>
+      <a class="nav-item" href="#">
+        <span class="dot-label" style="background:var(--color-accent)" aria-hidden="true"></span>
+        <span>Curation</span>
+      </a>
+      <a class="nav-item" href="#">
+        <span class="dot-label" style="background:var(--color-rose)" aria-hidden="true"></span>
+        <span>Events</span>
+      </a>
+    </nav>
+    <div class="sidebar__foot">
+      <div class="rule-sprig" aria-hidden="true">
+        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"><path d="M16 30C16 20 15 10 18 3"/><path d="M16 22c-4 0-7-3-7-7M17 16c4 0 6-3 6-7"/></svg>
+      </div>
+      <p class="text-xs text-faint text-center">Mailbox no. 17 · pressed &amp; posted</p>
+    </div>
+  </aside>
+
+  <!-- ---------- 2) MESSAGE LIST ---------- -->
+  <section class="list-pane" aria-label="Messages">
+    <div class="list-pane__head">
+      <div class="row between items-center">
+        <h1 class="h4 serif-display" style="margin:0">Inbox</h1>
+        <span class="text-xs text-muted">42 conversations</span>
+      </div>
+      <div class="searchbar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+        <input type="search" placeholder="Search the post room…" aria-label="Search messages">
+        <kbd>⌘K</kbd>
+      </div>
+      <div class="row between items-center">
+        <div class="segmented" role="group" data-segmented aria-label="Sort messages">
+          <button class="segmented__option" aria-pressed="true" data-value="newest">Newest</button>
+          <button class="segmented__option" aria-pressed="false" data-value="unread">Unread</button>
+        </div>
+        <button class="btn btn--icon btn--sm" aria-label="Refresh">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M21 12a9 9 0 11-3-6.7M21 4v4h-4"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="list-pane__scroll" role="list">
+
+      <!-- ROW 1 (active / selected) -->
+      <button class="msg-row is-active is-unread" role="listitem" data-row="m1" aria-pressed="true">
+        <span class="avatar avatar--sm msg-row__avatar" style="background:var(--green-200);color:var(--green-800)" aria-hidden="true">RO</span>
+        <span class="msg-row__line1"><span class="msg-row__sender">Rowan Oleander</span></span>
+        <span class="msg-row__time">9:14</span>
+        <span class="msg-row__subject">Autumn seed swap — your Cosmos &amp; my Nicotiana?</span>
+        <span class="msg-row__snippet">Hello Iris — I saved a generous packet of <em>Cosmos bipinnatus</em> 'Rubenza' this year and wondered…</span>
+        <span class="msg-row__meta">
+          <span class="msg-row__unread-dot" aria-label="Unread"></span>
+          <span class="msg-row__star is-starred" role="img" aria-label="Starred"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3l2.4 6.3 6.6.4-5.1 4.2 1.7 6.4L12 16.9 6.4 20.3l1.7-6.4L3 9.7l6.6-.4z"/></svg></span>
+        </span>
+        <span class="badge badge--primary" style="grid-column:2;justify-self:start">Foraging</span>
+      </button>
+
+      <!-- ROW 2 -->
+      <button class="msg-row is-unread" role="listitem" data-row="m2" aria-pressed="false">
+        <span class="avatar avatar--sm msg-row__avatar" style="background:var(--bloom-200);color:var(--bloom-800)" aria-hidden="true">FG</span>
+        <span class="msg-row__line1"><span class="msg-row__sender">Fenwood Garden Trust</span></span>
+        <span class="msg-row__time">8:02</span>
+        <span class="msg-row__subject">Spring foraging walk — Wytham Woods, 11 April</span>
+        <span class="msg-row__snippet">Join curator Bramble Ashford for a guided ramble through ancient woodland in search of ramsons…</span>
+        <span class="msg-row__meta">
+          <span class="msg-row__unread-dot" aria-label="Unread"></span>
+          <span class="msg-row__star" role="img" aria-label="Not starred"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3l2.4 6.3 6.6.4-5.1 4.2 1.7 6.4L12 16.9 6.4 20.3l1.7-6.4L3 9.7l6.6-.4z"/></svg></span>
+        </span>
+        <span class="badge badge--accent" style="grid-column:2;justify-self:start">Events</span>
+      </button>
+
+      <!-- ROW 3 -->
+      <button class="msg-row is-unread" role="listitem" data-row="m3" aria-pressed="false">
+        <span class="avatar avatar--sm msg-row__avatar" style="background:var(--rose-200);color:var(--rose-800)" aria-hidden="true">PM</span>
+        <span class="msg-row__line1"><span class="msg-row__sender">Primrose Mallow</span></span>
+        <span class="msg-row__time">Yest.</span>
+        <span class="msg-row__subject">Re: Sweet pea germination trouble</span>
+        <span class="msg-row__snippet">Thank you — chipping the seed coat made all the difference. Eleven of twelve 'Cupani' are up now…</span>
+        <span class="msg-row__meta">
+          <span class="msg-row__unread-dot" aria-label="Unread"></span>
+          <span class="msg-row__star is-starred" role="img" aria-label="Starred"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3l2.4 6.3 6.6.4-5.1 4.2 1.7 6.4L12 16.9 6.4 20.3l1.7-6.4L3 9.7l6.6-.4z"/></svg></span>
+        </span>
+      </button>
+
+      <!-- ROW 4 -->
+      <button class="msg-row" role="listitem" data-row="m4" aria-pressed="false">
+        <span class="avatar avatar--sm msg-row__avatar" aria-hidden="true">TB</span>
+        <span class="msg-row__line1"><span class="msg-row__sender">Thistle &amp; Bract Nursery</span></span>
+        <span class="msg-row__time">Yest.</span>
+        <span class="msg-row__subject">Your heritage tomato order has shipped</span>
+        <span class="msg-row__snippet">Three packets — 'Brandywine', 'Black Krim', and 'Green Zebra' — are on their way, expected Thursday…</span>
+        <span class="msg-row__meta">
+          <span class="msg-row__star" role="img" aria-label="Not starred"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3l2.4 6.3 6.6.4-5.1 4.2 1.7 6.4L12 16.9 6.4 20.3l1.7-6.4L3 9.7l6.6-.4z"/></svg></span>
+        </span>
+        <span class="badge badge--neutral" style="grid-column:2;justify-self:start">Curation</span>
+      </button>
+
+      <!-- ROW 5 -->
+      <button class="msg-row" role="listitem" data-row="m5" aria-pressed="false">
+        <span class="avatar avatar--sm msg-row__avatar" style="background:var(--green-200);color:var(--green-800)" aria-hidden="true">DV</span>
+        <span class="msg-row__line1"><span class="msg-row__sender">Dahlia Verbena</span></span>
+        <span class="msg-row__time">Wed</span>
+        <span class="msg-row__subject">Saved seed from the society's foxglove bed</span>
+        <span class="msg-row__snippet">The <em>Digitalis purpurea</em> 'Pam's Choice' came true again — pure white with maroon throats…</span>
+        <span class="msg-row__meta">
+          <span class="msg-row__star is-starred" role="img" aria-label="Starred"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3l2.4 6.3 6.6.4-5.1 4.2 1.7 6.4L12 16.9 6.4 20.3l1.7-6.4L3 9.7l6.6-.4z"/></svg></span>
+        </span>
+      </button>
+
+      <!-- ROW 6 -->
+      <button class="msg-row" role="listitem" data-row="m6" aria-pressed="false">
+        <span class="avatar avatar--sm msg-row__avatar" style="background:var(--bloom-200);color:var(--bloom-800)" aria-hidden="true">CB</span>
+        <span class="msg-row__line1"><span class="msg-row__sender">Bramble Ashford</span></span>
+        <span class="msg-row__time">Tue</span>
+        <span class="msg-row__subject">Elderflower cordial — a forager's reminder</span>
+        <span class="msg-row__snippet">A few notes before the blossom turns: gather <em>Sambucus nigra</em> on a dry sunny morning, never…</span>
+        <span class="msg-row__meta">
+          <span class="msg-row__star" role="img" aria-label="Not starred"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3l2.4 6.3 6.6.4-5.1 4.2 1.7 6.4L12 16.9 6.4 20.3l1.7-6.4L3 9.7l6.6-.4z"/></svg></span>
+        </span>
+        <span class="badge badge--primary" style="grid-column:2;justify-self:start">Foraging</span>
+      </button>
+
+      <!-- ROW 7 -->
+      <button class="msg-row" role="listitem" data-row="m7" aria-pressed="false">
+        <span class="avatar avatar--sm msg-row__avatar" style="background:var(--rose-200);color:var(--rose-800)" aria-hidden="true">HW</span>
+        <span class="msg-row__line1"><span class="msg-row__sender">Hazel Wren</span></span>
+        <span class="msg-row__time">Tue</span>
+        <span class="msg-row__subject">Calendula packet received — thank you!</span>
+        <span class="msg-row__snippet">The 'Indian Prince' arrived in perfect condition. I'll sow a tray under glass next week and report…</span>
+        <span class="msg-row__meta">
+          <span class="msg-row__star" role="img" aria-label="Not starred"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3l2.4 6.3 6.6.4-5.1 4.2 1.7 6.4L12 16.9 6.4 20.3l1.7-6.4L3 9.7l6.6-.4z"/></svg></span>
+        </span>
+      </button>
+
+      <!-- ROW 8 -->
+      <button class="msg-row" role="listitem" data-row="m8" aria-pressed="false">
+        <span class="avatar avatar--sm msg-row__avatar" aria-hidden="true">VS</span>
+        <span class="msg-row__line1"><span class="msg-row__sender">Verdant Society</span></span>
+        <span class="msg-row__time">Mon</span>
+        <span class="msg-row__subject">Newsletter № 84 — the winter sowing issue</span>
+        <span class="msg-row__snippet">Inside: cold-stratifying hardy perennials in milk jugs, a profile of our seed librarian, and the…</span>
+        <span class="msg-row__meta">
+          <span class="msg-row__star" role="img" aria-label="Not starred"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3l2.4 6.3 6.6.4-5.1 4.2 1.7 6.4L12 16.9 6.4 20.3l1.7-6.4L3 9.7l6.6-.4z"/></svg></span>
+        </span>
+        <span class="badge badge--rose" style="grid-column:2;justify-self:start">Events</span>
+      </button>
+
+      <!-- ROW 9 -->
+      <button class="msg-row" role="listitem" data-row="m9" aria-pressed="false">
+        <span class="avatar avatar--sm msg-row__avatar" style="background:var(--green-200);color:var(--green-800)" aria-hidden="true">MS</span>
+        <span class="msg-row__line1"><span class="msg-row__sender">Marigold Sorrel</span></span>
+        <span class="msg-row__time">Sun</span>
+        <span class="msg-row__subject">Trade proposal: my Aquilegia for your hellebore</span>
+        <span class="msg-row__snippet">I have hand-pollinated <em>Aquilegia vulgaris</em> 'Black Barlow' seed going spare and covet your…</span>
+        <span class="msg-row__meta">
+          <span class="msg-row__star" role="img" aria-label="Not starred"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3l2.4 6.3 6.6.4-5.1 4.2 1.7 6.4L12 16.9 6.4 20.3l1.7-6.4L3 9.7l6.6-.4z"/></svg></span>
+        </span>
+        <span class="badge badge--neutral" style="grid-column:2;justify-self:start">Curation</span>
+      </button>
+
+      <!-- ROW 10 -->
+      <button class="msg-row" role="listitem" data-row="m10" aria-pressed="false">
+        <span class="avatar avatar--sm msg-row__avatar" style="background:var(--bloom-200);color:var(--bloom-800)" aria-hidden="true">JB</span>
+        <span class="msg-row__line1"><span class="msg-row__sender">Juniper Blackthorn</span></span>
+        <span class="msg-row__time">Sun</span>
+        <span class="msg-row__subject">Seed library volunteer rota — March</span>
+        <span class="msg-row__snippet">Could you cover the cataloguing desk on the 14th? We've a backlog of donated packets to sort…</span>
+        <span class="msg-row__meta">
+          <span class="msg-row__star" role="img" aria-label="Not starred"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 3l2.4 6.3 6.6.4-5.1 4.2 1.7 6.4L12 16.9 6.4 20.3l1.7-6.4L3 9.7l6.6-.4z"/></svg></span>
+        </span>
+      </button>
+
+    </div>
+  </section>
+
+  <!-- ---------- 3) READING PANE ---------- -->
+  <section class="read-pane" aria-label="Reading pane" aria-live="polite">
+    <span class="read-watermark" aria-hidden="true">
+      <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="0.8" stroke-linecap="round"><path d="M32 60C32 40 30 20 36 6"/><path d="M33 50c-6-1-10-5-12-11M34 50c5-2 8-7 8-13M33 40c-5-1-9-4-10-10M34 40c4-2 7-6 7-12"/></svg>
+    </span>
+
+    <!-- MESSAGE m1 (default shown) -->
+    <article class="is-shown" data-message="m1">
+      <div class="read-toolbar">
+        <button class="btn btn--icon" data-toast="Reply window opened below." data-toast-title="Replying to Rowan" data-toast-variant="info" aria-label="Reply">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 17l-6-5 6-5M3 12h11a6 6 0 016 6v1"/></svg>
+        </button>
+        <button class="btn btn--icon" data-toast="Message forwarded." data-toast-title="Forwarded" data-toast-variant="success" aria-label="Forward">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 17l6-5-6-5M21 12H10a6 6 0 00-6 6v1"/></svg>
+        </button>
+        <button class="btn btn--icon" data-toast="Moved to Archive." data-toast-title="Archived" data-toast-variant="info" aria-label="Archive">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="5" rx="1"/><path d="M4 9v9a2 2 0 002 2h12a2 2 0 002-2V9M9 13h6"/></svg>
+        </button>
+        <button class="btn btn--icon" data-toast="Added to Starred." data-toast-title="Starred" data-toast-variant="success" aria-label="Star">
+          <svg viewBox="0 0 24 24" fill="var(--color-accent)" stroke="var(--color-accent)" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.4 6.3 6.6.4-5.1 4.2 1.7 6.4L12 16.9 6.4 20.3l1.7-6.4L3 9.7l6.6-.4z"/></svg>
+        </button>
+        <span class="read-toolbar__sep" aria-hidden="true"></span>
+        <div class="dropdown">
+          <button class="btn btn--icon" data-dropdown-trigger aria-haspopup="true" aria-label="More actions">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+          </button>
+          <div class="dropdown__panel">
+            <div class="menu">
+              <div class="menu__label">Conversation</div>
+              <button class="menu__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7l9 6 9-6"/><rect x="3" y="5" width="18" height="14" rx="2"/></svg> Mark as unread</button>
+              <button class="menu__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> Snooze until Monday</button>
+              <button class="menu__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 11l5 5 5-5M12 16V4"/></svg> Download attachment</button>
+              <div class="menu__sep"></div>
+              <button class="menu__item menu__item--danger" data-toast="Conversation moved to Trash." data-toast-title="Deleted" data-toast-variant="danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg> Delete</button>
+            </div>
+          </div>
+        </div>
+        <div style="flex:1"></div>
+        <span class="badge badge--primary badge--dot">Foraging</span>
+      </div>
+      <div class="read-pane__scroll">
+        <div class="read-head">
+          <h2 class="read-head__subject">Autumn seed swap — your Cosmos &amp; my Nicotiana?</h2>
+          <div class="read-from">
+            <span class="avatar avatar__ring" style="background:var(--green-200);color:var(--green-800)" aria-hidden="true">RO</span>
+            <div class="read-from__meta">
+              <div class="read-from__name">Rowan Oleander <span class="text-faint text-xs">&lt;rowan@hollowlane.garden&gt;</span></div>
+              <div class="read-from__addr">to Iris Hawthorne · 21 March 2026, 9:14</div>
+              <div class="read-from__to">Verdant Society — Seed exchange list</div>
+            </div>
+          </div>
+        </div>
+        <div class="read-body">
+          <p>Dear Iris,</p>
+          <p>I hope the new season finds your propagation bench groaning under trays. I saved a wonderfully generous packet of <span class="binomial">Cosmos bipinnatus</span> 'Rubenza' this year — that deep ruby that fades to dusty rose by autumn — and remembered you were after a richer red than the usual 'Sensation' mix.</p>
+          <p>In return, I'd be delighted to take some of your <span class="binomial">Nicotiana sylvestris</span> if you have it spare. My evening borders have felt rather flat without that drift of white trumpets, and nothing else carries scent across the garden after dusk quite like it. I can also offer a small twist of self-collected <span class="binomial">Ammi majus</span> if that tempts.</p>
+          <p>Everything below was hand-collected, dried on newspaper in the shed, and cleaned of chaff. Viability should be excellent — last year's batch germinated at better than ninety per cent. Shall I post yours this week?</p>
+          <div class="specimen-tag" style="margin-top:var(--space-5)">
+            <span class="specimen-tag__name">Cosmos bipinnatus 'Rubenza'</span>
+            <span class="specimen-tag__meta">collected sept · ~120 seeds · open-pollinated</span>
+          </div>
+          <div style="margin-top:var(--space-5)">
+            <p class="label mb-2">Attachment</p>
+            <div class="file-row">
+              <div class="file-row__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg></div>
+              <div class="file-row__meta">
+                <div class="file-row__name">rubenza-seed-label.pdf</div>
+                <div class="file-row__size">Provenance &amp; sowing card · 184 KB</div>
+              </div>
+              <button class="btn btn--icon btn--sm" data-toast="Saved to Downloads." data-toast-title="Downloaded" data-toast-variant="success" aria-label="Download attachment">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 11l5 5 5-5M12 16V4"/></svg>
+              </button>
+            </div>
+          </div>
+          <p class="read-sig">Warmly,<br>Rowan — Hollow Lane allotments, plot 14</p>
+        </div>
+      </div>
+      <div class="read-reply">
+        <div class="field" style="margin:0">
+          <label class="field__label" for="reply-m1">Reply to Rowan</label>
+          <textarea class="textarea" id="reply-m1" placeholder="Yes please — I'll wrap the Nicotiana sylvestris today…" style="min-height:5.5rem"></textarea>
+        </div>
+        <div class="row between items-center" style="margin-top:var(--space-3)">
+          <div class="row row-2">
+            <button class="btn btn--icon btn--sm" aria-label="Attach a file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5l-9 9a5 5 0 01-7-7l9-9a3.5 3.5 0 015 5l-9 9a1.5 1.5 0 01-2-2l8-8"/></svg></button>
+            <button class="btn btn--icon btn--sm" aria-label="Insert specimen tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M12 21c0-7-1-11 3-15M12 16c-3 0-5-2-5-5M13 12c3 0 5-2 5-5"/></svg></button>
+          </div>
+          <button class="btn btn--primary" data-toast="Your reply to Rowan is winging its way to Hollow Lane." data-toast-title="Reply sent" data-toast-variant="success">
+            Send
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+          </button>
+        </div>
+      </div>
+    </article>
+
+    <!-- MESSAGE m2 -->
+    <article data-message="m2">
+      <div class="read-toolbar">
+        <button class="btn btn--icon" data-toast="Reply window opened below." data-toast-title="Replying to Fenwood" data-toast-variant="info" aria-label="Reply"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 17l-6-5 6-5M3 12h11a6 6 0 016 6v1"/></svg></button>
+        <button class="btn btn--icon" data-toast="Message forwarded." data-toast-title="Forwarded" data-toast-variant="success" aria-label="Forward"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 17l6-5-6-5M21 12H10a6 6 0 00-6 6v1"/></svg></button>
+        <button class="btn btn--icon" data-toast="Moved to Archive." data-toast-title="Archived" data-toast-variant="info" aria-label="Archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="5" rx="1"/><path d="M4 9v9a2 2 0 002 2h12a2 2 0 002-2V9M9 13h6"/></svg></button>
+        <span class="read-toolbar__sep" aria-hidden="true"></span>
+        <div class="dropdown">
+          <button class="btn btn--icon" data-dropdown-trigger aria-haspopup="true" aria-label="More actions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button>
+          <div class="dropdown__panel"><div class="menu"><div class="menu__label">Conversation</div><button class="menu__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7l9 6 9-6"/><rect x="3" y="5" width="18" height="14" rx="2"/></svg> Mark as unread</button><button class="menu__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Add to calendar</button><div class="menu__sep"></div><button class="menu__item menu__item--danger" data-toast="Conversation moved to Trash." data-toast-title="Deleted" data-toast-variant="danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg> Delete</button></div></div>
+        </div>
+        <div style="flex:1"></div>
+        <span class="badge badge--accent badge--dot">Events</span>
+      </div>
+      <div class="read-pane__scroll">
+        <div class="read-head">
+          <h2 class="read-head__subject">Spring foraging walk — Wytham Woods, 11 April</h2>
+          <div class="read-from">
+            <span class="avatar avatar__ring" style="background:var(--bloom-200);color:var(--bloom-800)" aria-hidden="true">FG</span>
+            <div class="read-from__meta">
+              <div class="read-from__name">Fenwood Garden Trust <span class="text-faint text-xs">&lt;walks@fenwoodtrust.org&gt;</span></div>
+              <div class="read-from__addr">to Members list · 21 March 2026, 8:02</div>
+              <div class="read-from__to">Verdant Society — Events</div>
+            </div>
+          </div>
+        </div>
+        <div class="read-body">
+          <p>Spring has crept into the understorey, and the woodland floor is greening fast. Join curator Bramble Ashford for a gentle three-hour ramble through the ancient oaks of Wytham Woods in search of the season's first wild edibles.</p>
+          <p>We'll be looking for ramsons (<span class="binomial">Allium ursinum</span>) carpeting the damp hollows, the bittercress and wood sorrel of the path edges, and the unfurling fiddleheads of <span class="binomial">Matteuccia struthiopteris</span>. Bramble will cover responsible foraging — taking only a leaf in ten, never the bulb, and always leaving the rarest plants untouched.</p>
+          <p>Stout boots and a basket are advised; identification cards will be provided. Places are limited to fifteen so the woodland is not over-trodden.</p>
+          <div class="specimen-tag" style="margin-top:var(--space-5)">
+            <span class="specimen-tag__name">Allium ursinum</span>
+            <span class="specimen-tag__meta">wild garlic · sat 11 apr · 10am · meet at the gate</span>
+          </div>
+          <p class="read-sig">Yours in leaf,<br>The Fenwood Garden Trust</p>
+        </div>
+      </div>
+      <div class="read-reply">
+        <div class="field" style="margin:0">
+          <label class="field__label" for="reply-m2">RSVP to Fenwood</label>
+          <textarea class="textarea" id="reply-m2" placeholder="Count me in — I'll bring a trug…" style="min-height:5.5rem"></textarea>
+        </div>
+        <div class="row end" style="margin-top:var(--space-3)">
+          <button class="btn btn--primary" data-toast="Your place on the 11 April walk is reserved." data-toast-title="RSVP sent" data-toast-variant="success">Send RSVP <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button>
+        </div>
+      </div>
+    </article>
+
+    <!-- MESSAGE m3 -->
+    <article data-message="m3">
+      <div class="read-toolbar">
+        <button class="btn btn--icon" data-toast="Reply window opened below." data-toast-title="Replying to Primrose" data-toast-variant="info" aria-label="Reply"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 17l-6-5 6-5M3 12h11a6 6 0 016 6v1"/></svg></button>
+        <button class="btn btn--icon" data-toast="Message forwarded." data-toast-title="Forwarded" data-toast-variant="success" aria-label="Forward"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 17l6-5-6-5M21 12H10a6 6 0 00-6 6v1"/></svg></button>
+        <button class="btn btn--icon" data-toast="Moved to Archive." data-toast-title="Archived" data-toast-variant="info" aria-label="Archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="5" rx="1"/><path d="M4 9v9a2 2 0 002 2h12a2 2 0 002-2V9M9 13h6"/></svg></button>
+        <span class="read-toolbar__sep" aria-hidden="true"></span>
+        <div class="dropdown">
+          <button class="btn btn--icon" data-dropdown-trigger aria-haspopup="true" aria-label="More actions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button>
+          <div class="dropdown__panel"><div class="menu"><div class="menu__label">Conversation</div><button class="menu__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7l9 6 9-6"/><rect x="3" y="5" width="18" height="14" rx="2"/></svg> Mark as unread</button><div class="menu__sep"></div><button class="menu__item menu__item--danger" data-toast="Conversation moved to Trash." data-toast-title="Deleted" data-toast-variant="danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg> Delete</button></div></div>
+        </div>
+        <div style="flex:1"></div>
+        <span class="badge badge--success badge--dot">Resolved</span>
+      </div>
+      <div class="read-pane__scroll">
+        <div class="read-head">
+          <h2 class="read-head__subject">Re: Sweet pea germination trouble</h2>
+          <div class="read-from">
+            <span class="avatar avatar__ring" style="background:var(--rose-200);color:var(--rose-800)" aria-hidden="true">PM</span>
+            <div class="read-from__meta">
+              <div class="read-from__name">Primrose Mallow <span class="text-faint text-xs">&lt;p.mallow@cottagerow.net&gt;</span></div>
+              <div class="read-from__addr">to Iris Hawthorne · 20 March 2026, 4:48pm</div>
+              <div class="read-from__to">Verdant Society — Seed exchange</div>
+            </div>
+          </div>
+        </div>
+        <div class="read-body">
+          <p>Iris — a quick note of thanks. Chipping the seed coat with a nail file, just opposite the eye, made all the difference. After a night soaking on damp kitchen paper they plumped right up.</p>
+          <p>Eleven of the twelve <span class="binomial">Lathyrus odoratus</span> 'Cupani' are up now, those lovely bicoloured maroon-and-violet sweet peas with the old, strong scent. I've pinched the tips to encourage side shoots and they're hardening off in the cold frame.</p>
+          <p>I owe you a packet in return — would you like some 'Matucana' to go with them? Same heritage, similar perfume.</p>
+          <p class="read-sig">Gratefully,<br>Primrose</p>
+        </div>
+      </div>
+      <div class="read-reply">
+        <div class="field" style="margin:0">
+          <label class="field__label" for="reply-m3">Reply to Primrose</label>
+          <textarea class="textarea" id="reply-m3" placeholder="Yes to 'Matucana' please…" style="min-height:5.5rem"></textarea>
+        </div>
+        <div class="row end" style="margin-top:var(--space-3)">
+          <button class="btn btn--primary" data-toast="Reply sent to Primrose at Cottage Row." data-toast-title="Reply sent" data-toast-variant="success">Send <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button>
+        </div>
+      </div>
+    </article>
+
+    <!-- MESSAGE m4 -->
+    <article data-message="m4">
+      <div class="read-toolbar">
+        <button class="btn btn--icon" data-toast="Reply window opened below." data-toast-title="Replying to Thistle &amp; Bract" data-toast-variant="info" aria-label="Reply"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 17l-6-5 6-5M3 12h11a6 6 0 016 6v1"/></svg></button>
+        <button class="btn btn--icon" data-toast="Moved to Archive." data-toast-title="Archived" data-toast-variant="info" aria-label="Archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="5" rx="1"/><path d="M4 9v9a2 2 0 002 2h12a2 2 0 002-2V9M9 13h6"/></svg></button>
+        <span class="read-toolbar__sep" aria-hidden="true"></span>
+        <div class="dropdown">
+          <button class="btn btn--icon" data-dropdown-trigger aria-haspopup="true" aria-label="More actions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button>
+          <div class="dropdown__panel"><div class="menu"><div class="menu__label">Conversation</div><button class="menu__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/></svg> Track parcel</button><div class="menu__sep"></div><button class="menu__item menu__item--danger" data-toast="Conversation moved to Trash." data-toast-title="Deleted" data-toast-variant="danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg> Delete</button></div></div>
+        </div>
+        <div style="flex:1"></div>
+        <span class="badge badge--neutral badge--dot">Curation</span>
+      </div>
+      <div class="read-pane__scroll">
+        <div class="read-head">
+          <h2 class="read-head__subject">Your heritage tomato order has shipped</h2>
+          <div class="read-from">
+            <span class="avatar avatar__ring" aria-hidden="true">TB</span>
+            <div class="read-from__meta">
+              <div class="read-from__name">Thistle &amp; Bract Nursery <span class="text-faint text-xs">&lt;orders@thistleandbract.co&gt;</span></div>
+              <div class="read-from__addr">to Iris Hawthorne · 20 March 2026, 11:30am</div>
+              <div class="read-from__to">Order #VS-4471</div>
+            </div>
+          </div>
+        </div>
+        <div class="read-body">
+          <p>Good news — your heritage tomato seed has left the potting shed and is on its way. Three open-pollinated packets, all collected from our 2025 stock plants and germination-tested above 92%.</p>
+          <p>You ordered the beefsteak <span class="binomial">'Brandywine'</span>, the smoky Crimean <span class="binomial">'Black Krim'</span>, and the tangy striped <span class="binomial">'Green Zebra'</span>. Sow indoors six to eight weeks before your last frost, prick out at the first true leaf, and pot on generously.</p>
+          <p>Your parcel is expected Thursday. A sowing calendar card is tucked inside each packet.</p>
+          <div style="margin-top:var(--space-5)">
+            <p class="label mb-2">Attachment</p>
+            <div class="file-row">
+              <div class="file-row__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg></div>
+              <div class="file-row__meta">
+                <div class="file-row__name">order-VS-4471-receipt.pdf</div>
+                <div class="file-row__size">Invoice &amp; sowing guide · 96 KB</div>
+              </div>
+              <button class="btn btn--icon btn--sm" data-toast="Saved to Downloads." data-toast-title="Downloaded" data-toast-variant="success" aria-label="Download attachment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 11l5 5 5-5M12 16V4"/></svg></button>
+            </div>
+          </div>
+          <p class="read-sig">Happy growing,<br>The team at Thistle &amp; Bract</p>
+        </div>
+      </div>
+      <div class="read-reply">
+        <div class="field" style="margin:0">
+          <label class="field__label" for="reply-m4">Reply to the nursery</label>
+          <textarea class="textarea" id="reply-m4" placeholder="Thank you — looking forward to Thursday…" style="min-height:5.5rem"></textarea>
+        </div>
+        <div class="row end" style="margin-top:var(--space-3)">
+          <button class="btn btn--primary" data-toast="Reply sent to Thistle &amp; Bract Nursery." data-toast-title="Reply sent" data-toast-variant="success">Send <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button>
+        </div>
+      </div>
+    </article>
+
+    <!-- MESSAGES m5–m10 share a compact template -->
+    <article data-message="m5">
+      <div class="read-toolbar">
+        <button class="btn btn--icon" data-toast="Reply window opened below." data-toast-title="Replying to Dahlia" data-toast-variant="info" aria-label="Reply"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 17l-6-5 6-5M3 12h11a6 6 0 016 6v1"/></svg></button>
+        <button class="btn btn--icon" data-toast="Moved to Archive." data-toast-title="Archived" data-toast-variant="info" aria-label="Archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="5" rx="1"/><path d="M4 9v9a2 2 0 002 2h12a2 2 0 002-2V9M9 13h6"/></svg></button>
+        <span class="read-toolbar__sep" aria-hidden="true"></span>
+        <div class="dropdown"><button class="btn btn--icon" data-dropdown-trigger aria-haspopup="true" aria-label="More actions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button><div class="dropdown__panel"><div class="menu"><button class="menu__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7l9 6 9-6"/><rect x="3" y="5" width="18" height="14" rx="2"/></svg> Mark as unread</button><div class="menu__sep"></div><button class="menu__item menu__item--danger" data-toast="Moved to Trash." data-toast-title="Deleted" data-toast-variant="danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg> Delete</button></div></div></div>
+        <div style="flex:1"></div>
+        <span class="badge badge--primary badge--dot">Foraging</span>
+      </div>
+      <div class="read-pane__scroll">
+        <div class="read-head">
+          <h2 class="read-head__subject">Saved seed from the society's foxglove bed</h2>
+          <div class="read-from"><span class="avatar avatar__ring" style="background:var(--green-200);color:var(--green-800)" aria-hidden="true">DV</span><div class="read-from__meta"><div class="read-from__name">Dahlia Verbena <span class="text-faint text-xs">&lt;dahlia@wildacre.uk&gt;</span></div><div class="read-from__addr">to Seed exchange · 19 March 2026</div><div class="read-from__to">Verdant Society — Seed exchange</div></div></div>
+        </div>
+        <div class="read-body">
+          <p>Wonderful news from the trial bed: the <span class="binomial">Digitalis purpurea</span> 'Pam's Choice' came true once more — pure white spires freckled with maroon throats, not a muddied seedling among them.</p>
+          <p>I've cleaned and packeted roughly two hundred seeds. Foxglove is biennial and the seed is dust-fine, so I'd suggest surface-sowing in late summer for flowering the following June. I can split the packet between three or four members if there's demand on the list.</p>
+          <div class="specimen-tag" style="margin-top:var(--space-5)"><span class="specimen-tag__name">Digitalis purpurea 'Pam's Choice'</span><span class="specimen-tag__meta">biennial · ~200 seeds · surface sow</span></div>
+          <p class="read-sig">From the wild acre,<br>Dahlia</p>
+        </div>
+      </div>
+      <div class="read-reply"><div class="field" style="margin:0"><label class="field__label" for="reply-m5">Reply to the list</label><textarea class="textarea" id="reply-m5" placeholder="I'd love a quarter of that packet…" style="min-height:5.5rem"></textarea></div><div class="row end" style="margin-top:var(--space-3)"><button class="btn btn--primary" data-toast="Your reply was posted to the seed-exchange list." data-toast-title="Reply sent" data-toast-variant="success">Send <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div></div>
+    </article>
+
+    <article data-message="m6">
+      <div class="read-toolbar">
+        <button class="btn btn--icon" data-toast="Reply window opened below." data-toast-title="Replying to Bramble" data-toast-variant="info" aria-label="Reply"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 17l-6-5 6-5M3 12h11a6 6 0 016 6v1"/></svg></button>
+        <button class="btn btn--icon" data-toast="Moved to Archive." data-toast-title="Archived" data-toast-variant="info" aria-label="Archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="5" rx="1"/><path d="M4 9v9a2 2 0 002 2h12a2 2 0 002-2V9M9 13h6"/></svg></button>
+        <span class="read-toolbar__sep" aria-hidden="true"></span>
+        <div class="dropdown"><button class="btn btn--icon" data-dropdown-trigger aria-haspopup="true" aria-label="More actions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button><div class="dropdown__panel"><div class="menu"><button class="menu__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7l9 6 9-6"/><rect x="3" y="5" width="18" height="14" rx="2"/></svg> Mark as unread</button><div class="menu__sep"></div><button class="menu__item menu__item--danger" data-toast="Moved to Trash." data-toast-title="Deleted" data-toast-variant="danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg> Delete</button></div></div></div>
+        <div style="flex:1"></div>
+        <span class="badge badge--primary badge--dot">Foraging</span>
+      </div>
+      <div class="read-pane__scroll">
+        <div class="read-head">
+          <h2 class="read-head__subject">Elderflower cordial — a forager's reminder</h2>
+          <div class="read-from"><span class="avatar avatar__ring" style="background:var(--bloom-200);color:var(--bloom-800)" aria-hidden="true">CB</span><div class="read-from__meta"><div class="read-from__name">Bramble Ashford <span class="text-faint text-xs">&lt;bramble@verdant.society&gt;</span></div><div class="read-from__addr">to Members list · 18 March 2026</div><div class="read-from__to">Verdant Society — Foraging notes</div></div></div>
+        </div>
+        <div class="read-body">
+          <p>A few notes before the blossom turns, since the hedgerows are nearly ready. Gather <span class="binomial">Sambucus nigra</span> on a dry, sunny morning when the tiny florets are fully open and creamy — never after rain, which washes away the scented pollen that carries all the flavour.</p>
+          <p>Snip whole heads with a little stalk, shake out any insects rather than washing, and steep the same day with lemon and sugar. Take only the lower flowers and leave plenty for the bees and the autumn berries.</p>
+          <p>I'll bring a bottle of last year's cordial to the April walk for anyone curious.</p>
+          <p class="read-sig">In good leaf,<br>Bramble — Society curator</p>
+        </div>
+      </div>
+      <div class="read-reply"><div class="field" style="margin:0"><label class="field__label" for="reply-m6">Reply to Bramble</label><textarea class="textarea" id="reply-m6" placeholder="Saving a date for the elder by the south gate…" style="min-height:5.5rem"></textarea></div><div class="row end" style="margin-top:var(--space-3)"><button class="btn btn--primary" data-toast="Reply sent to Bramble Ashford." data-toast-title="Reply sent" data-toast-variant="success">Send <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div></div>
+    </article>
+
+    <article data-message="m7">
+      <div class="read-toolbar">
+        <button class="btn btn--icon" data-toast="Reply window opened below." data-toast-title="Replying to Hazel" data-toast-variant="info" aria-label="Reply"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 17l-6-5 6-5M3 12h11a6 6 0 016 6v1"/></svg></button>
+        <button class="btn btn--icon" data-toast="Moved to Archive." data-toast-title="Archived" data-toast-variant="info" aria-label="Archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="5" rx="1"/><path d="M4 9v9a2 2 0 002 2h12a2 2 0 002-2V9M9 13h6"/></svg></button>
+        <span class="read-toolbar__sep" aria-hidden="true"></span>
+        <div class="dropdown"><button class="btn btn--icon" data-dropdown-trigger aria-haspopup="true" aria-label="More actions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button><div class="dropdown__panel"><div class="menu"><button class="menu__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7l9 6 9-6"/><rect x="3" y="5" width="18" height="14" rx="2"/></svg> Mark as unread</button><div class="menu__sep"></div><button class="menu__item menu__item--danger" data-toast="Moved to Trash." data-toast-title="Deleted" data-toast-variant="danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg> Delete</button></div></div></div>
+        <div style="flex:1"></div>
+        <span class="badge badge--success badge--dot">Received</span>
+      </div>
+      <div class="read-pane__scroll">
+        <div class="read-head">
+          <h2 class="read-head__subject">Calendula packet received — thank you!</h2>
+          <div class="read-from"><span class="avatar avatar__ring" style="background:var(--rose-200);color:var(--rose-800)" aria-hidden="true">HW</span><div class="read-from__meta"><div class="read-from__name">Hazel Wren <span class="text-faint text-xs">&lt;hazel.wren@meadowpost.net&gt;</span></div><div class="read-from__addr">to Iris Hawthorne · 18 March 2026</div><div class="read-from__to">Verdant Society — Seed exchange</div></div></div>
+        </div>
+        <div class="read-body">
+          <p>Your packet arrived this morning, beautifully labelled. The <span class="binomial">Calendula officinalis</span> 'Indian Prince' is in perfect condition — those gorgeous dark-backed bronze-orange petals are exactly what my cutting border needs.</p>
+          <p>I'll sow a tray under glass next week and prick out into modules once they're sturdy. Pot marigolds always shrug off a late frost for me. I'll report back with a photo when they flower, and save you fresh seed in return come September.</p>
+          <p class="read-sig">With thanks,<br>Hazel</p>
+        </div>
+      </div>
+      <div class="read-reply"><div class="field" style="margin:0"><label class="field__label" for="reply-m7">Reply to Hazel</label><textarea class="textarea" id="reply-m7" placeholder="So glad they arrived safely…" style="min-height:5.5rem"></textarea></div><div class="row end" style="margin-top:var(--space-3)"><button class="btn btn--primary" data-toast="Reply sent to Hazel Wren." data-toast-title="Reply sent" data-toast-variant="success">Send <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div></div>
+    </article>
+
+    <article data-message="m8">
+      <div class="read-toolbar">
+        <button class="btn btn--icon" data-toast="Reply window opened below." data-toast-title="Replying to the Society" data-toast-variant="info" aria-label="Reply"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 17l-6-5 6-5M3 12h11a6 6 0 016 6v1"/></svg></button>
+        <button class="btn btn--icon" data-toast="Moved to Archive." data-toast-title="Archived" data-toast-variant="info" aria-label="Archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="5" rx="1"/><path d="M4 9v9a2 2 0 002 2h12a2 2 0 002-2V9M9 13h6"/></svg></button>
+        <span class="read-toolbar__sep" aria-hidden="true"></span>
+        <div class="dropdown"><button class="btn btn--icon" data-dropdown-trigger aria-haspopup="true" aria-label="More actions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button><div class="dropdown__panel"><div class="menu"><button class="menu__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7l9 6 9-6"/><rect x="3" y="5" width="18" height="14" rx="2"/></svg> Mark as unread</button><div class="menu__sep"></div><button class="menu__item menu__item--danger" data-toast="Moved to Trash." data-toast-title="Deleted" data-toast-variant="danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg> Delete</button></div></div></div>
+        <div style="flex:1"></div>
+        <span class="badge badge--rose badge--dot">News</span>
+      </div>
+      <div class="read-pane__scroll">
+        <div class="read-head">
+          <h2 class="read-head__subject">Newsletter № 84 — the winter sowing issue</h2>
+          <div class="read-from"><span class="avatar avatar__ring" aria-hidden="true">VS</span><div class="read-from__meta"><div class="read-from__name">Verdant Society <span class="text-faint text-xs">&lt;news@verdant.society&gt;</span></div><div class="read-from__addr">to All members · 17 March 2026</div><div class="read-from__to">Society news</div></div></div>
+        </div>
+        <div class="read-body">
+          <p>Inside this issue: a step-by-step guide to cold-stratifying hardy perennials in milk-jug mini-greenhouses left out over winter — a wonderfully low-tech route to <span class="binomial">Echinacea</span>, <span class="binomial">Rudbeckia</span> and <span class="binomial">Aquilegia</span> by spring.</p>
+          <p>We also profile our tireless seed librarian, who has catalogued over four hundred accessions this winter, and announce the dates for the summer plant-and-seed fair on the green.</p>
+          <p class="read-sig">For the love of growing,<br>The Verdant Society committee</p>
+        </div>
+      </div>
+      <div class="read-reply"><div class="field" style="margin:0"><label class="field__label" for="reply-m8">Reply to the committee</label><textarea class="textarea" id="reply-m8" placeholder="Loved the milk-jug guide…" style="min-height:5.5rem"></textarea></div><div class="row end" style="margin-top:var(--space-3)"><button class="btn btn--primary" data-toast="Reply sent to the Society committee." data-toast-title="Reply sent" data-toast-variant="success">Send <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div></div>
+    </article>
+
+    <article data-message="m9">
+      <div class="read-toolbar">
+        <button class="btn btn--icon" data-toast="Reply window opened below." data-toast-title="Replying to Marigold" data-toast-variant="info" aria-label="Reply"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 17l-6-5 6-5M3 12h11a6 6 0 016 6v1"/></svg></button>
+        <button class="btn btn--icon" data-toast="Moved to Archive." data-toast-title="Archived" data-toast-variant="info" aria-label="Archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="5" rx="1"/><path d="M4 9v9a2 2 0 002 2h12a2 2 0 002-2V9M9 13h6"/></svg></button>
+        <span class="read-toolbar__sep" aria-hidden="true"></span>
+        <div class="dropdown"><button class="btn btn--icon" data-dropdown-trigger aria-haspopup="true" aria-label="More actions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button><div class="dropdown__panel"><div class="menu"><button class="menu__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7l9 6 9-6"/><rect x="3" y="5" width="18" height="14" rx="2"/></svg> Mark as unread</button><div class="menu__sep"></div><button class="menu__item menu__item--danger" data-toast="Moved to Trash." data-toast-title="Deleted" data-toast-variant="danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg> Delete</button></div></div></div>
+        <div style="flex:1"></div>
+        <span class="badge badge--neutral badge--dot">Curation</span>
+      </div>
+      <div class="read-pane__scroll">
+        <div class="read-head">
+          <h2 class="read-head__subject">Trade proposal: my Aquilegia for your hellebore</h2>
+          <div class="read-from"><span class="avatar avatar__ring" style="background:var(--green-200);color:var(--green-800)" aria-hidden="true">MS</span><div class="read-from__meta"><div class="read-from__name">Marigold Sorrel <span class="text-faint text-xs">&lt;marigold@sorrelcottage.uk&gt;</span></div><div class="read-from__addr">to Iris Hawthorne · 16 March 2026</div><div class="read-from__to">Verdant Society — Seed exchange</div></div></div>
+        </div>
+        <div class="read-body">
+          <p>I have hand-pollinated <span class="binomial">Aquilegia vulgaris</span> 'Black Barlow' seed going spare — those dramatic double, near-black pompon flowers that the bees adore. Sown fresh and given a winter chill, they germinate readily.</p>
+          <p>In exchange I rather covet your <span class="binomial">Helleborus orientalis</span> seed, if any set this year. I know hellebore seed is fussy and short-lived, so I'd sow it the very day it arrives. A fair swap, I hope — happy to send extra to sweeten it.</p>
+          <p class="read-sig">Kind regards,<br>Marigold</p>
+        </div>
+      </div>
+      <div class="read-reply"><div class="field" style="margin:0"><label class="field__label" for="reply-m9">Reply to Marigold</label><textarea class="textarea" id="reply-m9" placeholder="A fair swap — I'll collect the hellebore fresh…" style="min-height:5.5rem"></textarea></div><div class="row end" style="margin-top:var(--space-3)"><button class="btn btn--primary" data-toast="Trade reply sent to Marigold Sorrel." data-toast-title="Reply sent" data-toast-variant="success">Send <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div></div>
+    </article>
+
+    <article data-message="m10">
+      <div class="read-toolbar">
+        <button class="btn btn--icon" data-toast="Reply window opened below." data-toast-title="Replying to Juniper" data-toast-variant="info" aria-label="Reply"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 17l-6-5 6-5M3 12h11a6 6 0 016 6v1"/></svg></button>
+        <button class="btn btn--icon" data-toast="Moved to Archive." data-toast-title="Archived" data-toast-variant="info" aria-label="Archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="5" rx="1"/><path d="M4 9v9a2 2 0 002 2h12a2 2 0 002-2V9M9 13h6"/></svg></button>
+        <span class="read-toolbar__sep" aria-hidden="true"></span>
+        <div class="dropdown"><button class="btn btn--icon" data-dropdown-trigger aria-haspopup="true" aria-label="More actions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg></button><div class="dropdown__panel"><div class="menu"><button class="menu__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7l9 6 9-6"/><rect x="3" y="5" width="18" height="14" rx="2"/></svg> Mark as unread</button><div class="menu__sep"></div><button class="menu__item menu__item--danger" data-toast="Moved to Trash." data-toast-title="Deleted" data-toast-variant="danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg> Delete</button></div></div></div>
+        <div style="flex:1"></div>
+        <span class="badge badge--neutral badge--dot">Volunteering</span>
+      </div>
+      <div class="read-pane__scroll">
+        <div class="read-head">
+          <h2 class="read-head__subject">Seed library volunteer rota — March</h2>
+          <div class="read-from"><span class="avatar avatar__ring" style="background:var(--bloom-200);color:var(--bloom-800)" aria-hidden="true">JB</span><div class="read-from__meta"><div class="read-from__name">Juniper Blackthorn <span class="text-faint text-xs">&lt;rota@verdant.society&gt;</span></div><div class="read-from__addr">to Volunteers · 16 March 2026</div><div class="read-from__to">Verdant Society — Seed library</div></div></div>
+        </div>
+        <div class="read-body">
+          <p>Could you possibly cover the cataloguing desk on Saturday the 14th? We've a happy backlog of donated packets to sort — lots of beans and squash from the autumn harvest, plus a box of unlabelled mystery seed that wants detective work.</p>
+          <p>It's the usual gentle two-hour shift: check viability dates, write the index cards, and file by family into the wooden drawers. Tea and homemade flapjack provided, as ever.</p>
+          <p class="read-sig">Thank you kindly,<br>Juniper — rota coordinator</p>
+        </div>
+      </div>
+      <div class="read-reply"><div class="field" style="margin:0"><label class="field__label" for="reply-m10">Reply to Juniper</label><textarea class="textarea" id="reply-m10" placeholder="Happy to take the 14th…" style="min-height:5.5rem"></textarea></div><div class="row end" style="margin-top:var(--space-3)"><button class="btn btn--primary" data-toast="You're down for the cataloguing desk on the 14th." data-toast-title="Reply sent" data-toast-variant="success">Send <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div></div>
+    </article>
+
+  </section>
+</main>
+
+<!-- ============================ COMPOSE DRAWER ============================ -->
+<div class="drawer-backdrop" id="compose-drawer" aria-hidden="true">
+  <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="compose-title">
+    <div class="drawer__header">
+      <h2 class="h4 serif-display" id="compose-title">New message</h2>
+      <button class="btn btn--icon" data-modal-close aria-label="Close compose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="drawer__body stack-4">
+      <div class="field">
+        <label class="field__label" for="c-to">To</label>
+        <input class="input" id="c-to" placeholder="member@verdant.society">
+      </div>
+      <div class="field">
+        <label class="field__label" for="c-subject">Subject</label>
+        <input class="input" id="c-subject" placeholder="Offering: hand-collected Calendula seed">
+      </div>
+      <div class="field">
+        <label class="field__label" for="c-label">Label</label>
+        <select class="select" id="c-label">
+          <option>Seed exchange</option>
+          <option>Foraging</option>
+          <option>Curation</option>
+          <option>Events</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field__label" for="c-body">Message</label>
+        <textarea class="textarea" id="c-body" placeholder="Dear fellow grower,&#10;&#10;I have a generous packet of…" style="min-height:9rem"></textarea>
+      </div>
+      <div class="rule-sprig" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"><path d="M16 30C16 20 15 10 18 3"/><path d="M16 22c-4 0-7-3-7-7M17 16c4 0 6-3 6-7"/></svg></div>
+      <div class="file-row">
+        <div class="file-row__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5l-9 9a5 5 0 01-7-7l9-9a3.5 3.5 0 015 5l-9 9a1.5 1.5 0 01-2-2l8-8"/></svg></div>
+        <div class="file-row__meta"><div class="file-row__name">calendula-seed-card.jpg</div><div class="file-row__size">Provenance photo · 1.2 MB</div></div>
+        <button class="btn btn--icon btn--sm" aria-label="Remove attachment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      </div>
+    </div>
+    <div class="drawer__footer">
+      <button class="btn btn--ghost" data-modal-close>Save draft</button>
+      <div style="flex:1"></div>
+      <button class="btn btn--primary" data-modal-close data-toast="Your message has been posted to the seed-exchange list." data-toast-title="Message sent" data-toast-variant="success">
+        Send
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+      </button>
+    </div>
+  </aside>
+</div>
+
+<!-- ============================ FOLDERS DRAWER (mobile) ============================ -->
+<div class="drawer-backdrop" id="folders-drawer" aria-hidden="true">
+  <aside class="drawer drawer--left" role="dialog" aria-modal="true" aria-labelledby="folders-title">
+    <div class="drawer__header">
+      <h2 class="h4 serif-display" id="folders-title">Mailboxes</h2>
+      <button class="btn btn--icon" data-modal-close aria-label="Close folders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="drawer__body" style="padding:var(--space-3)">
+      <button class="btn btn--primary btn--block mb-4" data-modal-close data-modal-open="compose-drawer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+        Compose
+      </button>
+      <nav style="display:flex;flex-direction:column;gap:2px" aria-label="Folders">
+        <a class="nav-item is-active" href="#main" data-modal-close><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 7l9 6 9-6"/><rect x="3" y="5" width="18" height="14" rx="2"/></svg><span>Inbox</span><span class="badge badge--primary">7</span></a>
+        <a class="nav-item" href="#" data-modal-close><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.4 6.3 6.6.4-5.1 4.2 1.7 6.4L12 16.9 6.4 20.3l1.7-6.4L3 9.7l6.6-.4z"/></svg><span>Starred</span></a>
+        <a class="nav-item" href="#" data-modal-close><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg><span>Sent</span></a>
+        <a class="nav-item" href="#" data-modal-close><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg><span>Drafts</span><span class="badge badge--neutral">2</span></a>
+        <a class="nav-item" href="#" data-modal-close><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M20 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9z"/><circle cx="14" cy="20" r="2"/></svg><span>Seed exchange</span><span class="badge badge--accent">4</span></a>
+        <a class="nav-item" href="#" data-modal-close><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 22V4a2 2 0 012-2h10l4 4v16zM16 2v4h4"/></svg><span>Society news</span></a>
+        <a class="nav-item" href="#" data-modal-close><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="5" rx="1"/><path d="M4 9v9a2 2 0 002 2h12a2 2 0 002-2V9"/></svg><span>Archive</span></a>
+        <a class="nav-item" href="#" data-modal-close><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg><span>Trash</span></a>
+        <p class="sidebar__label" style="margin-top:var(--space-3)">Labels</p>
+        <a class="nav-item" href="#" data-modal-close><span class="dot-label" style="background:var(--color-primary)" aria-hidden="true"></span><span>Foraging</span></a>
+        <a class="nav-item" href="#" data-modal-close><span class="dot-label" style="background:var(--color-accent)" aria-hidden="true"></span><span>Curation</span></a>
+        <a class="nav-item" href="#" data-modal-close><span class="dot-label" style="background:var(--color-rose)" aria-hidden="true"></span><span>Events</span></a>
+      </nav>
+    </div>
+  </aside>
+</div>
+
+<!-- ============================ 3-PANE BEHAVIOR (dependency-free) ============================ -->
+<script>
+(function () {
+  var rows = Array.prototype.slice.call(document.querySelectorAll('.msg-row'));
+  var panels = Array.prototype.slice.call(document.querySelectorAll('[data-message]'));
+
+  function showMessage(id) {
+    panels.forEach(function (p) {
+      p.classList.toggle('is-shown', p.getAttribute('data-message') === id);
+    });
+  }
+
+  function selectRow(row) {
+    var id = row.getAttribute('data-row');
+    rows.forEach(function (r) {
+      var active = r === row;
+      r.classList.toggle('is-active', active);
+      r.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    // opening a message marks it read
+    row.classList.remove('is-unread');
+    var dot = row.querySelector('.msg-row__unread-dot');
+    if (dot) dot.remove();
+    showMessage(id);
+    // on narrow screens the reading pane is hidden by CSS; surface it briefly
+    var rp = document.querySelector('.read-pane');
+    if (rp && window.matchMedia('(max-width: 1100px)').matches) {
+      rp.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  rows.forEach(function (row) {
+    row.addEventListener('click', function (e) {
+      // let the star toggle work independently
+      var star = e.target.closest('.msg-row__star');
+      if (star) {
+        e.stopPropagation();
+        star.classList.toggle('is-starred');
+        star.setAttribute('aria-label', star.classList.contains('is-starred') ? 'Starred' : 'Not starred');
+        return;
+      }
+      selectRow(row);
+    });
+    row.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectRow(row); }
+    });
+  });
+})();
+</script>
+
+<script src="../app.js"></script>
+</body>
+</html>

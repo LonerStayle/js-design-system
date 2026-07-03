@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>COMIC POP ART — 디자인 시스템</title>
+<meta name="description" content="Theme 22 · Comic Pop Art — 플랫 잉크, 하프톤, 액션 버스트 디자인 시스템. 프로덕션 등급 토큰, 컴포넌트, 데모." />
+<link rel="stylesheet" href="theme.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='14' fill='%23E8222B'/><text x='50' y='72' font-size='62' text-anchor='middle' fill='%23FFD400' font-family='Impact'>!</text></svg>" />
+<style>
+/* ----- page-local hero/gallery composition ----- */
+.hero {
+  position: relative;
+  padding: var(--space-12) 0 var(--space-13);
+  background: var(--yellow-400);
+  border-bottom: var(--border-w-4) solid var(--ink);
+  overflow: hidden;
+}
+[data-theme="dark"] .hero { background: var(--red-500); }
+.hero::before {
+  content: ""; position: absolute; inset: 0;
+  background-image:
+    radial-gradient(var(--ink) 9%, transparent 10%) 0 0 / 26px 26px;
+  opacity: 0.10; pointer-events: none;
+}
+.hero-grid {
+  position: relative; z-index: 1;
+  display: grid; grid-template-columns: 1.3fr 1fr; gap: var(--space-8);
+  align-items: center;
+}
+@media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; } }
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 11vw, 8rem);
+  line-height: 0.86;
+  letter-spacing: var(--tracking-wide);
+  color: var(--paper);
+  -webkit-text-stroke: 4px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 8px 8px 0 var(--ink);
+  margin-bottom: var(--space-5);
+}
+.hero-title .pop { color: var(--blue-500); }
+[data-theme="dark"] .hero-title .pop { color: var(--yellow-400); }
+.hero-sub {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-extra);
+  max-width: 46ch;
+  margin-bottom: var(--space-6);
+  color: var(--ink);
+}
+[data-theme="dark"] .hero-sub { color: var(--paper); }
+.hero-art {
+  position: relative;
+  display: grid; place-items: center;
+  min-height: 320px;
+}
+.hero-panel {
+  position: relative;
+  background: var(--paper);
+  border: var(--border-w-4) solid var(--ink);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-comic-xl);
+  padding: var(--space-7);
+  transform: rotate(-3deg);
+  width: 100%;
+}
+.hero-panel .big-burst {
+  position: absolute; top: -34px; right: -26px;
+  width: 130px; aspect-ratio: 1;
+  background: var(--blue-500); color: var(--paper);
+  clip-path: var(--action-burst);
+  display: grid; place-items: center;
+  font-family: var(--font-action); font-size: var(--text-2xl); text-align: center; line-height: 0.9;
+  transform: rotate(12deg);
+  animation: pulse-pop 2.4s var(--ease-emphasized) infinite;
+}
+[data-theme="dark"] .hero-panel .big-burst { background: var(--yellow-400); color: var(--neutral-900); }
+
+.swatch-ramp { display: grid; grid-template-columns: repeat(10, 1fr); border: var(--border-w-3) solid var(--ink); border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-comic-sm); }
+.swatch { aspect-ratio: 1 / 0.8; display: flex; align-items: flex-end; padding: 4px 6px; font-size: 9px; font-weight: 900; }
+.ramp-label { font-weight: 900; text-transform: uppercase; letter-spacing: var(--tracking-wide); margin-bottom: 6px; font-size: var(--text-sm); }
+
+.motif-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--panel-gutter); }
+.motif-cell {
+  position: relative;
+  min-height: 150px;
+  border: var(--border-w-3) solid var(--ink);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-comic-sm);
+  overflow: hidden;
+  display: grid; place-items: center; text-align: center;
+  background: var(--color-surface);
+}
+.motif-cell .motif-name {
+  position: absolute; left: 8px; bottom: 8px;
+  background: var(--ink); color: var(--paper);
+  font-size: var(--text-2xs); font-weight: 900;
+  padding: 3px 8px; border-radius: var(--radius-pill);
+  letter-spacing: var(--tracking-wide);
+}
+
+.gallery-block {
+  border: var(--border-w-3) solid var(--ink);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-comic);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+.gallery-block > .gb-head {
+  padding: var(--space-3) var(--space-5);
+  background: var(--ink); color: var(--paper);
+  font-family: var(--font-display); font-size: var(--text-xl); letter-spacing: var(--tracking-wide);
+  display: flex; align-items: center; gap: var(--space-2);
+}
+.gallery-block > .gb-body { padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-5); }
+.demo-row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+.demo-label { font-size: var(--text-2xs); font-weight: 900; text-transform: uppercase; letter-spacing: var(--tracking-widest); color: var(--color-text-muted); width: 100%; }
+
+.pages-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--panel-gutter); }
+.page-card {
+  display: block; position: relative;
+  border: var(--border-w-3) solid var(--ink);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-comic);
+  background: var(--color-surface);
+  overflow: hidden;
+  transition: transform var(--duration-fast) var(--ease-emphasized), box-shadow var(--duration-fast) var(--ease-emphasized);
+}
+.page-card:hover { transform: translate(-3px,-3px) rotate(-0.5deg); box-shadow: var(--shadow-comic-lg); text-decoration: none; }
+.page-card .pc-cover { height: 120px; display: grid; place-items: center; border-bottom: var(--border-w-3) solid var(--ink); color: var(--paper); }
+.page-card .pc-body { padding: var(--space-4); }
+.page-card .pc-num { font-family: var(--font-action); font-size: var(--text-2xl); }
+.page-card .pc-title { font-weight: 900; font-size: var(--text-lg); margin-top: 2px; }
+.page-card .pc-desc { color: var(--color-text-muted); font-size: var(--text-sm); font-weight: 600; }
+
+footer.site-foot {
+  border-top: var(--border-w-4) solid var(--ink);
+  /* always-dark footer (non-inverting) so yellow links stay AA in both themes */
+  background: var(--neutral-900); color: var(--neutral-50);
+  padding: var(--space-9) 0 var(--space-7);
+  margin-top: var(--space-12);
+}
+footer.site-foot a { color: var(--yellow-400); }   /* yellow on near-black = 13.8:1 */
+.section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-7); }
+.section-head .eyebrow { display:inline-block; background: var(--blue-500); color: #fff; border: var(--border-w-2) solid var(--ink); border-radius: var(--radius-pill); padding: 3px 12px; font-size: var(--text-xs); font-weight: 900; letter-spacing: var(--tracking-wide); transform: rotate(-2deg); }
+</style>
+</head>
+<body class="paper-bg">
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
+
+<!-- ====================== NAVBAR ====================== -->
+<nav class="navbar" aria-label="Primary">
+  <a class="brand" href="index.html">
+    <span class="brand-mark" aria-hidden="true">!</span>
+    <span>COMIC POP</span>
+  </a>
+  <div class="nav-links">
+    <a class="nav-link is-active" href="index.html">홈</a>
+    <a class="nav-link" href="#tokens">토큰</a>
+    <a class="nav-link" href="#motifs">모티프</a>
+    <a class="nav-link" href="#components">컴포넌트</a>
+    <a class="nav-link" href="#pages">데모</a>
+  </div>
+  <div class="nav-right">
+    <button class="btn btn-ghost btn-sm" data-cmdk-open aria-label="명령 팔레트 열기">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <span class="hide-mobile">검색</span> <kbd class="hide-mobile">⌘K</kbd>
+    </button>
+    <button class="btn btn-icon btn-sm btn-outline" data-theme-toggle aria-pressed="false" aria-label="다크 모드 전환" title="테마 전환">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
+    </button>
+  </div>
+</nav>
+
+<main id="main">
+
+<!-- ====================== HERO ====================== -->
+<header class="hero speed-lines">
+  <div class="container hero-grid">
+    <div>
+      <span class="badge solid" style="margin-bottom:14px;">THEME&nbsp;22 · 프로덕션 등급</span>
+      <h1 class="hero-title">COMIC<br><span class="pop">POP!</span> ART</h1>
+      <p class="hero-sub">만화책 한 페이지처럼 만든 플랫 잉크 디자인 시스템 — 모든 요소에 두꺼운 검은 외곽선, 벤데이 하프톤 음영, 말풍선, 그리고 <strong>POW!</strong> 하고 터지는 액션 버스트 뱃지까지.</p>
+      <div class="demo-row">
+        <a class="btn btn-primary btn-lg" href="#components" data-burst="POW!">컴포넌트 살펴보기</a>
+        <a class="btn btn-outline btn-lg" href="#pages">데모 보기</a>
+        <button class="btn btn-secondary btn-lg" data-toast="success" data-toast-title="KAPOW!" data-toast-body="만화풍 토스트 알림이에요.">토스트 띄우기</button>
+      </div>
+    </div>
+    <div class="hero-art">
+      <div class="hero-panel">
+        <div class="big-burst" aria-hidden="true">NEW<br>ISSUE!</div>
+        <div class="speech-bubble" style="margin-bottom:22px;">맙소사 하프톤이다! 픽셀 하나하나 손으로 잉크칠했어요.</div>
+        <div class="stack stack-3">
+          <div class="row between"><strong>주요 잉크</strong><span class="badge red">3</span></div>
+          <div class="row gap-2">
+            <span style="width:34px;height:34px;border:var(--border-w-3) solid var(--ink);border-radius:8px;background:var(--red-500)"></span>
+            <span style="width:34px;height:34px;border:var(--border-w-3) solid var(--ink);border-radius:8px;background:var(--yellow-400)"></span>
+            <span style="width:34px;height:34px;border:var(--border-w-3) solid var(--ink);border-radius:8px;background:var(--blue-500)"></span>
+            <span style="width:34px;height:34px;border:var(--border-w-3) solid var(--ink);border-radius:8px;background:var(--ink)"></span>
+          </div>
+          <div class="halftone" style="height:42px;border:var(--border-w-3) solid var(--ink);border-radius:8px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ====================== TOKENS ====================== -->
+<section id="tokens" class="section">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">잉크와 컬러</span>
+        <h2 style="margin-top:10px;">디자인 토큰</h2>
+        <p class="text-muted weight-extra">전체 주요 컬러 램프(50→900), 만화 모티프, 그리고 완성된 타입 / 여백 / 모션 스케일 — 모두 CSS 변수입니다.</p>
+      </div>
+    </div>
+
+    <div class="stack stack-6">
+      <div>
+        <div class="ramp-label" style="color:var(--red-600)">RED — 만화 잉크 #E8222B</div>
+        <div class="swatch-ramp" id="ramp-red"></div>
+      </div>
+      <div>
+        <div class="ramp-label" style="color:var(--yellow-600)">YELLOW — 팝 액센트 #FFD400</div>
+        <div class="swatch-ramp" id="ramp-yellow"></div>
+      </div>
+      <div>
+        <div class="ramp-label" style="color:var(--blue-600)">BLUE — #1E6FE8</div>
+        <div class="swatch-ramp" id="ramp-blue"></div>
+      </div>
+      <div>
+        <div class="ramp-label">NEUTRAL — 종이 → 잉크</div>
+        <div class="swatch-ramp" id="ramp-neutral"></div>
+      </div>
+    </div>
+
+    <div class="grid grid-3 mt-8">
+      <div class="panel" style="padding:var(--space-5)">
+        <h5 class="mb-4">타입 스케일</h5>
+        <div style="font-size:var(--text-4xl);font-family:var(--font-display);line-height:1">4xl 디스플레이</div>
+        <div style="font-size:var(--text-2xl);font-weight:900">2xl 제목</div>
+        <div style="font-size:var(--text-lg);font-weight:700">lg 본문 볼드</div>
+        <div style="font-size:var(--text-sm)" class="text-muted">sm 캡션 (흐린색)</div>
+      </div>
+      <div class="panel" style="padding:var(--space-5)">
+        <h5 class="mb-4">여백</h5>
+        <div class="stack stack-2">
+          <span style="height:8px;background:var(--blue-500);width:8px;border:2px solid var(--ink)"></span>
+          <span style="height:8px;background:var(--blue-500);width:16px;border:2px solid var(--ink)"></span>
+          <span style="height:8px;background:var(--blue-500);width:24px;border:2px solid var(--ink)"></span>
+          <span style="height:8px;background:var(--blue-500);width:40px;border:2px solid var(--ink)"></span>
+          <span style="height:8px;background:var(--blue-500);width:64px;border:2px solid var(--ink)"></span>
+        </div>
+      </div>
+      <div class="panel" style="padding:var(--space-5)">
+        <h5 class="mb-4">그림자와 테두리</h5>
+        <div class="demo-row">
+          <span style="width:54px;height:40px;background:var(--paper);border:var(--border-w-3) solid var(--ink);border-radius:8px;box-shadow:var(--shadow-comic-sm)"></span>
+          <span style="width:54px;height:40px;background:var(--paper);border:var(--border-w-3) solid var(--ink);border-radius:8px;box-shadow:var(--shadow-comic)"></span>
+          <span style="width:54px;height:40px;background:var(--paper);border:var(--border-w-4) solid var(--ink);border-radius:8px;box-shadow:var(--shadow-comic-lg)"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== MOTIFS ====================== -->
+<section id="motifs" class="section" style="background:var(--color-surface-2);border-block:var(--border-w-4) solid var(--ink);">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow" style="background:var(--red-600)">시그니처 DNA</span>
+        <h2 style="margin-top:10px;">코믹 모티프</h2>
+        <p class="text-muted weight-extra">누가 봐도 만화책임을 알게 하는 여섯 가지 기법.</p>
+      </div>
+    </div>
+    <div class="motif-grid">
+      <div class="motif-cell halftone" style="background-color:var(--yellow-300)"><span class="motif-name">벤데이 하프톤</span></div>
+      <div class="motif-cell">
+        <div class="speech-bubble">쿵! 바로 여기야.</div>
+        <span class="motif-name">말풍선</span>
+      </div>
+      <div class="motif-cell">
+        <div class="thought-bubble">음… 잉크인가?</div>
+        <span class="motif-name">생각풍선</span>
+      </div>
+      <div class="motif-cell">
+        <span class="burst" aria-hidden="true">POW!</span>
+        <span class="motif-name">액션 버스트</span>
+      </div>
+      <div class="motif-cell speed-lines" style="background:var(--blue-500)"><span style="font-family:var(--font-action);color:var(--paper);font-size:var(--text-2xl);-webkit-text-stroke:2px var(--ink);">ZOOM</span><span class="motif-name">스피드 라인</span></div>
+      <div class="motif-cell" style="padding:14px;">
+        <div class="panel-grid grid-2" style="width:100%;height:100%;">
+          <span class="halftone-red"></span><span style="background:var(--yellow-400)"></span>
+          <span style="background:var(--blue-500)"></span><span class="halftone"></span>
+        </div>
+        <span class="motif-name">패널 그리드</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== COMPONENTS GALLERY ====================== -->
+<section id="components" class="section">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow" style="background:var(--green-500);color:var(--neutral-900)">출연진</span>
+        <h2 style="margin-top:10px;">컴포넌트 갤러리</h2>
+        <p class="text-muted weight-extra">모든 컨트롤이 실제로 작동합니다. 여기저기 눌러 보세요 — POW 하고 터집니다.</p>
+      </div>
+    </div>
+
+    <div class="grid grid-2" style="align-items:start;gap:var(--panel-gutter)">
+
+      <!-- Buttons -->
+      <div class="gallery-block" data-reveal>
+        <div class="gb-head">⚡ 버튼</div>
+        <div class="gb-body">
+          <span class="demo-label">종류</span>
+          <div class="demo-row">
+            <button class="btn btn-primary" data-burst>Primary</button>
+            <button class="btn btn-secondary" data-burst>Secondary</button>
+            <button class="btn btn-accent" data-burst>Accent</button>
+            <button class="btn btn-ghost">Ghost</button>
+            <button class="btn btn-danger" data-burst="OOF!">Danger</button>
+          </div>
+          <span class="demo-label">크기와 상태</span>
+          <div class="demo-row">
+            <button class="btn btn-primary btn-sm">작게</button>
+            <button class="btn btn-primary">보통</button>
+            <button class="btn btn-primary btn-lg">크게</button>
+            <button class="btn btn-primary" disabled>비활성</button>
+            <button class="btn btn-secondary is-loading">로딩 중</button>
+          </div>
+          <span class="demo-label">그룹과 아이콘</span>
+          <div class="demo-row">
+            <div class="btn-group" data-toggle role="group" aria-label="보기">
+              <button class="btn btn-outline is-active">일</button>
+              <button class="btn btn-outline">주</button>
+              <button class="btn btn-outline">월</button>
+            </div>
+            <button class="btn btn-icon btn-primary" aria-label="추가">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form fields -->
+      <div class="gallery-block" data-reveal>
+        <div class="gb-head">✍️ 폼 필드</div>
+        <div class="gb-body">
+          <div class="field">
+            <label class="field-label" for="g-name">히어로 이름 <span class="req">*</span></label>
+            <input class="input" id="g-name" placeholder="예: 캡틴 하프톤" />
+          </div>
+          <div class="searchbar">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input class="input" type="search" placeholder="멀티버스 검색…" aria-label="검색" />
+            <button class="clear-btn" aria-label="지우기">✕</button>
+          </div>
+          <div class="demo-row" style="gap:var(--space-6)">
+            <label class="checkbox"><input type="checkbox" checked /><span class="box" aria-hidden="true"></span> 망토 착용</label>
+            <label class="radio"><input type="radio" name="g-side" checked /><span class="dot" aria-hidden="true"></span> 히어로</label>
+            <label class="radio"><input type="radio" name="g-side" /><span class="dot" aria-hidden="true"></span> 빌런</label>
+            <label class="toggle"><input type="checkbox" checked /><span class="track"><span class="knob"></span></span> 초능력</label>
+          </div>
+          <div class="segmented" role="group" aria-label="난이도">
+            <button class="is-active" aria-pressed="true" data-value="easy">사이드킥</button>
+            <button aria-pressed="false" data-value="mid">히어로</button>
+            <button aria-pressed="false" data-value="hard">레전드</button>
+          </div>
+          <div class="slider">
+            <div class="row between mb-2"><span class="field-label">파워 레벨</span><span class="slider-value">72</span></div>
+            <input type="range" min="0" max="100" value="72" data-suffix="" aria-label="파워 레벨" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Badges / chips / rating -->
+      <div class="gallery-block" data-reveal>
+        <div class="gb-head">🏷️ 뱃지와 소품</div>
+        <div class="gb-body">
+          <div class="demo-row">
+            <span class="badge">기본</span>
+            <span class="badge red">레드</span>
+            <span class="badge blue">블루</span>
+            <span class="badge yellow">옐로</span>
+            <span class="badge green dot">실시간</span>
+            <span class="badge-burst" aria-hidden="true">NEW!</span>
+            <span class="badge-burst yellow" aria-hidden="true">SALE!</span>
+          </div>
+          <span class="demo-label">아바타</span>
+          <div class="avatar-group">
+            <span class="avatar" aria-label="A">A</span>
+            <span class="avatar red" aria-label="B">B</span>
+            <span class="avatar blue" aria-label="C">C</span>
+            <span class="avatar more" aria-label="3명 더">+3</span>
+          </div>
+          <span class="demo-label">별점과 스테퍼</span>
+          <div class="demo-row" style="gap:var(--space-6)">
+            <div class="rating" role="radiogroup" aria-label="별점" data-value="4">
+              <button role="radio" aria-checked="false" aria-label="별 1개"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg></button>
+              <button role="radio" aria-checked="false" aria-label="별 2개"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg></button>
+              <button role="radio" aria-checked="false" aria-label="별 3개"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg></button>
+              <button role="radio" aria-checked="true" aria-label="별 4개"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg></button>
+              <button role="radio" aria-checked="false" aria-label="별 5개"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg></button>
+            </div>
+            <div class="stepper">
+              <button data-step="-" aria-label="감소">−</button>
+              <input type="text" value="3" inputmode="numeric" min="0" max="99" aria-label="수량" />
+              <button data-step="+" aria-label="증가">+</button>
+            </div>
+          </div>
+          <span class="demo-label">툴팁(호버)과 태그 입력</span>
+          <div class="demo-row">
+            <span class="tip"><button class="btn btn-outline btn-sm">마우스를 올려보세요</button><span class="tip-content" role="tooltip">말풍선 툴팁이에요!</span></span>
+          </div>
+          <div class="combo" data-chip>
+            <div class="combo-control">
+              <span class="chip">액션 <button aria-label="제거">✕</button></span>
+              <span class="chip">레트로 <button aria-label="제거">✕</button></span>
+              <input type="text" placeholder="태그 입력 후 Enter" aria-label="태그" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feedback / overlays -->
+      <div class="gallery-block" data-reveal>
+        <div class="gb-head">💥 피드백과 오버레이</div>
+        <div class="gb-body">
+          <div class="alert info">
+            <span class="alert-icon" aria-hidden="true">i</span>
+            <div><div class="alert-title">주목, 히어로!</div><div class="alert-body">알림은 info / success / warning / danger 종류로 제공됩니다.</div></div>
+          </div>
+          <div class="banner"><span class="banner-action-word" aria-hidden="true">WOW!</span><span>배너로 헤드라인을 외쳐 보세요.</span></div>
+          <div class="demo-row">
+            <button class="btn btn-primary" data-modal-open="demo-modal">모달 열기</button>
+            <button class="btn btn-secondary" data-drawer-open="demo-drawer">드로어 열기</button>
+            <button class="btn btn-accent" data-toast="warning" data-toast-title="조심하세요!" data-toast-body="경고 토스트가 나타납니다.">경고 토스트</button>
+            <button class="btn btn-outline" data-cmdk-open>⌘K 팔레트</button>
+          </div>
+          <span class="demo-label">진행률</span>
+          <div class="progress halftone blue" data-value="64" aria-label="64 퍼센트"><div class="progress-fill"></div></div>
+          <div class="demo-row">
+            <span class="progress-ring" data-value="78" aria-label="78 퍼센트">
+              <svg width="84" height="84"><circle class="pr-track" cx="42" cy="42" r="34" fill="none" stroke-width="8"/><circle class="pr-fill" cx="42" cy="42" r="34" fill="none" stroke-width="8"/></svg>
+              <span class="pr-label">78%</span>
+            </span>
+            <span class="spinner" role="status" aria-label="로딩 중"></span>
+            <span class="loading-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabs / accordion -->
+      <div class="gallery-block" data-reveal>
+        <div class="gb-head">📑 탭과 아코디언</div>
+        <div class="gb-body">
+          <div class="tabs">
+            <div class="tablist" role="tablist" aria-label="데모 탭">
+              <button class="tab" id="t1" role="tab" aria-selected="true" aria-controls="p1">탄생 비화</button>
+              <button class="tab" id="t2" role="tab" aria-selected="false" aria-controls="p2" tabindex="-1">초능력</button>
+              <button class="tab" id="t3" role="tab" aria-selected="false" aria-controls="p3" tabindex="-1">장비</button>
+            </div>
+            <div class="tabpanel" id="p1" role="tabpanel" aria-labelledby="t1">인쇄 잉크 통에서 태어난 우리의 히어로는 픽셀 깨짐과 맞서 싸웁니다.</div>
+            <div class="tabpanel" id="p2" role="tabpanel" aria-labelledby="t2" hidden>단 4ms 만에 하프톤 그라데이션을 렌더링할 수 있습니다.</div>
+            <div class="tabpanel" id="p3" role="tabpanel" aria-labelledby="t3" hidden>완벽하게 토큰화된 CSS 변수로 무장한 유틸리티 벨트.</div>
+          </div>
+          <div class="accordion" data-single>
+            <div class="accordion-item">
+              <button class="accordion-trigger" aria-expanded="true">"벤데이"가 뭔가요? <span class="chev" aria-hidden="true">▾</span></button>
+              <div class="accordion-panel is-open"><div><div class="inner">옛날 만화에서 쓰던 점 인쇄 기법으로, 순수 CSS 방사형 그라데이션으로 재현했습니다.</div></div></div>
+            </div>
+            <div class="accordion-item">
+              <button class="accordion-trigger" aria-expanded="false">접근성도 지키나요? <span class="chev" aria-hidden="true">▾</span></button>
+              <div class="accordion-panel"><div><div class="inner">네 — 4.5:1 명암비, 포커스 링, ARIA, 그리고 모션 최소화 지원까지 전반에 적용했습니다.</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Misc display -->
+      <div class="gallery-block" data-reveal>
+        <div class="gb-head">📊 카드와 데이터</div>
+        <div class="gb-body">
+          <div class="grid grid-2" style="gap:var(--space-3)">
+            <div class="stat-card accent-top">
+              <div class="stat-label">판매된 이슈</div>
+              <div class="stat-value">12.4k</div>
+              <span class="stat-delta up">▲ 18%</span>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">환불률</div>
+              <div class="stat-value">0.7%</div>
+              <span class="stat-delta down">▼ 2%</span>
+            </div>
+          </div>
+          <div class="list">
+            <div class="list-item"><span class="avatar sm blue">N</span><span class="li-title">Nova Strike #1</span><span class="li-meta">$4.99</span></div>
+            <div class="list-item"><span class="avatar sm red">H</span><span class="li-title">Halftone Heroes</span><span class="li-meta">$3.49</span></div>
+            <div class="list-item"><span class="avatar sm">P</span><span class="li-title">Panel Pals</span><span class="li-meta">$5.99</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ====================== PAGES ====================== -->
+<section id="pages" class="section" style="background:var(--color-surface-2);border-top:var(--border-w-4) solid var(--ink);">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow" style="background:var(--purple-500)">이슈 모음</span>
+        <h2 style="margin-top:10px;">전체 페이지 데모</h2>
+        <p class="text-muted weight-extra">이 시스템으로 조립한 실제 화면 9종. 모두 반응형이며 인터랙티브합니다.</p>
+      </div>
+    </div>
+    <div class="pages-grid">
+      <a class="page-card" href="pages/dashboard.html">
+        <div class="pc-cover halftone-blue" style="background-color:var(--blue-500)"><span style="font-family:var(--font-action);font-size:var(--text-3xl);color:var(--paper);-webkit-text-stroke:2px var(--ink)">DASH</span></div>
+        <div class="pc-body"><div class="pc-num">#1</div><div class="pc-title">애널리틱스 대시보드</div><div class="pc-desc">팝 위젯, 테이블, 하프톤 차트.</div></div>
+      </a>
+      <a class="page-card" href="pages/kanban.html">
+        <div class="pc-cover" style="background:var(--red-500)"><span style="font-family:var(--font-action);font-size:var(--text-3xl);color:var(--yellow-400);-webkit-text-stroke:2px var(--ink)">BOARD</span></div>
+        <div class="pc-body"><div class="pc-num">#2</div><div class="pc-title">칸반 보드</div><div class="pc-desc">패널 간격 컬럼, 드래그 앤 드롭.</div></div>
+      </a>
+      <a class="page-card" href="pages/inbox.html">
+        <div class="pc-cover" style="background:var(--yellow-400)"><span style="font-family:var(--font-action);font-size:var(--text-3xl);color:var(--ink)">INBOX</span></div>
+        <div class="pc-body"><div class="pc-num">#3</div><div class="pc-title">이메일 / 받은편지함</div><div class="pc-desc">3분할 패널 메일 클라이언트.</div></div>
+      </a>
+      <a class="page-card" href="pages/product.html">
+        <div class="pc-cover" style="background:var(--green-500)"><span style="font-family:var(--font-action);font-size:var(--text-3xl);color:var(--paper);-webkit-text-stroke:2px var(--ink)">SHOP</span></div>
+        <div class="pc-body"><div class="pc-num">#4</div><div class="pc-title">상품 상세</div><div class="pc-desc">만화 굿즈 스토어, 갤러리와 장바구니.</div></div>
+      </a>
+      <a class="page-card" href="pages/pricing.html">
+        <div class="pc-cover" style="background:var(--purple-500)"><span style="font-family:var(--font-action);font-size:var(--text-3xl);color:var(--paper);-webkit-text-stroke:2px var(--ink)">PLANS</span></div>
+        <div class="pc-body"><div class="pc-num">#5</div><div class="pc-title">요금제 표</div><div class="pc-desc">세 가지 플랜, 월 / 연 전환.</div></div>
+      </a>
+      <a class="page-card" href="pages/settings.html">
+        <div class="pc-cover" style="background:var(--blue-500)"><span style="font-family:var(--font-action);font-size:var(--text-3xl);color:var(--paper);-webkit-text-stroke:2px var(--ink)">SET</span></div>
+        <div class="pc-body"><div class="pc-num">#6</div><div class="pc-title">설정</div><div class="pc-desc">탭, 토글, 위험 구역.</div></div>
+      </a>
+      <a class="page-card" href="pages/onboarding.html">
+        <div class="pc-cover" style="background:var(--orange-500)"><span style="font-family:var(--font-action);font-size:var(--text-3xl);color:var(--paper);-webkit-text-stroke:2px var(--ink)">START</span></div>
+        <div class="pc-body"><div class="pc-num">#7</div><div class="pc-title">온보딩 마법사</div><div class="pc-desc">여러 단계로 이어지는 만화 패널 스토리.</div></div>
+      </a>
+      <a class="page-card" href="pages/profile.html">
+        <div class="pc-cover" style="background:var(--pink-500)"><span style="font-family:var(--font-action);font-size:var(--text-3xl);color:var(--paper);-webkit-text-stroke:2px var(--ink)">YOU</span></div>
+        <div class="pc-body"><div class="pc-num">#8</div><div class="pc-title">프로필 / 계정</div><div class="pc-desc">히어로 카드, 통계, 타임라인.</div></div>
+      </a>
+      <a class="page-card" href="pages/404.html">
+        <div class="pc-cover" style="background:var(--ink)"><span class="burst sm" aria-hidden="true">OOPS!</span></div>
+        <div class="pc-body"><div class="pc-num">#9</div><div class="pc-title">404와 빈 상태</div><div class="pc-desc">"OOPS!" 버스트와 빈 상태 일러스트.</div></div>
+      </a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ====================== FOOTER ====================== -->
+<footer class="site-foot">
+  <div class="container">
+    <div class="row between wrap gap-6" style="align-items:flex-start">
+      <div style="max-width:42ch">
+        <div class="brand" style="color:var(--neutral-50);font-size:var(--text-2xl);margin-bottom:10px"><span class="brand-mark" aria-hidden="true">!</span> COMIC POP ART</div>
+        <p style="color:var(--neutral-300);font-weight:600">디자인 시스템 모음집의 Theme 22. 순수 CSS + 토큰, 프레임워크 제로, 인라인 SVG 모티프. 아무 HTML이나 더블클릭하면 해당 이슈를 볼 수 있습니다.</p>
+      </div>
+      <div class="row gap-6 wrap" style="align-items:flex-start">
+        <div class="stack stack-2">
+          <strong>시스템</strong>
+          <a href="#tokens">토큰</a><a href="#motifs">모티프</a><a href="#components">컴포넌트</a><a href="README.md">README</a>
+        </div>
+        <div class="stack stack-2">
+          <strong>데모</strong>
+          <a href="pages/dashboard.html">대시보드</a><a href="pages/pricing.html">요금제</a><a href="pages/onboarding.html">온보딩</a><a href="pages/404.html">404</a>
+        </div>
+      </div>
+    </div>
+    <hr style="border-color:var(--neutral-700);margin:var(--space-7) 0 var(--space-4)" />
+    <p style="color:var(--neutral-400);font-weight:700;font-size:var(--text-sm)">© <span data-year>2026</span> Comic Pop Art Design System · 패널 하나하나 직접 제작. 검색하려면 <kbd>⌘K</kbd>.</p>
+  </div>
+</footer>
+
+<!-- ====================== MODAL ====================== -->
+<div class="overlay halftone-scrim" id="demo-modal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="dm-title">
+    <div class="modal-header">
+      <h3 class="modal-title" id="dm-title">KAPOW! 모달입니다</h3>
+      <button class="btn btn-icon btn-sm btn-outline" data-modal-close aria-label="닫기">✕</button>
+    </div>
+    <div class="modal-body stack stack-4">
+      <p class="weight-extra">이 다이얼로그는 살짝 튕기며 나타나고, 포커스를 가둬 두며, ESC를 누르거나 배경을 클릭하면 닫히고, 닫힐 때 포커스를 원래대로 되돌립니다.</p>
+      <div class="field">
+        <label class="field-label" for="dm-in">나만의 외침</label>
+        <input class="input" id="dm-in" placeholder="엑셀시오르!" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-modal-close>취소</button>
+      <button class="btn btn-primary" data-modal-close data-toast="success" data-toast-title="저장 완료!" data-toast-body="당신의 외침이 울려 퍼집니다.">저장하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== DRAWER ====================== -->
+<div class="overlay" id="demo-drawer-scrim" hidden></div>
+<aside class="drawer" id="demo-drawer" data-scrim="demo-drawer-scrim" aria-label="데모 드로어" role="dialog" aria-modal="true">
+  <div class="drawer-header">
+    <span class="dh-title">사이드 패널</span>
+    <button class="btn btn-icon btn-sm btn-outline" data-drawer-close="demo-drawer" aria-label="드로어 닫기">✕</button>
+  </div>
+  <div class="drawer-body stack stack-4">
+    <p class="weight-extra">드로어는 진한 잉크 그림자와 함께 화면 가장자리에서 슬라이드되어 나타납니다.</p>
+    <div class="list">
+      <div class="list-item"><span>🦸 프로필</span></div>
+      <div class="list-item"><span>⚙️ 설정</span></div>
+      <div class="list-item"><span>🚪 로그아웃</span></div>
+    </div>
+  </div>
+  <div class="drawer-footer"><button class="btn btn-primary btn-block" data-drawer-close="demo-drawer">확인</button></div>
+</aside>
+
+<!-- ====================== COMMAND PALETTE ====================== -->
+<div class="cmdk-overlay" role="dialog" aria-modal="true" aria-label="명령 팔레트">
+  <div class="cmdk">
+    <div class="cmdk-input-row">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input class="cmdk-input" placeholder="명령을 입력하거나 검색하세요…" aria-label="명령 팔레트 입력" />
+      <kbd>ESC</kbd>
+    </div>
+    <div class="cmdk-list">
+      <div class="cmdk-group">
+        <div class="cmdk-group-label">이동</div>
+        <div class="cmdk-item" data-href="pages/dashboard.html"><span class="cmdk-ico">📊</span> 대시보드로 이동 <kbd class="cmdk-kbd">G D</kbd></div>
+        <div class="cmdk-item" data-href="pages/kanban.html"><span class="cmdk-ico">🗂️</span> 칸반 보드로 이동</div>
+        <div class="cmdk-item" data-href="pages/pricing.html"><span class="cmdk-ico">💲</span> 요금제로 이동</div>
+        <div class="cmdk-item" data-href="pages/settings.html"><span class="cmdk-ico">⚙️</span> 설정 열기</div>
+      </div>
+      <div class="cmdk-group">
+        <div class="cmdk-group-label">작업</div>
+        <div class="cmdk-item" data-action="toggle-theme"><span class="cmdk-ico">🌗</span> 다크 모드 전환 <kbd class="cmdk-kbd">T</kbd></div>
+        <div class="cmdk-item"><span class="cmdk-ico">📋</span> 디자인 토큰 복사</div>
+        <div class="cmdk-item"><span class="cmdk-ico">🚀</span> 출시하기!</div>
+      </div>
+      <div class="cmdk-empty" style="display:none">결과가 없어요 — 다른 단어로 검색해 보세요, 히어로.</div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+/* build color ramps for the tokens section */
+(function () {
+  var ramps = { red: "--red-", yellow: "--yellow-", blue: "--blue-", neutral: "--neutral-" };
+  var steps = [50,100,200,300,400,500,600,700,800,900];
+  Object.keys(ramps).forEach(function (name) {
+    var host = document.getElementById("ramp-" + name);
+    if (!host) return;
+    steps.forEach(function (s) {
+      var d = document.createElement("div");
+      d.className = "swatch";
+      var v = "var(" + ramps[name] + s + ")";
+      d.style.background = v;
+      var dark = (name === "neutral" && s >= 500) || (name !== "yellow" && s >= 500);
+      d.style.color = dark ? "#fff" : "#0a0a09";
+      d.textContent = s;
+      host.appendChild(d);
+    });
+  });
+})();
+</script>
+</body>
+</html>

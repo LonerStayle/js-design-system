@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Settings Desk — The Ledger</title>
+<link rel="stylesheet" href="../theme.css">
+<style>
+  /* page-local layout only — token-based */
+  .settings-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, 280px) 1fr;
+    gap: 0;
+    border-top: var(--rule-heavy) solid var(--color-rule-heavy);
+    margin-top: var(--space-7);
+  }
+  .settings-rail {
+    border-right: var(--rule-medium) solid var(--color-border);
+    padding: var(--space-6) var(--space-6) var(--space-6) 0;
+  }
+  .settings-content {
+    padding: var(--space-6) 0 var(--space-6) var(--space-8);
+    min-width: 0;
+  }
+
+  /* vertical tab rail — restyle the .tabs list to a column using tokens */
+  .settings-rail .tabs__list {
+    flex-direction: column;
+    border-bottom: 0;
+    border-right: 0;
+    gap: 0;
+    align-items: stretch;
+  }
+  .settings-rail .tabs__tab {
+    justify-content: flex-start;
+    text-align: left;
+    border-bottom: var(--rule-thin) solid var(--color-border);
+    width: 100%;
+  }
+  .settings-rail .tabs__tab[aria-selected="true"] {
+    border-left: var(--rule-banner) solid var(--color-accent);
+    padding-left: var(--space-3);
+  }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-5);
+  }
+  .pref-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-5);
+    padding: var(--space-4) 0;
+    border-bottom: var(--rule-thin) solid var(--color-border);
+  }
+  .pref-row__main { max-width: 60ch; }
+  .pref-row__title {
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: var(--text-base);
+    margin: 0 0 var(--space-1);
+  }
+  .pref-row__sub { color: var(--color-text-muted); font-size: var(--text-sm); margin: 0; }
+  .avatar-edit { display: flex; align-items: center; gap: var(--space-6); }
+  .avatar-edit .stack-sm { flex: 1; min-width: 0; }
+  /* use the drop-zone as a compact inline "change photo" control here */
+  .avatar-edit .fileupload { display: inline-flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-5); text-align: left; width: max-content; }
+  .avatar-edit .fileupload svg { width: 1rem; height: 1rem; margin: 0; }
+
+  [data-reveal]{ opacity:0; transform: translateY(12px); transition: opacity .5s var(--ease-out), transform .5s var(--ease-out); }
+  [data-reveal].is-revealed{ opacity:1; transform:none; }
+
+  @media (max-width: 768px){
+    .settings-layout { grid-template-columns: 1fr; }
+    .settings-rail {
+      border-right: 0;
+      border-bottom: var(--rule-medium) solid var(--color-border);
+      padding: var(--space-5) 0;
+    }
+    .settings-content { padding: var(--space-6) 0; }
+    .settings-rail .tabs__list { flex-direction: row; flex-wrap: wrap; }
+    .settings-rail .tabs__tab { width: auto; border-bottom: 0; }
+    .settings-rail .tabs__tab[aria-selected="true"] { border-left: 0; padding-left: var(--space-4); }
+    .field-row { grid-template-columns: 1fr; }
+    .pref-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<nav class="navbar no-print" aria-label="Primary">
+  <a class="navbar__brand" href="../index.html">THE&nbsp;<span class="spot">LEDGER</span></a>
+  <div class="navbar__sections" id="primary-nav">
+    <a class="navbar__link" href="dashboard.html">Desk</a>
+    <a class="navbar__link" href="kanban.html">Board</a>
+    <a class="navbar__link" href="inbox.html">Wire</a>
+    <a class="navbar__link" href="pricing.html">Plans</a>
+    <a class="navbar__link" href="front-page.html">Front Page</a>
+  </div>
+  <div class="navbar__actions">
+    <button class="btn btn--ghost btn--sm" data-command-open aria-label="Search">⌘K</button>
+    <button class="btn btn--icon btn--sm" data-theme-toggle aria-pressed="false" aria-label="Toggle edition">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
+    </button>
+    <button class="btn btn--icon btn--sm navbar__toggle" data-nav-toggle="primary-nav" aria-label="Menu" aria-expanded="false">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+  </div>
+</nav>
+
+<main id="main">
+<div class="container">
+
+  <!-- Breadcrumb -->
+  <nav class="breadcrumb" aria-label="Breadcrumb" data-reveal>
+    <a class="breadcrumb__item" href="../index.html">Home</a>
+    <span class="breadcrumb__sep">/</span>
+    <a class="breadcrumb__item" href="dashboard.html">Account</a>
+    <span class="breadcrumb__sep">/</span>
+    <span class="breadcrumb__item" aria-current="page">Settings</span>
+  </nav>
+
+  <!-- Page header -->
+  <header class="article-header" data-reveal>
+    <span class="kicker">Preferences</span>
+    <h1 class="masthead__nameplate" style="font-size:var(--text-6xl);line-height:var(--leading-tight);margin:var(--space-2) 0">The Settings Desk</h1>
+    <p class="article-header__deck deck">Tune your byline, your alerts and the colour of the edition. Changes are filed to your account the moment you save — no second proof required.</p>
+    <div class="article-header__meta">
+      <span class="byline">Account holder · <strong>Margaret Reyes</strong></span>
+      <span class="dateline" data-dateline>—</span>
+      <span class="badge badge--success">All systems filed</span>
+    </div>
+  </header>
+
+  <!-- Two-column tabbed settings -->
+  <div class="tabs" data-tabs>
+    <div class="settings-layout">
+
+      <!-- LEFT vertical tab rail -->
+      <aside class="settings-rail" data-reveal>
+        <div class="section-label section-label--ink mb-2">Sections</div>
+        <div class="tabs__list" role="tablist" aria-label="Settings sections" aria-orientation="vertical">
+          <button class="tabs__tab" role="tab" id="tab-profile" aria-controls="panel-profile" aria-selected="true">Profile</button>
+          <button class="tabs__tab" role="tab" id="tab-account" aria-controls="panel-account" aria-selected="false" tabindex="-1">Account</button>
+          <button class="tabs__tab" role="tab" id="tab-notifications" aria-controls="panel-notifications" aria-selected="false" tabindex="-1">Notifications</button>
+          <button class="tabs__tab" role="tab" id="tab-appearance" aria-controls="panel-appearance" aria-selected="false" tabindex="-1">Appearance</button>
+          <button class="tabs__tab" role="tab" id="tab-danger" aria-controls="panel-danger" aria-selected="false" tabindex="-1">Danger Zone</button>
+        </div>
+        <hr class="rule mt-4">
+        <p class="dateline mt-4">Edition saved automatically to this device. Last sync 6 min ago.</p>
+      </aside>
+
+      <!-- RIGHT content area -->
+      <div class="settings-content">
+
+        <!-- PROFILE -->
+        <section class="tabs__panel" role="tabpanel" id="panel-profile" aria-labelledby="tab-profile" tabindex="0">
+          <div class="section-head">
+            <h2 class="section-head__title">Profile</h2>
+            <span class="section-head__meta">Public byline &amp; masthead</span>
+          </div>
+
+          <div class="avatar-edit mb-6 mt-6">
+            <span class="avatar avatar--xl"><span class="avatar__initials">MR</span><span class="avatar__status avatar__status--online"></span></span>
+            <div class="stack-sm">
+              <div class="byline">By <strong>Margaret Reyes</strong></div>
+              <p class="pref-row__sub" style="margin:0">JPG or PNG, square, at least 240×240. Halftone applied on the public page.</p>
+              <label class="fileupload">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>
+                <span>Change photo</span>
+                <input type="file" accept="image/png,image/jpeg" aria-label="Upload profile photo">
+              </label>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label class="field__label" for="f-name">Display name <span class="req" aria-hidden="true">*</span></label>
+              <input class="input" id="f-name" type="text" value="Margaret Reyes" autocomplete="name">
+              <p class="field__hint">Appears on every byline and in the staff box.</p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="f-title">Byline / title</label>
+              <input class="input" id="f-title" type="text" value="National Affairs Correspondent">
+              <p class="field__hint">Shown beneath your name on the front page.</p>
+            </div>
+          </div>
+
+          <div class="field mt-5">
+            <label class="field__label" for="f-bio">Bio</label>
+            <textarea class="textarea" id="f-bio" rows="4">Margaret Reyes covers the legislature and the long road of policy from committee to law. With The Ledger since Vol. XXI.</textarea>
+            <p class="field__hint">Up to 280 characters. Plain text, no markup.</p>
+          </div>
+
+          <hr class="rule mt-6">
+          <div class="row row-between mt-5">
+            <button class="btn btn--ghost">Reset</button>
+            <div class="cluster-sm">
+              <button class="btn btn--secondary">Preview byline</button>
+              <button class="btn btn--primary" data-toast="Your profile has been filed." data-toast-title="Profile saved" data-toast-variant="success">Save changes</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ACCOUNT -->
+        <section class="tabs__panel" role="tabpanel" id="panel-account" aria-labelledby="tab-account" tabindex="0" hidden>
+          <div class="section-head">
+            <h2 class="section-head__title">Account</h2>
+            <span class="section-head__meta">Sign-in &amp; security</span>
+          </div>
+
+          <div class="field mt-6">
+            <label class="field__label" for="f-email">Email address</label>
+            <div class="input-group">
+              <input class="input" id="f-email" type="email" value="m.reyes" autocomplete="email">
+              <span class="input-group__addon">@theledger.press</span>
+            </div>
+            <p class="field__hint">Used for sign-in and account notices.</p>
+          </div>
+
+          <div class="section-head mt-8">
+            <h3 class="section-head__title" style="font-size:var(--text-xl)">Change password</h3>
+            <span class="section-head__meta">Last changed 84 days ago</span>
+          </div>
+          <div class="field-row mt-5">
+            <div class="field">
+              <label class="field__label" for="f-pw-old">Current password</label>
+              <input class="input" id="f-pw-old" type="password" autocomplete="current-password">
+            </div>
+            <div class="field">
+              <label class="field__label" for="f-pw-new">New password</label>
+              <input class="input" id="f-pw-new" type="password" autocomplete="new-password">
+              <p class="field__hint">At least 12 characters, one number.</p>
+            </div>
+          </div>
+          <div class="row mt-4">
+            <button class="btn btn--primary" data-toast="Password updated successfully." data-toast-title="Security" data-toast-variant="success">Update password</button>
+          </div>
+
+          <div class="pref-row mt-8" style="border-top:var(--rule-medium) solid var(--color-border)">
+            <div class="pref-row__main">
+              <p class="pref-row__title">Two-factor authentication</p>
+              <p class="pref-row__sub">Require a one-time code from your authenticator app at sign-in.</p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" checked aria-label="Two-factor authentication">
+              <span class="toggle__track"></span>
+            </label>
+          </div>
+
+          <div class="section-head mt-8">
+            <h3 class="section-head__title" style="font-size:var(--text-xl)">Active sessions</h3>
+            <span class="section-head__meta">3 devices</span>
+          </div>
+          <ul class="list mt-4" style="border-top:var(--rule-medium) solid var(--color-border)">
+            <li class="list__item">
+              <span class="list__marker"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="12" rx="0"/><path d="M8 20h8M12 16v4"/></svg></span>
+              <div class="list__main"><div class="list__title">MacBook Pro · Newsroom <span class="badge badge--success">This device</span></div><div class="list__sub">San Francisco, CA · Safari · active now</div></div>
+              <span class="list__trail text-muted">—</span>
+            </li>
+            <li class="list__item">
+              <span class="list__marker"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="10" height="20" rx="0"/><path d="M11 18h2"/></svg></span>
+              <div class="list__main"><div class="list__title">iPhone 15 · Field kit</div><div class="list__sub">Sacramento, CA · Ledger app · 2 hours ago</div></div>
+              <button class="btn btn--ghost btn--sm" data-toast="Session revoked." data-toast-title="Signed out" data-toast-variant="warning">Revoke</button>
+            </li>
+            <li class="list__item">
+              <span class="list__marker"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="12" rx="0"/><path d="M8 20h8M12 16v4"/></svg></span>
+              <div class="list__main"><div class="list__title">Windows PC · Home desk</div><div class="list__sub">Oakland, CA · Firefox · yesterday</div></div>
+              <button class="btn btn--ghost btn--sm" data-toast="Session revoked." data-toast-title="Signed out" data-toast-variant="warning">Revoke</button>
+            </li>
+          </ul>
+          <div class="row mt-4">
+            <button class="btn btn--secondary" data-toast="All other sessions have been signed out." data-toast-title="Security" data-toast-variant="success">Sign out all other sessions</button>
+          </div>
+        </section>
+
+        <!-- NOTIFICATIONS -->
+        <section class="tabs__panel" role="tabpanel" id="panel-notifications" aria-labelledby="tab-notifications" tabindex="0" hidden>
+          <div class="section-head">
+            <h2 class="section-head__title">Notifications</h2>
+            <span class="section-head__meta">What lands on your desk</span>
+          </div>
+
+          <div class="pref-row mt-6" style="border-top:var(--rule-medium) solid var(--color-border)">
+            <div class="pref-row__main">
+              <p class="pref-row__title">Breaking news alerts</p>
+              <p class="pref-row__sub">Push the wire the moment a major story breaks.</p>
+            </div>
+            <label class="toggle"><input type="checkbox" checked aria-label="Breaking news alerts"><span class="toggle__track"></span></label>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row__main">
+              <p class="pref-row__title">Mentions &amp; replies</p>
+              <p class="pref-row__sub">When an editor or reader mentions your byline.</p>
+            </div>
+            <label class="toggle"><input type="checkbox" checked aria-label="Mentions and replies"><span class="toggle__track"></span></label>
+          </div>
+          <div class="pref-row">
+            <div class="pref-row__main">
+              <p class="pref-row__title">Marketing &amp; offers</p>
+              <p class="pref-row__sub">Subscription drives and press-tooling promotions.</p>
+            </div>
+            <label class="toggle"><input type="checkbox" aria-label="Marketing and offers"><span class="toggle__track"></span></label>
+          </div>
+
+          <div class="section-head mt-8">
+            <h3 class="section-head__title" style="font-size:var(--text-xl)">Delivery channels</h3>
+            <span class="section-head__meta">Pick your wires</span>
+          </div>
+          <div class="stack-sm mt-5">
+            <label class="checkbox"><input type="checkbox" checked><span class="checkbox__box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg></span> Email digest to m.reyes@theledger.press</label>
+            <label class="checkbox"><input type="checkbox" checked><span class="checkbox__box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg></span> Push notifications on mobile</label>
+            <label class="checkbox"><input type="checkbox"><span class="checkbox__box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg></span> Desktop browser notifications</label>
+            <label class="checkbox"><input type="checkbox"><span class="checkbox__box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg></span> SMS for critical security only</label>
+          </div>
+
+          <div class="section-head mt-8">
+            <h3 class="section-head__title" style="font-size:var(--text-xl)">Digest frequency</h3>
+            <span class="section-head__meta">When the summary prints</span>
+          </div>
+          <div class="segmented mt-5" data-segmented role="group" aria-label="Digest frequency">
+            <button class="segmented__option" data-value="daily" aria-selected="true">Daily</button>
+            <button class="segmented__option" data-value="weekly" aria-selected="false">Weekly</button>
+            <button class="segmented__option" data-value="monthly" aria-selected="false">Monthly</button>
+            <button class="segmented__option" data-value="never" aria-selected="false">Never</button>
+          </div>
+
+          <hr class="rule mt-6">
+          <div class="row mt-5">
+            <button class="btn btn--primary" data-toast="Notification preferences filed." data-toast-title="Notifications saved" data-toast-variant="success">Save changes</button>
+          </div>
+        </section>
+
+        <!-- APPEARANCE -->
+        <section class="tabs__panel" role="tabpanel" id="panel-appearance" aria-labelledby="tab-appearance" tabindex="0" hidden>
+          <div class="section-head">
+            <h2 class="section-head__title">Appearance</h2>
+            <span class="section-head__meta">The look of your edition</span>
+          </div>
+
+          <div class="section-head mt-6">
+            <h3 class="section-head__title" style="font-size:var(--text-xl)">Edition</h3>
+            <span class="section-head__meta">Day / Night / Auto</span>
+          </div>
+          <div class="row row-between mt-5" style="align-items:center;gap:var(--space-5);flex-wrap:wrap">
+            <div class="segmented" data-segmented role="group" aria-label="Edition theme">
+              <button class="segmented__option" data-value="day" aria-selected="true">Day</button>
+              <button class="segmented__option" data-value="night" aria-selected="false">Night</button>
+              <button class="segmented__option" data-value="auto" aria-selected="false">Auto</button>
+            </div>
+            <button class="btn btn--secondary btn--sm" data-theme-toggle aria-pressed="false">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
+              <span>Flip the edition now</span>
+            </button>
+          </div>
+          <p class="field__hint mt-2">The toggle on the right switches the live edition immediately so you can preview both.</p>
+
+          <div class="section-head mt-8">
+            <h3 class="section-head__title" style="font-size:var(--text-xl)">Body text size</h3>
+            <span class="section-head__meta">Reading comfort</span>
+          </div>
+          <div class="slider mt-5">
+            <input type="range" min="80" max="140" step="10" value="100" data-suffix="%" aria-label="Body text size">
+            <span class="slider__value">100%</span>
+          </div>
+
+          <div class="section-head mt-8">
+            <h3 class="section-head__title" style="font-size:var(--text-xl)">Density</h3>
+            <span class="section-head__meta">Column packing</span>
+          </div>
+          <div class="stack-sm mt-5">
+            <label class="radio"><input type="radio" name="density" checked><span class="radio__dot"></span> Broadsheet — maximum density, tight rules</label>
+            <label class="radio"><input type="radio" name="density"><span class="radio__dot"></span> Compact — balanced spacing</label>
+            <label class="radio"><input type="radio" name="density"><span class="radio__dot"></span> Comfortable — roomy, fewer columns</label>
+          </div>
+
+          <hr class="rule mt-6">
+          <div class="row mt-5">
+            <button class="btn btn--primary" data-toast="Appearance preferences filed." data-toast-title="Appearance saved" data-toast-variant="success">Save changes</button>
+          </div>
+        </section>
+
+        <!-- DANGER ZONE -->
+        <section class="tabs__panel" role="tabpanel" id="panel-danger" aria-labelledby="tab-danger" tabindex="0" hidden>
+          <div class="section-head">
+            <h2 class="section-head__title">Danger Zone</h2>
+            <span class="section-head__meta">Irreversible filings</span>
+          </div>
+
+          <div class="alert alert--danger mt-6" role="alert">
+            <span class="alert__icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></span>
+            <div class="alert__body">
+              <div class="alert__title">These actions cannot be retracted</div>
+              <div class="alert__text">Exporting is safe. Deactivating and deleting will affect your published bylines and cannot be undone once filed.</div>
+            </div>
+          </div>
+
+          <div class="pref-row mt-6" style="border-top:var(--rule-medium) solid var(--color-border)">
+            <div class="pref-row__main">
+              <p class="pref-row__title">Export your data</p>
+              <p class="pref-row__sub">Download an archive of your articles, drafts and account history (JSON + PDF).</p>
+            </div>
+            <button class="btn btn--secondary" data-toast="Your export is being prepared — we'll email a link." data-toast-title="Export started" data-toast-variant="info">Export data</button>
+          </div>
+
+          <div class="pref-row">
+            <div class="pref-row__main">
+              <p class="pref-row__title">Deactivate account</p>
+              <p class="pref-row__sub">Hide your byline and pause the account. You can reactivate any time within 30 days.</p>
+            </div>
+            <button class="btn btn--secondary" data-toast="Account deactivated. Reactivate within 30 days." data-toast-title="Deactivated" data-toast-variant="warning">Deactivate</button>
+          </div>
+
+          <div class="pref-row" style="border-bottom:0">
+            <div class="pref-row__main">
+              <p class="pref-row__title text-accent">Delete account</p>
+              <p class="pref-row__sub">Permanently erase your account and unpublish your bylines. This cannot be undone.</p>
+            </div>
+            <button class="btn btn--danger" data-modal-open="confirm-delete">Delete account</button>
+          </div>
+        </section>
+
+      </div><!-- /settings-content -->
+    </div><!-- /settings-layout -->
+  </div><!-- /tabs -->
+
+  <hr class="fold-line mt-8">
+  <div class="folio">
+    <span>The Ledger · Settings</span>
+    <span>Filed under Account &amp; Preferences</span>
+    <span>— 30 —</span>
+  </div>
+
+</div>
+</main>
+
+<!-- Delete confirmation modal -->
+<div class="modal modal--sm" id="confirm-delete" role="dialog" aria-modal="true" aria-labelledby="confirm-delete-title" hidden>
+  <div class="modal__head">
+    <h2 class="modal__title" id="confirm-delete-title">Delete your account?</h2>
+    <button class="modal__close" data-modal-close aria-label="Close dialog">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="modal__body">
+    <div class="alert alert--danger" role="alert">
+      <span class="alert__icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></span>
+      <div class="alert__body">
+        <div class="alert__title">This is permanent</div>
+        <div class="alert__text">All articles, drafts and settings will be erased. Your bylines will be unpublished from the archive.</div>
+      </div>
+    </div>
+    <div class="field mt-5">
+      <label class="field__label" for="confirm-text">Type <strong>DELETE</strong> to confirm</label>
+      <input class="input" id="confirm-text" type="text" placeholder="DELETE" autocomplete="off">
+      <p class="field__hint">This must match exactly, in capitals.</p>
+    </div>
+  </div>
+  <div class="modal__foot">
+    <button class="btn btn--ghost" data-modal-close>Cancel</button>
+    <button class="btn btn--danger" data-modal-close data-toast="Your account has been scheduled for deletion." data-toast-title="Account deleted" data-toast-variant="danger">Permanently delete</button>
+  </div>
+</div>
+
+<!-- Standard footer -->
+<footer class="container-broadsheet"><div class="folio"><span>The Ledger · Theme 28 “Newsprint”</span><span>The Settings Desk</span><span>— 30 —</span></div></footer>
+
+<!-- Command palette -->
+<div class="command" data-command role="dialog" aria-modal="true" aria-label="Command palette" hidden>
+  <div class="command__search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="Search…" aria-label="Command input"><kbd>ESC</kbd></div>
+  <div class="command__list">
+    <div class="command__group-label">Navigate</div>
+    <button class="command__item" data-href="../index.html">Back to Hub</button>
+    <button class="command__item" data-href="dashboard.html">Analytics Desk</button>
+    <button class="command__item" data-href="front-page.html">Front Page</button>
+    <div class="command__group-label">Commands</div>
+    <button class="command__item" data-action="toggle-theme">Toggle Day / Night Edition</button>
+  </div>
+  <div class="command__empty" hidden>No matching entry.</div>
+  <div class="command__foot"><span><kbd>↑</kbd><kbd>↓</kbd> nav</span><span><kbd>↵</kbd> select</span><span><kbd>esc</kbd> close</span></div>
+</div>
+
+<script src="../app.js" defer></script>
+</body>
+</html>

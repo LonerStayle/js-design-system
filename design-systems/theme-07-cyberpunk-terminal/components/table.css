@@ -1,0 +1,825 @@
+/* ============================================================================
+   THEME 07 — CYBERPUNK TERMINAL · components/table.css
+   ----------------------------------------------------------------------------
+   DATA-DISPLAY TRIO — mono data grid, terminal tabs, collapsible accordion.
+   Follows the canon set by button.css:
+     · BEM-ish naming:  .ct-table  ·  .ct-table--striped  ·  .is-selected
+     · hard corners (radius 0), uppercase tracked mono headers/labels
+     · neon glow is decoration; solid color always carries the contrast
+     · keyboard focus shows the neon ring (inherited from base.css)
+     · status is encoded by color + glyph/dot, never color alone
+     · all motion is reduced-motion safe (base.css global kill switch)
+
+   SEMANTIC TOKENS ONLY — never reach for the raw --cyan-*/--ink-* ramps.
+
+   CONTENTS
+     1. TABLE  ·  .ct-table-wrap / .ct-table  (+ --striped --bordered --compact)
+     2. TABS   ·  .ct-tabs                    (+ --underline --boxed --vertical --pill)
+     3. ACCORDION · .ct-accordion             (+ --bordered --flush)
+   ============================================================================ */
+
+
+/* ============================================================================
+   1. TABLE — MONOSPACE DATA GRID
+   ----------------------------------------------------------------------------
+   Markup contract:
+     <div class="ct-table-wrap">
+       <div class="ct-table-wrap__chrome">…optional terminal title bar…</div>
+       <table class="ct-table ct-table--striped">
+         <thead><tr><th><button class="ct-table__sort" aria-sort="ascending">…
+         <tbody><tr aria-selected="true"> <td class="ct-table__num">…
+         <tfoot>… or sibling .ct-table__footer …
+       </table>
+     </div>
+   ============================================================================ */
+
+/* ---- WRAP: the terminal frame ------------------------------------------- */
+/* Neon-bordered window. overflow-x:auto lets the grid scroll horizontally on
+   narrow screens while thead stays sticky vertically inside the scroll box.   */
+.ct-table-wrap {
+  position: relative;
+  width: 100%;
+  border: var(--border-1) solid var(--color-border-strong);
+  border-radius: var(--radius-0);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-glow-md);
+  overflow-x: auto;            /* horizontal scroll on small screens         */
+  overflow-y: hidden;          /* sticky head clips cleanly inside the frame  */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* optional terminal chrome / title bar at the top of the frame */
+.ct-table-wrap__chrome {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 30px;
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-chrome);
+  border-bottom: var(--border-1) solid var(--color-chrome-line);
+  color: var(--color-text-muted);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  white-space: nowrap;
+}
+/* faux traffic-light / status dots on the chrome (decorative) */
+.ct-table-wrap__chrome::before {
+  content: "";
+  flex-shrink: 0;
+  width: 8px; height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  box-shadow: var(--glow-primary);
+}
+
+/* ---- TABLE: the grid itself --------------------------------------------- */
+.ct-table {
+  --_cell-pad-y: var(--space-3);
+  --_cell-pad-x: var(--space-4);
+  width: 100%;
+  border-collapse: separate;   /* separate so sticky head borders don't drop  */
+  border-spacing: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text);
+  text-align: left;
+}
+
+/* ---- HEAD: uppercase tracked, neon, sticky ------------------------------ */
+.ct-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  padding: var(--space-2) var(--_cell-pad-x);
+  background: var(--table-head-bg);
+  color: var(--table-head-fg);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  white-space: nowrap;
+  text-align: left;
+  vertical-align: middle;
+  /* bottom edge reads as a neon HUD rule under the header row */
+  border-bottom: var(--border-2) solid var(--color-border-strong);
+  /* box-shadow doubles the under-rule so it survives sticky compositing */
+  box-shadow: inset 0 -1px 0 0 var(--color-border-strong);
+}
+.ct-table thead th:first-child { padding-left: var(--space-5); }
+.ct-table thead th:last-child  { padding-right: var(--space-5); }
+
+/* ---- BODY: mono cells with divider underlines --------------------------- */
+.ct-table tbody td {
+  padding: var(--_cell-pad-y) var(--_cell-pad-x);
+  border-bottom: var(--border-1) solid var(--table-border);
+  color: var(--color-text);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.ct-table tbody td:first-child { padding-left: var(--space-5); }
+.ct-table tbody td:last-child  { padding-right: var(--space-5); }
+.ct-table tbody tr:last-child td { border-bottom: none; }
+
+/* row hover — faint neon wash across the whole row */
+.ct-table tbody tr {
+  transition: background var(--duration-fast) var(--ease-standard);
+}
+.ct-table tbody tr:hover {
+  background: var(--table-row-hover);
+}
+
+/* ---- SELECTED ROW: neon left rail + tinted bg --------------------------- */
+/* Supports both the [aria-selected] state hook and the .is-selected class.    */
+.ct-table tbody tr.is-selected,
+.ct-table tbody tr[aria-selected="true"] {
+  background: var(--table-row-selected);
+}
+.ct-table tbody tr.is-selected td:first-child,
+.ct-table tbody tr[aria-selected="true"] td:first-child {
+  /* inset box-shadow paints a glowing left border without shifting layout    */
+  box-shadow: inset 3px 0 0 0 var(--color-primary),
+              inset 4px 0 10px -2px rgba(var(--rgb-cyan) / .5);
+}
+.ct-table tbody tr.is-selected:hover,
+.ct-table tbody tr[aria-selected="true"]:hover {
+  background: var(--table-row-selected);
+}
+
+/* ---- SORTABLE HEADER: button-like trigger with caret indicator ---------- */
+/* Default ↕ (muted) → ascending ▲ (neon) → descending ▼ (neon).
+   Drive state from the [aria-sort] attribute on the <th> (preferred) or on
+   the .ct-table__sort button itself.                                          */
+.ct-table__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 0;
+  margin: calc(var(--space-1) * -1) 0;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--duration-fast) var(--ease-standard),
+              text-shadow var(--duration-fast) var(--ease-standard);
+}
+.ct-table__sort:hover {
+  color: var(--color-primary-bright);
+  text-shadow: var(--glow-primary);
+}
+
+/* caret glyph rendered after the label; content swaps with sort state */
+.ct-table__sort::after {
+  content: "\2195";            /* ↕ — unsorted, muted                         */
+  font-size: 1.05em;
+  line-height: 1;
+  color: var(--color-text-subtle);
+  transition: color var(--duration-fast) var(--ease-standard),
+              text-shadow var(--duration-fast) var(--ease-standard);
+}
+.ct-table__sort:hover::after { color: var(--color-text-muted); }
+
+/* ascending — ▲ neon */
+.ct-table th[aria-sort="ascending"] .ct-table__sort::after,
+.ct-table__sort[aria-sort="ascending"]::after {
+  content: "\25B2";            /* ▲ */
+  color: var(--color-primary);
+  text-shadow: var(--glow-primary);
+}
+/* descending — ▼ neon */
+.ct-table th[aria-sort="descending"] .ct-table__sort::after,
+.ct-table__sort[aria-sort="descending"]::after {
+  content: "\25BC";            /* ▼ */
+  color: var(--color-primary);
+  text-shadow: var(--glow-primary);
+}
+/* active (sorted) header keeps its label lit so the column reads at a glance  */
+.ct-table th[aria-sort="ascending"] .ct-table__sort,
+.ct-table th[aria-sort="descending"] .ct-table__sort,
+.ct-table__sort[aria-sort="ascending"],
+.ct-table__sort[aria-sort="descending"] {
+  color: var(--color-primary-bright);
+}
+
+/* ---- NUMERIC CELLS: right-aligned, tabular figures ---------------------- */
+.ct-table__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  white-space: nowrap;
+}
+/* when a numeric column header is sortable, push caret to the right edge */
+.ct-table th.ct-table__num { text-align: right; }
+.ct-table th.ct-table__num .ct-table__sort { justify-content: flex-end; }
+
+/* ---- STATUS CELL HELPER: inline badge with leading glyph dot ------------ */
+/* color + dot + label → meaning never rides on color alone.                  */
+.ct-table__status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 1px var(--space-2);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  border: var(--border-1) solid var(--color-border);
+  border-radius: var(--radius-0);
+  white-space: nowrap;
+}
+.ct-table__status::before {
+  content: "";
+  flex-shrink: 0;
+  width: 7px; height: 7px;
+  border-radius: var(--radius-full);
+  background: currentColor;     /* dot inherits the status hue                */
+}
+/* status flavors — each pairs a hue with the dot AND a tinted border/text    */
+.ct-table__status--success {
+  color: var(--color-success-text);
+  border-color: var(--color-success);
+  background: var(--color-success-weak);
+}
+.ct-table__status--success::before { box-shadow: var(--glow-green); }
+.ct-table__status--warning {
+  color: var(--color-warning-text);
+  border-color: var(--color-warning);
+  background: var(--color-warning-weak);
+}
+.ct-table__status--warning::before { box-shadow: var(--glow-amber); }
+.ct-table__status--danger {
+  color: var(--color-danger-text);
+  border-color: var(--color-danger);
+  background: var(--color-danger-weak);
+}
+.ct-table__status--danger::before { box-shadow: var(--glow-red); }
+.ct-table__status--info {
+  color: var(--color-info-text);
+  border-color: var(--color-info);
+  background: var(--color-info-weak);
+}
+.ct-table__status--info::before { box-shadow: var(--glow-primary); }
+/* "offline"/idle — muted, no glow, hollow dot */
+.ct-table__status--muted {
+  color: var(--color-text-subtle);
+  border-color: var(--color-border);
+}
+.ct-table__status--muted::before { background: var(--color-text-subtle); }
+
+/* live status dot can pulse (1Hz-ish, reduced-motion safe via base.css) */
+.ct-table__status--live::before { animation: ct-pulse 1.6s var(--ease-in-out) infinite; }
+
+/* ---- CHECKBOX COLUMN: narrow, centered --------------------------------- */
+.ct-table__check {
+  width: 1px;                  /* shrink to content                          */
+  white-space: nowrap;
+  text-align: center;
+  padding-inline: var(--space-3) !important;
+}
+.ct-table__check input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px; height: 16px;
+  display: inline-grid;
+  place-content: center;
+  vertical-align: middle;
+  background: var(--color-surface-2);
+  border: var(--border-1) solid var(--color-border-strong);
+  border-radius: var(--radius-0);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-fast) var(--ease-standard);
+}
+.ct-table__check input[type="checkbox"]::before {
+  content: "";
+  width: 9px; height: 9px;
+  transform: scale(0);
+  transition: transform var(--duration-fast) var(--ease-out);
+  background: var(--color-primary);
+  box-shadow: var(--glow-primary);
+  /* checkmark notch */
+  clip-path: polygon(14% 44%, 0 65%, 40% 100%, 100% 16%, 82% 0, 38% 70%);
+}
+.ct-table__check input[type="checkbox"]:checked {
+  border-color: var(--color-primary);
+}
+.ct-table__check input[type="checkbox"]:checked::before { transform: scale(1); }
+.ct-table__check input[type="checkbox"]:hover { border-color: var(--color-primary); }
+
+/* ---- VARIANT: --striped (zebra) ----------------------------------------- */
+.ct-table--striped tbody tr:nth-child(even) {
+  background: var(--table-stripe);
+}
+.ct-table--striped tbody tr:nth-child(even):hover {
+  background: var(--table-row-hover);
+}
+/* selection must always win over the stripe */
+.ct-table--striped tbody tr.is-selected:nth-child(even),
+.ct-table--striped tbody tr[aria-selected="true"]:nth-child(even) {
+  background: var(--table-row-selected);
+}
+
+/* ---- VARIANT: --bordered (vertical cell rules too) ---------------------- */
+.ct-table--bordered thead th,
+.ct-table--bordered tbody td {
+  border-right: var(--border-1) solid var(--table-border);
+}
+.ct-table--bordered thead th:last-child,
+.ct-table--bordered tbody td:last-child { border-right: none; }
+
+/* ---- VARIANT: --compact (tighter padding) ------------------------------- */
+.ct-table--compact {
+  --_cell-pad-y: var(--space-2);
+  --_cell-pad-x: var(--space-3);
+  font-size: var(--text-xs);
+}
+.ct-table--compact thead th { padding-block: var(--space-1); }
+
+/* ---- EMPTY STATE row ----------------------------------------------------- */
+.ct-table__empty td,
+.ct-table__empty {
+  padding: var(--space-9) var(--space-4);
+  text-align: center;
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+}
+.ct-table__empty td::before {
+  content: "// ";
+  color: var(--color-primary);
+  opacity: .7;
+}
+
+/* ---- FOOTER: row count (left) + pagination slot (right) ----------------- */
+/* Place as a sibling of the wrap, or inside it below the table.              */
+.ct-table__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-chrome);
+  border-top: var(--border-1) solid var(--color-chrome-line);
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+.ct-table__footer-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.ct-table__footer-summary strong {
+  color: var(--color-primary-bright);
+  font-weight: var(--weight-bold);
+}
+.ct-table__footer-pagination {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+
+/* ============================================================================
+   2. TABS — TERMINAL TABBED PANELS
+   ----------------------------------------------------------------------------
+   Markup contract:
+     <div class="ct-tabs ct-tabs--underline">
+       <div class="ct-tabs__list" role="tablist">
+         <button class="ct-tabs__tab" role="tab" aria-selected="true">…</button>
+         <span class="ct-tabs__indicator"></span>   ← optional slider (underline)
+       </div>
+       <div class="ct-tabs__panel" role="tabpanel">…</div>
+       <div class="ct-tabs__panel" role="tabpanel" hidden>…</div>
+     </div>
+   ============================================================================ */
+
+.ct-tabs {
+  --_tab-accent: var(--color-primary);
+  display: block;
+  width: 100%;
+}
+
+/* ---- LIST: the tablist row ---------------------------------------------- */
+.ct-tabs__list {
+  position: relative;          /* anchor for the sliding --underline bar      */
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-1);
+  border-bottom: var(--border-1) solid var(--color-divider);
+  overflow-x: auto;            /* tabs scroll horizontally if they overflow    */
+  scrollbar-width: none;
+}
+.ct-tabs__list::-webkit-scrollbar { display: none; }
+
+/* ---- TAB: uppercase tracked trigger ------------------------------------- */
+.ct-tabs__tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  white-space: nowrap;
+  color: var(--color-text-muted);   /* inactive = muted                       */
+  background: none;
+  border: none;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--duration-fast) var(--ease-standard),
+              text-shadow var(--duration-fast) var(--ease-standard),
+              background var(--duration-fast) var(--ease-standard);
+}
+.ct-tabs__tab:hover { color: var(--color-text); }
+
+/* active tab — neon text + glow (state via class OR aria-selected) */
+.ct-tabs__tab.is-active,
+.ct-tabs__tab[aria-selected="true"] {
+  color: var(--_tab-accent);
+  text-shadow: var(--glow-primary);
+}
+
+/* disabled tab */
+.ct-tabs__tab.is-disabled,
+.ct-tabs__tab:disabled,
+.ct-tabs__tab[aria-disabled="true"] {
+  color: var(--color-text-subtle);
+  opacity: .5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ---- PANEL --------------------------------------------------------------- */
+.ct-tabs__panel {
+  padding: var(--space-5) var(--space-1);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  animation: ct-rise var(--duration-base) var(--ease-out);
+}
+.ct-tabs__panel[hidden] { display: none; }
+
+/* =========================  VARIANT: --underline (default)  ================ */
+/* Active tab gets a neon under-bar. Two strategies, both supported:
+   (a) static per-tab border via ::after (no JS), and
+   (b) a single sliding .ct-tabs__indicator the app positions with inline
+       left/width (smoothly animated here).                                    */
+.ct-tabs--underline .ct-tabs__tab::after {
+  content: "";
+  position: absolute;
+  left: var(--space-3);
+  right: var(--space-3);
+  bottom: -1px;                /* sit on top of the list's divider            */
+  height: var(--border-2);
+  background: var(--_tab-accent);
+  box-shadow: var(--glow-primary);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform var(--duration-base) var(--ease-out);
+}
+.ct-tabs--underline .ct-tabs__tab.is-active::after,
+.ct-tabs--underline .ct-tabs__tab[aria-selected="true"]::after {
+  transform: scaleX(1);
+}
+/* (b) JS-driven sliding bar — set --tab-x / --tab-w inline (or left/width).    */
+.ct-tabs--underline .ct-tabs__indicator {
+  position: absolute;
+  bottom: -1px;
+  left: var(--tab-x, 0);
+  width: var(--tab-w, 0);
+  height: var(--border-2);
+  background: var(--_tab-accent);
+  box-shadow: var(--glow-primary);
+  transition: left var(--duration-base) var(--ease-out),
+              width var(--duration-base) var(--ease-out);
+  pointer-events: none;
+}
+/* if the app uses the sliding indicator, suppress the per-tab static bar */
+.ct-tabs--underline:has(.ct-tabs__indicator) .ct-tabs__tab::after { content: none; }
+
+/* =========================  VARIANT: --boxed  ============================== */
+/* Active tab becomes an attached terminal "window tab": top neon border,
+   side borders, and it visually fuses with the panel below it.                */
+.ct-tabs--boxed .ct-tabs__list {
+  gap: var(--space-1);
+  border-bottom: var(--border-1) solid var(--color-border-strong);
+}
+.ct-tabs--boxed .ct-tabs__tab {
+  border: var(--border-1) solid transparent;
+  border-bottom: none;
+  background: var(--color-surface-2);
+  margin-bottom: calc(var(--border-1) * -1);  /* overlap the list border       */
+}
+.ct-tabs--boxed .ct-tabs__tab:hover {
+  background: var(--color-surface-3);
+}
+.ct-tabs--boxed .ct-tabs__tab.is-active,
+.ct-tabs--boxed .ct-tabs__tab[aria-selected="true"] {
+  background: var(--color-surface);
+  border-color: var(--color-border-strong);
+  /* top neon accent line + lift the bottom edge to "connect" to the panel     */
+  box-shadow: inset 0 var(--border-2) 0 0 var(--color-primary),
+              0 0 10px -2px rgba(var(--rgb-cyan) / .35);
+}
+/* the active boxed tab paints over the list border to fuse with the panel */
+.ct-tabs--boxed .ct-tabs__tab.is-active::after,
+.ct-tabs--boxed .ct-tabs__tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: calc(var(--border-1) * -1);
+  height: var(--border-1);
+  background: var(--color-surface);
+}
+.ct-tabs--boxed .ct-tabs__panel {
+  padding: var(--space-5);
+  border: var(--border-1) solid var(--color-border-strong);
+  border-top: none;
+  background: var(--color-surface);
+}
+
+/* =========================  VARIANT: --pill  =============================== */
+/* Minimal segmented control — bordered track, neon-weak fill on the active.   */
+.ct-tabs--pill .ct-tabs__list {
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border: var(--border-1) solid var(--color-border);
+  border-bottom: var(--border-1) solid var(--color-border);
+  background: var(--color-surface-2);
+}
+.ct-tabs--pill .ct-tabs__tab {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-0);
+}
+.ct-tabs--pill .ct-tabs__tab.is-active,
+.ct-tabs--pill .ct-tabs__tab[aria-selected="true"] {
+  color: var(--color-primary-bright);
+  background: var(--color-primary-weak);
+  box-shadow: inset 0 0 0 var(--border-1) var(--color-border-strong);
+  text-shadow: none;
+}
+
+/* =========================  VARIANT: --vertical  ========================== */
+/* List becomes a left rail; panel sits to the right.                          */
+.ct-tabs--vertical {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-5);
+}
+.ct-tabs--vertical .ct-tabs__list {
+  flex-direction: column;
+  align-items: stretch;
+  flex-shrink: 0;
+  min-width: 180px;
+  gap: 0;
+  border-bottom: none;
+  border-right: var(--border-1) solid var(--color-divider);
+  overflow-x: visible;
+}
+.ct-tabs--vertical .ct-tabs__tab {
+  justify-content: flex-start;
+  text-align: left;
+  padding: var(--space-3) var(--space-4);
+}
+/* active rail tab — neon left accent bar (right edge of the rail divider) */
+.ct-tabs--vertical .ct-tabs__tab::after {
+  content: "";
+  position: absolute;
+  top: var(--space-2);
+  bottom: var(--space-2);
+  right: calc(var(--border-1) * -1);
+  width: var(--border-2);
+  background: var(--_tab-accent);
+  box-shadow: var(--glow-primary);
+  transform: scaleY(0);
+  transform-origin: center;
+  transition: transform var(--duration-base) var(--ease-out);
+}
+.ct-tabs--vertical .ct-tabs__tab.is-active::after,
+.ct-tabs--vertical .ct-tabs__tab[aria-selected="true"]::after {
+  transform: scaleY(1);
+}
+.ct-tabs--vertical .ct-tabs__tab.is-active,
+.ct-tabs--vertical .ct-tabs__tab[aria-selected="true"] {
+  background: var(--color-primary-weak);
+}
+.ct-tabs--vertical .ct-tabs__panels { flex: 1 1 auto; min-width: 0; }
+.ct-tabs--vertical .ct-tabs__panel { padding: var(--space-1) 0; }
+
+
+/* ============================================================================
+   3. ACCORDION — COLLAPSIBLE TERMINAL SECTIONS
+   ----------------------------------------------------------------------------
+   Markup contract:
+     <div class="ct-accordion ct-accordion--bordered">
+       <div class="ct-accordion__item">
+         <button class="ct-accordion__trigger" aria-expanded="true">
+           <span class="ct-accordion__title">Section</span>
+         </button>
+         <div class="ct-accordion__panel">           ← grid collapse wrapper
+           <div class="ct-accordion__content">…body…</div>
+         </div>
+       </div>
+     </div>
+   Collapse technique: panel is a CSS grid whose row track animates
+   0fr → 1fr; the inner __content has overflow:hidden. A max-height fallback
+   is provided for engines without grid-row-track transitions.                 */
+   /* ======================================================================== */
+
+.ct-accordion {
+  display: block;
+  width: 100%;
+}
+
+/* ---- ITEM: bordered section --------------------------------------------- */
+.ct-accordion__item {
+  border: var(--border-1) solid var(--color-border);
+  border-radius: var(--radius-0);
+  background: var(--color-surface);
+}
+.ct-accordion__item + .ct-accordion__item { border-top: none; }
+
+/* ---- TRIGGER: full-width button, uppercase title + flipping glyph -------- */
+.ct-accordion__trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text);
+  background: none;
+  border: none;
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--duration-fast) var(--ease-standard),
+              color var(--duration-fast) var(--ease-standard);
+}
+.ct-accordion__trigger:hover {
+  background: var(--table-row-hover);
+  color: var(--color-primary-bright);
+}
+
+/* leading glyph that flips on expand: ▸ collapsed → ▾ expanded.
+   Placed via ::before so the title text stays clean for screen readers.       */
+.ct-accordion__trigger::before {
+  content: "\25B8";            /* ▸ collapsed                                  */
+  flex-shrink: 0;
+  margin-right: var(--space-3);
+  color: var(--color-text-subtle);
+  font-size: 0.9em;
+  transition: transform var(--duration-base) var(--ease-out),
+              color var(--duration-fast) var(--ease-standard);
+}
+.ct-accordion__trigger[aria-expanded="true"]::before {
+  content: "\25BE";            /* ▾ expanded                                   */
+  color: var(--color-primary);
+  text-shadow: var(--glow-primary);
+}
+
+/* trailing +/− indicator on the right, swapped on expand */
+.ct-accordion__trigger::after {
+  content: "+";
+  flex-shrink: 0;
+  color: var(--color-text-subtle);
+  font-size: var(--text-md);
+  line-height: 1;
+  transition: color var(--duration-fast) var(--ease-standard),
+              text-shadow var(--duration-fast) var(--ease-standard);
+}
+.ct-accordion__trigger[aria-expanded="true"]::after {
+  content: "\2212";            /* − minus sign                                 */
+  color: var(--color-primary);
+  text-shadow: var(--glow-primary);
+}
+
+/* open trigger — subtle neon left accent rail + lit title */
+.ct-accordion__trigger[aria-expanded="true"] {
+  color: var(--color-primary-bright);
+  box-shadow: inset 3px 0 0 0 var(--color-primary),
+              inset 4px 0 10px -3px rgba(var(--rgb-cyan) / .4);
+}
+
+/* ---- PANEL: grid-based collapse ----------------------------------------- */
+/* Default collapsed = grid-template-rows: 0fr. Open = 1fr.                     */
+.ct-accordion__panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--duration-base) var(--ease-out);
+}
+/* OPEN state — driven by .is-open on the panel OR aria-expanded on the
+   sibling trigger (works whether the wrapper or the item carries state).      */
+.ct-accordion__panel.is-open,
+.ct-accordion__trigger[aria-expanded="true"] + .ct-accordion__panel,
+.ct-accordion__item.is-open .ct-accordion__panel {
+  grid-template-rows: 1fr;
+}
+
+/* inner content — overflow:hidden is what makes the grid collapse read */
+.ct-accordion__content {
+  overflow: hidden;
+  min-height: 0;               /* allow the grid row to shrink to 0fr          */
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+/* padding lives on an inner wrapper so it doesn't bleed into the 0fr state */
+.ct-accordion__content > * {
+  padding: 0 var(--space-4) var(--space-4);
+}
+.ct-accordion__content > :first-child { padding-top: var(--space-1); }
+
+/* ---- MAX-HEIGHT FALLBACK ------------------------------------------------- */
+/* Engines that can't transition grid-row tracks degrade to a max-height
+   animation. @supports tests grid-row transition; the fallback block runs
+   only where it's NOT supported.                                              */
+@supports not (grid-template-rows: 0fr) {
+  .ct-accordion__panel {
+    display: block;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height var(--duration-base) var(--ease-out);
+  }
+  .ct-accordion__panel.is-open,
+  .ct-accordion__trigger[aria-expanded="true"] + .ct-accordion__panel,
+  .ct-accordion__item.is-open .ct-accordion__panel {
+    max-height: 60rem;         /* generous ceiling; clamps very long bodies     */
+  }
+  .ct-accordion__content { overflow: visible; }
+}
+
+/* ---- VARIANT: --bordered (strong outer frame + glow) -------------------- */
+.ct-accordion--bordered {
+  border: var(--border-1) solid var(--color-border-strong);
+  box-shadow: var(--shadow-glow-sm);
+}
+.ct-accordion--bordered .ct-accordion__item {
+  border-left: none;
+  border-right: none;
+}
+.ct-accordion--bordered .ct-accordion__item:first-child { border-top: none; }
+.ct-accordion--bordered .ct-accordion__item:last-child  { border-bottom: none; }
+
+/* ---- VARIANT: --flush (no item borders, only thin dividers) ------------- */
+.ct-accordion--flush .ct-accordion__item {
+  border: none;
+  border-bottom: var(--border-1) solid var(--color-divider);
+  background: transparent;
+}
+.ct-accordion--flush .ct-accordion__item:last-child { border-bottom: none; }
+.ct-accordion--flush .ct-accordion__trigger { padding-inline: var(--space-1); }
+.ct-accordion--flush .ct-accordion__content > * { padding-inline: var(--space-1); }
+
+
+/* ============================================================================
+   RESPONSIVE — narrow viewports
+   ============================================================================ */
+@media (max-width: 768px) {
+  .ct-table { --_cell-pad-x: var(--space-3); }
+  .ct-table thead th:first-child,
+  .ct-table tbody td:first-child { padding-left: var(--space-3); }
+  .ct-table thead th:last-child,
+  .ct-table tbody td:last-child  { padding-right: var(--space-3); }
+
+  /* vertical tabs collapse to a stacked layout on small screens */
+  .ct-tabs--vertical { flex-direction: column; gap: var(--space-3); }
+  .ct-tabs--vertical .ct-tabs__list {
+    flex-direction: row;
+    min-width: 0;
+    border-right: none;
+    border-bottom: var(--border-1) solid var(--color-divider);
+    overflow-x: auto;
+  }
+  .ct-tabs--vertical .ct-tabs__tab::after {
+    top: auto; bottom: calc(var(--border-1) * -1);
+    left: var(--space-3); right: var(--space-3);
+    width: auto; height: var(--border-2);
+    transform: scaleX(0);
+  }
+  .ct-tabs--vertical .ct-tabs__tab.is-active::after,
+  .ct-tabs--vertical .ct-tabs__tab[aria-selected="true"]::after { transform: scaleX(1); }
+}

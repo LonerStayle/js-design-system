@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OPS DASHBOARD // CYBER.TERM</title>
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../semantic.css">
+<link rel="stylesheet" href="../base.css">
+<link rel="stylesheet" href="../components/button.css">
+<link rel="stylesheet" href="../components/forms.css">
+<link rel="stylesheet" href="../components/card.css">
+<link rel="stylesheet" href="../components/display.css">
+<link rel="stylesheet" href="../components/table.css">
+<link rel="stylesheet" href="../components/feedback.css">
+<link rel="stylesheet" href="../components/nav.css">
+<style>
+  /* ---- dashboard page-only layout — tokens only ---- */
+
+  /* two-column app shell: sidebar + scrollable main */
+  .ops {
+    display: flex;
+    align-items: stretch;
+    min-height: calc(100vh - 60px);
+  }
+  .ops__sidebar {
+    position: sticky;
+    top: 60px;
+    align-self: flex-start;
+    height: calc(100vh - 60px);
+  }
+  .ops__main {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    background:
+      radial-gradient(70% 50% at 80% -5%, rgba(var(--rgb-magenta) / .06), transparent 70%),
+      radial-gradient(60% 50% at 0% 0%, rgba(var(--rgb-cyan) / .06), transparent 70%);
+  }
+
+  /* ---- header bar ---- */
+  .ops__header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    padding-bottom: var(--space-5);
+    border-bottom: var(--border-1) solid var(--color-divider);
+  }
+  .ops__title { font-size: clamp(1.5rem, 3.4vw, var(--text-3xl)); margin-top: var(--space-2); line-height: 1.05; }
+  .ops__title .t-accent { color: var(--color-accent); text-shadow: var(--glow-accent); }
+  .ops__controls { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+  .ops__controls .ct-select-wrap { min-width: 150px; }
+
+  /* ---- master grid ---- */
+  .ops__grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--space-6);
+    align-items: start;
+  }
+  .ops__kpis {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
+  }
+  .ops__chart  { grid-column: 1 / 2; }
+  .ops__rail   { grid-column: 2 / 3; display: flex; flex-direction: column; gap: var(--space-6); }
+  .ops__table  { grid-column: 1 / -1; }
+  .ops__log    { grid-column: 1 / -1; }
+
+  /* ---- KPI spark slot ---- */
+  .kpi__spark { width: 100%; height: 36px; margin-top: var(--space-3); }
+  .ct-stat__spark svg { width: 100%; }
+
+  /* ---- chart card internals ---- */
+  .chart-figure { position: relative; }
+  .chart-figure svg { display: block; width: 100%; height: auto; }
+  .chart-legend { display: flex; flex-wrap: wrap; gap: var(--space-5); margin-top: var(--space-4); }
+  .chart-legend__item { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--text-2xs); text-transform: uppercase; letter-spacing: var(--tracking-wide); color: var(--color-text-muted); }
+  .chart-legend__swatch { width: 14px; height: 3px; flex-shrink: 0; }
+  .chart-readouts { display: flex; flex-wrap: wrap; gap: var(--space-6); margin-top: var(--space-5); padding-top: var(--space-4); border-top: var(--border-1) dashed var(--color-divider); }
+  .chart-readout__label { display: block; font-size: var(--text-2xs); text-transform: uppercase; letter-spacing: var(--tracking-wider); color: var(--color-text-subtle); }
+  .chart-readout__value { display: block; font-family: var(--font-display); font-size: var(--text-xl); margin-top: var(--space-1); }
+
+  /* ---- system load: circular ring center readout ---- */
+  .load-ring { position: relative; display: inline-grid; place-items: center; margin: 0 auto; }
+  .load-ring__center {
+    position: absolute; inset: 0;
+    display: grid; place-items: center; text-align: center;
+  }
+  .load-ring__pct { font-family: var(--font-display); font-size: var(--text-2xl); color: var(--color-text); line-height: 1; }
+  .load-ring__pct span { font-size: var(--text-md); color: var(--color-text-subtle); }
+  .load-ring__tag { display: block; font-size: var(--text-2xs); text-transform: uppercase; letter-spacing: var(--tracking-wider); color: var(--color-primary); margin-top: var(--space-1); }
+  .load-gauges { display: flex; flex-direction: column; gap: var(--space-4); margin-top: var(--space-5); }
+  .load-gauge { display: grid; grid-template-columns: 52px 1fr; align-items: center; gap: var(--space-3); }
+  .load-gauge__label { font-size: var(--text-2xs); text-transform: uppercase; letter-spacing: var(--tracking-wider); color: var(--color-text-subtle); }
+
+  /* table selection summary line */
+  .ops__table .ct-table__footer-summary strong { color: var(--color-primary-bright); }
+
+  /* ---- responsive ---- */
+  @media (max-width: 1100px) {
+    .ops__grid { grid-template-columns: 1fr; }
+    .ops__chart, .ops__rail, .ops__table, .ops__log { grid-column: 1 / -1; }
+    .ops__rail { flex-direction: row; flex-wrap: wrap; }
+    .ops__rail > * { flex: 1 1 320px; }
+    .ops__kpis { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 900px) {
+    /* sidebar collapses to a horizontal icon/label rail pinned at the top of main column */
+    .ops { flex-direction: column; }
+    .ops__sidebar {
+      position: static;
+      width: 100%;
+      height: auto;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-1);
+      border-right: none;
+      border-bottom: var(--border-1) solid var(--color-border);
+      overflow-x: auto;
+      padding: var(--space-2) var(--space-3);
+    }
+    .ops__sidebar .ct-sidebar__section { padding-block: 0; display: flex; align-items: center; gap: var(--space-1); }
+    .ops__sidebar .ct-sidebar__section + .ct-sidebar__section { margin-top: 0; border-top: none; padding-top: 0; }
+    .ops__sidebar .ct-sidebar__section-label { display: none; }
+    .ops__sidebar .ct-sidebar__item { border-left: none; border-bottom: var(--border-2) solid transparent; padding: var(--space-2) var(--space-3); }
+    .ops__sidebar .ct-sidebar__item.is-active { border-bottom-color: var(--color-primary); background: transparent; box-shadow: none; }
+    .ops__sidebar .ct-sidebar__toggle { display: none; }
+    .ops__main { padding: var(--space-4); }
+  }
+  @media (max-width: 560px) {
+    .ops__kpis { grid-template-columns: 1fr; }
+    .ops__header { align-items: stretch; }
+    .ops__controls { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">CONTENT 로 건너뛰기</a>
+<div class="crt-overlay" aria-hidden="true"></div>
+
+<header class="ct-navbar">
+  <div class="container flex items-center justify-between" style="height:60px;">
+    <a class="ct-navbar__brand" href="../index.html"><span class="t-accent">◢</span> CYBER<span class="t-primary">.</span>TERM</a>
+    <nav class="ct-navbar__nav" aria-label="주요">
+      <a class="ct-navbar__link" href="../index.html">HOME</a>
+      <a class="ct-navbar__link is-active" href="dashboard.html" aria-current="page">DASH</a>
+      <a class="ct-navbar__link" href="kanban.html">KANBAN</a>
+      <a class="ct-navbar__link" href="inbox.html">INBOX</a>
+      <a class="ct-navbar__link" href="settings.html">SETTINGS</a>
+    </nav>
+    <div class="ct-navbar__actions flex items-center gap-2">
+      <button class="ct-btn ct-btn--secondary ct-btn--sm" data-cmdk-open>SEARCH <span class="ct-kbd">⌘K</span></button>
+      <button class="ct-btn ct-btn--icon ct-btn--sm" data-theme-toggle aria-label="테마 전환"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+      <button class="ct-navbar__toggle" data-nav-toggle aria-label="메뉴" aria-expanded="false">≡</button>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="site-main">
+  <div class="ops">
+
+    <!-- ============================ SIDEBAR ============================ -->
+    <nav class="ct-sidebar ops__sidebar" aria-label="앱 내비게이션">
+      <div class="ct-sidebar__section">
+        <span class="ct-sidebar__section-label ct-sidebar__section-label--path">APP</span>
+        <a class="ct-sidebar__item is-active" href="dashboard.html" aria-current="page">
+          <span class="ct-sidebar__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg></span>
+          <span class="ct-sidebar__label">Dashboard</span>
+        </a>
+        <a class="ct-sidebar__item" href="#analytics">
+          <span class="ct-sidebar__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg></span>
+          <span class="ct-sidebar__label">Analytics</span>
+        </a>
+        <a class="ct-sidebar__item" href="#nodes">
+          <span class="ct-sidebar__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="9" height="9"/><rect x="13" y="2" width="9" height="9"/><rect x="2" y="13" width="9" height="9"/><rect x="13" y="13" width="9" height="9"/></svg></span>
+          <span class="ct-sidebar__label">Nodes</span>
+          <span class="ct-sidebar__badge ct-sidebar__badge--accent">42</span>
+        </a>
+        <a class="ct-sidebar__item" href="#logs">
+          <span class="ct-sidebar__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg></span>
+          <span class="ct-sidebar__label">Logs</span>
+        </a>
+        <a class="ct-sidebar__item" href="#billing">
+          <span class="ct-sidebar__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14"/><path d="M2 10h20"/></svg></span>
+          <span class="ct-sidebar__label">Billing</span>
+        </a>
+      </div>
+      <div class="ct-sidebar__section">
+        <span class="ct-sidebar__section-label ct-sidebar__section-label--path">SYSTEM</span>
+        <a class="ct-sidebar__item" href="#users">
+          <span class="ct-sidebar__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2"/><path d="M17 8h4M19 6v4"/></svg></span>
+          <span class="ct-sidebar__label">Users</span>
+        </a>
+        <a class="ct-sidebar__item" href="settings.html">
+          <span class="ct-sidebar__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4m0 14v4M4.2 4.2l2.8 2.8m10 10l2.8 2.8M1 12h4m14 0h4M4.2 19.8l2.8-2.8m10-10l2.8-2.8"/></svg></span>
+          <span class="ct-sidebar__label">Settings</span>
+        </a>
+      </div>
+      <button class="ct-sidebar__toggle" data-sidebar-toggle aria-label="사이드바 접기" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+        <span>COLLAPSE</span>
+      </button>
+    </nav>
+
+    <!-- ============================ MAIN ============================ -->
+    <section class="ops__main" aria-label="대시보드 본문">
+
+      <!-- ---- 1. HEADER BAR ---- -->
+      <div class="ops__header">
+        <div>
+          <nav class="ct-breadcrumb" aria-label="경로">
+            <a class="ct-breadcrumb__item ct-breadcrumb__item--root" href="../index.html"></a>
+            <span class="ct-breadcrumb__sep">/</span>
+            <a class="ct-breadcrumb__item" href="#ops">ops</a>
+            <span class="ct-breadcrumb__sep">/</span>
+            <span class="ct-breadcrumb__item is-current" aria-current="page">overview</span>
+          </nav>
+          <h1 class="ops__title t-display">OPS <span class="t-accent">DASHBOARD</span></h1>
+        </div>
+        <div class="ops__controls">
+          <div class="ct-select-wrap">
+            <select class="ct-select" aria-label="기간 범위">
+              <option>Last 24h</option>
+              <option>Last 7d</option>
+              <option>Last 30d</option>
+            </select>
+          </div>
+          <button class="ct-btn ct-btn--secondary">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
+            EXPORT
+          </button>
+          <button class="ct-btn ct-btn--icon ct-btn--secondary" aria-label="새로고침"
+                  data-toast="메트릭 스트림을 다시 가져왔습니다 · 12개 노드 갱신" data-toast-title="REFRESHED" data-toast-variant="success">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+          </button>
+          <button class="ct-btn ct-btn--primary">NEW QUERY</button>
+        </div>
+      </div>
+
+      <!-- ---- 2. KPI ROW ---- -->
+      <section class="ops__kpis" aria-label="핵심 지표">
+
+        <!-- Uptime -->
+        <div class="ct-stat hud">
+          <span class="ct-stat__label">UPTIME</span>
+          <span class="ct-stat__value neon">99.98<span class="ct-stat__unit">%</span></span>
+          <span class="ct-stat__delta ct-stat__delta--up">0.4%</span>
+          <span class="ct-stat__spark kpi__spark" aria-hidden="true">
+            <svg viewBox="0 0 120 36" preserveAspectRatio="none" fill="none" style="color:var(--color-primary)">
+              <polyline points="0,26 12,24 24,25 36,20 48,21 60,16 72,17 84,12 96,13 108,8 120,9" stroke="currentColor" stroke-width="2"/>
+              <circle cx="120" cy="9" r="2.5" class="fill"/>
+            </svg>
+          </span>
+        </div>
+
+        <!-- Requests -->
+        <div class="ct-stat">
+          <span class="ct-stat__label">REQUESTS</span>
+          <span class="ct-stat__value neon">1.24<span class="ct-stat__unit">M</span></span>
+          <span class="ct-stat__delta ct-stat__delta--up">8.1%</span>
+          <span class="ct-stat__spark kpi__spark" aria-hidden="true">
+            <svg viewBox="0 0 120 36" preserveAspectRatio="none" fill="none" style="color:var(--color-primary)">
+              <polyline points="0,28 12,26 24,22 36,24 48,18 60,20 72,14 84,15 96,10 108,11 120,5" stroke="currentColor" stroke-width="2"/>
+              <circle cx="120" cy="5" r="2.5" class="fill"/>
+            </svg>
+          </span>
+        </div>
+
+        <!-- Error Rate (down is GOOD) -->
+        <div class="ct-stat ct-stat--success">
+          <span class="ct-stat__label">ERROR RATE</span>
+          <span class="ct-stat__value">0.12<span class="ct-stat__unit">%</span></span>
+          <span class="ct-stat__delta ct-stat__delta--down" title="오류율 하락 — 개선">0.03% · 개선</span>
+          <span class="ct-stat__spark kpi__spark" aria-hidden="true">
+            <svg viewBox="0 0 120 36" preserveAspectRatio="none" fill="none" style="color:var(--color-success-text)">
+              <polyline points="0,8 12,11 24,9 36,14 48,12 60,18 72,16 84,21 96,20 108,25 120,27" stroke="currentColor" stroke-width="2"/>
+              <circle cx="120" cy="27" r="2.5" class="fill"/>
+            </svg>
+          </span>
+        </div>
+
+        <!-- Active Nodes -->
+        <div class="ct-stat ct-stat--accent">
+          <span class="ct-stat__label">ACTIVE NODES</span>
+          <span class="ct-stat__value">42<span class="ct-stat__unit">/45</span></span>
+          <span class="ct-stat__delta ct-stat__delta--flat">3 대기</span>
+          <span class="ct-stat__spark kpi__spark" aria-hidden="true">
+            <svg viewBox="0 0 120 36" preserveAspectRatio="none" fill="none" style="color:var(--color-accent)">
+              <polyline points="0,16 12,12 24,14 36,12 48,15 60,11 72,13 84,12 96,14 108,11 120,12" stroke="currentColor" stroke-width="2"/>
+              <circle cx="120" cy="12" r="2.5" class="fill"/>
+            </svg>
+          </span>
+        </div>
+      </section>
+
+      <!-- ---- 3 + 4. CHART + RIGHT RAIL ---- -->
+      <div class="ops__grid">
+
+        <!-- 3. MAIN TRAFFIC CHART -->
+        <article class="ct-card ct-card--glow ops__chart" aria-label="트래픽 차트">
+          <div class="ct-card__chrome">
+            <div class="ct-card__dots"><span class="ct-card__dot"></span><span class="ct-card__dot"></span><span class="ct-card__dot"></span></div>
+            <span class="ct-card__title">traffic.live</span>
+            <div class="ct-card__actions">
+              <span class="ct-badge ct-badge--success ct-badge--dot">STREAMING</span>
+            </div>
+          </div>
+          <div class="ct-card__body">
+            <figure class="chart-figure">
+              <svg viewBox="0 0 720 260" preserveAspectRatio="none" role="img" aria-label="24시간 트래픽: 요청량(시안)과 오류율(마젠타) 라인 차트">
+                <defs>
+                  <linearGradient id="area-cyan" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" style="stop-color:var(--color-primary);stop-opacity:.45"/>
+                    <stop offset="100%" style="stop-color:var(--color-primary);stop-opacity:0"/>
+                  </linearGradient>
+                </defs>
+
+                <!-- faint gridlines -->
+                <g style="stroke:var(--grid-line-strong)" stroke-width="1">
+                  <line x1="0" y1="40"  x2="720" y2="40"/>
+                  <line x1="0" y1="90"  x2="720" y2="90"/>
+                  <line x1="0" y1="140" x2="720" y2="140"/>
+                  <line x1="0" y1="190" x2="720" y2="190"/>
+                  <line x1="0" y1="230" x2="720" y2="230"/>
+                </g>
+                <g style="stroke:var(--grid-line)" stroke-width="1">
+                  <line x1="120" y1="10" x2="120" y2="230"/>
+                  <line x1="240" y1="10" x2="240" y2="230"/>
+                  <line x1="360" y1="10" x2="360" y2="230"/>
+                  <line x1="480" y1="10" x2="480" y2="230"/>
+                  <line x1="600" y1="10" x2="600" y2="230"/>
+                </g>
+
+                <!-- gradient area fill under the requests curve -->
+                <path d="M0,180 L60,168 120,150 180,162 240,120 300,128 360,92 420,104 480,70 540,84 600,58 660,76 720,48 L720,230 L0,230 Z"
+                      fill="url(#area-cyan)"/>
+
+                <!-- primary line: requests (neon cyan) -->
+                <polyline fill="none" stroke-width="2.5"
+                          style="stroke:var(--color-primary);filter:drop-shadow(0 0 5px rgba(var(--rgb-cyan) / .6))"
+                          points="0,180 60,168 120,150 180,162 240,120 300,128 360,92 420,104 480,70 540,84 600,58 660,76 720,48"/>
+
+                <!-- secondary line: error rate (magenta, scaled up for visibility) -->
+                <polyline fill="none" stroke-width="2" stroke-dasharray="2 4"
+                          style="stroke:var(--color-accent);filter:drop-shadow(0 0 4px rgba(var(--rgb-magenta) / .55))"
+                          points="0,214 60,210 120,216 180,206 240,212 300,200 360,208 420,198 480,205 540,194 600,202 660,196 720,200"/>
+
+                <!-- live cursor dot on the requests line -->
+                <circle cx="720" cy="48" r="4" style="fill:var(--color-primary);filter:drop-shadow(0 0 6px rgba(var(--rgb-cyan) / .8))"/>
+              </svg>
+
+              <!-- x-axis hour ticks -->
+              <div class="flex justify-between t-2xs t-subtle" style="margin-top:var(--space-2);font-variant-numeric:tabular-nums;">
+                <span>00:00</span><span>04:00</span><span>08:00</span><span>12:00</span><span>16:00</span><span>20:00</span><span>23:59</span>
+              </div>
+            </figure>
+
+            <!-- legend -->
+            <div class="chart-legend">
+              <span class="chart-legend__item"><span class="chart-legend__swatch" style="background:var(--color-primary);box-shadow:var(--glow-primary)"></span> REQUESTS / MIN</span>
+              <span class="chart-legend__item"><span class="chart-legend__swatch" style="background:var(--color-accent);box-shadow:var(--glow-accent)"></span> ERROR RATE %</span>
+              <span class="chart-legend__item t-subtle">RES = 5min · TZ = UTC+9</span>
+            </div>
+
+            <!-- stat readouts beside the chart -->
+            <div class="chart-readouts">
+              <div class="chart-readout">
+                <span class="chart-readout__label">PEAK / MIN</span>
+                <span class="chart-readout__value neon">18.6K</span>
+              </div>
+              <div class="chart-readout">
+                <span class="chart-readout__label">AVG / MIN</span>
+                <span class="chart-readout__value">9.42K</span>
+              </div>
+              <div class="chart-readout">
+                <span class="chart-readout__label">P95 LATENCY</span>
+                <span class="chart-readout__value">214<span class="t-subtle t-sm">ms</span></span>
+              </div>
+              <div class="chart-readout">
+                <span class="chart-readout__label">5xx (24H)</span>
+                <span class="chart-readout__value" style="color:var(--color-danger-text)">1,482</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- 4. RIGHT RAIL: system.load -->
+        <aside class="ops__rail" aria-label="시스템 부하">
+          <article class="ct-card">
+            <div class="ct-card__chrome">
+              <div class="ct-card__dots"><span class="ct-card__dot"></span><span class="ct-card__dot"></span><span class="ct-card__dot"></span></div>
+              <span class="ct-card__title">system.load</span>
+            </div>
+            <div class="ct-card__body">
+
+              <!-- circular CPU ring (static SVG; dashoffset computed inline) -->
+              <div style="text-align:center">
+                <div class="ct-progress ct-progress--circular load-ring" role="progressbar" aria-label="CPU 사용률" aria-valuenow="64" aria-valuemin="0" aria-valuemax="100">
+                  <svg class="ct-progress__ring" viewBox="0 0 88 88" aria-hidden="true">
+                    <!-- r=40, C = 2πr ≈ 251.3 ; 64% → offset = 251.3 * 0.36 ≈ 90.5 -->
+                    <circle class="ct-progress__track" cx="44" cy="44" r="40"/>
+                    <circle class="ct-progress__bar"   cx="44" cy="44" r="40"
+                            stroke-dasharray="251.3" stroke-dashoffset="90.5"/>
+                  </svg>
+                  <div class="load-ring__center">
+                    <div>
+                      <span class="load-ring__pct">64<span>%</span></span>
+                      <span class="load-ring__tag">CPU</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ascii gauges -->
+              <div class="load-gauges">
+                <div class="load-gauge">
+                  <span class="load-gauge__label">MEM</span>
+                  <div class="ct-progress ct-progress--ascii ct-progress--warning" role="progressbar" aria-label="메모리 사용률" aria-valuenow="78" aria-valuemin="0" aria-valuemax="100">
+                    <span class="ct-progress__ascii" data-ascii-progress="78" data-width="18"></span>
+                  </div>
+                </div>
+                <div class="load-gauge">
+                  <span class="load-gauge__label">DISK</span>
+                  <div class="ct-progress ct-progress--ascii" role="progressbar" aria-label="디스크 사용률" aria-valuenow="41" aria-valuemin="0" aria-valuemax="100">
+                    <span class="ct-progress__ascii" data-ascii-progress="41" data-width="18"></span>
+                  </div>
+                </div>
+                <div class="load-gauge">
+                  <span class="load-gauge__label">NET</span>
+                  <div class="ct-progress ct-progress--ascii ct-progress--danger" role="progressbar" aria-label="네트워크 사용률" aria-valuenow="92" aria-valuemin="0" aria-valuemax="100">
+                    <span class="ct-progress__ascii" data-ascii-progress="92" data-width="18"></span>
+                  </div>
+                </div>
+              </div>
+
+              <p class="t-2xs t-subtle" style="margin-top:var(--space-5)">› host <span class="t-primary">edge-ap2-07</span> · load avg 4.21 / 3.88 / 3.40</p>
+            </div>
+          </article>
+        </aside>
+      </div>
+
+      <!-- ---- 5. RECENT REQUESTS TABLE ---- -->
+      <section class="ops__table" aria-label="최근 요청">
+        <div class="ct-table-wrap">
+          <div class="ct-table-wrap__chrome">recent_requests · live tail</div>
+          <table class="ct-table ct-table--striped" id="reqtable" data-table>
+            <thead>
+              <tr>
+                <th class="ct-table__check" scope="col">
+                  <input type="checkbox" data-select-all aria-label="전체 선택">
+                </th>
+                <th scope="col"><button class="ct-table__sort" data-sort="text">TIME</button></th>
+                <th scope="col"><button class="ct-table__sort" data-sort="text">ENDPOINT</button></th>
+                <th scope="col"><button class="ct-table__sort" data-sort="text">METHOD</button></th>
+                <th scope="col"><button class="ct-table__sort" data-sort="text">STATUS</button></th>
+                <th scope="col" class="ct-table__num"><button class="ct-table__sort" data-sort="num">LATENCY</button></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="ct-table__check"><input type="checkbox" data-row-check aria-label="행 선택"></td>
+                <td>14:08:21</td><td>/api/v2/auth</td><td>POST</td>
+                <td><span class="ct-table__status ct-table__status--success">200 OK</span></td>
+                <td class="ct-table__num" data-value="42">42ms</td>
+              </tr>
+              <tr>
+                <td class="ct-table__check"><input type="checkbox" data-row-check aria-label="행 선택"></td>
+                <td>14:08:20</td><td>/ingest</td><td>POST</td>
+                <td><span class="ct-table__status ct-table__status--success">200 OK</span></td>
+                <td class="ct-table__num" data-value="118">118ms</td>
+              </tr>
+              <tr>
+                <td class="ct-table__check"><input type="checkbox" data-row-check aria-label="행 선택"></td>
+                <td>14:08:19</td><td>/ws/stream</td><td>GET</td>
+                <td><span class="ct-table__status ct-table__status--info">301 MOVED</span></td>
+                <td class="ct-table__num" data-value="9">9ms</td>
+              </tr>
+              <tr>
+                <td class="ct-table__check"><input type="checkbox" data-row-check aria-label="행 선택"></td>
+                <td>14:08:17</td><td>/api/v2/orders</td><td>GET</td>
+                <td><span class="ct-table__status ct-table__status--success">200 OK</span></td>
+                <td class="ct-table__num" data-value="67">67ms</td>
+              </tr>
+              <tr>
+                <td class="ct-table__check"><input type="checkbox" data-row-check aria-label="행 선택"></td>
+                <td>14:08:16</td><td>/api/v2/search</td><td>GET</td>
+                <td><span class="ct-table__status ct-table__status--warning">429 LIMIT</span></td>
+                <td class="ct-table__num" data-value="305">305ms</td>
+              </tr>
+              <tr>
+                <td class="ct-table__check"><input type="checkbox" data-row-check aria-label="행 선택"></td>
+                <td>14:08:14</td><td>/api/v2/billing/charge</td><td>POST</td>
+                <td><span class="ct-table__status ct-table__status--danger">500 ERROR</span></td>
+                <td class="ct-table__num" data-value="1204">1204ms</td>
+              </tr>
+              <tr>
+                <td class="ct-table__check"><input type="checkbox" data-row-check aria-label="행 선택"></td>
+                <td>14:08:13</td><td>/api/v2/users/me</td><td>GET</td>
+                <td><span class="ct-table__status ct-table__status--success">200 OK</span></td>
+                <td class="ct-table__num" data-value="38">38ms</td>
+              </tr>
+              <tr>
+                <td class="ct-table__check"><input type="checkbox" data-row-check aria-label="행 선택"></td>
+                <td>14:08:11</td><td>/ingest/batch</td><td>PUT</td>
+                <td><span class="ct-table__status ct-table__status--warning">429 LIMIT</span></td>
+                <td class="ct-table__num" data-value="288">288ms</td>
+              </tr>
+              <tr>
+                <td class="ct-table__check"><input type="checkbox" data-row-check aria-label="행 선택"></td>
+                <td>14:08:09</td><td>/api/v2/assets/upload</td><td>POST</td>
+                <td><span class="ct-table__status ct-table__status--info">301 MOVED</span></td>
+                <td class="ct-table__num" data-value="74">74ms</td>
+              </tr>
+              <tr>
+                <td class="ct-table__check"><input type="checkbox" data-row-check aria-label="행 선택"></td>
+                <td>14:08:07</td><td>/api/v2/webhooks/dispatch</td><td>POST</td>
+                <td><span class="ct-table__status ct-table__status--danger">500 ERROR</span></td>
+                <td class="ct-table__num" data-value="982">982ms</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="ct-table__footer">
+            <span class="ct-table__footer-summary">SELECTION :: <strong data-select-count="reqtable">NONE SELECTED</strong> · 10 / 4,318 ROWS</span>
+            <nav class="ct-table__footer-pagination ct-pagination ct-pagination--sm" aria-label="페이지">
+              <button class="ct-pagination__prev" aria-label="이전" disabled></button>
+              <button class="ct-pagination__item is-active" aria-current="page">1</button>
+              <button class="ct-pagination__item">2</button>
+              <button class="ct-pagination__item">3</button>
+              <span class="ct-pagination__ellipsis"></span>
+              <button class="ct-pagination__item">432</button>
+              <button class="ct-pagination__next" aria-label="다음"></button>
+            </nav>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---- 6. EVENT STREAM LOG ---- -->
+      <section class="ops__log" aria-label="이벤트 스트림">
+        <article class="ct-card">
+          <div class="ct-card__chrome">
+            <div class="ct-card__dots"><span class="ct-card__dot"></span><span class="ct-card__dot"></span><span class="ct-card__dot"></span></div>
+            <span class="ct-card__title">event_stream</span>
+          </div>
+          <div class="ct-card__body ct-card__body--tight">
+            <ul class="ct-list ct-list--log">
+              <li class="ct-list__item"><span class="ct-list__time">14:08:21</span><span class="ct-list__level ct-list__level--ok">OK</span><span class="ct-list__content">node <span class="t-primary">edge-ap2-07</span> 자동 스케일 +1 → 42 active</span></li>
+              <li class="ct-list__item"><span class="ct-list__time">14:07:58</span><span class="ct-list__level ct-list__level--info">INFO</span><span class="ct-list__content">deploy <span class="t-accent">api@2.6.3</span> 카나리 12% 트래픽 라우팅</span></li>
+              <li class="ct-list__item"><span class="ct-list__time">14:07:42</span><span class="ct-list__level ct-list__level--warn">WARN</span><span class="ct-list__content">/api/v2/search 레이트리밋 임계치 도달 — 429 비율 3.2%</span></li>
+              <li class="ct-list__item"><span class="ct-list__time">14:07:15</span><span class="ct-list__level ct-list__level--error">ERR</span><span class="ct-list__content">webhooks dispatch worker 타임아웃 (500) · 재시도 큐 +14</span></li>
+              <li class="ct-list__item"><span class="ct-list__time">14:06:50</span><span class="ct-list__level ct-list__level--ok">OK</span><span class="ct-list__content">DB replica <span class="t-primary">ap-northeast-2c</span> 동기화 지연 0.4s → 정상</span></li>
+              <li class="ct-list__item"><span class="ct-list__time">14:06:09</span><span class="ct-list__level ct-list__level--info">INFO</span><span class="ct-list__content">TLS 인증서 자동 갱신 완료 · 만료 90일 연장</span></li>
+            </ul>
+          </div>
+        </article>
+      </section>
+
+      <!-- ---- 7. FOOTER ---- -->
+      <footer style="border-top:var(--border-1) solid var(--color-divider);padding-top:var(--space-5);margin-top:var(--space-2)">
+        <div class="flex justify-between items-center flex-wrap gap-4">
+          <p class="t-2xs t-subtle">CYBER<span class="t-primary">.</span>TERM · ops console · region ap-northeast-2 · build 2026.06.21</p>
+          <p class="t-2xs t-subtle"><span class="prompt"></span>last sync 14:08:21 KST <span class="cursor-blink" aria-hidden="true"></span></p>
+        </div>
+      </footer>
+
+    </section>
+  </div>
+</main>
+
+<script src="../app.js"></script>
+</body>
+</html>

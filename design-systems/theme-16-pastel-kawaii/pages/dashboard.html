@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>분석 대시보드 ♡ Pastel Kawaii</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../theme.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23FF8FBC' d='M12 21s-7.5-4.9-10-9.3C.3 8.6 1.6 5 5 5c2 0 3.3 1.1 4 2.3C9.7 6.1 11 5 13 5c3.4 0 4.7 3.6 3 6.7C19.5 16.1 12 21 12 21z'/%3E%3C/svg%3E">
+<style>
+  /* ── 페이지 전용 앱 셸 레이아웃 (컴포넌트 클래스 재사용 + 셸만 보강) ── */
+  .app-shell { display: flex; min-height: 100vh; }
+  .app-shell .sidebar { position: sticky; top: 0; height: 100vh; z-index: var(--z-sticky); }
+  .app-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+  .content-head {
+    position: sticky; top: 0; z-index: calc(var(--z-sticky) - 1);
+    display: flex; align-items: center; gap: var(--space-4);
+    padding: var(--space-4) var(--space-6);
+    background: var(--nav-bg);
+    backdrop-filter: saturate(1.4) blur(14px);
+    border-bottom: var(--border-2) solid var(--nav-border);
+    flex-wrap: wrap;
+  }
+  .content-head .ch-search { flex: 1 1 260px; max-width: 420px; }
+  .content-body { padding: var(--space-6); display: flex; flex-direction: column; gap: var(--space-6); }
+  .side-user {
+    display: flex; align-items: center; gap: var(--space-3);
+    padding: var(--space-3); border-radius: var(--radius-lg);
+    background: var(--color-surface-2); border: var(--border-1) solid var(--color-border);
+  }
+  .sidebar.is-collapsed .side-user .su-text { display: none; }
+  .legend { display: flex; flex-direction: column; gap: var(--space-2); }
+  .legend-row { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+  .legend-dot { width: 0.85rem; height: 0.85rem; border-radius: 50%; flex-shrink: 0; }
+  .mobile-only { display: none; }
+
+  @media (max-width: 1024px) {
+    .app-shell .sidebar {
+      position: fixed; left: 0; top: 0; bottom: 0;
+      transform: translateX(-100%);
+      transition: transform var(--duration-base) var(--ease-emphasized);
+      box-shadow: var(--shadow-xl);
+    }
+    .app-shell .sidebar.is-mobile-open { transform: translateX(0); }
+    /* 데스크탑 접기 토글은 모바일에서 무시 */
+    .app-shell .sidebar.is-collapsed { width: var(--sidebar-w); }
+    .app-shell .sidebar.is-collapsed .side-label,
+    .app-shell .sidebar.is-collapsed .side-section-label,
+    .app-shell .sidebar.is-collapsed .brand span,
+    .app-shell .sidebar.is-collapsed .side-item .count-badge,
+    .app-shell .sidebar.is-collapsed .side-user .su-text { display: revert; }
+    .mobile-only { display: inline-grid; }
+    .sidebar-scrim {
+      position: fixed; inset: 0; background: var(--color-overlay);
+      z-index: calc(var(--z-sticky) - 1); opacity: 0; pointer-events: none;
+      transition: opacity var(--duration-base) var(--ease-soft);
+    }
+    .sidebar-scrim.is-open { opacity: 1; pointer-events: auto; }
+  }
+  @media (max-width: 680px) {
+    .content-body { padding: var(--space-4); }
+    .content-head { padding: var(--space-3) var(--space-4); }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
+
+<div class="app-shell">
+
+  <!-- ───────────────────────── 사이드바 ───────────────────────── -->
+  <aside class="sidebar" aria-label="주요 메뉴">
+    <a class="brand" href="../index.html" aria-label="모카샵 홈으로">
+      <span class="logo" aria-hidden="true" style="width:2.4rem;height:2.4rem;border-radius:var(--radius-md);background:var(--grad-primary);display:grid;place-items:center;box-shadow:var(--shadow-sm);color:var(--pink-900);">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 21s-7.5-4.9-10-9.3C.3 8.6 1.6 5 5 5c2 0 3.3 1.1 4 2.3C9.7 6.1 11 5 13 5c3.4 0 4.7 3.6 3 6.7C19.5 16.1 12 21 12 21z"/></svg>
+      </span>
+      <span>모카샵 ♡</span>
+    </a>
+
+    <nav class="stack" style="flex:1;overflow-y:auto;">
+      <div class="side-section-label">메인</div>
+      <a class="side-item is-active" href="#main" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>
+        <span class="side-label">대시보드</span>
+      </a>
+      <a class="side-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        <span class="side-label">주문</span>
+        <span class="count-badge">18</span>
+      </a>
+      <a class="side-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span class="side-label">고객</span>
+        <span class="count-badge">7</span>
+      </a>
+      <a class="side-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+        <span class="side-label">상품</span>
+      </a>
+
+      <div class="side-section-label">분석</div>
+      <a class="side-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        <span class="side-label">통계</span>
+        <span class="count-badge">NEW</span>
+      </a>
+      <a class="side-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>
+        <span class="side-label">리포트</span>
+      </a>
+
+      <div class="side-section-label">시스템</div>
+      <a class="side-item" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span class="side-label">설정</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-foot">
+      <button class="btn btn--ghost btn--block mb-2" data-sidebar-toggle aria-label="사이드바 접기/펼치기">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m11 17-5-5 5-5"/><path d="m18 17-5-5 5-5"/></svg>
+        <span class="side-label">접기</span>
+      </button>
+      <div class="side-user">
+        <span class="avatar avatar--peach" aria-hidden="true">미<span class="status-dot online"></span></span>
+        <div class="su-text">
+          <div style="font-weight:var(--weight-bold);font-size:var(--text-sm);">김미소</div>
+          <div class="text-xs text-muted">스토어 매니저</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ───────────────────────── 메인 ───────────────────────── -->
+  <div class="app-main">
+
+    <!-- 콘텐츠 헤더 (상단 바) -->
+    <header class="content-head">
+      <button class="btn btn--icon btn--ghost mobile-only" data-mobile-sidebar aria-label="메뉴 열기">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+
+      <div class="stack" style="gap:2px;position:relative;">
+        <span class="sparkle-deco" aria-hidden="true" style="top:-14px;left:-18px;"></span>
+        <span class="heart-deco" aria-hidden="true" style="top:-10px;right:-26px;left:auto;"></span>
+        <nav class="breadcrumb" aria-label="현재 위치">
+          <a href="../index.html">홈</a>
+          <span class="sep" aria-hidden="true">›</span>
+          <a href="#">분석</a>
+          <span class="sep" aria-hidden="true">›</span>
+          <span class="current">대시보드</span>
+        </nav>
+        <h1 style="font-family:var(--font-display);font-size:var(--text-2xl);line-height:1.1;">오늘의 살림살이 ♡</h1>
+      </div>
+
+      <div class="ch-search">
+        <div class="searchbar" role="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="search" placeholder="주문·고객·상품 찾기…" aria-label="검색">
+          <kbd class="kbd-hint">/</kbd>
+        </div>
+      </div>
+
+      <div class="row row-2 shrink-0" style="margin-left:auto;">
+        <button class="btn btn--icon btn--ghost" data-cmdk-open aria-label="커맨드 팔레트 열기 (⌘K)">
+          <kbd>⌘K</kbd>
+        </button>
+        <button class="btn btn--icon btn--ghost" data-theme-toggle aria-label="다크모드 전환">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+        </button>
+        <button class="btn btn--icon btn--ghost" aria-label="알림 3개" style="position:relative;">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          <span class="count-badge" style="position:absolute;top:2px;right:2px;">3</span>
+        </button>
+        <span class="avatar avatar--sm avatar--lav" aria-label="김미소 프로필">미</span>
+      </div>
+    </header>
+
+    <!-- 본문 -->
+    <main id="main" class="content-body">
+
+      <!-- 환영 배너 -->
+      <div class="alert alert--info" role="status">
+        <svg class="alert-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        <div class="alert-body">
+          <div class="alert-title">반가워요, 미소님! 🌸</div>
+          <div class="alert-msg">어제보다 방문자가 <strong>12.4%</strong> 늘었어요. 오늘도 폭신폭신한 하루 되세요!</div>
+        </div>
+        <button class="alert-close" aria-label="닫기">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- 1) 스탯 카드 4개 -->
+      <section class="grid grid-4" aria-label="핵심 지표">
+        <article class="stat" data-reveal="1">
+          <div class="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+          </div>
+          <div class="stat-label">오늘 방문자</div>
+          <div class="stat-value">8,492</div>
+          <div class="stat-delta up">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
+            12.4% <span class="text-muted" style="font-weight:var(--weight-medium);">어제 대비</span>
+          </div>
+        </article>
+
+        <article class="stat stat--mint" data-reveal="2">
+          <div class="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <div class="stat-label">오늘 매출</div>
+          <div class="stat-value">₩3.74M</div>
+          <div class="stat-delta up">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
+            8.1% <span class="text-muted" style="font-weight:var(--weight-medium);">어제 대비</span>
+          </div>
+        </article>
+
+        <article class="stat stat--sky" data-reveal="3">
+          <div class="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+          </div>
+          <div class="stat-label">신규 주문</div>
+          <div class="stat-value">312</div>
+          <div class="stat-delta down">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 7 7 17M15 17H7V9"/></svg>
+            3.2% <span class="text-muted" style="font-weight:var(--weight-medium);">어제 대비</span>
+          </div>
+        </article>
+
+        <article class="stat stat--lav" data-reveal="4">
+          <div class="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.5 2.5 14 7.6l5.6.8-4 4 .9 5.6-5-2.6-5 2.6.9-5.6-4-4 5.6-.8z"/></svg>
+          </div>
+          <div class="stat-label">평균 평점</div>
+          <div class="stat-value">4.86</div>
+          <div class="stat-delta up">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
+            0.12 <span class="text-muted" style="font-weight:var(--weight-medium);">이번 주</span>
+          </div>
+        </article>
+      </section>
+
+      <!-- 2) 큰 카드 2개: 바차트 + 도넛 -->
+      <section class="grid" style="grid-template-columns:1.6fr 1fr;" aria-label="매출 차트">
+        <article class="card card--hover">
+          <div class="card-head">
+            <div>
+              <div class="card-title">월간 매출 추이 📈</div>
+              <div class="card-sub">최근 12개월 · 단위: 백만원</div>
+            </div>
+            <div class="segmented" role="group" aria-label="기간 선택">
+              <button aria-selected="false">주</button>
+              <button aria-selected="true">월</button>
+              <button aria-selected="false">분기</button>
+            </div>
+          </div>
+          <div class="barchart" role="img" aria-label="월별 매출 막대그래프, 최고 12월 41백만원">
+            <div class="bar-col"><div class="bar-fill" style="height:48%"></div><span class="bar-label">1월</span></div>
+            <div class="bar-col"><div class="bar-fill" style="height:55%"></div><span class="bar-label">2월</span></div>
+            <div class="bar-col"><div class="bar-fill" style="height:42%"></div><span class="bar-label">3월</span></div>
+            <div class="bar-col"><div class="bar-fill" style="height:63%"></div><span class="bar-label">4월</span></div>
+            <div class="bar-col"><div class="bar-fill" style="height:58%"></div><span class="bar-label">5월</span></div>
+            <div class="bar-col"><div class="bar-fill" style="height:71%"></div><span class="bar-label">6월</span></div>
+            <div class="bar-col"><div class="bar-fill" style="height:66%"></div><span class="bar-label">7월</span></div>
+            <div class="bar-col"><div class="bar-fill" style="height:78%"></div><span class="bar-label">8월</span></div>
+            <div class="bar-col"><div class="bar-fill" style="height:69%"></div><span class="bar-label">9월</span></div>
+            <div class="bar-col"><div class="bar-fill" style="height:84%"></div><span class="bar-label">10월</span></div>
+            <div class="bar-col"><div class="bar-fill" style="height:92%"></div><span class="bar-label">11월</span></div>
+            <div class="bar-col"><div class="bar-fill" style="height:100%"></div><span class="bar-label">12월</span></div>
+          </div>
+          <div class="divider"></div>
+          <div class="row between wrap" style="gap:var(--space-3);">
+            <div class="row row-2"><span class="badge badge--solid">올해 누적 ₩812M</span><span class="badge badge--mint">목표 96% 달성 ♡</span></div>
+            <button class="btn btn--ghost btn--sm" data-toast="info" data-toast-title="리포트 준비 중" data-toast-msg="상세 매출 리포트를 만들고 있어요!">자세히 보기</button>
+          </div>
+        </article>
+
+        <article class="card card--hover">
+          <div class="card-head">
+            <div class="card-title">카테고리 비중 🍰</div>
+            <span class="sticker" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="var(--pink-500)" aria-hidden="true"><path d="M12 21s-7.5-4.9-10-9.3C.3 8.6 1.6 5 5 5c2 0 3.3 1.1 4 2.3C9.7 6.1 11 5 13 5c3.4 0 4.7 3.6 3 6.7C19.5 16.1 12 21 12 21z"/></svg>
+            </span>
+          </div>
+          <div class="center" style="margin:var(--space-3) 0;">
+            <div class="donut" role="img" aria-label="카테고리 비중: 디저트 38%, 음료 27%, 굿즈 20%, 기타 15%"
+                 style="background:conic-gradient(var(--pink-400) 0 38%, var(--lavender-400) 38% 65%, var(--mint-400) 65% 85%, var(--sky-400) 85% 100%);">
+              <div class="donut-center">38%<small>디저트</small></div>
+            </div>
+          </div>
+          <div class="legend">
+            <div class="legend-row"><span class="legend-dot" style="background:var(--pink-400)"></span>디저트 <span class="text-muted" style="margin-left:auto;">38%</span></div>
+            <div class="legend-row"><span class="legend-dot" style="background:var(--lavender-400)"></span>음료 <span class="text-muted" style="margin-left:auto;">27%</span></div>
+            <div class="legend-row"><span class="legend-dot" style="background:var(--mint-400)"></span>굿즈 <span class="text-muted" style="margin-left:auto;">20%</span></div>
+            <div class="legend-row"><span class="legend-dot" style="background:var(--sky-400)"></span>기타 <span class="text-muted" style="margin-left:auto;">15%</span></div>
+          </div>
+        </article>
+      </section>
+
+      <!-- 3) 미니 스파크라인 카드 3개 -->
+      <section class="grid grid-3" aria-label="추세 미니 카드">
+        <article class="card card--soft" data-reveal="2">
+          <div class="row between">
+            <div>
+              <div class="card-sub">재방문율</div>
+              <div style="font-family:var(--font-display);font-size:var(--text-2xl);font-weight:var(--weight-extra);">42.8%</div>
+            </div>
+            <span class="badge badge--success">▲ 4.1%</span>
+          </div>
+          <svg class="sparkline mt-2" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
+            <polyline class="area" points="0,40 0,30 14,26 28,30 42,20 56,24 70,14 84,18 100,8 100,40"/>
+            <polyline points="0,30 14,26 28,30 42,20 56,24 70,14 84,18 100,8"/>
+          </svg>
+        </article>
+
+        <article class="card card--soft" data-reveal="3">
+          <div class="row between">
+            <div>
+              <div class="card-sub">장바구니 전환</div>
+              <div style="font-family:var(--font-display);font-size:var(--text-2xl);font-weight:var(--weight-extra);">3.62%</div>
+            </div>
+            <span class="badge badge--mint">▲ 0.4%</span>
+          </div>
+          <svg class="sparkline mt-2" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true" style="--pink-400:var(--mint-500);">
+            <polyline points="0,28 14,24 28,27 42,18 56,22 70,16 84,20 100,10" style="stroke:var(--mint-500);"/>
+          </svg>
+        </article>
+
+        <article class="card card--soft" data-reveal="4">
+          <div class="row between">
+            <div>
+              <div class="card-sub">평균 객단가</div>
+              <div style="font-family:var(--font-display);font-size:var(--text-2xl);font-weight:var(--weight-extra);">₩24,300</div>
+            </div>
+            <span class="badge badge--danger">▼ 1.2%</span>
+          </div>
+          <svg class="sparkline mt-2" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
+            <polyline points="0,14 14,18 28,12 42,20 56,18 70,24 84,22 100,28" style="stroke:var(--lavender-500);"/>
+          </svg>
+        </article>
+      </section>
+
+      <!-- 4) 최근 주문 테이블 -->
+      <section aria-label="최근 주문">
+        <div class="table-wrap">
+          <div class="row between wrap p-4" style="gap:var(--space-3);">
+            <h2 style="font-family:var(--font-display);font-size:var(--text-xl);">최근 주문 🧁</h2>
+            <div class="row row-2 wrap">
+              <span class="badge badge--neutral">총 312건</span>
+              <button class="btn btn--secondary btn--sm" data-toast="success" data-toast-title="내보내기 완료!" data-toast-msg="주문 목록을 CSV로 저장했어요.">내보내기</button>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table class="table table--striped">
+              <thead>
+                <tr>
+                  <th class="sortable">주문번호 <span class="sort-ic" aria-hidden="true">▾</span></th>
+                  <th class="sortable">고객 <span class="sort-ic" aria-hidden="true">▾</span></th>
+                  <th class="sortable">상품 <span class="sort-ic" aria-hidden="true">▾</span></th>
+                  <th class="sortable">상태 <span class="sort-ic" aria-hidden="true">▾</span></th>
+                  <th class="sortable">금액 <span class="sort-ic" aria-hidden="true">▾</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="cell-strong">#MK-2048</td>
+                  <td><div class="cell-user"><span class="avatar avatar--sm avatar--peach" aria-hidden="true">하</span>하늘이</div></td>
+                  <td>딸기 생크림 케이크 외 2건</td>
+                  <td><span class="badge badge--success">● 배송완료</span></td>
+                  <td class="cell-strong">₩48,000</td>
+                </tr>
+                <tr>
+                  <td class="cell-strong">#MK-2047</td>
+                  <td><div class="cell-user"><span class="avatar avatar--sm avatar--mint" aria-hidden="true">민</span>민들레</div></td>
+                  <td>말차 라떼 세트</td>
+                  <td><span class="badge badge--info">● 배송중</span></td>
+                  <td class="cell-strong">₩16,500</td>
+                </tr>
+                <tr>
+                  <td class="cell-strong">#MK-2046</td>
+                  <td><div class="cell-user"><span class="avatar avatar--sm avatar--lav" aria-hidden="true">보</span>보라돌이</div></td>
+                  <td>곰돌이 마카롱 12구</td>
+                  <td><span class="badge badge--warning">● 준비중</span></td>
+                  <td class="cell-strong">₩32,000</td>
+                </tr>
+                <tr>
+                  <td class="cell-strong">#MK-2045</td>
+                  <td><div class="cell-user"><span class="avatar avatar--sm avatar--sky" aria-hidden="true">파</span>파랑새</div></td>
+                  <td>블루베리 치즈케이크</td>
+                  <td><span class="badge badge--success">● 배송완료</span></td>
+                  <td class="cell-strong">₩28,900</td>
+                </tr>
+                <tr>
+                  <td class="cell-strong">#MK-2044</td>
+                  <td><div class="cell-user"><span class="avatar avatar--sm avatar--peach" aria-hidden="true">노</span>노을이</div></td>
+                  <td>복숭아 에이드 외 1건</td>
+                  <td><span class="badge badge--danger">● 취소</span></td>
+                  <td class="cell-strong">₩12,000</td>
+                </tr>
+                <tr>
+                  <td class="cell-strong">#MK-2043</td>
+                  <td><div class="cell-user"><span class="avatar avatar--sm avatar--mint" aria-hidden="true">초</span>초록이</div></td>
+                  <td>피스타치오 마들렌 8구</td>
+                  <td><span class="badge badge--info">● 배송중</span></td>
+                  <td class="cell-strong">₩21,600</td>
+                </tr>
+                <tr>
+                  <td class="cell-strong">#MK-2042</td>
+                  <td><div class="cell-user"><span class="avatar avatar--sm avatar--lav" aria-hidden="true">달</span>달님이</div></td>
+                  <td>레몬 타르트 세트 외 3건</td>
+                  <td><span class="badge badge--success">● 배송완료</span></td>
+                  <td class="cell-strong">₩54,200</td>
+                </tr>
+                <tr>
+                  <td class="cell-strong">#MK-2041</td>
+                  <td><div class="cell-user"><span class="avatar avatar--sm avatar--peach" aria-hidden="true">별</span>별하나</div></td>
+                  <td>한정판 토끼 굿즈 박스</td>
+                  <td><span class="badge badge--warning">● 준비중</span></td>
+                  <td class="cell-strong">₩39,900</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="table-foot">
+            <span>312건 중 1–8 표시 중</span>
+            <div class="pagination">
+              <button aria-label="이전 페이지" disabled>‹</button>
+              <button class="is-active" aria-current="page">1</button>
+              <button>2</button>
+              <button>3</button>
+              <button>…</button>
+              <button>39</button>
+              <button aria-label="다음 페이지">›</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5) 최근 활동 + 할 일 진행률 -->
+      <section class="grid" style="grid-template-columns:1.4fr 1fr;" aria-label="활동과 진행률">
+        <article class="card">
+          <div class="card-head">
+            <div class="card-title">최근 활동 🐰</div>
+            <a href="#" class="text-sm" style="color:var(--color-primary);font-weight:var(--weight-bold);">전체 보기</a>
+          </div>
+          <div class="timeline">
+            <div class="tl-item">
+              <span class="tl-dot" aria-hidden="true"></span>
+              <div class="tl-time">방금 전</div>
+              <div class="tl-title">새 주문 #MK-2048 결제 완료</div>
+              <div class="tl-body">하늘이님이 딸기 생크림 케이크를 주문했어요. ₩48,000</div>
+            </div>
+            <div class="tl-item">
+              <span class="tl-dot mint" aria-hidden="true"></span>
+              <div class="tl-time">23분 전</div>
+              <div class="tl-title">신규 고객 가입 🎉</div>
+              <div class="tl-body">민들레님이 회원이 되었어요. 환영 쿠폰이 발송되었습니다.</div>
+            </div>
+            <div class="tl-item">
+              <span class="tl-dot lav" aria-hidden="true"></span>
+              <div class="tl-time">1시간 전</div>
+              <div class="tl-title">상품 재고 부족 알림</div>
+              <div class="tl-body">곰돌이 마카롱 12구의 재고가 5개 남았어요.</div>
+            </div>
+            <div class="tl-item">
+              <span class="tl-dot sky" aria-hidden="true"></span>
+              <div class="tl-time">3시간 전</div>
+              <div class="tl-title">리뷰 5건 도착 ⭐</div>
+              <div class="tl-body">블루베리 치즈케이크에 별점 5점 리뷰가 달렸어요.</div>
+            </div>
+            <div class="tl-item">
+              <span class="tl-dot" aria-hidden="true"></span>
+              <div class="tl-time">어제</div>
+              <div class="tl-title">월간 정산 마감 완료</div>
+              <div class="tl-body">11월 정산이 마무리되었어요. 총 매출 ₩74M ♡</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card card--candy">
+          <div class="card-head">
+            <div class="card-title">할 일 진행률 ✅</div>
+            <span class="badge badge--solid">오늘 5개</span>
+          </div>
+          <div class="center mb-4" style="margin-top:var(--space-2);">
+            <div class="progress-ring" data-value="72">
+              <svg width="132" height="132" viewBox="0 0 132 132" aria-hidden="true">
+                <circle class="pr-track" cx="66" cy="66" r="56" fill="none" stroke-width="12"></circle>
+                <circle class="pr-bar" cx="66" cy="66" r="56" fill="none" stroke-width="12"></circle>
+              </svg>
+              <span class="pr-value">72%</span>
+            </div>
+          </div>
+          <div class="stack stack-3">
+            <div>
+              <div class="progress-label"><span>주문 검수</span><span>8/10</span></div>
+              <div class="progress progress--mint"><div class="bar" style="width:80%"></div></div>
+            </div>
+            <div>
+              <div class="progress-label"><span>발송 처리</span><span>14/18</span></div>
+              <div class="progress"><div class="bar" style="width:78%"></div></div>
+            </div>
+            <div>
+              <div class="progress-label"><span>리뷰 답변</span><span>3/9</span></div>
+              <div class="progress progress--lav"><div class="bar" style="width:33%"></div></div>
+            </div>
+          </div>
+          <div class="card-foot">
+            <button class="btn btn--primary btn--sm btn--block" data-sparkle="12" data-toast="success" data-toast-title="화이팅! 💖" data-toast-msg="할 일 한 개를 완료로 표시했어요.">다음 할 일 시작하기</button>
+          </div>
+        </article>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ───────────────────────── 모바일 사이드바 스크림 ───────────────────────── -->
+<div class="sidebar-scrim" data-mobile-sidebar-close aria-hidden="true"></div>
+
+<!-- ───────────────────────── 플로팅 액션 버튼 ───────────────────────── -->
+<button class="fab" data-toast="info" data-toast-title="빠른 추가 ✨" data-toast-msg="새 주문/상품을 추가할 수 있어요." aria-label="빠른 추가">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
+<!-- ───────────────────────── 커맨드 팔레트 (⌘K) ───────────────────────── -->
+<div class="cmdk" role="dialog" aria-modal="true" aria-label="빠른 명령">
+  <div class="cmdk-box">
+    <div class="cmdk-input-row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" placeholder="무엇을 도와드릴까요? 🌷" aria-label="명령 검색">
+      <kbd>esc</kbd>
+    </div>
+    <div class="cmdk-list">
+      <div class="cmdk-group-label">바로가기</div>
+      <div class="cmdk-item is-active" role="button" tabindex="0">
+        <span class="cmdk-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/></svg></span>
+        <span class="cmdk-label">대시보드로 이동</span>
+        <kbd>G D</kbd>
+      </div>
+      <div class="cmdk-item" role="button" tabindex="0">
+        <span class="cmdk-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/></svg></span>
+        <span class="cmdk-label">주문 목록 열기</span>
+        <kbd>G O</kbd>
+      </div>
+      <div class="cmdk-item" role="button" tabindex="0">
+        <span class="cmdk-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span>
+        <span class="cmdk-label">고객 검색</span>
+        <kbd>G C</kbd>
+      </div>
+      <div class="cmdk-group-label">작업</div>
+      <div class="cmdk-item" role="button" tabindex="0">
+        <span class="cmdk-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        <span class="cmdk-label">새 상품 추가</span>
+        <kbd>N P</kbd>
+      </div>
+      <div class="cmdk-item" role="button" tabindex="0">
+        <span class="cmdk-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41"/></svg></span>
+        <span class="cmdk-label">다크모드 전환</span>
+        <kbd>T</kbd>
+      </div>
+    </div>
+    <div class="cmdk-empty" hidden>앗, 찾는 명령이 없어요 🥲</div>
+    <div class="cmdk-foot">
+      <span><kbd>↑</kbd><kbd>↓</kbd> 이동</span>
+      <span><kbd>↵</kbd> 선택</span>
+      <span><kbd>esc</kbd> 닫기</span>
+    </div>
+  </div>
+</div>
+
+<script src="../app.js"></script>
+<script>
+  /* 페이지 고유: 모바일 사이드바 토글 (data-속성 기반, app.js 와 분리) */
+  (function () {
+    var sb = document.querySelector('.sidebar');
+    var scrim = document.querySelector('.sidebar-scrim');
+    function open() { sb && sb.classList.add('is-mobile-open'); scrim && scrim.classList.add('is-open'); }
+    function close() { sb && sb.classList.remove('is-mobile-open'); scrim && scrim.classList.remove('is-open'); }
+    document.addEventListener('click', function (e) {
+      if (e.target.closest('[data-mobile-sidebar]')) { open(); }
+      else if (e.target.closest('[data-mobile-sidebar-close]')) { close(); }
+      else if (e.target.closest('.sidebar .side-item')) { close(); }
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+  })();
+</script>
+</body>
+</html>

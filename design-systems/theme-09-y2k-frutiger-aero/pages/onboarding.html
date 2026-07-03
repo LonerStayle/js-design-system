@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>온보딩 · Aero</title>
+  <link rel="stylesheet" href="../tokens.css" />
+  <link rel="stylesheet" href="../semantic.css" />
+  <link rel="stylesheet" href="../base.css" />
+  <link rel="stylesheet" href="../components/buttons.css" />
+  <link rel="stylesheet" href="../components/forms.css" />
+  <link rel="stylesheet" href="../components/forms-advanced.css" />
+  <link rel="stylesheet" href="../components/card.css" />
+  <link rel="stylesheet" href="../components/badge.css" />
+  <link rel="stylesheet" href="../components/data-display.css" />
+  <link rel="stylesheet" href="../components/overlay.css" />
+  <link rel="stylesheet" href="../components/feedback.css" />
+  <link rel="stylesheet" href="../components/nav.css" />
+  <link rel="stylesheet" href="../components/carousel.css" />
+
+  <style>
+    /* ====================================================================== *
+     * ONBOARDING PAGE — local layout (tokens only)                            *
+     * ====================================================================== */
+    .onboard {
+      min-height: calc(100dvh - 0px);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: var(--space-8) var(--space-4) var(--space-9);
+    }
+    .onboard__card {
+      width: 100%;
+      max-width: 720px;
+      padding: var(--space-7);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-6);
+    }
+
+    /* welcome header inside the card */
+    .onboard__intro { text-align: center; display: flex; flex-direction: column; gap: var(--space-2); align-items: center; }
+    .onboard__logo {
+      width: 3.2rem; height: 3.2rem; display: inline-flex; align-items: center; justify-content: center;
+      border-radius: var(--radius-full);
+      background: var(--btn-accent-bg);
+      box-shadow: var(--shadow-aqua), inset 0 1px 0 rgba(255,255,255,.85);
+      position: relative; overflow: hidden;
+    }
+    .onboard__logo::before { content:""; position:absolute; inset:0 0 auto 0; height:55%; background:var(--gloss-shine); pointer-events:none; }
+    .onboard__logo svg { position: relative; z-index: 1; color: var(--color-accent-fg); }
+    .onboard__title { font-size: var(--text-2xl); font-weight: var(--weight-bold); letter-spacing: var(--tracking-tight); }
+    .onboard__sub { color: var(--color-text-muted); font-size: var(--text-sm); max-width: 44ch; }
+
+    .wizard__step { display: flex; flex-direction: column; gap: var(--space-5); }
+    .wizard__step[hidden] { display: none; }
+    .wizard__heading { display: flex; flex-direction: column; gap: var(--space-1); }
+    .wizard__step-title { font-size: var(--text-lg); font-weight: var(--weight-bold); }
+    .wizard__step-desc { font-size: var(--text-sm); color: var(--color-text-muted); }
+
+    /* two-column field rows that stack on small screens */
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+    @media (max-width: 560px) { .field-row { grid-template-columns: 1fr; } }
+
+    /* slug input with prefix addon */
+    .addon-group { display: flex; align-items: stretch; width: 100%; }
+    .addon-group__prefix {
+      display: inline-flex; align-items: center;
+      padding: 0 var(--space-3);
+      font-size: var(--text-sm); font-weight: var(--weight-semibold);
+      color: var(--color-text-muted);
+      background: var(--color-surface-sunken);
+      border: var(--border-1) solid var(--input-border);
+      border-right: none;
+      border-radius: var(--input-radius) 0 0 var(--input-radius);
+      box-shadow: inset 0 2px 4px rgba(10,59,97,.10);
+      white-space: nowrap;
+    }
+    .addon-group .input { border-radius: 0 var(--input-radius) var(--input-radius) 0; }
+
+    /* avatar / emoji picker */
+    .emoji-picker { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+    .emoji-picker__opt {
+      width: 2.75rem; height: 2.75rem; flex: 0 0 auto;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; cursor: pointer;
+      border-radius: var(--radius-full);
+      background: var(--color-surface);
+      border: 2px solid var(--color-border-soft);
+      box-shadow: var(--shadow-xs), inset 0 1px 0 rgba(255,255,255,.7);
+      position: relative; overflow: hidden;
+      transition: transform var(--duration-base) var(--ease-spring), box-shadow var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard);
+    }
+    .emoji-picker__opt::before { content:""; position:absolute; inset:0 0 auto 0; height:50%; background:var(--gloss-shine); pointer-events:none; }
+    .emoji-picker__opt > span { position: relative; z-index: 1; }
+    .emoji-picker__opt:hover { transform: translateY(-2px); }
+    .emoji-picker__opt:focus-within { box-shadow: var(--ring); }
+    .emoji-picker__opt > input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+    .emoji-picker__opt:has(> input:checked) {
+      border-color: transparent;
+      background: var(--btn-primary-bg);
+      box-shadow: var(--glow-aqua), var(--shadow-sky);
+      transform: scale(1.06);
+    }
+
+    /* wizard footer row */
+    .wizard__foot {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: var(--space-3);
+      padding-top: var(--space-5);
+      border-top: var(--border-1) solid var(--color-border-soft);
+    }
+    .wizard__foot-hint { font-size: var(--text-xs); color: var(--color-text-subtle); }
+
+    /* step 4 — celebratory glossy panel */
+    .celebrate {
+      text-align: center;
+      display: flex; flex-direction: column; align-items: center; gap: var(--space-3);
+      padding: var(--space-7) var(--space-5);
+      border-radius: var(--radius-lg);
+      background: linear-gradient(160deg, var(--sky-200, #cfeeff) 0%, var(--aqua-100, #e6fbf9) 55%, var(--lime-100, #f1ffe0) 100%);
+      border: var(--border-1) solid var(--color-border-soft);
+      box-shadow: var(--surface-rim), inset 0 1px 0 rgba(255,255,255,.85), var(--shadow-md);
+      position: relative; overflow: hidden;
+    }
+    [data-theme="dark"] .celebrate {
+      background: linear-gradient(160deg, rgba(57,182,255,.18), rgba(0,214,200,.16) 55%, rgba(155,225,93,.14));
+    }
+    .celebrate::before { content:""; position:absolute; inset:0 0 auto 0; height:42%; background:var(--gloss-shine); opacity:.7; pointer-events:none; }
+    .celebrate > * { position: relative; z-index: 1; }
+    .celebrate__art { width: 7rem; height: 7rem; }
+    .celebrate__title { font-size: var(--text-xl); font-weight: var(--weight-bold); }
+    .celebrate__text { color: var(--color-text-muted); font-size: var(--text-sm); max-width: 42ch; }
+
+    .recap { width: 100%; max-width: 420px; margin-inline: auto; text-align: left; }
+    .recap__item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: var(--border-1) solid var(--color-border-soft); }
+    .recap__item:last-child { border-bottom: none; }
+    .recap__ico {
+      width: 2rem; height: 2rem; flex: 0 0 auto;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: var(--radius-full);
+      background: var(--color-surface); border: var(--border-1) solid var(--color-border-soft);
+      box-shadow: var(--shadow-xs), inset 0 1px 0 rgba(255,255,255,.7);
+    }
+    .recap__k { font-size: var(--text-xs); color: var(--color-text-subtle); }
+    .recap__v { font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+    .recap__text { display: flex; flex-direction: column; gap: 1px; }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+  <div class="aero-sky" aria-hidden="true"></div>
+  <div class="aero-bubbles" data-bubbles="14" aria-hidden="true"></div>
+
+  <!-- ====================================================================== -->
+  <!-- SHARED NAVBAR                                                            -->
+  <!-- ====================================================================== -->
+  <header class="navbar" role="banner">
+    <a class="navbar__brand" href="../index.html">
+      <span class="navbar__logo" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 18a4 4 0 0 1 0-8 5.5 5.5 0 0 1 10.6-1.5A3.75 3.75 0 0 1 18 18z" fill="rgba(255,255,255,.35)"/>
+          <circle cx="9.5" cy="13" r="1" fill="currentColor" stroke="none"/>
+        </svg>
+      </span>
+      <strong>Aero</strong>
+    </a>
+    <nav class="navbar__nav" aria-label="주요 메뉴">
+      <a class="navbar__link" href="dashboard.html">대시보드</a>
+      <a class="navbar__link" href="pricing.html">요금제</a>
+      <a class="navbar__link is-active" href="onboarding.html" aria-current="page">시작하기</a>
+    </nav>
+    <div class="navbar__actions">
+      <button class="btn btn--ghost btn--sm" data-command-open aria-label="명령 팔레트 열기">⌘K</button>
+      <button class="btn btn--secondary btn--sm" data-theme-toggle aria-pressed="false">
+        <span data-theme-label>Dark</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ====================================================================== -->
+  <!-- MAIN — onboarding wizard                                                 -->
+  <!-- ====================================================================== -->
+  <main id="main" class="onboard">
+    <section class="glass onboard__card" aria-labelledby="onboard-title">
+      <div class="onboard__intro">
+        <span class="onboard__logo" aria-hidden="true">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6.5 17a3.5 3.5 0 0 1 0-7A5 5 0 0 1 16 8.7 3.3 3.3 0 0 1 17 17z" fill="rgba(255,255,255,.4)"/>
+            <path d="M9.5 13l1.8 1.8L15 11" />
+          </svg>
+        </span>
+        <h1 class="onboard__title" id="onboard-title">Aero Cloud에 오신 걸 환영해요 ✨</h1>
+        <p class="onboard__sub">몇 단계만 거치면 나만의 반짝이는 워크스페이스가 준비됩니다. 천천히 따라와 주세요!</p>
+      </div>
+
+      <!-- WIZARD ROOT -->
+      <div data-wizard>
+        <!-- progress steps -->
+        <ol class="steps" aria-label="온보딩 진행 단계">
+          <li class="steps__step is-active">
+            <span class="steps__circle">
+              <span class="steps__num">1</span>
+              <svg class="steps__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            </span>
+            <span class="steps__label">계정</span>
+            <span class="steps__desc">기본 정보</span>
+          </li>
+          <li class="steps__step">
+            <span class="steps__circle">
+              <span class="steps__num">2</span>
+              <svg class="steps__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            </span>
+            <span class="steps__label">워크스페이스</span>
+            <span class="steps__desc">팀 공간 설정</span>
+          </li>
+          <li class="steps__step">
+            <span class="steps__circle">
+              <span class="steps__num">3</span>
+              <svg class="steps__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            </span>
+            <span class="steps__label">팀 초대</span>
+            <span class="steps__desc">동료 부르기</span>
+          </li>
+          <li class="steps__step">
+            <span class="steps__circle">
+              <span class="steps__num">4</span>
+              <svg class="steps__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            </span>
+            <span class="steps__label">완료</span>
+            <span class="steps__desc">준비 끝!</span>
+          </li>
+        </ol>
+
+        <!-- ============================================================= -->
+        <!-- STEP 1 — 계정                                                  -->
+        <!-- ============================================================= -->
+        <section class="wizard__step" role="group" aria-labelledby="step1-title">
+          <div class="wizard__heading">
+            <h2 class="wizard__step-title" id="step1-title">계정을 만들어요</h2>
+            <p class="wizard__step-desc">로그인에 사용할 기본 정보를 입력해 주세요.</p>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label class="field__label" for="acc-name">이름 <span class="field__req" aria-hidden="true">*</span></label>
+              <input class="input" id="acc-name" type="text" placeholder="김아라" value="김아라" autocomplete="name" />
+              <p class="field__hint">동료에게 표시될 이름이에요.</p>
+            </div>
+            <div class="field">
+              <label class="field__label" for="acc-email">이메일 <span class="field__req" aria-hidden="true">*</span></label>
+              <input class="input" id="acc-email" type="email" placeholder="ara@example.com" value="ara@aerocloud.io" autocomplete="email" />
+              <p class="field__hint">인증 메일이 발송됩니다.</p>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="acc-pw">비밀번호 <span class="field__req" aria-hidden="true">*</span></label>
+            <input class="input" id="acc-pw" type="password" placeholder="••••••••" autocomplete="new-password" />
+            <p class="field__hint">8자 이상, 숫자와 특수문자를 섞으면 더 안전해요.</p>
+          </div>
+
+          <fieldset class="field" style="border:none;padding:0;margin:0;">
+            <legend class="field__label">프로필 이모지 <span style="font-weight:var(--weight-regular);color:var(--color-text-muted)">(선택)</span></legend>
+            <div class="emoji-picker" role="radiogroup" aria-label="프로필 이모지 선택">
+              <label class="emoji-picker__opt"><input type="radio" name="avatar" value="🐬" checked /><span aria-hidden="true">🐬</span><span class="sr-only">돌고래</span></label>
+              <label class="emoji-picker__opt"><input type="radio" name="avatar" value="🌊" /><span aria-hidden="true">🌊</span><span class="sr-only">파도</span></label>
+              <label class="emoji-picker__opt"><input type="radio" name="avatar" value="🍃" /><span aria-hidden="true">🍃</span><span class="sr-only">잎사귀</span></label>
+              <label class="emoji-picker__opt"><input type="radio" name="avatar" value="☁️" /><span aria-hidden="true">☁️</span><span class="sr-only">구름</span></label>
+              <label class="emoji-picker__opt"><input type="radio" name="avatar" value="🫧" /><span aria-hidden="true">🫧</span><span class="sr-only">물방울</span></label>
+              <label class="emoji-picker__opt"><input type="radio" name="avatar" value="🌈" /><span aria-hidden="true">🌈</span><span class="sr-only">무지개</span></label>
+            </div>
+          </fieldset>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- STEP 2 — 워크스페이스                                          -->
+        <!-- ============================================================= -->
+        <section class="wizard__step" role="group" aria-labelledby="step2-title">
+          <div class="wizard__heading">
+            <h2 class="wizard__step-title" id="step2-title">워크스페이스를 설정해요</h2>
+            <p class="wizard__step-desc">팀이 함께 일할 공간의 이름과 주소를 정해 주세요.</p>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="ws-name">워크스페이스 이름 <span class="field__req" aria-hidden="true">*</span></label>
+            <input class="input" id="ws-name" type="text" placeholder="아라 디자인 스튜디오" value="아라 디자인 스튜디오" />
+            <p class="field__hint">팀, 회사, 또는 프로젝트 이름이 좋아요.</p>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="ws-slug">워크스페이스 주소 <span class="field__req" aria-hidden="true">*</span></label>
+            <div class="addon-group">
+              <span class="addon-group__prefix" aria-hidden="true">aerocloud.io/</span>
+              <input class="input" id="ws-slug" type="text" placeholder="ara-studio" value="ara-studio" aria-describedby="ws-slug-hint" inputmode="url" />
+            </div>
+            <p class="field__hint" id="ws-slug-hint">영문 소문자, 숫자, 하이픈(-)만 사용할 수 있어요.</p>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label class="field__label" for="ws-industry">업종</label>
+              <select class="select" id="ws-industry">
+                <option>디자인 / 크리에이티브</option>
+                <option>소프트웨어 / IT</option>
+                <option>마케팅 / 광고</option>
+                <option>교육</option>
+                <option>커머스 / 리테일</option>
+                <option>기타</option>
+              </select>
+              <p class="field__hint">추천 템플릿을 골라드려요.</p>
+            </div>
+
+            <div class="field">
+              <span class="field__label" id="ws-size-label">팀 규모</span>
+              <div class="segmented" role="radiogroup" aria-labelledby="ws-size-label">
+                <label class="segmented__option">
+                  <input type="radio" name="ws-size" value="solo" />
+                  <span class="segmented__label">1명</span>
+                </label>
+                <label class="segmented__option">
+                  <input type="radio" name="ws-size" value="small" checked />
+                  <span class="segmented__label">2–10</span>
+                </label>
+                <label class="segmented__option">
+                  <input type="radio" name="ws-size" value="mid" />
+                  <span class="segmented__label">11–50</span>
+                </label>
+                <label class="segmented__option">
+                  <input type="radio" name="ws-size" value="large" />
+                  <span class="segmented__label">50+</span>
+                </label>
+              </div>
+              <p class="field__hint">언제든 바꿀 수 있어요.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- STEP 3 — 팀 초대                                               -->
+        <!-- ============================================================= -->
+        <section class="wizard__step" role="group" aria-labelledby="step3-title">
+          <div class="wizard__heading">
+            <h2 class="wizard__step-title" id="step3-title">동료를 초대해요</h2>
+            <p class="wizard__step-desc">함께할 사람들의 이메일을 입력하면 초대장이 발송돼요.</p>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="invite-input">초대할 이메일</label>
+            <div class="chip-input" data-chip-input>
+              <span class="chip">jun@aerocloud.io<button type="button" class="chip__remove" aria-label="jun@aerocloud.io 제거">&times;</button></span>
+              <span class="chip">mina@aerocloud.io<button type="button" class="chip__remove" aria-label="mina@aerocloud.io 제거">&times;</button></span>
+              <input id="invite-input" type="email" placeholder="이메일 입력 후 Enter…" aria-label="초대할 이메일 입력" />
+            </div>
+            <p class="field__hint">Enter 또는 쉼표(,)로 추가하고, ⌫(백스페이스)로 삭제해요.</p>
+          </div>
+
+          <div class="field" style="max-width:280px;">
+            <label class="field__label" for="invite-role">기본 역할</label>
+            <select class="select" id="invite-role">
+              <option>멤버 — 보기 / 편집</option>
+              <option>관리자 — 전체 권한</option>
+              <option>게스트 — 보기 전용</option>
+            </select>
+            <p class="field__hint">초대받는 모든 사람에게 적용돼요.</p>
+          </div>
+
+          <div class="alert alert--info" role="note">
+            <span class="alert__icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            </span>
+            <div class="alert__body">
+              <strong class="alert__title">나중에 해도 괜찮아요</strong>
+              <p>지금 건너뛰고 워크스페이스 설정에서 언제든 팀원을 초대할 수 있어요.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- STEP 4 — 완료                                                  -->
+        <!-- ============================================================= -->
+        <section class="wizard__step" role="group" aria-labelledby="step4-title">
+          <div class="celebrate">
+            <svg class="celebrate__art" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="bubGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#7fd9ff"/>
+                  <stop offset="0.55" stop-color="#39B6FF"/>
+                  <stop offset="1" stop-color="#00D6C8"/>
+                </linearGradient>
+                <radialGradient id="shine" cx="0.35" cy="0.28" r="0.5">
+                  <stop offset="0" stop-color="#ffffff" stop-opacity="0.95"/>
+                  <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+              <circle cx="60" cy="60" r="44" fill="url(#bubGrad)"/>
+              <ellipse cx="48" cy="42" rx="26" ry="16" fill="url(#shine)"/>
+              <circle cx="92" cy="34" r="7" fill="#9BE15D" opacity="0.9"/>
+              <circle cx="22" cy="84" r="5" fill="#fff" opacity="0.7"/>
+              <circle cx="100" cy="80" r="4" fill="#fff" opacity="0.6"/>
+              <path d="M42 61 L55 74 L80 47" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <h2 class="celebrate__title" id="step4-title">모든 준비가 끝났어요! 🎉</h2>
+            <p class="celebrate__text">반짝이는 새 워크스페이스가 만들어졌어요. 이제 팀과 함께 멋진 일을 시작해 볼까요?</p>
+
+            <ul class="recap" aria-label="설정 요약">
+              <li class="recap__item">
+                <span class="recap__ico" aria-hidden="true">🐬</span>
+                <span class="recap__text"><span class="recap__k">계정</span><span class="recap__v">김아라 · ara@aerocloud.io</span></span>
+              </li>
+              <li class="recap__item">
+                <span class="recap__ico" aria-hidden="true">☁️</span>
+                <span class="recap__text"><span class="recap__k">워크스페이스</span><span class="recap__v">아라 디자인 스튜디오 · aerocloud.io/ara-studio</span></span>
+              </li>
+              <li class="recap__item">
+                <span class="recap__ico" aria-hidden="true">✉️</span>
+                <span class="recap__text"><span class="recap__k">초대</span><span class="recap__v">2명에게 초대장 발송 예정</span></span>
+              </li>
+            </ul>
+
+            <a class="btn btn--primary btn--lg" href="dashboard.html">
+              대시보드로 이동
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+            </a>
+          </div>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- WIZARD FOOTER — prev / next                                    -->
+        <!-- ============================================================= -->
+        <div class="wizard__foot">
+          <button type="button" class="btn btn--ghost" data-wizard-prev>이전</button>
+          <span class="wizard__foot-hint" aria-hidden="true">진행 상황은 자동 저장돼요</span>
+          <button type="button" class="btn btn--primary" data-wizard-next>다음</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ====================================================================== -->
+  <!-- FOOTER                                                                   -->
+  <!-- ====================================================================== -->
+  <footer class="site-footer container" style="padding-block:var(--space-9);text-align:center;color:var(--color-text-muted)">
+    <p>Aero · Y2K / Frutiger Aero 디자인 시스템 — <a class="link" href="../index.html">컴포넌트 허브로 돌아가기</a></p>
+  </footer>
+
+  <!-- ====================================================================== -->
+  <!-- COMMAND PALETTE                                                          -->
+  <!-- ====================================================================== -->
+  <div class="command-palette" data-command-palette aria-hidden="true" role="dialog" aria-modal="true" aria-label="명령 팔레트">
+    <div class="command-palette__backdrop"></div>
+    <div class="command-palette__panel">
+      <div class="command-palette__search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" placeholder="명령 또는 페이지 검색…" aria-label="명령 검색" />
+      </div>
+      <div class="command-palette__list" role="listbox">
+        <button class="command-palette__item" role="option" onclick="location.href='dashboard.html'">📊 분석 대시보드</button>
+        <button class="command-palette__item" role="option" onclick="location.href='kanban.html'">🗂️ 칸반 보드</button>
+        <button class="command-palette__item" role="option" onclick="location.href='inbox.html'">✉️ 이메일 인박스</button>
+        <button class="command-palette__item" role="option" onclick="location.href='product.html'">🛍️ 상품 상세</button>
+        <button class="command-palette__item" role="option" onclick="location.href='pricing.html'">💎 가격표</button>
+        <button class="command-palette__item" role="option" onclick="location.href='settings.html'">⚙️ 설정</button>
+        <button class="command-palette__item" role="option" onclick="location.href='../index.html'">🏠 홈으로</button>
+        <button class="command-palette__item" role="option" data-theme-toggle>🌙 테마 전환</button>
+      </div>
+      <div class="command-palette__empty" hidden>일치하는 결과가 없습니다.</div>
+    </div>
+  </div>
+
+  <script src="../app.js"></script>
+</body>
+</html>

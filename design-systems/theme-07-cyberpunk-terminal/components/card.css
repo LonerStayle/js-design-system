@@ -1,0 +1,669 @@
+/* ============================================================================
+   THEME 07 — CYBERPUNK TERMINAL · components/card.css
+   ----------------------------------------------------------------------------
+   Surfaces shaped like CRT terminal windows + HUD widgets. Mirrors the patterns
+   established in button.css:
+     · BEM-ish naming:  .ct-card  ·  .ct-card__chrome  ·  .ct-card--glow  ·  .is-*
+     · hard corners (radius 0), uppercase tracked mono labels
+     · neon glow is DECORATION only — solid text/border colors carry contrast
+     · SEMANTIC tokens only (never raw --cyan-400 etc.)
+     · motion is short/gentle and globally frozen by base.css reduced-motion
+
+   COMPONENTS
+     1. .ct-card        terminal window  (chrome bar · dots · title · body · footer)
+     2. .ct-stat        HUD stat widget  (label · value · delta · spark · icon)
+     3. .ct-kanban-card draggable task card (priority rail · tags · meta · avatar)
+     4. .ct-empty       terminal-error empty state (ascii art · code · action)
+   ============================================================================ */
+
+
+/* ============================================================================
+   1. CARD — TERMINAL WINDOW
+   ----------------------------------------------------------------------------
+   Structure:
+     .ct-card
+       .ct-card__chrome      top bar (dots + title + actions)
+         .ct-card__dots  > .ct-card__dot ×3
+         .ct-card__title
+         .ct-card__actions
+       .ct-card__body
+       .ct-card__footer      (optional, top divider)
+   Variants: --glow --accent --flat --clip --ghost  ·  --link / .is-interactive
+   ============================================================================ */
+.ct-card {
+  /* local hooks — variants/states only retint these, never restate geometry */
+  --_card-bg:      var(--card-bg);
+  --_card-border:  var(--card-border);
+  --_card-shadow:  var(--card-shadow);
+  --_chrome-bg:    var(--card-chrome-bg);
+  --_chrome-line:  var(--color-chrome-line);
+  --_accent:       var(--color-primary);          /* chrome accent / dot tint */
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;                                    /* allow clamping inside grids */
+  color: var(--color-text);
+  background: var(--_card-bg);
+  border: var(--border-1) solid var(--_card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--_card-shadow);
+  transition: transform var(--duration-base) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-base) var(--ease-standard);
+}
+
+/* ---- chrome bar (the window title bar) ----------------------------------- */
+.ct-card__chrome {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: var(--card-chrome-h);
+  flex-shrink: 0;
+  padding-inline: var(--space-3);
+  background: var(--_chrome-bg);
+  border-bottom: var(--border-1) solid var(--_chrome-line);
+  /* faint top-edge neon seam, decorative only */
+  box-shadow: inset 0 1px 0 rgba(var(--rgb-white) / .04);
+  user-select: none;
+}
+
+/* ---- traffic-light dots (cyan / amber / magenta) ------------------------- */
+.ct-card__dots {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+.ct-card__dot {
+  --_dot: var(--color-text-subtle);
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-sm);                 /* small squares, terminal-grade */
+  background: var(--_dot);
+  box-shadow: 0 0 5px color-mix(in srgb, var(--_dot) 70%, transparent);
+}
+.ct-card__dot:nth-child(1) { --_dot: var(--color-primary); }   /* cyan  */
+.ct-card__dot:nth-child(2) { --_dot: var(--color-warning); }   /* amber */
+.ct-card__dot:nth-child(3) { --_dot: var(--color-accent);  }   /* magenta */
+
+/* ---- chrome title (often a filename like "user.cfg") --------------------- */
+.ct-card__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* optional leading prompt glyph for the title */
+.ct-card__title--prompt::before {
+  content: "› ";
+  color: var(--_accent);
+  opacity: .8;
+}
+
+/* ---- chrome actions (right-aligned icon buttons) ------------------------- */
+.ct-card__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.ct-card__actions > * { flex-shrink: 0; }
+
+/* ---- body & footer ------------------------------------------------------- */
+.ct-card__body {
+  position: relative;
+  flex: 1 1 auto;
+  padding: var(--card-pad);
+}
+/* tighter body when content is dense */
+.ct-card__body--tight { padding: var(--space-4); }
+
+.ct-card__footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--card-pad);
+  border-top: var(--border-1) solid var(--color-divider);
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}
+
+/* ---- optional decorative scanline inside the body ------------------------ */
+/* A single faint horizontal neon sweep line; purely cosmetic, no pointer hit. */
+.ct-card__scanline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(var(--rgb-cyan) / .45) 50%,
+    transparent 100%);
+  opacity: .6;
+}
+
+/* ---- VARIANT: --glow (stronger neon border + ambient halo) --------------- */
+.ct-card--glow {
+  --_card-border: var(--color-border-strong);
+  --_card-shadow: var(--shadow-glow-lg);
+}
+.ct-card--glow .ct-card__chrome {
+  --_chrome-line: var(--color-border-strong);
+}
+
+/* ---- VARIANT: --accent (magenta chrome + magenta border) ----------------- */
+.ct-card--accent {
+  --_card-border: var(--color-accent);
+  --_card-shadow: var(--shadow-glow-magenta);
+  --_accent:      var(--color-accent);
+  --_chrome-line: rgba(var(--rgb-magenta) / .4);
+}
+.ct-card--accent .ct-card__title { color: var(--color-accent-bright); }
+
+/* ---- VARIANT: --flat (no chrome bar, plain bordered panel) --------------- */
+/* When --flat is used, omit the chrome markup; this just neutralizes shadow. */
+.ct-card--flat {
+  --_card-shadow: var(--shadow-1);
+}
+.ct-card--flat > .ct-card__chrome { display: none; }
+
+/* ---- VARIANT: --clip (notched corner via base utility or local clip) ------ */
+.ct-card--clip {
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--corner-cut)) 0,
+    100% var(--corner-cut),
+    100% 100%,
+    var(--corner-cut) 100%,
+    0 calc(100% - var(--corner-cut))
+  );
+}
+
+/* ---- VARIANT: --ghost (transparent body, dashed neon border) ------------- */
+.ct-card--ghost {
+  --_card-bg: transparent;
+  --_card-border: var(--color-border);
+  --_card-shadow: none;
+  border-style: dashed;
+}
+.ct-card--ghost .ct-card__chrome { background: rgba(var(--rgb-cyan) / .04); }
+
+/* ---- INTERACTIVE: --link / .is-interactive (hover lift + brighter glow) --- */
+.ct-card--link,
+.ct-card.is-interactive {
+  cursor: pointer;
+}
+.ct-card--link:hover,
+.ct-card.is-interactive:hover,
+.ct-card--link:focus-within,
+.ct-card.is-interactive:focus-within {
+  transform: translateY(-3px);
+  --_card-border: var(--color-border-strong);
+  --_card-shadow: var(--shadow-glow-lg);
+}
+/* accent/magenta interactive cards lift with a magenta halo to match */
+.ct-card--accent.ct-card--link:hover,
+.ct-card--accent.is-interactive:hover {
+  --_card-shadow: var(--shadow-glow-magenta), 0 18px 50px rgba(0 0 0 / .6);
+}
+
+
+/* ============================================================================
+   2. STAT — HUD WIDGET
+   ----------------------------------------------------------------------------
+   A telemetry tile: big neon value, trend delta pill, sparkline slot, HUD icon.
+   Corner brackets give the "targeting reticle" HUD feel (replicated locally so
+   the component is self-sufficient even without base's .hud).
+   Structure:
+     .ct-stat
+       .ct-stat__icon     (top-right slot)
+       .ct-stat__label
+       .ct-stat__value (+ .ct-stat__unit) (+ .ct-stat__delta)
+       .ct-stat__spark    (inline SVG sparkline)
+   Variants: --success --warning --danger --accent  ·  .ct-stat--float (hover)
+   ============================================================================ */
+.ct-stat {
+  --_tint:  var(--color-primary);                  /* rail + value glow color */
+  --_glow:  var(--glow-primary);
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-5) var(--space-5) var(--space-5) var(--space-6);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: var(--border-1) solid var(--color-border);
+  /* signature left rail in the tint color */
+  border-left: var(--border-thick) solid var(--_tint);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow-glow-sm);
+  transition: transform var(--duration-base) var(--ease-out),
+              box-shadow var(--duration-base) var(--ease-standard),
+              border-color var(--duration-fast) var(--ease-standard);
+}
+
+/* HUD corner brackets (top-left + bottom-right L-ticks, decorative) */
+.ct-stat::before,
+.ct-stat::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: var(--border-2) solid var(--_tint);
+  pointer-events: none;
+  opacity: .8;
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--_tint) 55%, transparent));
+}
+.ct-stat::before { top: -1px;    left: -1px;  border-right: none; border-bottom: none; }
+.ct-stat::after  { bottom: -1px; right: -1px; border-left: none;  border-top: none; }
+
+/* ---- label (uppercase subtle) -------------------------------------------- */
+.ct-stat__label {
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--color-text-subtle);
+  font-weight: var(--weight-medium);
+}
+
+/* ---- value row (big display number + unit + delta inline) ---------------- */
+.ct-stat__value {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  line-height: var(--leading-none);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  /* solid bright tint carries legibility; text-shadow is the neon decoration */
+  color: var(--_tint);
+  text-shadow: var(--_glow);
+}
+.ct-stat__unit {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-normal);
+  color: var(--color-text-muted);
+  text-shadow: none;
+}
+
+/* ---- delta trend pill ----------------------------------------------------- */
+/* Sign + arrow glyph baked in via modifiers; color reinforces direction.     */
+.ct-stat__delta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  align-self: center;
+  padding: 2px var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  letter-spacing: var(--tracking-wide);
+  border: var(--border-1) solid currentColor;
+  border-radius: var(--badge-radius);
+  /* default = flat / neutral */
+  color: var(--color-text-muted);
+  background: rgba(var(--rgb-white) / .04);
+}
+.ct-stat__delta::before {
+  content: "◆";                                    /* flat default */
+  font-size: .85em;
+}
+.ct-stat__delta--up {
+  color: var(--color-success-text);
+  background: var(--color-success-weak);
+}
+.ct-stat__delta--up::before { content: "▲"; }
+.ct-stat__delta--down {
+  color: var(--color-danger-text);
+  background: var(--color-danger-weak);
+}
+.ct-stat__delta--down::before { content: "▼"; }
+.ct-stat__delta--flat {
+  color: var(--color-text-muted);
+  background: rgba(var(--rgb-white) / .04);
+}
+.ct-stat__delta--flat::before { content: "◆"; }
+
+/* ---- sparkline slot (host an inline <svg>) -------------------------------- */
+/* Sizes the container + biases inline SVG strokes toward neon without forcing */
+/* it (consumer SVG can override). currentColor inherits the tint.            */
+.ct-stat__spark {
+  margin-top: var(--space-1);
+  width: 100%;
+  height: 36px;
+  color: var(--_tint);
+}
+.ct-stat__spark svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  display: block;
+}
+.ct-stat__spark svg :where(path, polyline, line) {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 3px color-mix(in srgb, currentColor 55%, transparent));
+}
+.ct-stat__spark svg :where(circle, rect.fill) { fill: currentColor; stroke: none; }
+
+/* ---- HUD icon slot (top-right) ------------------------------------------- */
+.ct-stat__icon {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4em;
+  height: 1.4em;
+  color: var(--_tint);
+  opacity: .7;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--_tint) 50%, transparent));
+}
+.ct-stat__icon svg { width: 100%; height: 100%; }
+
+/* ---- VARIANTS: status tints (retint rail + brackets + value glow) -------- */
+.ct-stat--success { --_tint: var(--color-success-text); --_glow: var(--glow-green); }
+.ct-stat--warning { --_tint: var(--color-warning-text); --_glow: var(--glow-amber); }
+.ct-stat--danger  { --_tint: var(--color-danger-text);  --_glow: var(--glow-red); }
+.ct-stat--accent  { --_tint: var(--color-accent);       --_glow: var(--glow-accent); }
+
+/* ---- optional gentle HUD float on hover ---------------------------------- */
+.ct-stat--float:hover { animation: ct-float 3.2s var(--ease-in-out) infinite; }
+.ct-stat.is-interactive {
+  cursor: pointer;
+}
+.ct-stat.is-interactive:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-glow-md);
+}
+
+
+/* ============================================================================
+   3. KANBAN CARD
+   ----------------------------------------------------------------------------
+   A compact, draggable task card with a priority rail, mini tags, a clamped
+   description, and a meta footer (task id ⟷ assignee avatar).
+   Structure:
+     .ct-kanban-card                  (+ --high | --med | --low)
+       .ct-kanban-card__tags > .ct-kanban-card__tag
+       .ct-kanban-card__title
+       .ct-kanban-card__desc          (2-line clamp)
+       .ct-kanban-card__meta
+         .ct-kanban-card__id
+         .ct-kanban-card__avatar
+   States: hover lift · .is-dragging
+   ============================================================================ */
+.ct-kanban-card {
+  --_prio: var(--color-primary);                   /* priority rail color */
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: var(--border-1) solid var(--color-border);
+  border-left: var(--border-thick) solid var(--_prio);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow-1);
+  cursor: grab;
+  transition: transform var(--duration-base) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-base) var(--ease-standard);
+}
+.ct-kanban-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-glow-sm);
+}
+
+/* ---- priority rail color modifiers --------------------------------------- */
+.ct-kanban-card--high { --_prio: var(--color-danger); }   /* red    */
+.ct-kanban-card--med  { --_prio: var(--color-warning); }  /* amber  */
+.ct-kanban-card--low  { --_prio: var(--color-primary); }  /* cyan   */
+
+/* (back-compat aliases for the documented --priority hook) */
+.ct-kanban-card__priority { /* marker class — rail handled by host modifier */ }
+
+/* ---- mini tags row ------------------------------------------------------- */
+.ct-kanban-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.ct-kanban-card__tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-primary-bright);
+  background: var(--color-primary-weak);
+  border: var(--border-1) solid rgba(var(--rgb-cyan) / .28);
+  border-radius: var(--badge-radius);
+  white-space: nowrap;
+}
+/* tag accent variant */
+.ct-kanban-card__tag--accent {
+  color: var(--color-accent-bright);
+  background: var(--color-accent-weak);
+  border-color: rgba(var(--rgb-magenta) / .3);
+}
+
+/* ---- title --------------------------------------------------------------- */
+.ct-kanban-card__title {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text);
+}
+
+/* ---- description (clamped to 2 lines) ------------------------------------ */
+.ct-kanban-card__desc {
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  color: var(--color-text-muted);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+/* ---- meta footer (id ⟷ avatar) ------------------------------------------ */
+.ct-kanban-card__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: var(--border-1) solid var(--color-divider);
+}
+.ct-kanban-card__id {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--color-text-subtle);
+}
+.ct-kanban-card__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-on-neon);
+  background: var(--color-primary-dim);
+  border: var(--border-1) solid var(--color-border-strong);
+  border-radius: var(--radius-full);              /* avatars are the rare round shape */
+  overflow: hidden;
+}
+.ct-kanban-card__avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ---- dragging affordance -------------------------------------------------- */
+.ct-kanban-card:active { cursor: grabbing; }
+.ct-kanban-card.is-dragging {
+  cursor: grabbing;
+  opacity: .65;
+  transform: rotate(-1.2deg) scale(1.01);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-glow-md);
+  /* neon outline + lift the card off the column */
+  outline: var(--border-1) dashed rgba(var(--rgb-cyan) / .6);
+  outline-offset: 2px;
+}
+
+
+/* ============================================================================
+   4. EMPTY — TERMINAL-ERROR EMPTY STATE
+   ----------------------------------------------------------------------------
+   Center-aligned, generously padded "no data" panel with terminal-error flavor.
+   Structure:
+     .ct-empty                        (+ --danger | --search)
+       .ct-empty__art       (ASCII art block / big glyph, subtle neon)
+       .ct-empty__code      ("ERR::NO_DATA")
+       .ct-empty__title
+       .ct-empty__desc
+       .ct-empty__action    (button slot)
+   Legibility is fully static — no animation is required to read it.
+   ============================================================================ */
+.ct-empty {
+  --_tint: var(--color-primary);
+  --_glow: var(--glow-primary);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--space-3);
+  padding: var(--space-11) var(--space-6);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: var(--border-1) dashed var(--color-border);
+  border-radius: var(--card-radius);
+}
+
+/* ---- ASCII art / glyph block (subtle neon, decorative) ------------------- */
+.ct-empty__art {
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-normal);
+  white-space: pre;                                /* preserve ASCII alignment */
+  color: var(--_tint);
+  text-shadow: var(--_glow);
+  opacity: .85;
+  margin-bottom: var(--space-1);
+}
+/* single big glyph variant */
+.ct-empty__art--glyph { font-size: var(--text-5xl); line-height: 1; }
+
+/* ---- error code chip ("ERR::NO_DATA") ------------------------------------ */
+.ct-empty__code {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--_tint);
+  padding: 2px var(--space-2);
+  border: var(--border-1) solid currentColor;
+  border-radius: var(--badge-radius);
+}
+
+/* ---- title & description ------------------------------------------------- */
+.ct-empty__title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text);
+  text-wrap: balance;
+}
+.ct-empty__desc {
+  max-width: 46ch;
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-muted);
+  text-wrap: balance;
+}
+
+/* ---- action slot (host a .ct-btn) ---------------------------------------- */
+.ct-empty__action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* ---- VARIANT: --danger (red error flavor) -------------------------------- */
+.ct-empty--danger {
+  --_tint: var(--color-danger-text);
+  --_glow: var(--glow-red);
+  border-color: rgba(var(--rgb-red) / .35);
+}
+
+/* ---- VARIANT: --search (no results — magenta/muted, softer) -------------- */
+.ct-empty--search {
+  --_tint: var(--color-accent);
+  --_glow: var(--glow-accent);
+  border-color: rgba(var(--rgb-magenta) / .3);
+}
+
+
+/* ============================================================================
+   RESPONSIVE — collapse paddings & shrink HUD numerals on small terminals
+   ============================================================================ */
+@media (max-width: 768px) {
+  .ct-card { --card-pad: var(--space-4); }
+  .ct-stat__value { font-size: var(--text-2xl); }
+  .ct-empty { padding: var(--space-9) var(--space-4); }
+  .ct-empty__art--glyph { font-size: var(--text-4xl); }
+}
+
+/* ============================================================================
+   REDUCED MOTION — base.css freezes keyframes globally; we additionally pin
+   transform-based lifts so nothing slides for vestibular-sensitive users.
+   ============================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .ct-card--link:hover,
+  .ct-card.is-interactive:hover,
+  .ct-card--link:focus-within,
+  .ct-card.is-interactive:focus-within,
+  .ct-stat.is-interactive:hover,
+  .ct-kanban-card:hover {
+    transform: none;
+  }
+  .ct-stat--float:hover { animation: none; }
+  .ct-kanban-card.is-dragging { transform: none; }   /* keep drag legible, no tilt */
+}

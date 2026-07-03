@@ -1,0 +1,1440 @@
+/* ============================================================================
+   THEME 07 — CYBERPUNK TERMINAL · components/forms.css
+   ----------------------------------------------------------------------------
+   Command-line form surface. Every control reads like a live terminal field:
+   monospace ink, hard right-angle corners (radius 0), uppercase tracked labels,
+   a neon caret/prompt, and glow that is DECORATION ONLY — legibility is always
+   carried by solid --color-text + >=4.5:1 contrast.
+
+   Patterns inherited from button.css (the canonical reference):
+     · BEM-ish naming:  .ct-<name> · .ct-<name>__<part> · .ct-<name>--<variant>
+     · state hooks:     .is-* · native :disabled / :checked / [aria-invalid]
+     · local custom-props (--_bg / --_bd / --_fg) for compact variant switching
+     · neon focus ring  box-shadow: var(--focus-ring)  on CUSTOM controls
+     · reduced-motion + native :focus-visible ring supplied globally by base.css
+
+   ACCESSIBILITY CONTRACT
+     · never color-alone — every status pairs with an icon/label/glyph
+     · invalid  = red border + red glow + danger hint  (.is-invalid / [aria-invalid="true"])
+     · disabled = dimmed, not-allowed, no glow
+     · hidden native inputs stay in the DOM & focusable:
+         appearance:none  (checkbox/radio/range/select)  OR
+         position:absolute; opacity:0  (switch/file/segmented) — never display:none
+       …so the visual sibling can mirror :checked / :focus-visible.
+
+   COMPONENT INDEX
+     01  field scaffold  .ct-field / .ct-form-row / .ct-form-actions
+     02  text input      .ct-input  (+ wrap / group / addon)
+     03  textarea        .ct-textarea
+     04  select          .ct-select
+     05  multiselect     .ct-multiselect
+     06  combobox        .ct-combobox
+     07  checkbox        .ct-checkbox
+     08  radio           .ct-radio
+     09  switch          .ct-switch
+     10  segmented       .ct-segmented
+     11  slider          .ct-slider
+     12  stepper         .ct-stepper
+     13  datepicker      .ct-datepicker
+     14  fileupload      .ct-fileupload
+     15  searchbar       .ct-searchbar
+     16  rating          .ct-rating
+     17  chipinput       .ct-chipinput
+   ============================================================================ */
+
+
+/* ============================================================================
+   01 · FIELD SCAFFOLD
+   The shared wrapper that gives every control its label / hint / error stack.
+   ============================================================================ */
+.ct-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;                       /* allow shrink inside grids */
+}
+
+/* uppercase tracked terminal label — the signature form caption */
+.ct-field__label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--color-text-muted);
+  line-height: var(--leading-tight);
+}
+
+/* required marker — accent magenta asterisk, announced as decorative */
+.ct-field__req {
+  color: var(--color-accent);
+  text-shadow: var(--glow-accent);
+  font-weight: var(--weight-bold);
+}
+
+/* supporting copy below the control — subtle, never load-bearing */
+.ct-field__hint {
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+  line-height: var(--leading-snug);
+}
+
+/* validation message — danger text, leading "!" injected so the meaning
+   never relies on color alone */
+.ct-field__error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-danger-text);
+  line-height: var(--leading-snug);
+}
+.ct-field__error::before {
+  content: "!";
+  flex-shrink: 0;
+  font-weight: var(--weight-bold);
+  color: var(--color-danger);
+  text-shadow: var(--glow-red);
+}
+
+/* horizontal field — label sits to the left of the control */
+.ct-field--row {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-4);
+}
+.ct-field--row .ct-field__label { flex: 0 0 auto; }
+
+/* responsive grid of fields */
+.ct-form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-5);
+}
+.ct-form-row--2 { grid-template-columns: repeat(2, 1fr); }
+.ct-form-row--3 { grid-template-columns: repeat(3, 1fr); }
+
+/* right-aligned button row that closes a form */
+.ct-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: var(--border-1) dashed var(--color-divider);
+}
+.ct-form-actions--split { justify-content: space-between; }
+
+@media (max-width: 768px) {
+  .ct-form-row,
+  .ct-form-row--2,
+  .ct-form-row--3 { grid-template-columns: 1fr; }
+  .ct-field--row { flex-direction: column; align-items: stretch; gap: var(--space-2); }
+}
+
+
+/* ============================================================================
+   SHARED CONTROL SURFACE
+   Single source of truth for the "command-line box" used by input / textarea /
+   select / token boxes. Local props let each control retune border + glow per
+   state without re-declaring the box.
+   ============================================================================ */
+.ct-input,
+.ct-textarea,
+.ct-select,
+.ct-multiselect,
+.ct-chipinput {
+  --_bd: var(--input-border);
+  --_glow: none;
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--input-fg);
+  background: var(--input-bg);
+  border: var(--border-1) solid var(--_bd);
+  border-radius: var(--input-radius);     /* hard corner */
+  box-shadow: var(--_glow);
+  caret-color: var(--input-caret);        /* neon blinking caret */
+  transition: border-color var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-fast) var(--ease-standard),
+              background var(--duration-fast) var(--ease-standard);
+}
+.ct-input::placeholder,
+.ct-textarea::placeholder {
+  color: var(--input-placeholder);
+  opacity: 1;
+}
+
+
+/* ============================================================================
+   02 · TEXT INPUT  .ct-input
+   The command line. Sizes sm/lg, a >_ prompt variant, addon groups.
+   ============================================================================ */
+.ct-input {
+  display: block;
+  padding: var(--input-pad-y) var(--input-pad-x);
+  min-height: 38px;
+  appearance: none;
+}
+
+/* hover = border warms toward neon */
+.ct-input:hover:not(:disabled):not(.is-invalid):not([aria-invalid="true"]) {
+  --_bd: var(--input-border-hover);
+}
+
+/* focus = full neon border + soft glow; caret already neon */
+.ct-input:focus,
+.ct-input:focus-visible {
+  outline: none;
+  --_bd: var(--color-border-glow);
+  --_glow: var(--shadow-glow-sm);
+}
+
+/* sizes */
+.ct-input--sm { padding: var(--space-1) var(--space-2); min-height: 30px; font-size: var(--text-2xs); }
+.ct-input--lg { padding: var(--space-3) var(--space-4); min-height: 48px; font-size: var(--text-base); }
+
+/* ---- >_ PROMPT VARIANT --------------------------------------------------- */
+/* Wrap the input in .ct-input-wrap and add --prompt to flush-mount a neon ">"
+   glyph. The wrapper owns the box so the prompt aligns inside the border. */
+.ct-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+}
+.ct-input-wrap .ct-input { width: 100%; }
+
+.ct-input--prompt { padding-left: calc(var(--input-pad-x) + 1.4em); }
+.ct-input-wrap--prompt::before {
+  content: ">";
+  position: absolute;
+  left: var(--input-pad-x);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--input-prompt);
+  text-shadow: var(--glow-primary);
+  font-weight: var(--weight-bold);
+  pointer-events: none;
+  z-index: 1;
+}
+/* blinking block caret rendered after the prompt when the field is focused */
+.ct-input-wrap--prompt:focus-within::before { animation: ct-cursor-blink 1.06s steps(1) infinite; }
+
+/* ---- ADDON GROUP --------------------------------------------------------- */
+/* prefix / suffix chips bolted onto the input, sharing one neon outline */
+.ct-input-group {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  border: var(--border-1) solid var(--input-border);
+  background: var(--input-bg);
+  transition: border-color var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-fast) var(--ease-standard);
+}
+.ct-input-group:focus-within {
+  border-color: var(--color-border-glow);
+  box-shadow: var(--shadow-glow-sm);
+}
+.ct-input-group .ct-input {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.ct-input-group .ct-input:focus { box-shadow: none; }
+.ct-input-group__addon {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-inline: var(--input-pad-x);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text-subtle);
+  background: var(--color-surface-2);
+  white-space: nowrap;
+  user-select: none;
+}
+.ct-input-group__addon--prefix { border-right: var(--border-1) solid var(--color-border-muted); }
+.ct-input-group__addon--suffix { border-left:  var(--border-1) solid var(--color-border-muted); }
+.ct-input-group__addon svg { width: 1.05em; height: 1.05em; }
+
+
+/* ============================================================================
+   03 · TEXTAREA  .ct-textarea
+   Same language as the input, vertical resize, generous min-height.
+   ============================================================================ */
+.ct-textarea {
+  display: block;
+  padding: var(--input-pad-y) var(--input-pad-x);
+  min-height: 7.5rem;
+  resize: vertical;
+  field-sizing: content;           /* progressive enhancement where supported */
+}
+.ct-textarea:hover:not(:disabled):not(.is-invalid):not([aria-invalid="true"]) {
+  --_bd: var(--input-border-hover);
+}
+.ct-textarea:focus,
+.ct-textarea:focus-visible {
+  outline: none;
+  --_bd: var(--color-border-glow);
+  --_glow: var(--shadow-glow-sm);
+}
+.ct-textarea--code { tab-size: 2; white-space: pre; overflow-wrap: normal; }
+
+
+/* ============================================================================
+   04 · SELECT  .ct-select
+   Native <select> stripped of chrome, fitted with a custom neon ▾ caret.
+   ============================================================================ */
+.ct-select-wrap {
+  position: relative;
+  display: inline-flex;
+  width: 100%;
+}
+.ct-select {
+  display: block;
+  appearance: none;
+  -webkit-appearance: none;
+  padding: var(--input-pad-y) calc(var(--input-pad-x) + 1.6em) var(--input-pad-y) var(--input-pad-x);
+  min-height: 38px;
+  cursor: pointer;
+  text-transform: none;
+}
+.ct-select::-ms-expand { display: none; }
+.ct-select:hover:not(:disabled):not(.is-invalid):not([aria-invalid="true"]) {
+  --_bd: var(--input-border-hover);
+}
+.ct-select:focus,
+.ct-select:focus-visible {
+  outline: none;
+  --_bd: var(--color-border-glow);
+  --_glow: var(--shadow-glow-sm);
+}
+/* custom caret — drawn on the wrapper so it survives appearance:none */
+.ct-select-wrap::after {
+  content: "▾";
+  position: absolute;
+  right: var(--input-pad-x);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-primary);
+  text-shadow: var(--glow-primary);
+  font-size: var(--text-sm);
+  pointer-events: none;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+.ct-select-wrap:focus-within::after { color: var(--color-primary-bright); }
+/* dark dropdown options where the UA honors it */
+.ct-select option { background: var(--color-surface-2); color: var(--color-text); }
+.ct-select option:disabled { color: var(--color-text-subtle); }
+.ct-select--sm { padding-block: var(--space-1); min-height: 30px; font-size: var(--text-2xs); }
+.ct-select--lg { padding-block: var(--space-3); min-height: 48px; font-size: var(--text-base); }
+
+
+/* ============================================================================
+   05 · MULTISELECT  .ct-multiselect
+   A token box: selected values render as removable chips, an inline input
+   trails them. Glows on focus-within.
+   ============================================================================ */
+.ct-multiselect {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  min-height: 38px;
+  cursor: text;
+}
+.ct-multiselect:hover:not(.is-invalid):not([aria-invalid="true"]) { --_bd: var(--input-border-hover); }
+.ct-multiselect:focus-within {
+  --_bd: var(--color-border-glow);
+  --_glow: var(--shadow-glow-sm);
+}
+/* selected value chip — neon outline + glyph × remove */
+.ct-multiselect__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-primary-bright);
+  background: var(--color-primary-weak);
+  border: var(--border-1) solid var(--color-border-strong);
+  border-radius: var(--radius-0);
+  white-space: nowrap;
+}
+.ct-multiselect__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1em;
+  height: 1.1em;
+  padding: 0;
+  font-size: 1em;
+  line-height: 1;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  opacity: .8;
+  transition: opacity var(--duration-instant) var(--ease-standard),
+              color var(--duration-instant) var(--ease-standard);
+}
+.ct-multiselect__remove::before { content: "\00d7"; }   /* × */
+.ct-multiselect__remove:hover { opacity: 1; color: var(--color-accent); }
+.ct-multiselect__remove:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+/* the inline text field — borderless, grows to fill */
+.ct-multiselect__input {
+  flex: 1 1 60px;
+  min-width: 60px;
+  padding: var(--space-1) 0;
+  font: inherit;
+  color: var(--input-fg);
+  background: transparent;
+  border: none;
+  outline: none;
+  caret-color: var(--input-caret);
+}
+.ct-multiselect__input::placeholder { color: var(--input-placeholder); }
+
+
+/* ============================================================================
+   06 · COMBOBOX / AUTOCOMPLETE  .ct-combobox
+   An input with an absolutely-positioned terminal dropdown panel.
+   ============================================================================ */
+.ct-combobox {
+  position: relative;
+  width: 100%;
+}
+.ct-combobox__input { /* inherits .ct-input styling when both classes applied */ }
+
+/* the suggestion panel — terminal popover, neon border, md glow */
+.ct-combobox__list {
+  position: absolute;
+  z-index: var(--z-dropdown);
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 16rem;
+  overflow-y: auto;
+  padding: var(--space-1);
+  background: var(--color-surface-2);
+  border: var(--border-1) solid var(--color-border-strong);
+  border-radius: var(--radius-0);
+  box-shadow: var(--shadow-glow-md);
+}
+.ct-combobox__list[hidden] { display: none; }
+
+.ct-combobox__option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  position: relative;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background var(--duration-instant) var(--ease-standard),
+              color var(--duration-instant) var(--ease-standard);
+}
+.ct-combobox__option:hover {
+  background: var(--color-surface-3);
+  color: var(--color-text);
+}
+/* active / selected row — neon-weak fill + a neon left tick */
+.ct-combobox__option.is-active,
+.ct-combobox__option[aria-selected="true"] {
+  background: var(--color-primary-weak);
+  color: var(--color-primary-bright);
+  text-shadow: var(--glow-primary);
+}
+.ct-combobox__option.is-active::before,
+.ct-combobox__option[aria-selected="true"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: var(--space-1);
+  bottom: var(--space-1);
+  width: 2px;
+  background: var(--color-primary);
+  box-shadow: var(--glow-primary);
+}
+/* match-highlight inside an option label */
+.ct-combobox__match { color: var(--color-accent-bright); font-weight: var(--weight-bold); }
+/* empty state row */
+.ct-combobox__empty {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+.ct-combobox__empty::before { content: ":: "; color: var(--color-text-subtle); }
+
+
+/* ============================================================================
+   07 · CHECKBOX  .ct-checkbox
+   Hard square box, neon ✓ on check. Native input kept (appearance:none) so it
+   stays focusable and form-bound; the box IS the input.
+   ============================================================================ */
+.ct-checkbox {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  cursor: pointer;
+  user-select: none;
+  line-height: var(--leading-snug);
+}
+.ct-checkbox__box {
+  position: relative;
+  flex-shrink: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.15em;
+  height: 1.15em;
+  margin: 0;
+  margin-top: 0.12em;
+  background: var(--input-bg);
+  border: var(--border-1) solid var(--color-border-strong);
+  border-radius: var(--radius-0);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-standard),
+              border-color var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-fast) var(--ease-standard);
+}
+.ct-checkbox__box:hover { border-color: var(--color-primary); }
+/* the neon ✓ — drawn as a rotated double border, scales in on check */
+.ct-checkbox__box::after {
+  content: "";
+  position: absolute;
+  left: 32%;
+  top: 12%;
+  width: 28%;
+  height: 58%;
+  border: solid var(--color-primary-fg);
+  border-width: 0 var(--border-2) var(--border-2) 0;
+  transform: rotate(45deg) scale(0);
+  transform-origin: center;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+.ct-checkbox__box:checked {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  box-shadow: var(--glow-primary);
+}
+.ct-checkbox__box:checked::after { transform: rotate(45deg) scale(1); }
+/* indeterminate — neon bar */
+.ct-checkbox__box:indeterminate {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+.ct-checkbox__box:indeterminate::after {
+  left: 22%; top: 44%; width: 56%; height: 0;
+  border-width: var(--border-2) 0 0 0;
+  transform: none;
+}
+/* explicit neon focus ring on the box (custom control requirement) */
+.ct-checkbox__box:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.ct-checkbox__label { color: var(--color-text); font-size: var(--text-sm); }
+.ct-checkbox--sm { font-size: var(--text-2xs); }
+.ct-checkbox--sm .ct-checkbox__box { width: 1em; height: 1em; }
+/* disabled */
+.ct-checkbox:has(:disabled),
+.ct-checkbox__box:disabled {
+  cursor: not-allowed;
+}
+.ct-checkbox__box:disabled {
+  opacity: .5;
+  border-color: var(--color-border-muted);
+  box-shadow: none;
+}
+.ct-checkbox:has(:disabled) .ct-checkbox__label { color: var(--color-text-subtle); }
+/* invalid */
+.ct-checkbox__box[aria-invalid="true"],
+.ct-checkbox.is-invalid .ct-checkbox__box { border-color: var(--color-danger); box-shadow: var(--glow-red); }
+
+
+/* ============================================================================
+   08 · RADIO  .ct-radio
+   A terminal radio reads better as a square box with a small filled neon
+   square inside (not a soft circle). Single-select group semantics native.
+   ============================================================================ */
+.ct-radio {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  cursor: pointer;
+  user-select: none;
+  line-height: var(--leading-snug);
+}
+.ct-radio__box {
+  position: relative;
+  flex-shrink: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.15em;
+  height: 1.15em;
+  margin: 0;
+  margin-top: 0.12em;
+  background: var(--input-bg);
+  border: var(--border-1) solid var(--color-border-strong);
+  border-radius: var(--radius-0);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-fast) var(--ease-standard);
+}
+.ct-radio__box:hover { border-color: var(--color-primary); }
+/* inner filled neon square — the terminal "selected" pip */
+.ct-radio__box::after {
+  content: "";
+  position: absolute;
+  inset: 26%;
+  background: var(--color-primary);
+  box-shadow: var(--glow-primary);
+  transform: scale(0);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+.ct-radio__box:checked {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-glow-sm);
+}
+.ct-radio__box:checked::after { transform: scale(1); }
+.ct-radio__box:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.ct-radio__label { color: var(--color-text); font-size: var(--text-sm); }
+/* diamond modifier — rotate the box 45deg for a HUD pip look */
+.ct-radio--diamond .ct-radio__box { transform: rotate(45deg); margin-top: 0.25em; }
+.ct-radio--diamond .ct-radio__box::after { inset: 24%; }
+/* disabled */
+.ct-radio:has(:disabled) { cursor: not-allowed; }
+.ct-radio__box:disabled { opacity: .5; border-color: var(--color-border-muted); box-shadow: none; }
+.ct-radio:has(:disabled) .ct-radio__label { color: var(--color-text-subtle); }
+/* invalid */
+.ct-radio__box[aria-invalid="true"],
+.ct-radio.is-invalid .ct-radio__box { border-color: var(--color-danger); box-shadow: var(--glow-red); }
+
+
+/* ============================================================================
+   09 · SWITCH / TOGGLE  .ct-switch
+   Rectangular terminal toggle. Track shows 0/1 (OFF/ON), knob slides, checked
+   lights the track neon. Native checkbox hidden but focusable underneath.
+   ============================================================================ */
+.ct-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  user-select: none;
+}
+/* native input stays in DOM & focusable — NOT display:none */
+.ct-switch__input {
+  position: absolute;
+  width: 1px; height: 1px;
+  opacity: 0;
+  margin: 0;
+  pointer-events: none;
+}
+/* visual track */
+.ct-switch__track {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: 3.4em;
+  height: 1.55em;
+  padding: 2px;
+  background: var(--color-surface-2);
+  border: var(--border-1) solid var(--color-border-strong);
+  border-radius: var(--radius-0);     /* rectangular = terminal */
+  transition: background var(--duration-base) var(--ease-standard),
+              border-color var(--duration-base) var(--ease-standard),
+              box-shadow var(--duration-base) var(--ease-standard);
+}
+/* 0 / 1 glyphs printed on each side of the track */
+.ct-switch__track::before,
+.ct-switch__track::after {
+  position: absolute;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wide);
+  pointer-events: none;
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+.ct-switch__track::before {                 /* ON marker (left, lit when checked) */
+  content: "1";
+  left: .5em;
+  color: var(--color-primary-fg);
+  opacity: 0;
+}
+.ct-switch__track::after {                  /* OFF marker (right, shown when off) */
+  content: "0";
+  right: .5em;
+  color: var(--color-text-subtle);
+  opacity: 1;
+}
+/* sliding neon knob */
+.ct-switch__knob {
+  position: relative;
+  z-index: 1;
+  width: 1.1em;
+  height: 1.1em;
+  background: var(--color-text-muted);
+  border-radius: var(--radius-0);
+  transition: transform var(--duration-base) var(--ease-out),
+              background var(--duration-base) var(--ease-standard),
+              box-shadow var(--duration-base) var(--ease-standard);
+}
+/* CHECKED — neon track + glow, knob slides right and lights up */
+.ct-switch__input:checked + .ct-switch__track {
+  background: var(--color-primary-weak);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-glow-sm);
+}
+.ct-switch__input:checked + .ct-switch__track::before { opacity: 1; }
+.ct-switch__input:checked + .ct-switch__track::after  { opacity: 0; }
+.ct-switch__input:checked + .ct-switch__track .ct-switch__knob {
+  transform: translateX(1.85em);
+  background: var(--color-primary);
+  box-shadow: var(--glow-primary);
+}
+/* focus ring mirrored onto the visual track (custom control requirement) */
+.ct-switch__input:focus-visible + .ct-switch__track { box-shadow: var(--focus-ring); }
+/* disabled */
+.ct-switch__input:disabled + .ct-switch__track { opacity: .5; cursor: not-allowed; box-shadow: none; }
+.ct-switch:has(:disabled) { cursor: not-allowed; }
+.ct-switch__label { font-size: var(--text-sm); color: var(--color-text); }
+
+
+/* ============================================================================
+   10 · SEGMENTED CONTROL  .ct-segmented
+   A single control split into mutually-exclusive options (one neon active).
+   Hidden radio inputs drive state; labels are the visible segments.
+   ============================================================================ */
+.ct-segmented {
+  display: inline-flex;
+  padding: 2px;
+  background: var(--color-surface-2);
+  border: var(--border-1) solid var(--color-border-strong);
+  border-radius: var(--radius-0);
+}
+.ct-segmented__option {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-4);
+  min-height: 30px;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--duration-fast) var(--ease-standard),
+              background var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-fast) var(--ease-standard);
+}
+.ct-segmented__option:hover { color: var(--color-text); }
+/* the input that backs each segment stays in DOM, hidden visually */
+.ct-segmented__input {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+/* ACTIVE — neon-weak fill + bright neon label.
+   Works whether the active state is on the label (.is-active /
+   [aria-checked]) or driven by the contained checked radio. */
+.ct-segmented__option.is-active,
+.ct-segmented__option[aria-checked="true"],
+.ct-segmented__option:has(.ct-segmented__input:checked) {
+  background: var(--color-primary-weak);
+  color: var(--color-primary-bright);
+  text-shadow: var(--glow-primary);
+  box-shadow: inset 0 0 0 1px var(--color-border-strong);
+}
+/* focus ring surfaced onto the segment when its radio is focused */
+.ct-segmented__option:has(.ct-segmented__input:focus-visible) { box-shadow: var(--focus-ring); }
+.ct-segmented__option:has(.ct-segmented__input:disabled) {
+  color: var(--color-text-subtle);
+  cursor: not-allowed;
+  opacity: .6;
+}
+.ct-segmented--block { display: flex; width: 100%; }
+.ct-segmented--block .ct-segmented__option { flex: 1 1 0; }
+
+
+/* ============================================================================
+   11 · SLIDER  .ct-slider
+   Range input with a neon fill, a glowing square thumb, focus glow. Styled for
+   both -webkit-slider-thumb and -moz-range-thumb.
+   ============================================================================ */
+.ct-slider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  /* --_fill is set inline by JS as a 0–100% value to colour the played track */
+  --_fill: 50%;
+}
+.ct-slider__input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 1.4em;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+/* ---- track (WebKit) — neon fill left of thumb via gradient stop ---------- */
+.ct-slider__input::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: var(--radius-0);
+  background:
+    linear-gradient(var(--color-primary), var(--color-primary)) 0 / var(--_fill) 100% no-repeat,
+    var(--color-surface-3);
+  box-shadow: inset 0 0 0 1px var(--color-border-muted);
+}
+.ct-slider__input::-moz-range-track {
+  height: 4px;
+  border-radius: var(--radius-0);
+  background: var(--color-surface-3);
+  box-shadow: inset 0 0 0 1px var(--color-border-muted);
+}
+.ct-slider__input::-moz-range-progress {
+  height: 4px;
+  background: var(--color-primary);
+  box-shadow: var(--glow-primary);
+}
+/* ---- thumb — glowing square ---------------------------------------------- */
+.ct-slider__input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;                 /* centre on the 4px track */
+  background: var(--color-primary);
+  border: var(--border-1) solid var(--color-primary-bright);
+  border-radius: var(--radius-0);   /* square thumb */
+  box-shadow: var(--glow-primary);
+  transition: box-shadow var(--duration-fast) var(--ease-standard),
+              transform var(--duration-instant) var(--ease-standard);
+}
+.ct-slider__input::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--color-primary);
+  border: var(--border-1) solid var(--color-primary-bright);
+  border-radius: var(--radius-0);
+  box-shadow: var(--glow-primary);
+}
+.ct-slider__input:hover::-webkit-slider-thumb { transform: scale(1.1); }
+.ct-slider__input:hover::-moz-range-thumb { transform: scale(1.1); }
+/* focus — stronger glow on the thumb (explicit, custom control) */
+.ct-slider__input:focus-visible { outline: none; }
+.ct-slider__input:focus-visible::-webkit-slider-thumb { box-shadow: var(--focus-ring); }
+.ct-slider__input:focus-visible::-moz-range-thumb { box-shadow: var(--focus-ring); }
+/* disabled */
+.ct-slider__input:disabled { cursor: not-allowed; opacity: .5; }
+.ct-slider__input:disabled::-webkit-slider-thumb { box-shadow: none; background: var(--color-text-subtle); }
+.ct-slider__input:disabled::-moz-range-thumb { box-shadow: none; background: var(--color-text-subtle); }
+/* optional value readout bubble */
+.ct-slider__value {
+  flex-shrink: 0;
+  min-width: 3.5ch;
+  margin-left: var(--space-3);
+  padding: 2px var(--space-2);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  text-align: center;
+  color: var(--color-primary-bright);
+  background: var(--color-primary-weak);
+  border: var(--border-1) solid var(--color-border-strong);
+}
+
+
+/* ============================================================================
+   12 · STEPPER  .ct-stepper
+   [−] value [+] — terminal buttons flanking a centred numeric input.
+   ============================================================================ */
+.ct-stepper {
+  display: inline-flex;
+  align-items: stretch;
+  border: var(--border-1) solid var(--input-border);
+  background: var(--input-bg);
+  transition: border-color var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-fast) var(--ease-standard);
+}
+.ct-stepper:focus-within {
+  border-color: var(--color-border-glow);
+  box-shadow: var(--shadow-glow-sm);
+}
+.ct-stepper__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  color: var(--color-primary);
+  background: var(--color-surface-2);
+  border: none;
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--duration-instant) var(--ease-standard),
+              color var(--duration-instant) var(--ease-standard);
+}
+.ct-stepper__btn:hover { background: var(--color-primary-weak); color: var(--color-primary-bright); }
+.ct-stepper__btn:active { background: var(--color-surface-3); }
+.ct-stepper__btn:focus-visible { outline: none; box-shadow: var(--focus-ring); z-index: var(--z-raised); }
+.ct-stepper__btn--dec { border-right: var(--border-1) solid var(--color-border-muted); }
+.ct-stepper__btn--inc { border-left:  var(--border-1) solid var(--color-border-muted); }
+.ct-stepper__btn:disabled { color: var(--color-text-subtle); cursor: not-allowed; background: var(--color-surface-2); }
+/* centred value field — hides the native spin buttons */
+.ct-stepper__value {
+  width: 4ch;
+  padding: var(--space-2) var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  text-align: center;
+  color: var(--input-fg);
+  background: transparent;
+  border: none;
+  outline: none;
+  appearance: textfield;
+  -moz-appearance: textfield;
+  caret-color: var(--input-caret);
+}
+.ct-stepper__value::-webkit-outer-spin-button,
+.ct-stepper__value::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.ct-stepper--sm .ct-stepper__btn { width: 28px; font-size: var(--text-sm); }
+.ct-stepper--sm .ct-stepper__value { padding-block: var(--space-1); font-size: var(--text-2xs); }
+
+
+/* ============================================================================
+   13 · DATEPICKER  .ct-datepicker
+   An input that opens a calendar popover with a 7-col grid.
+   ============================================================================ */
+.ct-datepicker {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+/* the trigger reuses .ct-input; a trailing glyph hints the calendar */
+.ct-datepicker__icon {
+  position: absolute;
+  right: var(--input-pad-x);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-primary);
+  text-shadow: var(--glow-primary);
+  pointer-events: none;
+  font-size: var(--text-sm);
+}
+
+/* ---- popover panel ------------------------------------------------------- */
+.ct-datepicker__pop {
+  position: absolute;
+  z-index: var(--z-popover);
+  top: calc(100% + 4px);
+  left: 0;
+  width: 17.5rem;
+  padding: var(--space-3);
+  background: var(--color-surface-2);
+  border: var(--border-1) solid var(--color-border-strong);
+  border-radius: var(--radius-0);
+  box-shadow: var(--shadow-glow-md);
+}
+.ct-datepicker__pop[hidden] { display: none; }
+
+/* month header with prev/next nav */
+.ct-datepicker__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: var(--border-1) solid var(--color-divider);
+}
+.ct-datepicker__title {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--color-text);
+}
+.ct-datepicker__nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px; height: 26px;
+  color: var(--color-primary);
+  background: var(--color-surface);
+  border: var(--border-1) solid var(--color-border);
+  cursor: pointer;
+  transition: background var(--duration-instant) var(--ease-standard),
+              border-color var(--duration-instant) var(--ease-standard);
+}
+.ct-datepicker__nav:hover { border-color: var(--color-primary); background: var(--color-primary-weak); }
+.ct-datepicker__nav:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* 7-col calendar grid */
+.ct-datepicker__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.ct-datepicker__weekday {
+  padding: var(--space-1) 0;
+  font-size: var(--text-2xs);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text-subtle);
+}
+.ct-datepicker__day {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1 / 1;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  background: transparent;
+  border: var(--border-1) solid transparent;
+  border-radius: var(--radius-0);
+  cursor: pointer;
+  transition: background var(--duration-instant) var(--ease-standard),
+              color var(--duration-instant) var(--ease-standard),
+              border-color var(--duration-instant) var(--ease-standard);
+}
+.ct-datepicker__day:hover { background: var(--color-surface-3); color: var(--color-text); }
+.ct-datepicker__day:focus-visible { outline: none; box-shadow: var(--focus-ring); z-index: var(--z-raised); }
+/* today — neon ring outline (not filled) */
+.ct-datepicker__day.is-today {
+  border-color: var(--color-primary);
+  color: var(--color-primary-bright);
+  box-shadow: inset 0 0 0 1px rgba(var(--rgb-cyan) / .4);
+}
+/* selected — neon fill */
+.ct-datepicker__day.is-selected {
+  background: var(--color-primary);
+  color: var(--color-primary-fg);
+  border-color: var(--color-primary);
+  box-shadow: var(--glow-primary);
+  font-weight: var(--weight-bold);
+}
+/* outside the current month */
+.ct-datepicker__day.is-muted { color: var(--color-text-subtle); opacity: .5; }
+/* unavailable */
+.ct-datepicker__day.is-disabled {
+  color: var(--color-text-subtle);
+  cursor: not-allowed;
+  opacity: .35;
+  text-decoration: line-through;
+}
+.ct-datepicker__day.is-disabled:hover { background: transparent; }
+/* range endpoints / in-range tint */
+.ct-datepicker__day.is-in-range { background: var(--color-primary-weak); color: var(--color-primary-bright); }
+/* footer actions */
+.ct-datepicker__foot {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: var(--border-1) dashed var(--color-divider);
+}
+
+
+/* ============================================================================
+   14 · FILE UPLOAD  .ct-fileupload
+   Dashed-neon dropzone with terminal copy, dragover glow, and a file list.
+   Native <input type=file> kept (opacity:0) so it stays focusable.
+   ============================================================================ */
+.ct-fileupload { display: flex; flex-direction: column; gap: var(--space-3); width: 100%; }
+
+.ct-fileupload__zone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-7) var(--space-5);
+  text-align: center;
+  background: var(--input-bg);
+  border: var(--border-2) dashed var(--color-border-strong);
+  border-radius: var(--radius-0);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-standard),
+              background var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-fast) var(--ease-standard);
+}
+/* native input fills the zone, invisible but focusable & clickable */
+.ct-fileupload__input {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.ct-fileupload__zone:hover { border-color: var(--color-primary); }
+/* keyboard focus surfaced from the hidden input onto the zone */
+.ct-fileupload__zone:has(.ct-fileupload__input:focus-visible) {
+  box-shadow: var(--focus-ring);
+  border-color: var(--color-primary);
+}
+/* DRAGOVER — brighter neon + glow */
+.ct-fileupload__zone.is-dragover {
+  border-color: var(--color-primary-bright);
+  background: var(--color-primary-weak);
+  box-shadow: var(--shadow-glow-md);
+}
+.ct-fileupload__glyph {
+  font-size: var(--text-2xl);
+  color: var(--color-primary);
+  text-shadow: var(--glow-primary);
+  line-height: 1;
+}
+.ct-fileupload__copy {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  color: var(--color-text-muted);
+}
+/* the "[SELECT]" call-to-action token inside the copy */
+.ct-fileupload__cta { color: var(--color-primary-bright); text-shadow: var(--glow-primary); }
+.ct-fileupload__meta { font-size: var(--text-2xs); color: var(--color-text-subtle); }
+.ct-fileupload__zone.is-invalid,
+.ct-fileupload__zone[aria-invalid="true"] { border-color: var(--color-danger); box-shadow: var(--glow-red); }
+
+/* selected file list */
+.ct-fileupload__list { display: flex; flex-direction: column; gap: var(--space-1); }
+.ct-fileupload__file {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-xs);
+  background: var(--color-surface-2);
+  border: var(--border-1) solid var(--color-border-muted);
+  border-left: var(--border-2) solid var(--color-primary);
+}
+.ct-fileupload__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ct-fileupload__size { flex-shrink: 0; color: var(--color-text-subtle); font-variant-numeric: tabular-nums; }
+.ct-fileupload__remove {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.3em; height: 1.3em;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--duration-instant) var(--ease-standard);
+}
+.ct-fileupload__remove::before { content: "\00d7"; font-size: 1.1em; }
+.ct-fileupload__remove:hover { color: var(--color-danger); }
+.ct-fileupload__remove:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+/* error row state */
+.ct-fileupload__file.is-error { border-left-color: var(--color-danger); }
+.ct-fileupload__file.is-error .ct-fileupload__name { color: var(--color-danger-text); }
+
+
+/* ============================================================================
+   15 · SEARCHBAR  .ct-searchbar
+   >_ prompt glyph + magnifier slot + trailing key-hint chip (e.g. ⌘K).
+   ============================================================================ */
+.ct-searchbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 0 var(--space-2) 0 var(--input-pad-x);
+  min-height: 38px;
+  background: var(--input-bg);
+  border: var(--border-1) solid var(--input-border);
+  border-radius: var(--radius-0);
+  transition: border-color var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-fast) var(--ease-standard);
+}
+.ct-searchbar:hover { border-color: var(--input-border-hover); }
+.ct-searchbar:focus-within { border-color: var(--color-border-glow); box-shadow: var(--shadow-glow-sm); }
+/* >_ prompt prefix */
+.ct-searchbar__prompt {
+  flex-shrink: 0;
+  color: var(--input-prompt);
+  text-shadow: var(--glow-primary);
+  font-weight: var(--weight-bold);
+  user-select: none;
+}
+.ct-searchbar__prompt::before { content: ">_"; }
+/* magnifier SVG slot */
+.ct-searchbar__icon { flex-shrink: 0; display: inline-flex; color: var(--color-text-subtle); }
+.ct-searchbar__icon svg { width: 1.05em; height: 1.05em; }
+/* the field itself — borderless inside the bar */
+.ct-searchbar__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: var(--space-2) 0;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--input-fg);
+  background: transparent;
+  border: none;
+  outline: none;
+  caret-color: var(--input-caret);
+}
+.ct-searchbar__input::placeholder { color: var(--input-placeholder); }
+/* trailing keyboard-shortcut hint chip */
+.ct-searchbar__hint {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 1px var(--space-2);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text-subtle);
+  background: var(--color-surface-2);
+  border: var(--border-1) solid var(--color-border-muted);
+  border-radius: var(--radius-sm);
+  user-select: none;
+}
+/* clear button surfaces when there is a query */
+.ct-searchbar__clear {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.3em; height: 1.3em;
+  color: var(--color-text-muted);
+  background: none; border: none; cursor: pointer;
+}
+.ct-searchbar__clear::before { content: "\00d7"; }
+.ct-searchbar__clear:hover { color: var(--color-accent); }
+.ct-searchbar__clear:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+
+/* ============================================================================
+   16 · RATING  .ct-rating
+   Block/star rating. Empty vs .is-filled (neon). Hover preview, read-only mode.
+   Backed by radio inputs for keyboard a11y; labels are the visible items.
+   ============================================================================ */
+.ct-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  /* reverse row enables the pure-CSS "highlight up to hovered" preview */
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+}
+.ct-rating__input {           /* native radio kept, hidden but focusable */
+  position: absolute;
+  width: 1px; height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.ct-rating__item {
+  font-size: var(--text-xl);
+  line-height: 1;
+  color: var(--color-border-strong);   /* empty glyph = muted neon outline tone */
+  cursor: pointer;
+  transition: color var(--duration-instant) var(--ease-standard),
+              text-shadow var(--duration-instant) var(--ease-standard),
+              transform var(--duration-instant) var(--ease-standard);
+}
+.ct-rating__item::before { content: "\2605"; }   /* ★ — swap to ▰ for block style */
+/* filled — explicit state set by JS for the current value */
+.ct-rating__item.is-filled {
+  color: var(--color-primary);
+  text-shadow: var(--glow-primary);
+}
+/* pure-CSS hover/checked preview: in a reversed row, hovering an item lights
+   it and every sibling that follows in source order (i.e. lower values). */
+.ct-rating:not(.ct-rating--readonly):hover .ct-rating__item,
+.ct-rating__input:checked ~ .ct-rating__item {
+  color: var(--color-primary);
+  text-shadow: var(--glow-primary);
+}
+.ct-rating:not(.ct-rating--readonly) .ct-rating__item:hover ~ .ct-rating__item {
+  color: var(--color-border-strong);
+  text-shadow: none;
+}
+.ct-rating:not(.ct-rating--readonly) .ct-rating__item:hover { transform: scale(1.15); }
+/* keyboard focus mirrored onto the visible glyph */
+.ct-rating__input:focus-visible + .ct-rating__item { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius-sm); }
+/* read-only — no pointer affordance, still legible */
+.ct-rating--readonly .ct-rating__item { cursor: default; }
+.ct-rating--sm .ct-rating__item { font-size: var(--text-md); }
+.ct-rating--lg .ct-rating__item { font-size: var(--text-2xl); }
+/* numeric readout */
+.ct-rating__value {
+  margin-left: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  order: -1;                     /* keep value at the visual end of the reversed row */
+}
+
+
+/* ============================================================================
+   17 · CHIPINPUT  .ct-chipinput
+   Tag input: removable neon-outline chips + an inline text field. Full width,
+   glows on focus-within. (Shares the control surface declared above.)
+   ============================================================================ */
+.ct-chipinput {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  min-height: 38px;
+  cursor: text;
+}
+.ct-chipinput:hover:not(.is-invalid):not([aria-invalid="true"]) { --_bd: var(--input-border-hover); }
+.ct-chipinput:focus-within {
+  --_bd: var(--color-border-glow);
+  --_glow: var(--shadow-glow-sm);
+}
+/* removable tag — neon outline, terminal bracket flavour */
+.ct-chipinput__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-primary-bright);
+  background: transparent;
+  border: var(--border-1) solid var(--color-border-strong);
+  border-radius: var(--radius-0);
+  box-shadow: var(--shadow-glow-sm);
+  white-space: nowrap;
+}
+.ct-chipinput__chip::before { content: "#"; opacity: .6; }   /* tag glyph */
+.ct-chipinput__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1em; height: 1.1em;
+  padding: 0;
+  color: inherit;
+  background: none; border: none; cursor: pointer;
+  opacity: .8;
+  transition: opacity var(--duration-instant) var(--ease-standard),
+              color var(--duration-instant) var(--ease-standard);
+}
+.ct-chipinput__remove::before { content: "\00d7"; }
+.ct-chipinput__remove:hover { opacity: 1; color: var(--color-accent); }
+.ct-chipinput__remove:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+/* inline field grows to fill the remaining row */
+.ct-chipinput__input {
+  flex: 1 1 80px;
+  min-width: 80px;
+  padding: var(--space-1) 0;
+  font: inherit;
+  color: var(--input-fg);
+  background: transparent;
+  border: none;
+  outline: none;
+  caret-color: var(--input-caret);
+}
+.ct-chipinput__input::placeholder { color: var(--input-placeholder); }
+/* invalid chip flavour (e.g. duplicate / rejected tag) */
+.ct-chipinput__chip.is-invalid {
+  color: var(--color-danger-text);
+  border-color: var(--color-danger);
+  box-shadow: var(--glow-red);
+}
+
+
+/* ============================================================================
+   SHARED STATES — applied last so they win over per-control base rules.
+   These cover the whole control-surface family in one pass.
+   ============================================================================ */
+
+/* ---- INVALID — red border + red glow on every box control ---------------- */
+.ct-input.is-invalid,            .ct-input[aria-invalid="true"],
+.ct-textarea.is-invalid,         .ct-textarea[aria-invalid="true"],
+.ct-select.is-invalid,           .ct-select[aria-invalid="true"],
+.ct-multiselect.is-invalid,      .ct-multiselect[aria-invalid="true"],
+.ct-chipinput.is-invalid,        .ct-chipinput[aria-invalid="true"] {
+  --_bd: var(--color-danger);
+  --_glow: var(--glow-red);
+  caret-color: var(--color-danger);
+}
+/* invalid focus escalates to the danger ring, never loses the red cue */
+.ct-input.is-invalid:focus,            .ct-input[aria-invalid="true"]:focus,
+.ct-textarea.is-invalid:focus,         .ct-textarea[aria-invalid="true"]:focus,
+.ct-select.is-invalid:focus,           .ct-select[aria-invalid="true"]:focus {
+  --_glow: var(--ring-danger);
+}
+/* an invalid select tints its custom caret red too (not color-alone — the
+   field also carries the red border + the .ct-field__error "!" hint) */
+.ct-select-wrap:has(.is-invalid)::after,
+.ct-select-wrap:has([aria-invalid="true"])::after { color: var(--color-danger); }
+
+/* ---- DISABLED — dim, not-allowed, no glow, muted border ------------------ */
+.ct-input:disabled,
+.ct-textarea:disabled,
+.ct-select:disabled,
+.ct-multiselect.is-disabled,
+.ct-chipinput.is-disabled {
+  --_bd: var(--color-border-muted);
+  --_glow: none;
+  color: var(--color-text-subtle);
+  background: var(--color-surface-2);
+  cursor: not-allowed;
+  opacity: .7;
+}
+.ct-input:disabled::placeholder,
+.ct-textarea:disabled::placeholder { color: var(--color-text-subtle); }
+.ct-select:disabled { cursor: not-allowed; }
+.ct-select-wrap:has(:disabled)::after { color: var(--color-text-subtle); }
+
+/* read-only — editable look, not-editable behaviour (no red, no full glow) */
+.ct-input:read-only:not(:disabled),
+.ct-textarea:read-only:not(:disabled) {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+
+/* ============================================================================
+   REDUCED MOTION — extra safety net for THIS file's custom-control animations.
+   base.css already supplies the global kill-switch; this freezes the prompt
+   caret blink and the slider thumb scale so nothing here strobes or jitters.
+   ============================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .ct-input-wrap--prompt:focus-within::before { animation: none; opacity: 1; }
+  .ct-checkbox__box::after,
+  .ct-radio__box::after,
+  .ct-switch__knob,
+  .ct-rating__item { transition: none; }
+  .ct-slider__input:hover::-webkit-slider-thumb,
+  .ct-rating__item:hover { transform: none; }
+}

@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Onboarding — Hand-drawn Sketch</title>
+<link rel="stylesheet" href="../theme.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='16' fill='%23f7f1e3' stroke='%23243042' stroke-width='6'/><path d='M24 64 C40 40 60 40 76 60' fill='none' stroke='%23243042' stroke-width='7' stroke-linecap='round'/><circle cx='70' cy='34' r='7' fill='%23ffe45c' stroke='%23243042' stroke-width='4'/></svg>" />
+<style>
+/* PAGE-LOCAL layout only (use tokens). */
+
+/* Narrow the page well — cap ~880px centred (brief). */
+.onb-main { max-width: 880px; }
+
+/* Centred intro block */
+.onb-intro { text-align: center; }
+.onb-intro h1 { font-size: var(--text-5xl); }
+.onb-subtitle { margin-top: var(--space-2); color: var(--color-text-muted); }
+
+/* Each panel = a roomy hand-drawn cell */
+.onb-panel {
+  position: relative;
+  padding: var(--space-7) var(--space-6);
+}
+.onb-panel[hidden] { display: none; }
+
+/* Doodle accent corner inside a panel */
+.onb-accent {
+  position: absolute;
+  top: calc(var(--space-4) * -1);
+  right: var(--space-5);
+  z-index: var(--z-raised);
+}
+.onb-panel-head {
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-3xl);
+  line-height: var(--leading-tight);
+  color: var(--color-text);
+}
+.onb-reassure { margin-top: var(--space-4); }
+
+/* Selectable choice cards (radio styled as clickable card) */
+.choice-grid { /* uses .grid .grid-2 from base; collapse <640 below */ }
+.choice-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  cursor: pointer;
+  background-color: var(--color-surface);
+  border: var(--border-w-3) solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--sketch-shadow-sm);
+  transition:
+    transform var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
+}
+.choice-card:nth-child(even) { transform: rotate(0.6deg); }
+.choice-card:nth-child(odd)  { transform: rotate(-0.6deg); }
+.choice-card:hover {
+  transform: translate(-1px, -1px) rotate(-0.6deg);
+  box-shadow: var(--sketch-shadow);
+}
+/* hide the native radio but keep it focusable */
+.choice-card input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+}
+.choice-emoji {
+  font-size: var(--text-3xl);
+  line-height: 1;
+}
+.choice-name {
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-xl);
+  color: var(--color-text);
+}
+.choice-desc {
+  font-family: var(--font-hand);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+/* selected highlight — :has() preferred, fallback :focus-within */
+.choice-card:focus-within {
+  outline: var(--ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--ring-offset);
+}
+.choice-card:has(input:checked) {
+  background-color: var(--color-accent);
+  color: var(--color-accent-fg);
+  border-color: var(--ink-700);
+  box-shadow: var(--sketch-shadow);
+}
+.choice-card:has(input:checked) .choice-name { color: var(--color-accent-fg); }
+.choice-card:has(input:checked) .choice-desc { color: var(--ink-700); }
+/* tiny checked tick badge */
+.choice-card:has(input:checked)::after {
+  content: "✓";
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-xl);
+  color: var(--ink-700);
+}
+
+/* Tool checkbox grid */
+.tool-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+.tool-grid .checkbox {
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-w-2) dashed var(--color-divider);
+  border-radius: var(--radius-sm);
+}
+
+/* Summary list value alignment */
+.onb-summary .li-meta { margin-left: auto; }
+
+/* Skip link row */
+.onb-skip { margin-top: var(--space-5); }
+
+/* "ALL SET" celebration cluster */
+.onb-done-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.onb-done-hero .badge-star {
+  font-size: var(--text-lg);
+  padding: var(--space-3) var(--space-4);
+  min-width: 88px;
+  min-height: 88px;
+}
+
+/* Responsive ----------------------------------------------------- */
+@media (max-width: 640px) {
+  .choice-grid { grid-template-columns: 1fr; }
+  .tool-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  /* keep step numbers, hide their text labels to save room */
+  .steps .step-label,
+  .steps .step-sub { display: none; }
+}
+</style>
+</head>
+<body class="paper-bg">
+<a class="skip-link" href="#main">Skip to content</a>
+
+<!-- rough-edge SVG filter (enables .rough-edge wobble) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="roughpaper"><feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="3" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2.2"/></filter></svg>
+
+<nav class="navbar" aria-label="Primary">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true">✎</span><span class="hide-mobile">sketchbook</span></a>
+  <div class="nav-links">
+    <a class="nav-link" href="dashboard.html">Dashboard</a>
+    <a class="nav-link" href="kanban.html">Board</a>
+    <a class="nav-link" href="inbox.html">Inbox</a>
+    <a class="nav-link" href="pricing.html">Pricing</a>
+  </div>
+  <div class="nav-right">
+    <button class="btn btn-ghost btn-sm" data-cmdk-open aria-label="Search"><svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3" stroke-linecap="round"/></svg><kbd class="hide-mobile">⌘K</kbd></button>
+    <button class="btn btn-icon btn-sm btn-outline" data-theme-toggle aria-label="Toggle dark mode"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19" stroke-linecap="round"/></svg></button>
+    <span class="avatar sm">JS</span>
+  </div>
+</nav>
+
+<main id="main" class="container onb-main" style="padding-block:var(--space-7)">
+  <nav class="breadcrumb mb-4" aria-label="Breadcrumb"><a href="../index.html">Home</a><span class="sep" aria-hidden="true">→</span><span class="current">Get started</span></nav>
+  <!-- ===== PAGE CONTENT ===== -->
+
+  <header class="onb-intro stack stack-2 mb-6">
+    <h1 class="scrawl">LET'S SET UP YOUR SKETCHBOOK</h1>
+    <p class="onb-subtitle font-display text-2xl">Four quick doodles and you're rolling ✦</p>
+  </header>
+
+  <div data-wizard class="stack stack-6">
+
+    <!-- STEP INDICATOR -->
+    <ol class="steps" aria-label="Setup progress">
+      <li class="step is-active">
+        <span class="step-num">1</span>
+        <span class="step-label">Welcome</span>
+        <span class="step-sub">say hi</span>
+      </li>
+      <li class="step">
+        <span class="step-num">2</span>
+        <span class="step-label">Your style</span>
+        <span class="step-sub">how you think</span>
+      </li>
+      <li class="step">
+        <span class="step-num">3</span>
+        <span class="step-label">Your tools</span>
+        <span class="step-sub">pick a kit</span>
+      </li>
+      <li class="step">
+        <span class="step-num">4</span>
+        <span class="step-label">Done</span>
+        <span class="step-sub">all set</span>
+      </li>
+    </ol>
+
+    <!-- ====================== PANEL 1 — WELCOME ====================== -->
+    <div data-wizard-panel>
+      <section class="card panel onb-panel rough-edge" aria-labelledby="onb-welcome-h">
+        <span class="badge-star onb-accent" aria-hidden="true">HI!</span>
+        <h2 id="onb-welcome-h" class="onb-panel-head">Welcome to your blank page 👋</h2>
+
+        <span class="tip mt-3" tabindex="0">
+          <span class="font-display text-xl">Pssst — read this</span>
+          <span class="tip-content" role="tooltip">Nothing's saved until you hit Finish. Scribble freely!</span>
+        </span>
+
+        <div class="stack stack-4 mt-5">
+          <div class="field">
+            <label class="field-label" for="onb-name">What should we call you?</label>
+            <input class="input" id="onb-name" type="text" name="name" value="Mara Ellison" autocomplete="name" placeholder="e.g. Mara Ellison" />
+            <span class="field-hint">Goes on the cover of your first sketchbook.</span>
+          </div>
+          <div class="field">
+            <label class="field-label" for="onb-email">Where do we send the good ideas?</label>
+            <input class="input" id="onb-email" type="email" name="email" value="mara@sketchbook.app" autocomplete="email" placeholder="you@example.com" />
+            <span class="field-hint">We'll only ping you about your boards.</span>
+          </div>
+        </div>
+
+        <p class="onb-reassure text-muted font-hand">No credit card, no commitment — you can erase any of this later. ✏️</p>
+      </section>
+    </div>
+
+    <!-- ====================== PANEL 2 — YOUR STYLE ====================== -->
+    <div data-wizard-panel hidden>
+      <section class="card panel onb-panel panel-tilt-r rough-edge" aria-labelledby="onb-style-h">
+        <span class="badge-star onb-accent" aria-hidden="true">YOU!</span>
+        <h2 id="onb-style-h" class="onb-panel-head">How do you think?</h2>
+        <p class="text-muted font-hand mt-2">Pick the shape your brain likes best — we'll tune the canvas to match.</p>
+
+        <fieldset class="grid grid-2 choice-grid mt-5" style="border:0;padding:0;margin:0;">
+          <legend class="sr-only">Your thinking style</legend>
+
+          <label class="choice-card">
+            <input type="radio" name="style" value="lists" checked />
+            <span class="choice-emoji" aria-hidden="true">📝</span>
+            <span class="choice-name">Lists</span>
+            <span class="choice-desc">Tidy bullets, checkboxes, one thing after another.</span>
+          </label>
+
+          <label class="choice-card">
+            <input type="radio" name="style" value="mindmaps" />
+            <span class="choice-emoji" aria-hidden="true">🕸️</span>
+            <span class="choice-name">Mind-maps</span>
+            <span class="choice-desc">Branches and threads spider out from a center.</span>
+          </label>
+
+          <label class="choice-card">
+            <input type="radio" name="style" value="sketches" />
+            <span class="choice-emoji" aria-hidden="true">✏️</span>
+            <span class="choice-name">Sketches</span>
+            <span class="choice-desc">Freehand boxes, arrows and quick doodles.</span>
+          </label>
+
+          <label class="choice-card">
+            <input type="radio" name="style" value="moodboards" />
+            <span class="choice-emoji" aria-hidden="true">🎨</span>
+            <span class="choice-name">Moodboards</span>
+            <span class="choice-desc">Colors, clippings and references pinned together.</span>
+          </label>
+        </fieldset>
+
+        <p class="onb-reassure text-muted font-hand">Not sure? Leave it on Lists — you can remix styles per board anytime.</p>
+      </section>
+    </div>
+
+    <!-- ====================== PANEL 3 — YOUR TOOLS ====================== -->
+    <div data-wizard-panel hidden>
+      <section class="card panel onb-panel panel-tilt rough-edge" aria-labelledby="onb-tools-h">
+        <span class="badge-star onb-accent" aria-hidden="true">KIT!</span>
+        <h2 id="onb-tools-h" class="onb-panel-head">Pick your kit 🧰</h2>
+        <p class="text-muted font-hand mt-2">Drop these onto every new page. Add more from the toolbar later.</p>
+
+        <div class="field mt-5">
+          <span class="field-label" id="onb-tools-lbl">Tools</span>
+          <div class="tool-grid" role="group" aria-labelledby="onb-tools-lbl">
+            <label class="checkbox"><input type="checkbox" name="tools" value="pen" checked /><span class="box" aria-hidden="true"></span><span>Pen</span></label>
+            <label class="checkbox"><input type="checkbox" name="tools" value="marker" checked /><span class="box" aria-hidden="true"></span><span>Marker</span></label>
+            <label class="checkbox"><input type="checkbox" name="tools" value="pencil" checked /><span class="box" aria-hidden="true"></span><span>Pencil</span></label>
+            <label class="checkbox"><input type="checkbox" name="tools" value="eraser" /><span class="box" aria-hidden="true"></span><span>Eraser</span></label>
+            <label class="checkbox"><input type="checkbox" name="tools" value="ruler" /><span class="box" aria-hidden="true"></span><span>Ruler</span></label>
+            <label class="checkbox"><input type="checkbox" name="tools" value="sticky" checked /><span class="box" aria-hidden="true"></span><span>Sticky notes</span></label>
+            <label class="checkbox"><input type="checkbox" name="tools" value="stamps" /><span class="box" aria-hidden="true"></span><span>Stamps</span></label>
+            <label class="checkbox"><input type="checkbox" name="tools" value="stencils" /><span class="box" aria-hidden="true"></span><span>Stencils</span></label>
+          </div>
+        </div>
+
+        <div class="field mt-5">
+          <span class="field-label">Favorite colors</span>
+          <div class="combo" data-chip>
+            <div class="combo-control">
+              <span class="chip"><span>Yellow</span> <button type="button" aria-label="Remove Yellow">✕</button></span>
+              <span class="chip"><span>Mint</span> <button type="button" aria-label="Remove Mint">✕</button></span>
+              <input type="text" aria-label="Add a favorite color" placeholder="Add a color…" />
+            </div>
+          </div>
+          <span class="field-hint">Type a color and press Enter to add a chip.</span>
+        </div>
+
+        <div class="mt-5">
+          <label class="toggle">
+            <input type="checkbox" name="tips" checked />
+            <span class="track" aria-hidden="true"><span class="knob"></span></span>
+            <span>Email me tips &amp; tricks each week</span>
+          </label>
+        </div>
+      </section>
+    </div>
+
+    <!-- ====================== PANEL 4 — DONE ====================== -->
+    <div data-wizard-panel hidden>
+      <section class="card panel onb-panel rough-edge" aria-labelledby="onb-done-h">
+        <div class="onb-done-hero">
+          <span class="badge-star" aria-hidden="true">ALL&nbsp;SET!</span>
+          <div>
+            <h2 id="onb-done-h" class="onb-panel-head">Your sketchbook is ready 🎉</h2>
+            <p class="text-muted font-hand mt-1">Here's what we noted down — change anything from Settings later.</p>
+          </div>
+        </div>
+
+        <ul class="list onb-summary mt-5">
+          <li class="list-item">
+            <span class="li-title">Name</span>
+            <span class="li-meta">Mara Ellison</span>
+          </li>
+          <li class="list-item">
+            <span class="li-title">Style</span>
+            <span class="li-meta">Lists 📝</span>
+          </li>
+          <li class="list-item">
+            <span class="li-title">Tools</span>
+            <span class="li-meta">Pen, Marker, Pencil, Sticky notes</span>
+          </li>
+          <li class="list-item">
+            <span class="li-title">Colors</span>
+            <span class="li-meta">Yellow, Mint</span>
+          </li>
+        </ul>
+
+        <p class="tip-content onb-reassure" role="note" style="position:static;opacity:1;visibility:visible;pointer-events:auto;max-width:none;transform:rotate(-0.8deg);display:inline-block;">
+          High five! Hit Finish to drop your first blank page. ✦
+        </p>
+      </section>
+    </div>
+
+    <!-- NAV ROW -->
+    <div class="row gap-4 between wrap">
+      <button class="btn btn-ghost" type="button" data-wizard-back>← Back</button>
+      <div class="row gap-3 wrap">
+        <button class="btn btn-primary" type="button" data-wizard-next>Next →</button>
+        <button class="btn btn-primary" type="button" data-wizard-done data-doodle="3" data-toast="success" data-toast-title="You're all set!" data-toast-body="Welcome to sketchbook — your first page is ready." style="display:none">Finish ✦</button>
+      </div>
+    </div>
+
+  </div>
+
+  <p class="text-center onb-skip">
+    <a class="btn btn-ghost btn-sm" href="../index.html">Skip for now</a>
+  </p>
+
+</main>
+
+<!-- command palette (keep on every page) -->
+<div class="cmdk-overlay" role="dialog" aria-modal="true" aria-label="Command palette">
+  <div class="cmdk">
+    <div class="cmdk-input-row"><svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3" stroke-linecap="round"/></svg><input class="cmdk-input" placeholder="Type a command…" aria-label="Command input" /><kbd>ESC</kbd></div>
+    <div class="cmdk-list">
+      <div class="cmdk-group"><div class="cmdk-group-label">Go to</div>
+        <div class="cmdk-item" data-href="dashboard.html"><span class="cmdk-ico">📊</span> Dashboard</div>
+        <div class="cmdk-item" data-href="kanban.html"><span class="cmdk-ico">🗂️</span> Board</div>
+        <div class="cmdk-item" data-href="inbox.html"><span class="cmdk-ico">✉️</span> Inbox</div>
+        <div class="cmdk-item" data-href="pricing.html"><span class="cmdk-ico">🏷️</span> Pricing</div>
+        <div class="cmdk-item" data-href="settings.html"><span class="cmdk-ico">⚙️</span> Settings</div>
+        <div class="cmdk-item" data-href="profile.html"><span class="cmdk-ico">🙂</span> Profile</div>
+        <div class="cmdk-item" data-href="../index.html"><span class="cmdk-ico">🏠</span> Home</div>
+      </div>
+      <div class="cmdk-group"><div class="cmdk-group-label">Actions</div>
+        <div class="cmdk-item" data-action="toggle-theme"><span class="cmdk-ico">🌗</span> Toggle dark mode</div>
+      </div>
+      <div class="cmdk-empty" style="display:none">No results.</div>
+    </div>
+  </div>
+</div>
+
+<script src="../app.js"></script>
+</body>
+</html>

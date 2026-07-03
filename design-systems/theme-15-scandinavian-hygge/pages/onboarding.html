@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Onboarding · Hygge</title>
+<meta name="description" content="A cosy, guided onboarding wizard built with the Scandinavian Hygge design system.">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../semantic.css">
+<link rel="stylesheet" href="../base.css">
+<link rel="stylesheet" href="../components/buttons.css">
+<link rel="stylesheet" href="../components/forms.css">
+<link rel="stylesheet" href="../components/cards.css">
+<link rel="stylesheet" href="../components/data-display.css">
+<link rel="stylesheet" href="../components/feedback.css">
+<link rel="stylesheet" href="../components/navigation.css">
+<style>
+  /* ---- page-local layout (tokens only, no hard-coded colors) ---- */
+  .ob-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background:
+      radial-gradient(120% 110% at 10% 4%, var(--sage-100) 0%, transparent 44%),
+      radial-gradient(110% 100% at 94% 0%, var(--terracotta-100) 0%, transparent 40%),
+      radial-gradient(130% 120% at 78% 116%, var(--dusty-blue-100) 0%, transparent 48%),
+      var(--color-bg);
+  }
+  [data-theme="dark"] .ob-page {
+    background:
+      radial-gradient(120% 110% at 10% 4%, rgb(157 174 150 / 0.12) 0%, transparent 44%),
+      radial-gradient(110% 100% at 94% 0%, rgb(201 139 107 / 0.12) 0%, transparent 40%),
+      radial-gradient(130% 120% at 78% 116%, rgb(138 161 177 / 0.10) 0%, transparent 48%),
+      var(--color-bg);
+  }
+
+  /* slim top bar */
+  .ob-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--space-6);
+    flex-wrap: wrap;
+  }
+  .ob-bar .brand { font-family: var(--font-display); }
+  .ob-step-count {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .ob-step-count b { color: var(--color-text); font-weight: 600; }
+  .ob-bar-spacer { flex: 1 1 auto; }
+  .ob-bar-actions { display: flex; align-items: center; gap: var(--space-2); }
+
+  /* centred stage */
+  .ob-stage {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: clamp(var(--space-4), 4vw, var(--space-10)) var(--space-4) var(--space-12);
+  }
+  .ob-card {
+    width: 100%;
+    max-width: 700px;
+    box-shadow: var(--shadow-lg);
+  }
+  .ob-card .card-body { padding: clamp(var(--space-5), 4vw, var(--space-8)); }
+
+  /* progress bar sits just under the steps */
+  .ob-progress { margin: var(--space-5) 0 var(--space-2); }
+
+  /* panel intro */
+  .ob-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: var(--tracking-wide, .04em);
+    text-transform: uppercase;
+    color: var(--color-primary);
+    margin-bottom: var(--space-2);
+  }
+  .ob-panel h2 { margin: 0 0 var(--space-1); }
+  .ob-panel .ob-lead {
+    color: var(--color-text-secondary);
+    line-height: var(--leading-relaxed);
+    max-width: 52ch;
+    margin: 0 0 var(--space-6);
+  }
+  .ob-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4);
+  }
+  @media (max-width: 560px) { .ob-grid-2 { grid-template-columns: 1fr; } }
+
+  /* footer nav row */
+  .ob-foot {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-top: var(--space-8);
+    padding-top: var(--space-5);
+    border-top: var(--border-1) solid var(--color-border-subtle);
+  }
+  .ob-foot .ob-foot-spacer { flex: 1 1 auto; }
+  [data-step-prev][hidden] { display: none; }
+
+  /* swatch / accent picker */
+  .swatch-row { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+  .swatch {
+    position: relative;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+  }
+  .swatch input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+  .swatch .dot-lg {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--radius-pill);
+    border: 2px solid var(--color-border);
+    box-shadow: var(--shadow-sm);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .swatch:hover .dot-lg { transform: translateY(-2px); }
+  .swatch input:focus-visible + .dot-lg { outline: 2px solid var(--color-primary); outline-offset: 3px; }
+  .swatch input:checked + .dot-lg {
+    border-color: var(--color-text);
+    box-shadow: 0 0 0 3px var(--color-surface), 0 0 0 5px var(--color-primary);
+  }
+
+  /* live workspace url preview */
+  .ob-url-preview {
+    margin-top: var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+  .ob-url-preview b { color: var(--color-primary); font-weight: 600; }
+
+  /* invite list */
+  .invite-list { margin-top: var(--space-5); }
+  .invite-list .li-meta { margin-left: auto; display: flex; align-items: center; gap: var(--space-3); }
+
+  /* success art circle */
+  .ob-success { text-align: center; }
+  .ob-success-art {
+    width: 96px; height: 96px;
+    margin: var(--space-2) auto var(--space-5);
+    border-radius: var(--radius-pill);
+    display: grid; place-items: center;
+    background: var(--color-success-soft);
+    color: var(--color-success);
+    box-shadow: 0 0 0 10px color-mix(in srgb, var(--color-success-soft) 55%, transparent);
+  }
+  .ob-recap { text-align: left; margin: var(--space-6) auto 0; max-width: 30rem; }
+
+  /* segmented full width on small */
+  .ob-panel .segmented { flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<div class="ob-page">
+
+  <!-- ============ SLIM TOP BAR ============ -->
+  <header class="ob-bar">
+    <a class="brand" href="../index.html">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 9v11a1 1 0 0 0 1 1h5v-6h6v6h5a1 1 0 0 0 1-1V9Z"/></svg></span>
+      <span>Hygge</span>
+    </a>
+    <span class="ob-step-count" aria-live="polite">Step <b data-step-current>1</b> of 4</span>
+    <span class="ob-bar-spacer"></span>
+    <div class="ob-bar-actions">
+      <button class="btn btn-icon btn-ghost btn-sm" data-theme-toggle aria-pressed="false" aria-label="Toggle dark mode">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>
+      </button>
+      <a class="btn btn-ghost btn-sm" href="dashboard.html">Skip for now</a>
+    </div>
+  </header>
+
+  <!-- ============ CENTRED WIZARD ============ -->
+  <main class="ob-stage" id="main">
+    <section class="card ob-card" data-wizard role="region" aria-label="Welcome to Hygge onboarding wizard">
+      <div class="card-body">
+
+        <h1 class="sr-only">Welcome to Hygge</h1>
+
+        <!-- steps indicator -->
+        <ol class="steps" aria-label="Onboarding progress">
+          <li class="step active">
+            <span class="step-dot" aria-hidden="true">1</span>
+            <span class="step-label">About you</span>
+            <span class="step-sub">Tell us hej</span>
+          </li>
+          <li class="step">
+            <span class="step-dot" aria-hidden="true">2</span>
+            <span class="step-label">Workspace</span>
+            <span class="step-sub">Make it yours</span>
+          </li>
+          <li class="step">
+            <span class="step-dot" aria-hidden="true">3</span>
+            <span class="step-label">Invite team</span>
+            <span class="step-sub">Better together</span>
+          </li>
+          <li class="step">
+            <span class="step-dot" aria-hidden="true">4</span>
+            <span class="step-label">All set</span>
+            <span class="step-sub">Cosy up</span>
+          </li>
+        </ol>
+
+        <!-- thin progress bar -->
+        <div class="progress progress-sm ob-progress accent" data-wizard-progress role="progressbar" aria-label="Setup progress" aria-valuemin="0" aria-valuemax="100">
+          <span class="bar" style="width:0%"></span>
+        </div>
+
+        <!-- ===================== STEP 1 — ABOUT YOU ===================== -->
+        <div data-step-panel class="ob-panel">
+          <span class="ob-eyebrow">🌿 Welcome</span>
+          <h2 class="card-title">Welcome to Hygge</h2>
+          <p class="ob-lead">Let's make your corner of the studio feel warm and your own. First, a little about you — this takes about two minutes, tea optional but encouraged.</p>
+
+          <div class="flow">
+            <div class="ob-grid-2">
+              <div class="field">
+                <label class="label" for="ob-name">Full name <span class="req" aria-hidden="true">*</span></label>
+                <input class="input" id="ob-name" type="text" autocomplete="name" placeholder="Astrid Holm" value="Astrid Holm">
+                <span class="hint">We'll only use this around the workspace.</span>
+              </div>
+              <div class="field">
+                <label class="label" for="ob-role">Your role</label>
+                <div class="select-wrap">
+                  <select class="select" id="ob-role">
+                    <option>Founder / Owner</option>
+                    <option selected>Designer</option>
+                    <option>Product manager</option>
+                    <option>Developer</option>
+                    <option>Marketer</option>
+                    <option>Operations</option>
+                    <option>Just exploring</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <fieldset class="field" style="border:0;padding:0;margin:0">
+              <legend class="label">What brings you to Hygge?</legend>
+              <div class="segmented" role="group" aria-label="What brings you here">
+                <button type="button" class="is-active" aria-pressed="true">Personal</button>
+                <button type="button" aria-pressed="false">Team</button>
+                <button type="button" aria-pressed="false">Studio</button>
+              </div>
+              <span class="hint">Helps us set sensible defaults — you can change everything later.</span>
+            </fieldset>
+
+            <label class="switch">
+              <input type="checkbox" checked>
+              <span class="track"><span class="thumb"></span></span>
+              Send me the occasional cosy tip (about one email a month)
+            </label>
+          </div>
+
+          <div class="ob-foot">
+            <button type="button" class="btn btn-ghost" data-step-prev hidden>Back</button>
+            <span class="ob-foot-spacer"></span>
+            <button type="button" class="btn btn-primary" data-step-next>
+              Continue
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- ===================== STEP 2 — YOUR WORKSPACE ===================== -->
+        <div data-step-panel class="ob-panel" hidden>
+          <span class="ob-eyebrow">🪵 Your space</span>
+          <h2 class="card-title">Name your workspace</h2>
+          <p class="ob-lead">This is the cosy home where your projects live. Pick a name, a colour that feels like you, and pop a logo on the door.</p>
+
+          <div class="flow">
+            <div class="field">
+              <label class="label" for="ob-ws">Workspace name <span class="req" aria-hidden="true">*</span></label>
+              <div class="input-group">
+                <input class="input" id="ob-ws" type="text" placeholder="oak-and-linen" value="oak-and-linen" aria-describedby="ob-ws-url">
+                <span class="adornment adornment-trailing">.hygge.studio</span>
+              </div>
+              <span class="ob-url-preview" id="ob-ws-url">Your space will live at <b>oak-and-linen</b>.hygge.studio</span>
+            </div>
+
+            <fieldset class="field" style="border:0;padding:0;margin:0">
+              <legend class="label">Accent colour</legend>
+              <div class="swatch-row" role="radiogroup" aria-label="Workspace accent colour">
+                <label class="swatch"><input type="radio" name="ob-accent" value="sage" checked aria-label="Sage"><span class="dot-lg" style="background:var(--sage-400)"></span></label>
+                <label class="swatch"><input type="radio" name="ob-accent" value="terracotta" aria-label="Terracotta"><span class="dot-lg" style="background:var(--terracotta-400)"></span></label>
+                <label class="swatch"><input type="radio" name="ob-accent" value="dusty-blue" aria-label="Dusty blue"><span class="dot-lg" style="background:var(--dusty-blue-400)"></span></label>
+                <label class="swatch"><input type="radio" name="ob-accent" value="clay" aria-label="Clay"><span class="dot-lg" style="background:var(--clay-400)"></span></label>
+                <label class="swatch"><input type="radio" name="ob-accent" value="warm-neutral" aria-label="Warm neutral"><span class="dot-lg" style="background:var(--warm-neutral-500)"></span></label>
+              </div>
+              <span class="hint">Sets the tone for buttons, links and highlights across your space.</span>
+            </fieldset>
+
+            <div class="field">
+              <span class="label">Workspace logo</span>
+              <div class="dropzone" role="button" tabindex="0" aria-label="Upload a logo, drag a file or browse">
+                <span class="dz-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+                </span>
+                <span class="dz-title">Drag a logo here, or <b>browse</b></span>
+                <span class="dz-sub">PNG, SVG or JPG up to 2 MB · a square mark works best</span>
+              </div>
+              <div class="file-list">
+                <div class="file-item">
+                  <span class="badge badge-accent" aria-hidden="true">SVG</span>
+                  <div class="li-main">
+                    <span class="li-title">oak-and-linen-mark.svg</span>
+                    <span class="li-sub">18 KB · uploaded just now</span>
+                  </div>
+                  <button type="button" class="btn btn-icon btn-ghost btn-sm" aria-label="Remove logo">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ob-foot">
+            <button type="button" class="btn btn-ghost" data-step-prev>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+              Back
+            </button>
+            <span class="ob-foot-spacer"></span>
+            <button type="button" class="btn btn-primary" data-step-next>
+              Continue
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- ===================== STEP 3 — INVITE TEAM ===================== -->
+        <div data-step-panel class="ob-panel" hidden>
+          <span class="ob-eyebrow">🍵 Better together</span>
+          <h2 class="card-title">Invite your team</h2>
+          <p class="ob-lead">Hygge is nicer with company. Add a few teammates by email — we'll send them a warm welcome. No rush, you can always do this later.</p>
+
+          <div class="flow">
+            <div class="field">
+              <label class="label" for="ob-invite-email">Email addresses</label>
+              <div class="chip-input">
+                <span class="chip">freya@oak-and-linen.studio<button type="button" aria-label="Remove Freya">×</button></span>
+                <span class="chip">mikkel@oak-and-linen.studio<button type="button" aria-label="Remove Mikkel">×</button></span>
+                <input id="ob-invite-email" type="email" placeholder="Type an email and press Enter…" aria-label="Add a teammate by email">
+              </div>
+              <span class="hint">Press Enter or comma to add each address.</span>
+            </div>
+
+            <div class="field">
+              <label class="label" for="ob-invite-role">Default role for invites</label>
+              <div class="select-wrap">
+                <select class="select" id="ob-invite-role">
+                  <option>Admin — full access</option>
+                  <option selected>Editor — create &amp; edit</option>
+                  <option>Commenter — view &amp; comment</option>
+                  <option>Viewer — read only</option>
+                </select>
+              </div>
+              <span class="hint">You can fine-tune each person's role after they join.</span>
+            </div>
+
+            <div>
+              <span class="label">Pending invites</span>
+              <ul class="list invite-list" aria-label="Pending invitations">
+                <li class="list-item">
+                  <span class="avatar avatar-sm" aria-hidden="true" style="background:var(--terracotta-200);color:var(--terracotta-700)">FL</span>
+                  <div class="li-main">
+                    <span class="li-title">freya@oak-and-linen.studio</span>
+                    <span class="li-sub">Freya Lund</span>
+                  </div>
+                  <span class="li-meta">
+                    <span class="badge badge-outline">Editor</span>
+                    <span class="badge badge-warning"><span class="dot"></span> Pending</span>
+                  </span>
+                </li>
+                <li class="list-item">
+                  <span class="avatar avatar-sm" aria-hidden="true" style="background:var(--dusty-blue-200);color:var(--dusty-blue-700)">MB</span>
+                  <div class="li-main">
+                    <span class="li-title">mikkel@oak-and-linen.studio</span>
+                    <span class="li-sub">Mikkel Berg</span>
+                  </div>
+                  <span class="li-meta">
+                    <span class="badge badge-outline">Editor</span>
+                    <span class="badge badge-warning"><span class="dot"></span> Pending</span>
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="ob-foot">
+            <button type="button" class="btn btn-ghost" data-step-prev>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+              Back
+            </button>
+            <span class="ob-foot-spacer"></span>
+            <button type="button" class="btn btn-ghost btn-sm" data-step-next>Skip — I'll do this later</button>
+            <button type="button" class="btn btn-primary" data-step-next>
+              Send invites &amp; continue
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- ===================== STEP 4 — ALL SET ===================== -->
+        <div data-step-panel class="ob-panel ob-success" hidden>
+          <div class="ob-success-art" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          </div>
+          <span class="ob-eyebrow" style="justify-content:center;width:100%">🕯️ All set</span>
+          <h2 class="card-title">You're all cosy, Astrid</h2>
+          <p class="ob-lead" style="margin-inline:auto">Your workspace is ready and the kettle's on. Here's a quick recap of how we've set things up — change anything anytime in Settings.</p>
+
+          <div class="card card-quiet ob-recap">
+            <ul class="list">
+              <li class="list-item">
+                <span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
+                <div class="li-main"><span class="li-title">Astrid Holm · Designer</span><span class="li-sub">Personal account</span></div>
+              </li>
+              <li class="list-item">
+                <span class="stat-icon accent" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 9v11a1 1 0 0 0 1 1h5v-6h6v6h5a1 1 0 0 0 1-1V9Z"/></svg></span>
+                <div class="li-main"><span class="li-title">oak-and-linen.hygge.studio</span><span class="li-sub">Workspace · sage accent</span></div>
+              </li>
+              <li class="list-item">
+                <span class="stat-icon info" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span>
+                <div class="li-main"><span class="li-title">2 teammates invited</span><span class="li-sub">Freya &amp; Mikkel · Editors</span></div>
+              </li>
+            </ul>
+          </div>
+
+          <div class="ob-foot" style="justify-content:center;border:0;margin-top:var(--space-7);padding-top:0">
+            <button type="button" class="btn btn-ghost" data-step-prev>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+              Back
+            </button>
+            <a class="btn btn-primary btn-lg" href="dashboard.html">
+              Enter Hygge
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+</div>
+
+<script src="../app.js"></script>
+<script>
+  /* Keep the "Step X of 4" text + progressbar aria value in sync with the
+     wizard that app.js already drives. We only observe — app.js owns navigation. */
+  (function () {
+    var wiz = document.querySelector("[data-wizard]");
+    if (!wiz) return;
+    var counter = document.querySelector("[data-step-current]");
+    var bar = wiz.querySelector("[data-wizard-progress] .bar");
+    var pbar = wiz.querySelector("[data-wizard-progress]");
+    var panels = wiz.querySelectorAll("[data-step-panel]");
+    function sync() {
+      var idx = 0;
+      panels.forEach(function (p, i) { if (!p.hidden) idx = i; });
+      if (counter) counter.textContent = idx + 1;
+      if (pbar) {
+        var pct = Math.round((idx / (panels.length - 1)) * 100);
+        pbar.setAttribute("aria-valuenow", String(pct));
+        pbar.setAttribute("aria-valuetext", "Step " + (idx + 1) + " of " + panels.length);
+      }
+    }
+    /* run after app.js click handler advances the wizard */
+    wiz.addEventListener("click", function () { setTimeout(sync, 0); });
+    sync();
+  })();
+</script>
+</body>
+</html>

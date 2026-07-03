@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>분석 대시보드 — Minimal Monochrome</title>
+  <script>(function(){try{var t=localStorage.getItem('mm-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap">
+  <link rel="stylesheet" href="../tokens.css">
+  <link rel="stylesheet" href="../semantic.css">
+  <link rel="stylesheet" href="../base.css">
+  <link rel="stylesheet" href="../components/index.css">
+  <style>
+    /* 이 페이지 레이아웃 조합용 — 토큰 변수만 사용, 색 도입 금지 */
+    .dash-search { flex: 1; max-width: 24rem; }
+    .dash-search.searchbar { min-width: 0; }
+    .topbar-icon-btn { position: relative; }
+    .topbar-icon-btn .count {
+      position: absolute; top: -2px; right: -2px;
+      min-width: 16px; height: 16px; padding: 0 4px;
+      font-size: 10px; line-height: 16px;
+    }
+    .menu-btn-mobile { display: none; }
+    @media (max-width: 768px) { .menu-btn-mobile { display: inline-flex; } }
+    @media (min-width: 769px) { .topbar [data-sidebar-open] { display: none; } }
+
+    .card-chart-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; }
+    .chart-grid-2 { display: grid; grid-template-columns: 1.55fr 1fr; gap: var(--space-5); }
+    @media (max-width: 1024px) { .chart-grid-2 { grid-template-columns: 1fr; } }
+
+    .sparkline-wrap { margin-top: var(--space-3); }
+    .donut-wrap { display: flex; align-items: center; gap: var(--space-7); flex-wrap: wrap; }
+    .legend-pct { display: grid; gap: var(--space-3); }
+    .legend-pct .legend-item { justify-content: space-between; min-width: 11rem; font-size: var(--text-sm); }
+    .legend-pct .legend-item .tnum { color: var(--color-text-strong); font-weight: var(--weight-medium); }
+
+    .axis-labels { display: flex; justify-content: space-between; margin-top: var(--space-2); padding-inline: 2%; }
+    .axis-labels span { font-size: var(--text-2xs); color: var(--color-text-subtle); }
+
+    .meter-stack { display: grid; gap: var(--space-4); }
+    .bars-card-body { min-height: 11rem; display: flex; flex-direction: column; }
+
+    .activity-side { display: grid; grid-template-columns: 1.6fr 1fr; gap: var(--space-5); align-items: start; }
+    @media (max-width: 1024px) { .activity-side { grid-template-columns: 1fr; } }
+
+    /* 통계 그리드: ≤1024 → 2열, ≤768 → 1열 (.grid-4 자동축소 보강) */
+    @media (max-width: 1024px) { .grid.grid-4 { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 560px) { .grid.grid-4 { grid-template-columns: 1fr; } }
+
+    .th-checkbox { width: 40px; }
+    .breadcrumb-mini { min-width: 0; }
+    @media (max-width: 560px) { .breadcrumb-mini { display: none; } }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+
+  <div class="app-shell">
+    <!-- ===== 사이드바 ===== -->
+    <aside class="sidebar" aria-label="기본 탐색">
+      <div class="sidebar-head">
+        <a class="navbar-brand" href="../index.html" aria-label="홈">
+          <span class="mark">M</span><span class="sidebar-brand-text">Monochrome</span>
+        </a>
+        <span class="navbar-spacer"></span>
+        <button class="btn btn-icon btn-ghost btn-sm" data-sidebar-toggle aria-label="사이드바 접기/펼치기">
+          <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3v18M4 6h2M4 10h2M4 14h2"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+        </button>
+      </div>
+
+      <nav class="sidebar-section" aria-label="개요">
+        <div class="sidebar-section-label">개요</div>
+        <a class="sidebar-link is-active" href="dashboard.html" aria-current="page">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+          <span class="sidebar-label">대시보드</span>
+        </a>
+        <a class="sidebar-link" href="#" aria-label="분석">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg>
+          <span class="sidebar-label">분석</span>
+        </a>
+        <a class="sidebar-link" href="#" aria-label="리포트">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3v5h5"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M8 13h8M8 17h6"/></svg>
+          <span class="sidebar-label">리포트</span>
+          <span class="count count-soft sidebar-label">3</span>
+        </a>
+      </nav>
+
+      <nav class="sidebar-section" aria-label="비즈니스">
+        <div class="sidebar-section-label">비즈니스</div>
+        <a class="sidebar-link" href="#" aria-label="고객">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M17 11a4 4 0 0 0 0-6"/><path d="M22 21a7 7 0 0 0-5-6.7"/></svg>
+          <span class="sidebar-label">고객</span>
+        </a>
+        <a class="sidebar-link" href="#" aria-label="매출">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span class="sidebar-label">매출</span>
+        </a>
+        <a class="sidebar-link" href="#" aria-label="제품">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></svg>
+          <span class="sidebar-label">제품</span>
+        </a>
+        <a class="sidebar-link" href="#" aria-label="주문">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg>
+          <span class="sidebar-label">주문</span>
+          <span class="count count-soft sidebar-label">12</span>
+        </a>
+      </nav>
+
+      <nav class="sidebar-section" aria-label="시스템">
+        <div class="sidebar-section-label">시스템</div>
+        <a class="sidebar-link" href="#" aria-label="팀">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+          <span class="sidebar-label">팀</span>
+        </a>
+        <a class="sidebar-link" href="../pages/settings.html" aria-label="설정">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 7 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9.4a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+          <span class="sidebar-label">설정</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-foot">
+        <div class="row gap-3">
+          <span class="avatar" aria-hidden="true">진수</span>
+          <div class="grow sidebar-label" style="min-width:0">
+            <div class="text-sm font-medium text-strong truncate">김진수</div>
+            <div class="text-2xs text-subtle truncate">admin@jinju-ict.com</div>
+          </div>
+          <button class="btn btn-icon btn-ghost btn-sm sidebar-label" aria-label="계정 메뉴">
+            <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ===== 메인 ===== -->
+    <div class="app-main">
+      <!-- 상단 바 -->
+      <header class="topbar no-print">
+        <button class="btn btn-icon btn-ghost menu-btn-mobile" data-sidebar-open aria-label="사이드바 열기">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+        </button>
+        <nav class="breadcrumb breadcrumb-mini" aria-label="위치">
+          <span class="breadcrumb-item"><a href="../index.html">홈</a></span><span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-item"><a href="#">개요</a></span><span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-item" aria-current="page">대시보드</span>
+        </nav>
+
+        <div class="searchbar dash-search">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input class="input" type="search" placeholder="주문·고객·상품 검색…" aria-label="검색">
+        </div>
+
+        <span class="navbar-spacer"></span>
+
+        <!-- 알림 드롭다운 -->
+        <div class="dropdown">
+          <button class="btn btn-icon btn-ghost topbar-icon-btn" data-dropdown-toggle aria-haspopup="true" aria-expanded="false" aria-label="알림 3건">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+            <span class="count count-soft" aria-hidden="true">3</span>
+          </button>
+          <div class="dropdown-menu align-right" role="menu" style="width:18rem">
+            <div class="menu-label">알림</div>
+            <button class="menu-item" role="menuitem">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/></svg>
+              <span><span class="text-sm text-strong">신규 주문 #10482</span><br><span class="text-2xs text-subtle">2분 전 · ₩184,000</span></span>
+            </button>
+            <button class="menu-item" role="menuitem">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4m0 4h.01"/></svg>
+              <span><span class="text-sm text-strong">재고 부족 경고</span><br><span class="text-2xs text-subtle">14분 전 · 무선 키보드 K2</span></span>
+            </button>
+            <button class="menu-item" role="menuitem">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/></svg>
+              <span><span class="text-sm text-strong">신규 고객 가입</span><br><span class="text-2xs text-subtle">1시간 전 · 윤서연</span></span>
+            </button>
+            <div class="menu-sep"></div>
+            <button class="menu-item" role="menuitem">모든 알림 보기<span class="menu-shortcut">→</span></button>
+          </div>
+        </div>
+
+        <button class="btn btn-icon btn-ghost" data-theme-toggle aria-pressed="false" aria-label="다크 모드로 전환">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        </button>
+        <button class="btn btn-secondary btn-sm" data-command-open aria-label="명령 팔레트 열기">
+          <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <kbd>⌘K</kbd>
+        </button>
+      </header>
+
+      <main id="main">
+        <!-- 페이지 헤더 -->
+        <div class="page-header" style="padding-inline: var(--space-6)">
+          <div>
+            <h1 class="page-title">대시보드</h1>
+            <p class="page-subtitle">2026년 6월 · 진주ICT 커머스 성과 개요</p>
+          </div>
+          <div class="cluster" style="gap: var(--space-4)">
+            <div class="segmented" role="tablist" aria-label="기간">
+              <button class="seg" role="tab" aria-selected="false">오늘</button>
+              <button class="seg is-active" role="tab" aria-selected="true">주</button>
+              <button class="seg" role="tab" aria-selected="false">월</button>
+              <button class="seg" role="tab" aria-selected="false">분기</button>
+            </div>
+            <button class="btn btn-primary" data-toast="리포트 생성됨" data-toast-body="대시보드 리포트가 내보내기 되었습니다." data-toast-icon="success">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+              리포트 내보내기
+            </button>
+          </div>
+        </div>
+
+        <div class="page-body stack-6">
+
+          <!-- 1) 통계 카드 4개 -->
+          <section class="grid grid-4" aria-label="핵심 지표">
+            <div class="statcard">
+              <div class="statcard-label">총매출</div>
+              <div class="statcard-value tnum">₩84,290,000</div>
+              <div class="statcard-meta">
+                <span class="statcard-trend"><svg class="icon-sm icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>14.2%</span>
+                <span>전주 대비</span>
+              </div>
+              <div class="sparkline-wrap">
+                <svg class="sparkline" viewBox="0 0 120 40" preserveAspectRatio="none" role="img" aria-label="총매출 추이 상승">
+                  <path class="area" d="M0,30 L17,26 L34,28 L51,20 L68,22 L85,14 L102,12 L120,6 L120,40 L0,40 Z"/>
+                  <path class="series" d="M0,30 L17,26 L34,28 L51,20 L68,22 L85,14 L102,12 L120,6"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="statcard">
+              <div class="statcard-label">주문수</div>
+              <div class="statcard-value tnum">1,842</div>
+              <div class="statcard-meta">
+                <span class="statcard-trend"><svg class="icon-sm icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>8.9%</span>
+                <span>전주 대비</span>
+              </div>
+              <div class="sparkline-wrap">
+                <svg class="sparkline" viewBox="0 0 120 40" preserveAspectRatio="none" role="img" aria-label="주문수 추이 상승">
+                  <path class="area" d="M0,28 L17,30 L34,22 L51,24 L68,18 L85,20 L102,12 L120,10 L120,40 L0,40 Z"/>
+                  <path class="series" d="M0,28 L17,30 L34,22 L51,24 L68,18 L85,20 L102,12 L120,10"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="statcard">
+              <div class="statcard-label">전환율</div>
+              <div class="statcard-value tnum">3.42%</div>
+              <div class="statcard-meta">
+                <span class="statcard-trend is-down"><svg class="icon-sm icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M9 17H17V9"/></svg>0.6%</span>
+                <span>전주 대비</span>
+              </div>
+              <div class="sparkline-wrap">
+                <svg class="sparkline" viewBox="0 0 120 40" preserveAspectRatio="none" role="img" aria-label="전환율 추이 하락">
+                  <path class="area" d="M0,12 L17,14 L34,10 L51,16 L68,18 L85,16 L102,22 L120,24 L120,40 L0,40 Z"/>
+                  <path class="series" d="M0,12 L17,14 L34,10 L51,16 L68,18 L85,16 L102,22 L120,24"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="statcard">
+              <div class="statcard-label">신규고객</div>
+              <div class="statcard-value tnum">+318</div>
+              <div class="statcard-meta">
+                <span class="statcard-trend"><svg class="icon-sm icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>21.7%</span>
+                <span>전주 대비</span>
+              </div>
+              <div class="sparkline-wrap">
+                <svg class="sparkline" viewBox="0 0 120 40" preserveAspectRatio="none" role="img" aria-label="신규고객 추이 상승">
+                  <path class="area" d="M0,32 L17,28 L34,26 L51,22 L68,24 L85,16 L102,10 L120,4 L120,40 L0,40 Z"/>
+                  <path class="series" d="M0,32 L17,28 L34,26 L51,22 L68,24 L85,16 L102,10 L120,4"/>
+                </svg>
+              </div>
+            </div>
+          </section>
+
+          <!-- 2) 매출 추이 + 트래픽 소스 -->
+          <section class="chart-grid-2" aria-label="추이 차트">
+            <!-- 매출 추이 (라인) -->
+            <div class="card">
+              <div class="card-body">
+                <div class="card-chart-head">
+                  <div>
+                    <h2 class="card-title">매출 추이</h2>
+                    <p class="card-subtitle">최근 12개월 · 실선=2026, 점선=2025</p>
+                  </div>
+                  <div class="legend">
+                    <span class="legend-item"><span class="legend-swatch s1"></span>2026</span>
+                    <span class="legend-item"><span class="legend-swatch s-dash"></span>2025</span>
+                  </div>
+                </div>
+                <div class="mt-6">
+                  <svg class="chart-line" viewBox="0 0 600 240" role="img" aria-label="월별 매출 추이 라인 차트, 2026년이 전년 대비 상승">
+                    <!-- grid lines -->
+                    <line class="grid-line" x1="0" y1="40" x2="600" y2="40"/>
+                    <line class="grid-line" x1="0" y1="100" x2="600" y2="100"/>
+                    <line class="grid-line" x1="0" y1="160" x2="600" y2="160"/>
+                    <!-- axis (x base) -->
+                    <line class="axis" x1="0" y1="210" x2="600" y2="210"/>
+                    <!-- area under 2026 series -->
+                    <path class="area" d="M0,170 L55,158 L109,164 L164,130 L218,138 L273,108 L327,118 L382,86 L436,94 L491,62 L545,70 L600,40 L600,210 L0,210 Z"/>
+                    <!-- 2025 series (점선) -->
+                    <path class="series series-2" d="M0,196 L55,188 L109,192 L164,176 L218,182 L273,166 L327,172 L382,150 L436,156 L491,138 L545,146 L600,126"/>
+                    <!-- 2026 series (실선) -->
+                    <path class="series" d="M0,170 L55,158 L109,164 L164,130 L218,138 L273,108 L327,118 L382,86 L436,94 L491,62 L545,70 L600,40"/>
+                    <!-- dots -->
+                    <circle class="dot" cx="164" cy="130" r="3.5"/>
+                    <circle class="dot" cx="382" cy="86" r="3.5"/>
+                    <circle class="dot" cx="600" cy="40" r="3.5"/>
+                  </svg>
+                  <div class="axis-labels" aria-hidden="true">
+                    <span>1월</span><span>3월</span><span>5월</span><span>7월</span><span>9월</span><span>11월</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 트래픽 소스 (도넛) -->
+            <div class="card">
+              <div class="card-body">
+                <h2 class="card-title">트래픽 소스</h2>
+                <p class="card-subtitle">세션 유입 경로 비중</p>
+                <div class="donut-wrap mt-6">
+                  <span class="chart-donut" role="img" aria-label="트래픽 소스 도넛: 자연 검색 42%, 직접 28%, 추천 18%, 소셜 12%">
+                    <svg width="148" height="148" viewBox="0 0 148 148">
+                      <!-- r=58, C=2πr≈364.4 -->
+                      <circle class="seg-track" cx="74" cy="74" r="58" fill="none" stroke-width="20"/>
+                      <!-- seg-1 자연검색 42% → 153.0 -->
+                      <circle class="seg-1" cx="74" cy="74" r="58" fill="none" stroke-width="20" stroke-dasharray="153.0 211.4" stroke-dashoffset="0"/>
+                      <!-- seg-2 직접 28% → 102.0, offset -153.0 -->
+                      <circle class="seg-2" cx="74" cy="74" r="58" fill="none" stroke-width="20" stroke-dasharray="102.0 262.4" stroke-dashoffset="-153.0"/>
+                      <!-- seg-3 추천 18% → 65.6, offset -255.0 -->
+                      <circle class="seg-3" cx="74" cy="74" r="58" fill="none" stroke-width="20" stroke-dasharray="65.6 298.8" stroke-dashoffset="-255.0"/>
+                      <!-- seg-4 소셜 12% → 43.7, offset -320.6 -->
+                      <circle class="seg-4" cx="74" cy="74" r="58" fill="none" stroke-width="20" stroke-dasharray="43.7 320.7" stroke-dashoffset="-320.6"/>
+                    </svg>
+                    <span class="chart-donut-center"><strong class="tnum">182K</strong><span>총 세션</span></span>
+                  </span>
+                  <div class="legend legend-pct">
+                    <span class="legend-item"><span class="row-2"><span class="legend-swatch s1"></span>자연 검색</span><span class="tnum">42%</span></span>
+                    <span class="legend-item"><span class="row-2"><span class="legend-swatch s2"></span>직접 유입</span><span class="tnum">28%</span></span>
+                    <span class="legend-item"><span class="row-2"><span class="legend-swatch s3"></span>추천</span><span class="tnum">18%</span></span>
+                    <span class="legend-item"><span class="row-2"><span class="legend-swatch s-dash"></span>소셜</span><span class="tnum">12%</span></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 3) 채널별 성과 (비교 바) + 4) 요일별 주문 (막대) -->
+          <section class="chart-grid-2" aria-label="채널 및 요일 성과">
+            <div class="card">
+              <div class="card-body">
+                <h2 class="card-title">채널별 성과</h2>
+                <p class="card-subtitle">채널 매출 기여도 (명도 = 비중)</p>
+                <div class="meter-stack mt-6">
+                  <div class="meter">
+                    <span class="meter-label">스토어 직영</span>
+                    <span class="meter-track"><span class="meter-fill" style="width:88%"></span></span>
+                    <span class="meter-value tnum">₩37.1M</span>
+                  </div>
+                  <div class="meter">
+                    <span class="meter-label">네이버 스마트스토어</span>
+                    <span class="meter-track"><span class="meter-fill" style="width:64%"></span></span>
+                    <span class="meter-value tnum">₩21.4M</span>
+                  </div>
+                  <div class="meter">
+                    <span class="meter-label">카카오 선물하기</span>
+                    <span class="meter-track"><span class="meter-fill is-soft" style="width:46%"></span></span>
+                    <span class="meter-value tnum">₩13.8M</span>
+                  </div>
+                  <div class="meter">
+                    <span class="meter-label">오프라인 팝업</span>
+                    <span class="meter-track"><span class="meter-fill is-soft" style="width:31%"></span></span>
+                    <span class="meter-value tnum">₩8.2M</span>
+                  </div>
+                  <div class="meter">
+                    <span class="meter-label">제휴 파트너</span>
+                    <span class="meter-track"><span class="meter-fill is-soft" style="width:18%"></span></span>
+                    <span class="meter-value tnum">₩3.8M</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-body">
+                <div class="card-chart-head">
+                  <div>
+                    <h2 class="card-title">요일별 주문</h2>
+                    <p class="card-subtitle">이번 주 · 금요일 최고</p>
+                  </div>
+                  <span class="badge badge-soft tnum">평균 263</span>
+                </div>
+                <div class="bars-card-body mt-6">
+                  <div class="chart-bars grow" role="img" aria-label="요일별 주문: 월 198, 화 224, 수 256, 목 241, 금 342, 토 318, 일 263. 금요일 최고">
+                    <div class="bar-col"><span class="bar" style="height:46%"></span><span class="bar-label">월</span></div>
+                    <div class="bar-col"><span class="bar" style="height:58%"></span><span class="bar-label">화</span></div>
+                    <div class="bar-col"><span class="bar" style="height:68%"></span><span class="bar-label">수</span></div>
+                    <div class="bar-col"><span class="bar" style="height:62%"></span><span class="bar-label">목</span></div>
+                    <div class="bar-col"><span class="bar is-emph" style="height:100%"></span><span class="bar-label">금</span></div>
+                    <div class="bar-col"><span class="bar" style="height:90%"></span><span class="bar-label">토</span></div>
+                    <div class="bar-col"><span class="bar" style="height:73%"></span><span class="bar-label">일</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 5) 최근 주문 테이블 + 6) 최근 활동 타임라인 -->
+          <section class="activity-side" aria-label="주문 및 활동">
+            <!-- 최근 주문 테이블 -->
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <h2 class="card-title">최근 주문</h2>
+                  <p class="card-subtitle">정렬·선택 가능 · 최근 8건</p>
+                </div>
+                <button class="btn btn-secondary btn-sm">전체 보기</button>
+              </div>
+              <div class="card-body" style="padding-top:0">
+                <div class="table-wrap">
+                  <table class="table table-hover" data-table-sort>
+                    <thead>
+                      <tr>
+                        <th class="th-checkbox"><label class="checkbox"><input type="checkbox" data-select-all aria-label="전체 선택"><span class="control"></span></label></th>
+                        <th class="th-sort" data-key="id" data-type="text">주문번호 <span class="sort-ind"><span class="up">▲</span><span class="down">▼</span></span></th>
+                        <th class="th-sort" data-key="customer" data-type="text">고객 <span class="sort-ind"><span class="up">▲</span><span class="down">▼</span></span></th>
+                        <th>상품</th>
+                        <th class="th-sort num" data-key="amt" data-type="number">금액 <span class="sort-ind"><span class="up">▲</span><span class="down">▼</span></span></th>
+                        <th>상태</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><label class="checkbox"><input type="checkbox" data-row-select aria-label="행 선택"><span class="control"></span></label></td>
+                        <td class="tnum">#10482</td><td>윤서연</td><td class="truncate" style="max-width:11rem">무선 키보드 K2 외 2건</td><td class="num">184,000</td>
+                        <td><span class="badge badge-status"><svg class="icon-sm icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>완료</span></td>
+                      </tr>
+                      <tr>
+                        <td><label class="checkbox"><input type="checkbox" data-row-select aria-label="행 선택"><span class="control"></span></label></td>
+                        <td class="tnum">#10481</td><td>박도현</td><td class="truncate" style="max-width:11rem">모노 데스크 매트</td><td class="num">39,800</td>
+                        <td><span class="badge badge-status"><svg class="icon-sm icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>배송중</span></td>
+                      </tr>
+                      <tr>
+                        <td><label class="checkbox"><input type="checkbox" data-row-select aria-label="행 선택"><span class="control"></span></label></td>
+                        <td class="tnum">#10480</td><td>이지민</td><td class="truncate" style="max-width:11rem">알루미늄 스탠드 · 케이블</td><td class="num">67,500</td>
+                        <td><span class="badge badge-status"><svg class="icon-sm icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>대기</span></td>
+                      </tr>
+                      <tr>
+                        <td><label class="checkbox"><input type="checkbox" data-row-select aria-label="행 선택"><span class="control"></span></label></td>
+                        <td class="tnum">#10479</td><td>최민준</td><td class="truncate" style="max-width:11rem">기계식 키보드 · 키캡 세트</td><td class="num">212,400</td>
+                        <td><span class="badge badge-status"><svg class="icon-sm icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>완료</span></td>
+                      </tr>
+                      <tr>
+                        <td><label class="checkbox"><input type="checkbox" data-row-select aria-label="행 선택"><span class="control"></span></label></td>
+                        <td class="tnum">#10478</td><td>정하늘</td><td class="truncate" style="max-width:11rem">노이즈 캔슬 이어버드</td><td class="num">158,000</td>
+                        <td><span class="badge badge-status"><svg class="icon-sm icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>배송중</span></td>
+                      </tr>
+                      <tr>
+                        <td><label class="checkbox"><input type="checkbox" data-row-select aria-label="행 선택"><span class="control"></span></label></td>
+                        <td class="tnum">#10477</td><td>한예린</td><td class="truncate" style="max-width:11rem">USB-C 허브 7포트</td><td class="num">52,900</td>
+                        <td><span class="badge badge-muted"><svg class="icon-sm icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>취소</span></td>
+                      </tr>
+                      <tr>
+                        <td><label class="checkbox"><input type="checkbox" data-row-select aria-label="행 선택"><span class="control"></span></label></td>
+                        <td class="tnum">#10476</td><td>오세훈</td><td class="truncate" style="max-width:11rem">4K 모니터 27인치</td><td class="num">428,000</td>
+                        <td><span class="badge badge-status"><svg class="icon-sm icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>완료</span></td>
+                      </tr>
+                      <tr>
+                        <td><label class="checkbox"><input type="checkbox" data-row-select aria-label="행 선택"><span class="control"></span></label></td>
+                        <td class="tnum">#10475</td><td>강수빈</td><td class="truncate" style="max-width:11rem">데스크 조명 · 펜홀더</td><td class="num">73,600</td>
+                        <td><span class="badge badge-status"><svg class="icon-sm icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>대기</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="row between mt-4" style="flex-wrap:wrap; gap: var(--space-3)">
+                  <span class="text-xs text-subtle">총 1,842건 중 1–8 표시</span>
+                  <nav class="pagination" aria-label="주문 페이지">
+                    <button class="pagination-item" aria-label="이전"><svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+                    <button class="pagination-item" aria-current="page">1</button>
+                    <button class="pagination-item">2</button>
+                    <button class="pagination-item">3</button>
+                    <span class="pagination-ellipsis">…</span>
+                    <button class="pagination-item">231</button>
+                    <button class="pagination-item" aria-label="다음"><svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
+                  </nav>
+                </div>
+              </div>
+            </div>
+
+            <!-- 최근 활동 타임라인 -->
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">최근 활동</h2>
+              </div>
+              <div class="card-body">
+                <ul class="timeline" role="list">
+                  <li class="timeline-item is-done">
+                    <div class="timeline-time">10:42</div>
+                    <div class="timeline-title">주문 #10482 결제 완료</div>
+                    <div class="timeline-desc">윤서연 · ₩184,000 · 스토어 직영</div>
+                  </li>
+                  <li class="timeline-item is-done">
+                    <div class="timeline-time">10:18</div>
+                    <div class="timeline-title">4K 모니터 27인치 출고</div>
+                    <div class="timeline-desc">오세훈 · 송장 등록됨</div>
+                  </li>
+                  <li class="timeline-item is-done">
+                    <div class="timeline-time">09:55</div>
+                    <div class="timeline-title">신규 고객 가입</div>
+                    <div class="timeline-desc">정하늘 · 추천 코드 JINJU26</div>
+                  </li>
+                  <li class="timeline-item">
+                    <div class="timeline-time">09:30</div>
+                    <div class="timeline-title">재고 부족 경고</div>
+                    <div class="timeline-desc">무선 키보드 K2 · 잔여 7개</div>
+                  </li>
+                  <li class="timeline-item">
+                    <div class="timeline-time">09:02</div>
+                    <div class="timeline-title">주문 #10477 취소 처리</div>
+                    <div class="timeline-desc">한예린 · 환불 요청 접수</div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ===== 오버레이 인프라 ===== -->
+  <div class="overlay" data-overlay-shared aria-hidden="true"></div>
+
+  <div class="command" role="dialog" aria-modal="true" aria-label="명령 팔레트" aria-hidden="true">
+    <div class="command-panel">
+      <div class="command-search">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" placeholder="명령 또는 페이지 검색…" aria-label="명령 검색" autocomplete="off">
+        <kbd>ESC</kbd>
+      </div>
+      <div class="command-list">
+        <div class="command-group-label">바로가기</div>
+        <button class="command-item is-active" data-href="dashboard.html"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>대시보드</button>
+        <button class="command-item" data-href="kanban.html"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="5" height="16"/><rect x="10" y="4" width="5" height="11"/><rect x="17" y="4" width="4" height="14"/></svg>칸반 보드</button>
+        <button class="command-item" data-href="inbox.html"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>인박스</button>
+        <button class="command-item" data-href="settings.html"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 7 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9.4a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>설정</button>
+        <div class="command-group-label">동작</div>
+        <button class="command-item" onclick="MM.toggleTheme()"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>다크 모드 전환</button>
+        <div class="command-empty" style="display:none">결과가 없습니다.</div>
+      </div>
+      <div class="command-footer">
+        <span class="row-2"><kbd>↑</kbd><kbd>↓</kbd> 이동</span>
+        <span class="row-2"><kbd>↵</kbd> 선택</span>
+        <span class="row-2"><kbd>ESC</kbd> 닫기</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-region" role="region" aria-label="알림"></div>
+
+  <script src="../app.js"></script>
+</body>
+</html>

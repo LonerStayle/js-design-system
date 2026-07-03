@@ -1,0 +1,726 @@
+/* ============================================================================
+   THEME 23 — HAND-DRAWN SKETCH  ·  components/navigation.css
+   ----------------------------------------------------------------------------
+   Navigation surfaces, all drawn like pen-on-paper: rough wobbly borders,
+   sketch (offset) shadows, marker/hand type. Reads ONLY semantic + component
+   tokens so light (note paper) and dark (chalkboard) both work for free.
+
+     .navbar         top bar (sticky)
+     .app-shell      sidebar + main grid (responsive off-canvas under 1024px)
+     .sidebar        left rail
+     .breadcrumb     trail of links
+     .pagination     rough square page buttons
+     .menu-wrap/.menu   dropdown menu
+     .context-menu   right-click style floating menu (positioned by JS)
+     .steps/.steps-vert  stepper / progress trail
+   ========================================================================== */
+
+/* ===========================================================================
+   NAVBAR
+   ======================================================================== */
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  height: var(--navbar-h);
+  padding-inline: var(--space-5);
+  background: var(--nav-bg);
+  color: var(--nav-fg);
+  /* rough bottom border (only the underside, like a torn page edge) */
+  border-bottom: var(--nav-border);
+}
+
+/* Brand — marker hand, oversized, with a doodle dot/circle mark */
+.navbar .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-none);
+  letter-spacing: var(--tracking-tight);
+  color: var(--nav-fg);
+  text-decoration: none;
+  padding-block: var(--space-1);
+}
+
+.brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 1.7em;
+  height: 1.7em;
+  font-size: var(--text-lg);
+  line-height: 1;
+  color: var(--color-accent-fg);
+  background: var(--color-accent);
+  border: var(--border-2);
+  /* doodle dot/circle — irregular blob ring */
+  border-radius: var(--radius-round);
+  box-shadow: var(--sketch-shadow-sm);
+  transform: rotate(-6deg);
+}
+
+/* Nav links — a row of pen links */
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.nav-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-hand);
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wide);
+  color: var(--nav-fg);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition: color var(--duration-fast) var(--ease-standard),
+              background-color var(--duration-fast) var(--ease-standard);
+}
+
+/* hover/active draw a wavy hand underline beneath the link */
+.nav-link::after {
+  content: "";
+  position: absolute;
+  left: var(--space-3);
+  right: var(--space-3);
+  bottom: 4px;
+  height: 8px;
+  background: var(--hand-underline) center / 100% 8px no-repeat;
+  opacity: 0;
+  transform: scaleX(0.6);
+  transform-origin: left center;
+  transition: opacity var(--duration-fast) var(--ease-out),
+              transform var(--duration-base) var(--ease-wobble);
+  pointer-events: none;
+}
+
+.nav-link:hover {
+  color: var(--color-text);
+}
+.nav-link:hover::after {
+  opacity: 0.85;
+  transform: scaleX(1);
+}
+
+.nav-link.is-active {
+  color: var(--color-text);
+}
+.nav-link.is-active::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+/* Nav right — actions cluster */
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Under ~720px collapse the inline links (kept accessible — wrap, scroll) */
+@media (max-width: 720px) {
+  .nav-links {
+    /* keep reachable: horizontal scroll rather than display:none */
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    gap: var(--space-1);
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .nav-links::-webkit-scrollbar { display: none; }
+  .nav-link {
+    padding-inline: var(--space-2);
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 540px) {
+  .navbar { padding-inline: var(--space-3); }
+  .navbar .brand { font-size: var(--text-2xl); }
+  /* shrink, never hide — links collapse to a compact scrollable strip */
+  .nav-links {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: var(--navbar-h);
+    padding: var(--space-2) var(--space-3);
+    background: var(--nav-bg);
+    border-bottom: var(--nav-border);
+    z-index: var(--z-sticky);
+  }
+}
+
+/* ===========================================================================
+   APP SHELL  (sidebar + main grid)
+   ======================================================================== */
+.app-shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  align-items: start;
+  min-height: calc(100vh - var(--navbar-h));
+  transition: grid-template-columns var(--duration-base) var(--ease-standard);
+}
+
+/* Collapsed rail — icons only */
+.app-shell.collapsed {
+  grid-template-columns: var(--sidebar-w-collapsed) 1fr;
+}
+.app-shell.collapsed .si-label,
+.app-shell.collapsed .side-section,
+.app-shell.collapsed .si-badge,
+.app-shell.collapsed .side-brand-text {
+  display: none;
+}
+.app-shell.collapsed .side-item {
+  justify-content: center;
+}
+
+/* ===========================================================================
+   SIDEBAR
+   ======================================================================== */
+.sidebar {
+  position: sticky;
+  top: var(--navbar-h);
+  align-self: start;
+  max-height: calc(100vh - var(--navbar-h));
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-5) var(--space-3);
+  background: var(--sidebar-bg);
+  color: var(--color-text);
+  /* rough right border (pen line down the page gutter) */
+  border-right: var(--border-2);
+}
+
+.side-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  padding-inline: var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-none);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.side-section {
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-1);
+  padding-inline: var(--space-3);
+  font-family: var(--font-hand);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+}
+.side-section:first-of-type { margin-top: 0; }
+
+.side-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-hand);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  color: var(--color-text);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  border: var(--border-w-2) solid transparent;
+  transition: background-color var(--duration-fast) var(--ease-standard),
+              border-color var(--duration-fast) var(--ease-standard);
+}
+
+.si-icon {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: 1.5em;
+  height: 1.5em;
+  font-size: var(--text-lg);
+  line-height: 1;
+  color: currentColor;
+}
+.si-icon svg { width: 1em; height: 1em; }
+
+.si-label {
+  flex: 1 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.si-badge {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.5em;
+  padding: 1px var(--space-2);
+  font-family: var(--font-sans);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  line-height: 1.4;
+  color: var(--color-accent-fg);
+  background: var(--color-accent);
+  border: var(--border-w-2) solid var(--ink);
+  border-radius: var(--radius-pill);
+}
+
+.side-item:hover {
+  background: var(--color-surface-2);
+  border-color: var(--color-border-soft);
+}
+
+.side-item.is-active {
+  background: var(--sidebar-active-bg);
+  border-color: var(--color-border);
+  font-weight: var(--weight-bold);
+  box-shadow: var(--sketch-shadow-sm);
+}
+/* ink left mark — a thick pen tab down the left edge of the active item */
+.side-item.is-active::before {
+  content: "";
+  position: absolute;
+  left: -3px;
+  top: 18%;
+  bottom: 18%;
+  width: var(--border-w-4);
+  background: var(--color-border);
+  border-radius: var(--radius-pill);
+}
+
+/* ---------- Responsive: off-canvas sidebar under 1024px ---------- */
+@media (max-width: 1024px) {
+  .app-shell,
+  .app-shell.collapsed {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    position: fixed;
+    top: var(--navbar-h);
+    left: 0;
+    bottom: 0;
+    z-index: var(--z-drawer);
+    width: min(var(--sidebar-w), 84vw);
+    max-height: none;
+    box-shadow: var(--sketch-shadow-lg);
+    transform: translateX(-110%);
+    transition: transform var(--duration-base) var(--ease-out);
+  }
+  .sidebar.is-open {
+    transform: translateX(0);
+  }
+  /* a collapsed rail expands back to full when slid in on mobile */
+  .app-shell.collapsed .si-label,
+  .app-shell.collapsed .side-section,
+  .app-shell.collapsed .si-badge,
+  .app-shell.collapsed .side-brand-text {
+    display: revert;
+  }
+  .app-shell.collapsed .side-item {
+    justify-content: flex-start;
+  }
+}
+
+/* ===========================================================================
+   BREADCRUMB
+   ======================================================================== */
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-hand);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.breadcrumb a {
+  color: var(--color-text-muted);
+  text-decoration: none;
+  border-radius: var(--radius-xs);
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+.breadcrumb a:hover {
+  color: var(--color-text);
+  background: var(--hand-underline) left bottom / 100% 7px no-repeat;
+}
+
+.breadcrumb .sep {
+  color: var(--color-text-subtle);
+  font-size: var(--text-md);
+  line-height: 1;
+}
+
+.breadcrumb .current {
+  color: var(--color-text);
+  font-weight: var(--weight-bold);
+}
+
+/* ===========================================================================
+   PAGINATION
+   ======================================================================== */
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pagination a,
+.pagination button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 38px;
+  height: 38px;
+  padding-inline: var(--space-2);
+  font-family: var(--font-hand);
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: var(--border-2);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--sketch-shadow-sm);
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-standard),
+              background-color var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-fast) var(--ease-standard);
+}
+/* wobble the neighbours so the squares don't look cloned */
+.pagination a:nth-child(even),
+.pagination button:nth-child(even) {
+  border-radius: var(--radius-md-alt);
+}
+
+.pagination a:hover,
+.pagination button:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--sketch-shadow);
+  background: var(--color-surface-2);
+}
+
+.pagination .is-active,
+.pagination [aria-current="page"] {
+  color: var(--color-primary-fg);
+  background: var(--color-primary);
+  border-color: var(--color-border);
+}
+.pagination .is-active:hover,
+.pagination [aria-current="page"]:hover {
+  background: var(--color-primary);
+}
+
+.pagination .ellipsis {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  height: 38px;
+  font-family: var(--font-hand);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-subtle);
+  background: none;
+  border: none;
+  box-shadow: none;
+  cursor: default;
+}
+
+.pagination button:disabled,
+.pagination [aria-disabled="true"] {
+  color: var(--color-text-subtle);
+  background: var(--color-surface-2);
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.pagination button:disabled:hover,
+.pagination [aria-disabled="true"]:hover {
+  transform: none;
+  box-shadow: none;
+  background: var(--color-surface-2);
+}
+
+/* ===========================================================================
+   MENU  (dropdown)
+   ======================================================================== */
+.menu-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  z-index: var(--z-dropdown);
+  min-width: 196px;
+  padding: var(--space-2);
+  background: var(--color-surface);
+  color: var(--color-text);
+  /* rough card */
+  border: var(--border-2);
+  border-radius: var(--radius-md);
+  box-shadow: var(--sketch-shadow-lg);
+  /* hidden until opened */
+  display: none;
+  transform-origin: top left;
+}
+
+.menu.align-right {
+  left: auto;
+  right: 0;
+  transform-origin: top right;
+}
+
+.menu.is-open {
+  display: block;
+  animation: menu-pop var(--duration-fast) var(--ease-wobble) both;
+}
+
+@keyframes menu-pop {
+  from { opacity: 0; transform: scale(0.94) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-hand);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  text-align: left;
+  color: var(--color-text);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: var(--color-surface-2);
+}
+.menu-item.danger {
+  color: var(--color-danger);
+}
+.menu-item.danger:hover {
+  background: var(--color-danger-bg);
+}
+
+.menu-sep {
+  height: 0;
+  margin: var(--space-2) var(--space-1);
+  border: none;
+  border-top: var(--border-dashed);
+  opacity: 0.7;
+}
+
+.menu-label {
+  padding: var(--space-1) var(--space-3);
+  font-family: var(--font-hand);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+}
+
+/* ===========================================================================
+   CONTEXT MENU  (fixed, positioned by JS)
+   ======================================================================== */
+.context-menu {
+  position: fixed;
+  z-index: var(--z-popover);
+  min-width: 180px;
+  padding: var(--space-2);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: var(--border-2);
+  border-radius: var(--radius-md);
+  box-shadow: var(--sketch-shadow-lg);
+  display: none;
+}
+.context-menu.is-open {
+  display: block;
+  animation: menu-pop var(--duration-fast) var(--ease-wobble) both;
+}
+
+/* ===========================================================================
+   STEPS  (horizontal stepper)
+   ======================================================================== */
+.steps {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.step {
+  position: relative;
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+/* connector line between steps (drawn from each step toward the next) */
+.step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 18px; /* centred on the ~36px number circle */
+  left: calc(50% + 22px);
+  right: calc(-50% + 22px);
+  height: var(--border-w-2);
+  background: var(--color-divider);
+  z-index: var(--z-base);
+}
+
+.step-num {
+  position: relative;
+  z-index: var(--z-raised);
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  color: var(--color-text);
+  background: var(--color-surface);
+  /* rough circle */
+  border: var(--border-2);
+  border-radius: var(--radius-round);
+  box-shadow: var(--sketch-shadow-sm);
+}
+
+.step-label {
+  font-family: var(--font-hand);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  color: var(--color-text);
+}
+
+.step-sub {
+  font-family: var(--font-hand);
+  font-size: var(--text-2xs);
+  color: var(--color-text-subtle);
+}
+
+/* active — accent/ink number */
+.step.is-active {
+  color: var(--color-text);
+}
+.step.is-active .step-num {
+  color: var(--color-accent-fg);
+  background: var(--color-accent);
+  border-color: var(--color-border);
+  box-shadow: var(--sketch-shadow);
+}
+
+/* complete — filled ink with a hand check, connector inked through */
+.step.is-complete .step-num {
+  color: var(--color-primary-fg);
+  background: var(--color-primary);
+  border-color: var(--color-border);
+}
+.step.is-complete .step-num {
+  font-size: 0; /* hide the digit, show the check glyph */
+}
+.step.is-complete .step-num::after {
+  content: "\2713"; /* ✓ */
+  font-size: var(--text-lg);
+  color: var(--color-primary-fg);
+}
+.step.is-complete::after {
+  background: var(--color-border);
+}
+
+/* ===========================================================================
+   STEPS — vertical
+   ======================================================================== */
+.steps-vert {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.vstep {
+  position: relative;
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  align-items: start;
+  gap: var(--space-3);
+  color: var(--color-text-muted);
+}
+
+/* vertical connector running down from each step's number */
+.vstep:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 17px; /* centred on the 36px circle */
+  top: 40px;
+  bottom: calc(-1 * var(--space-5) - 0px);
+  width: var(--border-w-2);
+  background: var(--color-divider);
+  z-index: var(--z-base);
+}
+
+.vstep .step-num {
+  grid-row: 1 / span 2;
+}
+
+.vstep .step-label,
+.vstep .step-sub {
+  text-align: left;
+}
+.vstep .step-label { align-self: center; }
+
+.vstep.is-active .step-num {
+  color: var(--color-accent-fg);
+  background: var(--color-accent);
+  border-color: var(--color-border);
+  box-shadow: var(--sketch-shadow);
+}
+.vstep.is-active { color: var(--color-text); }
+
+.vstep.is-complete .step-num {
+  color: var(--color-primary-fg);
+  background: var(--color-primary);
+  border-color: var(--color-border);
+  font-size: 0;
+}
+.vstep.is-complete .step-num::after {
+  content: "\2713";
+  font-size: var(--text-lg);
+  color: var(--color-primary-fg);
+}
+.vstep.is-complete::after {
+  background: var(--color-border);
+}

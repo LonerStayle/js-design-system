@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings · Hygge</title>
+<meta name="description" content="Manage your workspace and preferences in the Scandinavian Hygge design system.">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../semantic.css">
+<link rel="stylesheet" href="../base.css">
+<link rel="stylesheet" href="../components/buttons.css">
+<link rel="stylesheet" href="../components/forms.css">
+<link rel="stylesheet" href="../components/cards.css">
+<link rel="stylesheet" href="../components/data-display.css">
+<link rel="stylesheet" href="../components/feedback.css">
+<link rel="stylesheet" href="../components/navigation.css">
+<link rel="stylesheet" href="_shell.css">
+<style>
+  /* ---- page-local layout, tokens only ---- */
+  .settings-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:var(--space-4);
+  }
+  /* a setting row: label + hint on the left, control on the right */
+  .set-row{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:var(--space-4);
+    padding:var(--space-4) 0;
+    border-bottom:1px solid var(--color-border-subtle);
+  }
+  .set-row:last-child{ border-bottom:0; }
+  .set-row .set-copy{ min-width:0; }
+  .set-row .set-title{
+    font-weight:600;
+    color:var(--color-text);
+    font-size:var(--text-sm);
+  }
+  .set-row .set-desc{
+    color:var(--color-text-muted);
+    font-size:var(--text-xs);
+    margin-top:2px;
+    max-width:42ch;
+  }
+  .set-row .set-control{ flex-shrink:0; }
+
+  /* form 2-col on wide screens */
+  .form-2col{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:var(--space-4);
+  }
+  @media (max-width:640px){ .form-2col{ grid-template-columns:1fr; } }
+
+  /* avatar editor */
+  .avatar-edit{
+    display:flex;
+    align-items:center;
+    gap:var(--space-5);
+    flex-wrap:wrap;
+  }
+  .avatar-xxl{
+    width:88px;height:88px;border-radius:var(--radius-pill);
+    display:grid;place-items:center;
+    font-size:var(--text-2xl);font-weight:600;
+    font-family:var(--font-display, inherit);
+    background:var(--terracotta-200);color:var(--terracotta-800);
+    flex-shrink:0;
+  }
+
+  /* radio cards for theme / accent */
+  .choice-row{ display:flex; gap:var(--space-3); flex-wrap:wrap; }
+  .choice-card{
+    position:relative;
+    flex:1 1 9rem;
+    min-width:8rem;
+    border:1.5px solid var(--color-border);
+    border-radius:var(--radius-md);
+    padding:var(--space-4);
+    cursor:pointer;
+    background:var(--color-surface);
+    transition:border-color .15s ease, background .15s ease, box-shadow .15s ease;
+  }
+  .choice-card:hover{ border-color:var(--color-primary); }
+  .choice-card input{ position:absolute; opacity:0; pointer-events:none; }
+  .choice-card:has(input:checked){
+    border-color:var(--color-primary);
+    background:var(--color-primary-soft);
+    box-shadow:0 0 0 3px var(--color-primary-soft);
+  }
+  .choice-card:has(input:focus-visible){
+    outline:2px solid var(--color-primary);
+    outline-offset:2px;
+  }
+  .choice-card .cc-swatch{
+    height:46px;border-radius:var(--radius-sm);
+    margin-bottom:var(--space-3);
+    border:1px solid var(--color-border-subtle);
+    display:grid;place-items:center;
+    color:var(--color-text-muted);
+  }
+  .choice-card .cc-name{ font-weight:600; font-size:var(--text-sm); color:var(--color-text); }
+  .choice-card .cc-sub{ font-size:var(--text-xs); color:var(--color-text-muted); }
+
+  /* accent color swatches */
+  .swatch-row{ display:flex; gap:var(--space-3); flex-wrap:wrap; }
+  .swatch{
+    position:relative;
+    width:40px;height:40px;border-radius:var(--radius-pill);
+    cursor:pointer;
+    display:grid;place-items:center;
+    color:#fff;
+    box-shadow:var(--shadow-sm);
+    transition:transform .12s ease;
+  }
+  .swatch:hover{ transform:translateY(-2px); }
+  .swatch input{ position:absolute; opacity:0; pointer-events:none; }
+  .swatch .check-ic{ opacity:0; transition:opacity .12s ease; }
+  .swatch:has(input:checked) .check-ic{ opacity:1; }
+  .swatch:has(input:checked){ box-shadow:0 0 0 3px var(--color-bg), 0 0 0 5px currentColor; }
+  .swatch:has(input:focus-visible){ outline:2px solid var(--color-text); outline-offset:3px; }
+
+  /* connected accounts provider icon tile */
+  .provider-ic{
+    width:38px;height:38px;border-radius:var(--radius-sm);
+    display:grid;place-items:center;flex-shrink:0;
+    background:var(--color-surface-2);color:var(--color-text);
+  }
+
+  /* plan card */
+  .plan-card{
+    border:1.5px solid var(--color-primary);
+    background:var(--color-primary-soft);
+    border-radius:var(--radius-lg);
+    padding:var(--space-5);
+  }
+  .plan-price{ font-family:var(--font-display, inherit); font-size:var(--text-3xl); line-height:1; color:var(--color-text); }
+
+  /* danger zone */
+  .danger-card{
+    border:1.5px solid var(--color-danger);
+    border-radius:var(--radius-lg);
+    background:color-mix(in srgb, var(--color-danger) 6%, var(--color-surface));
+  }
+
+  /* sticky save bar */
+  .save-bar{
+    position:sticky;
+    bottom:var(--space-4);
+    z-index:30;
+    margin-top:var(--space-6);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:var(--space-4);
+    padding:var(--space-3) var(--space-4);
+    border:1px solid var(--color-border);
+    border-radius:var(--radius-lg);
+    background:var(--color-bg-elevated);
+    box-shadow:var(--shadow-lg);
+    flex-wrap:wrap;
+  }
+  .save-bar .sb-note{ display:flex; align-items:center; gap:var(--space-2); color:var(--color-text-muted); font-size:var(--text-sm); }
+
+  .section-icon{
+    width:34px;height:34px;border-radius:var(--radius-sm);
+    display:grid;place-items:center;flex-shrink:0;
+    background:var(--color-accent-soft);color:var(--color-accent-soft-fg);
+  }
+  .card-head-row{ display:flex; align-items:center; gap:var(--space-3); }
+
+  .pay-row{
+    display:flex;align-items:center;gap:var(--space-4);
+    padding:var(--space-4);
+    border:1px solid var(--color-border);
+    border-radius:var(--radius-md);
+    background:var(--color-surface-2);
+  }
+  .card-brand{
+    width:46px;height:32px;border-radius:6px;flex-shrink:0;
+    display:grid;place-items:center;
+    background:var(--dusty-blue-700);color:#fff;
+    font-size:10px;font-weight:700;letter-spacing:.04em;
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="app">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <div class="sidebar-head">
+      <a class="brand" href="../index.html">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 9v11a1 1 0 0 0 1 1h5v-6h6v6h5a1 1 0 0 0 1-1V9Z"/></svg></span>
+        <span class="nav-label">Hygge</span>
+      </a>
+    </div>
+    <nav class="sidebar-nav">
+      <span class="sidebar-section">Workspace</span>
+      <a class="nav-link" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h8v8H3zM13 3h8v5h-8zM13 10h8v11h-8zM3 13h8v8H3z"/></svg><span class="nav-label">Overview</span></a>
+      <a class="nav-link" href="kanban.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h4v16H4zM10 4h4v10h-4zM16 4h4v13h-4z"/></svg><span class="nav-label">Projects</span><span class="nav-badge badge badge-primary">6</span></a>
+      <a class="nav-link" href="inbox.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5 5h14l3 7v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-6Z"/></svg><span class="nav-label">Inbox</span><span class="nav-badge badge">12</span></a>
+      <a class="nav-link" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span class="nav-label">Customers</span></a>
+      <span class="sidebar-section">Shop</span>
+      <a class="nav-link" href="product.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V6l-3-4Z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg><span class="nav-label">Products</span></a>
+      <a class="nav-link" href="pricing.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span class="nav-label">Plans</span></a>
+      <span class="sidebar-section">System</span>
+      <a class="nav-link is-active" href="settings.html" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 0 1-4 0v-.1A1.6 1.6 0 0 0 7 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3.5 14a2 2 0 0 1 0-4h.1A1.6 1.6 0 0 0 4.6 7"/></svg><span class="nav-label">Settings</span></a>
+    </nav>
+    <div class="sidebar-foot">
+      <button class="btn btn-ghost btn-block" data-sidebar-toggle="sidebar" aria-label="Collapse sidebar">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        <span class="nav-label">Collapse</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="app-main">
+    <!-- top bar -->
+    <header class="navbar">
+      <button class="btn btn-icon btn-ghost menu-btn" data-sidebar-open="sidebar" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <nav class="breadcrumb hide-mobile" aria-label="Breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg></span>
+        <span aria-current="page">Settings</span>
+      </nav>
+      <span class="nav-spacer"></span>
+      <div class="navbar-actions">
+        <button class="btn btn-ghost btn-sm" data-command-open aria-label="Search">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <kbd>⌘K</kbd>
+        </button>
+        <div class="dropdown">
+          <button class="btn btn-icon btn-ghost" data-dropdown-toggle aria-haspopup="true" aria-expanded="false" aria-label="Notifications">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+          </button>
+          <div class="menu right" role="menu">
+            <span class="menu-label">Notifications</span>
+            <button class="menu-item" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg> New order #1024</button>
+            <button class="menu-item" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg> Stock low: Oak stool</button>
+            <div class="menu-sep"></div>
+            <button class="menu-item" role="menuitem">View all</button>
+          </div>
+        </div>
+        <button class="btn btn-icon btn-ghost" data-theme-toggle aria-pressed="false" aria-label="Toggle dark mode">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>
+        </button>
+        <span class="avatar avatar-sm" style="background:var(--sage-200);color:var(--sage-700)">SH</span>
+      </div>
+    </header>
+
+    <main class="app-content" id="main">
+      <div class="page-head">
+        <div>
+          <h1 class="ph-title">Settings</h1>
+          <p class="ph-sub">Manage your workspace and preferences.</p>
+        </div>
+        <div class="ph-actions">
+          <button class="btn btn-ghost" data-toast='{"title":"Changes reverted","msg":"Your last saved settings were restored.","variant":"info"}'>Discard</button>
+          <button class="btn btn-primary" data-toast='{"title":"Settings saved","msg":"Your preferences are tucked in safely. 🌿","variant":"success"}'>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            Save changes
+          </button>
+        </div>
+      </div>
+
+      <!-- ============ TABS ============ -->
+      <div data-tabs>
+        <div class="tabs" role="tablist" aria-label="Settings sections">
+          <button class="tab" role="tab" id="tab-profile" aria-controls="panel-profile" aria-selected="true">Profile</button>
+          <button class="tab" role="tab" id="tab-account" aria-controls="panel-account" aria-selected="false">Account</button>
+          <button class="tab" role="tab" id="tab-notif" aria-controls="panel-notif" aria-selected="false">Notifications</button>
+          <button class="tab" role="tab" id="tab-appear" aria-controls="panel-appear" aria-selected="false">Appearance</button>
+          <button class="tab" role="tab" id="tab-billing" aria-controls="panel-billing" aria-selected="false">Billing</button>
+        </div>
+
+        <!-- ---------- PROFILE ---------- -->
+        <div class="tab-panel" id="panel-profile" role="tabpanel" aria-labelledby="tab-profile">
+          <div class="settings-grid">
+
+            <section class="card">
+              <div class="card-header">
+                <div class="card-head-row">
+                  <span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
+                  <div><h2 class="card-title">Public profile</h2><p class="card-subtitle">This is how teammates and customers see you.</p></div>
+                </div>
+              </div>
+              <div class="card-body flow">
+                <div class="avatar-edit">
+                  <span class="avatar-xxl" aria-hidden="true">SH</span>
+                  <div class="flow" style="gap:var(--space-2)">
+                    <p class="text-sm" style="color:var(--color-text);font-weight:600;margin:0">Profile photo</p>
+                    <p class="hint" style="margin:0">PNG or JPG, square works best. Up to 4&nbsp;MB.</p>
+                    <div class="row gap-2" style="flex-wrap:wrap">
+                      <label class="btn btn-secondary btn-sm" style="cursor:pointer">
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg>
+                        Change
+                        <input type="file" accept="image/*" hidden aria-label="Upload profile photo">
+                      </label>
+                      <button class="btn btn-ghost btn-sm" data-toast='{"title":"Photo removed","msg":"Your initials will be shown instead.","variant":"info"}'>Remove</button>
+                    </div>
+                  </div>
+                </div>
+
+                <hr class="divider divider-soft">
+
+                <div class="form-2col">
+                  <div class="field">
+                    <label class="label req" for="display-name">Display name</label>
+                    <input class="input" id="display-name" type="text" value="Sofie Halvorsen" autocomplete="name">
+                    <span class="hint">Your full name as shown across the workspace.</span>
+                  </div>
+                  <div class="field">
+                    <label class="label" for="username">Username</label>
+                    <div class="input-group">
+                      <span class="adornment" aria-hidden="true">@</span>
+                      <input class="input" id="username" type="text" value="sofie.h" autocomplete="username">
+                    </div>
+                    <span class="hint">hygge.studio/@sofie.h</span>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label class="label" for="role-title">Role</label>
+                  <input class="input" id="role-title" type="text" value="Studio Lead · Furniture &amp; Textiles">
+                </div>
+
+                <div class="field">
+                  <label class="label" for="bio">Bio</label>
+                  <textarea class="textarea" id="bio" rows="4">Designing calm, long-lasting pieces from a small oak workshop in Aarhus. I care about honest materials, soft light, and a good cup of tea. 🍵</textarea>
+                  <span class="hint">A short intro for your profile — keep it warm, around 160 characters.</span>
+                </div>
+
+                <div class="field">
+                  <label class="label" for="skill-input">Skills &amp; interests</label>
+                  <div class="chip-input" id="skills-chip">
+                    <span class="chip">Woodworking <button type="button" aria-label="Remove Woodworking">×</button></span>
+                    <span class="chip">Textile design <button type="button" aria-label="Remove Textile design">×</button></span>
+                    <span class="chip">Ceramics <button type="button" aria-label="Remove Ceramics">×</button></span>
+                    <span class="chip">Sustainable sourcing <button type="button" aria-label="Remove Sustainable sourcing">×</button></span>
+                    <input id="skill-input" type="text" placeholder="Add a skill…" aria-label="Add a skill">
+                  </div>
+                  <span class="hint">Press Enter to add. These help teammates find the right person.</span>
+                </div>
+              </div>
+              <div class="card-footer">
+                <span class="hint" style="margin-right:auto">Profile changes are visible to your workspace.</span>
+                <button class="btn btn-ghost">Cancel</button>
+                <button class="btn btn-primary" data-toast='{"title":"Profile saved","msg":"Your public profile has been updated.","variant":"success"}'>Save profile</button>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-header">
+                <div class="card-head-row">
+                  <span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg></span>
+                  <div><h2 class="card-title">Where you work</h2><p class="card-subtitle">Helps with timezones and local delivery.</p></div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="form-2col">
+                  <div class="field">
+                    <label class="label" for="location">Location</label>
+                    <input class="input" id="location" type="text" value="Aarhus, Denmark">
+                  </div>
+                  <div class="field">
+                    <label class="label" for="timezone">Timezone</label>
+                    <div class="select-wrap">
+                      <select class="select" id="timezone">
+                        <option selected>(GMT+01:00) Copenhagen, Oslo</option>
+                        <option>(GMT+00:00) London, Dublin</option>
+                        <option>(GMT+02:00) Helsinki, Athens</option>
+                        <option>(GMT-05:00) New York, Toronto</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+          </div>
+        </div>
+
+        <!-- ---------- ACCOUNT ---------- -->
+        <div class="tab-panel" id="panel-account" role="tabpanel" aria-labelledby="tab-account" hidden>
+          <div class="settings-grid">
+
+            <section class="card">
+              <div class="card-header">
+                <div class="card-head-row">
+                  <span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5 5h14l3 7v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-6Z"/></svg></span>
+                  <div><h2 class="card-title">Email address</h2><p class="card-subtitle">Used for sign-in and important notices.</p></div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="field">
+                  <label class="label" for="email">Email</label>
+                  <div class="input-group">
+                    <span class="adornment" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span>
+                    <input class="input is-success" id="email" type="email" value="sofie@hygge.studio" autocomplete="email">
+                  </div>
+                  <span class="hint hint-success">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+                    Verified on 14 May 2026.
+                  </span>
+                </div>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-header">
+                <div class="card-head-row">
+                  <span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                  <div><h2 class="card-title">Change password</h2><p class="card-subtitle">Use at least 10 characters with a number.</p></div>
+                </div>
+              </div>
+              <div class="card-body flow">
+                <div class="field">
+                  <label class="label" for="pw-current">Current password</label>
+                  <input class="input" id="pw-current" type="password" autocomplete="current-password" placeholder="••••••••••">
+                </div>
+                <div class="form-2col">
+                  <div class="field">
+                    <label class="label" for="pw-new">New password</label>
+                    <input class="input" id="pw-new" type="password" autocomplete="new-password" placeholder="••••••••••">
+                    <span class="hint">10+ characters, mix of letters and numbers.</span>
+                  </div>
+                  <div class="field">
+                    <label class="label" for="pw-confirm">Confirm new password</label>
+                    <input class="input" id="pw-confirm" type="password" autocomplete="new-password" placeholder="••••••••••">
+                  </div>
+                </div>
+              </div>
+              <div class="card-footer">
+                <button class="btn btn-ghost">Cancel</button>
+                <button class="btn btn-primary" data-toast='{"title":"Password updated","msg":"Use your new password next time you sign in.","variant":"success"}'>Update password</button>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-header">
+                <div class="card-head-row">
+                  <span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+                  <div><h2 class="card-title">Two-factor authentication</h2><p class="card-subtitle">Add a second step at sign-in for extra safety.</p></div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="set-row">
+                  <div class="set-copy">
+                    <div class="set-title">Authenticator app</div>
+                    <div class="set-desc">Use a TOTP app like 1Password or Authy to generate codes.</div>
+                  </div>
+                  <div class="set-control">
+                    <label class="switch">
+                      <input type="checkbox" checked aria-label="Enable authenticator two-factor authentication">
+                      <span class="track"><span class="thumb"></span></span>
+                    </label>
+                  </div>
+                </div>
+                <div class="set-row">
+                  <div class="set-copy">
+                    <div class="set-title">SMS backup codes</div>
+                    <div class="set-desc">Receive a code by text if you lose your authenticator.</div>
+                  </div>
+                  <div class="set-control">
+                    <label class="switch">
+                      <input type="checkbox" aria-label="Enable SMS backup codes">
+                      <span class="track"><span class="thumb"></span></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="card card-flush">
+              <div class="card-header" style="padding:var(--space-5) var(--space-6) var(--space-3)">
+                <div class="card-head-row">
+                  <span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></span>
+                  <div><h2 class="card-title">Connected accounts</h2><p class="card-subtitle">Sign in faster and sync your calendar.</p></div>
+                </div>
+              </div>
+              <ul class="list">
+                <li class="list-item">
+                  <span class="provider-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20Z"/></svg></span>
+                  <div class="li-main"><div class="li-title">Google</div><div class="li-sub">sofie@hygge.studio</div></div>
+                  <span class="badge badge-success"><span class="dot"></span> Connected</span>
+                  <button class="btn btn-ghost btn-sm" data-toast='{"title":"Google disconnected","msg":"You can reconnect any time.","variant":"info"}'>Disconnect</button>
+                </li>
+                <li class="list-item">
+                  <span class="provider-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.3 4.3 0 0 0-.1-3.2s-1-.3-3.5 1.3a12 12 0 0 0-6.2 0C6.5 2.8 5.5 3.1 5.5 3.1a4.3 4.3 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg></span>
+                  <div class="li-main"><div class="li-title">GitHub</div><div class="li-sub">@sofie-h</div></div>
+                  <span class="badge badge-success"><span class="dot"></span> Connected</span>
+                  <button class="btn btn-ghost btn-sm" data-toast='{"title":"GitHub disconnected","msg":"You can reconnect any time.","variant":"info"}'>Disconnect</button>
+                </li>
+                <li class="list-item">
+                  <span class="provider-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2Z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg></span>
+                  <div class="li-main"><div class="li-title">Dropbox</div><div class="li-sub">Sync invoices &amp; assets</div></div>
+                  <span class="badge badge-outline">Not connected</span>
+                  <button class="btn btn-secondary btn-sm" data-toast='{"title":"Connect Dropbox","msg":"Opening Dropbox authorization…","variant":"info"}'>Connect</button>
+                </li>
+              </ul>
+            </section>
+
+            <section class="card">
+              <div class="card-header">
+                <div class="card-head-row">
+                  <span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20Z"/></svg></span>
+                  <div><h2 class="card-title">Language &amp; region</h2><p class="card-subtitle">Set the language for your account.</p></div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="field" style="max-width:22rem">
+                  <label class="label" for="language">Language</label>
+                  <div class="select-wrap">
+                    <select class="select" id="language">
+                      <option selected>English (UK)</option>
+                      <option>Dansk</option>
+                      <option>Norsk bokmål</option>
+                      <option>Svenska</option>
+                      <option>Suomi</option>
+                      <option>Deutsch</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- DANGER ZONE -->
+            <section class="card danger-card" aria-labelledby="danger-title">
+              <div class="card-header">
+                <div class="card-head-row">
+                  <span class="section-icon" aria-hidden="true" style="background:var(--color-danger-soft);color:var(--color-danger)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg></span>
+                  <div><h2 class="card-title" id="danger-title" style="color:var(--color-danger)">Danger zone</h2><p class="card-subtitle">Irreversible and destructive actions.</p></div>
+                </div>
+              </div>
+              <div class="card-body flow">
+                <div class="alert alert-danger" role="note">
+                  <span class="alert-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></span>
+                  <div class="alert-body"><span class="alert-title">These actions cannot be undone.</span> Deleting your workspace removes all projects, orders, and customer data permanently.</div>
+                </div>
+                <div class="set-row">
+                  <div class="set-copy">
+                    <div class="set-title">Export your data</div>
+                    <div class="set-desc">Download a copy of your projects, orders and invoices as a ZIP archive.</div>
+                  </div>
+                  <div class="set-control">
+                    <button class="btn btn-secondary" data-toast='{"title":"Export started","msg":"We will email a download link within a few minutes.","variant":"info"}'>
+                      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+                      Export data
+                    </button>
+                  </div>
+                </div>
+                <div class="set-row">
+                  <div class="set-copy">
+                    <div class="set-title" style="color:var(--color-danger)">Delete workspace</div>
+                    <div class="set-desc">Permanently remove the Hygge Studio workspace and everything in it.</div>
+                  </div>
+                  <div class="set-control">
+                    <button class="btn btn-danger" data-modal-open="delete-modal">
+                      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/></svg>
+                      Delete workspace
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+          </div>
+        </div>
+
+        <!-- ---------- NOTIFICATIONS ---------- -->
+        <div class="tab-panel" id="panel-notif" role="tabpanel" aria-labelledby="tab-notif" hidden>
+          <div class="settings-grid">
+
+            <section class="card">
+              <div class="card-header">
+                <div class="card-head-row">
+                  <span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5 5h14l3 7v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-6Z"/></svg></span>
+                  <div><h2 class="card-title">Email notifications</h2><p class="card-subtitle">Sent to sofie@hygge.studio.</p></div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="set-row">
+                  <div class="set-copy">
+                    <div class="set-title">Order updates</div>
+                    <div class="set-desc">When an order is placed, paid, shipped, or refunded.</div>
+                  </div>
+                  <div class="set-control">
+                    <label class="switch"><input type="checkbox" checked aria-label="Email: order updates"><span class="track"><span class="thumb"></span></span></label>
+                  </div>
+                </div>
+                <div class="set-row">
+                  <div class="set-copy">
+                    <div class="set-title">Weekly digest</div>
+                    <div class="set-desc">A cosy Monday summary of sales, reviews, and stock. 🍵</div>
+                  </div>
+                  <div class="set-control">
+                    <label class="switch"><input type="checkbox" checked aria-label="Email: weekly digest"><span class="track"><span class="thumb"></span></span></label>
+                  </div>
+                </div>
+                <div class="set-row">
+                  <div class="set-copy">
+                    <div class="set-title">Product news</div>
+                    <div class="set-desc">Occasional notes about new Hygge features and tips.</div>
+                  </div>
+                  <div class="set-control">
+                    <label class="switch"><input type="checkbox" aria-label="Email: product news"><span class="track"><span class="thumb"></span></span></label>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-header">
+                <div class="card-head-row">
+                  <span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></span>
+                  <div><h2 class="card-title">Push notifications</h2><p class="card-subtitle">Delivered to your browser and mobile app.</p></div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="set-row">
+                  <div class="set-copy">
+                    <div class="set-title">Mentions</div>
+                    <div class="set-desc">When a teammate @mentions you in a comment or task.</div>
+                  </div>
+                  <div class="set-control">
+                    <label class="switch"><input type="checkbox" checked aria-label="Push: mentions"><span class="track"><span class="thumb"></span></span></label>
+                  </div>
+                </div>
+                <div class="set-row">
+                  <div class="set-copy">
+                    <div class="set-title">Comments</div>
+                    <div class="set-desc">Replies on projects you follow or created.</div>
+                  </div>
+                  <div class="set-control">
+                    <label class="switch"><input type="checkbox" aria-label="Push: comments"><span class="track"><span class="thumb"></span></span></label>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-header">
+                <div class="card-head-row">
+                  <span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+                  <div><h2 class="card-title">Delivery frequency</h2><p class="card-subtitle">How often we batch up your push notifications.</p></div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="segmented" role="group" aria-label="Notification frequency">
+                  <button class="is-active" aria-pressed="true">Realtime</button>
+                  <button aria-pressed="false">Hourly</button>
+                  <button aria-pressed="false">Daily</button>
+                  <button aria-pressed="false">Off</button>
+                </div>
+                <p class="hint" style="margin-top:var(--space-3)">Quiet hours are respected between 21:00 and 07:00 in your timezone.</p>
+              </div>
+            </section>
+
+          </div>
+        </div>
+
+        <!-- ---------- APPEARANCE ---------- -->
+        <div class="tab-panel" id="panel-appear" role="tabpanel" aria-labelledby="tab-appear" hidden>
+          <div class="settings-grid">
+
+            <section class="card">
+              <div class="card-header">
+                <div class="card-head-row">
+                  <span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg></span>
+                  <div><h2 class="card-title">Theme 🕯️</h2><p class="card-subtitle">Choose a look. The moon toggle in the top bar also switches it instantly.</p></div>
+                </div>
+              </div>
+              <div class="card-body">
+                <fieldset style="border:0;padding:0;margin:0">
+                  <legend class="label" style="margin-bottom:var(--space-3)">Colour mode</legend>
+                  <div class="choice-row">
+                    <label class="choice-card">
+                      <input type="radio" name="theme-mode" value="light" checked>
+                      <span class="cc-swatch" style="background:var(--warm-neutral-50)">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+                      </span>
+                      <div class="cc-name">Light</div>
+                      <div class="cc-sub">Warm cream &amp; oak</div>
+                    </label>
+                    <label class="choice-card">
+                      <input type="radio" name="theme-mode" value="dark">
+                      <span class="cc-swatch" style="background:var(--warm-neutral-800);color:var(--warm-neutral-100)">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>
+                      </span>
+                      <div class="cc-name">Dark</div>
+                      <div class="cc-sub">Soft, low-glare evening</div>
+                    </label>
+                    <label class="choice-card">
+                      <input type="radio" name="theme-mode" value="system">
+                      <span class="cc-swatch" style="background:linear-gradient(105deg, var(--warm-neutral-50) 50%, var(--warm-neutral-800) 50%)">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                      </span>
+                      <div class="cc-name">System</div>
+                      <div class="cc-sub">Match your device</div>
+                    </label>
+                  </div>
+                </fieldset>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-header">
+                <div class="card-head-row">
+                  <span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="19" cy="12" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="10" cy="18" r="2.5"/><path d="M12 2a10 10 0 1 0 0 20c1 0 1.5-.8 1.5-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.1 0-.9.7-1.5 1.5-1.5H16a4 4 0 0 0 4-4 8 8 0 0 0-8-8Z"/></svg></span>
+                  <div><h2 class="card-title">Accent colour</h2><p class="card-subtitle">A warm tone used for highlights and active states.</p></div>
+                </div>
+              </div>
+              <div class="card-body">
+                <fieldset style="border:0;padding:0;margin:0">
+                  <legend class="label" style="margin-bottom:var(--space-3)">Pick an accent</legend>
+                  <div class="swatch-row" role="radiogroup" aria-label="Accent colour">
+                    <label class="swatch" style="background:var(--terracotta-500);color:var(--terracotta-500)" title="Terracotta">
+                      <input type="radio" name="accent" value="terracotta" checked>
+                      <span class="check-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+                      <span class="sr-only">Terracotta</span>
+                    </label>
+                    <label class="swatch" style="background:var(--sage-500);color:var(--sage-500)" title="Sage">
+                      <input type="radio" name="accent" value="sage">
+                      <span class="check-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+                      <span class="sr-only">Sage</span>
+                    </label>
+                    <label class="swatch" style="background:var(--dusty-blue-500);color:var(--dusty-blue-500)" title="Dusty blue">
+                      <input type="radio" name="accent" value="dusty-blue">
+                      <span class="check-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+                      <span class="sr-only">Dusty blue</span>
+                    </label>
+                    <label class="swatch" style="background:var(--clay-500);color:var(--clay-500)" title="Clay">
+                      <input type="radio" name="accent" value="clay">
+                      <span class="check-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+                      <span class="sr-only">Clay</span>
+                    </label>
+                    <label class="swatch" style="background:var(--warm-neutral-600);color:var(--warm-neutral-600)" title="Warm neutral">
+                      <input type="radio" name="accent" value="warm-neutral">
+                      <span class="check-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+                      <span class="sr-only">Warm neutral</span>
+                    </label>
+                  </div>
+                  <p class="hint" style="margin-top:var(--space-3)">Terracotta is the studio default — soft, earthy and easy on the eyes.</p>
+                </fieldset>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-header">
+                <div class="card-head-row">
+                  <span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></span>
+                  <div><h2 class="card-title">Layout density</h2><p class="card-subtitle">Adjust spacing to fit more or breathe more.</p></div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="segmented" role="group" aria-label="Layout density">
+                  <button aria-pressed="false">Compact</button>
+                  <button class="is-active" aria-pressed="true">Cosy</button>
+                  <button aria-pressed="false">Spacious</button>
+                </div>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-header">
+                <div class="card-head-row">
+                  <span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v4M3 5h4M6 17v4M4 19h4M13 3l2.5 6.5L22 12l-6.5 2.5L13 21l-2.5-6.5L4 12l6.5-2.5Z"/></svg></span>
+                  <div><h2 class="card-title">Motion</h2><p class="card-subtitle">Animations and transitions across the app.</p></div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="set-row">
+                  <div class="set-copy">
+                    <div class="set-title">Reduce motion</div>
+                    <div class="set-desc">Minimise non-essential animations like reveals and slides.</div>
+                  </div>
+                  <div class="set-control">
+                    <label class="switch"><input type="checkbox" aria-label="Reduce motion"><span class="track"><span class="thumb"></span></span></label>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+          </div>
+        </div>
+
+        <!-- ---------- BILLING ---------- -->
+        <div class="tab-panel" id="panel-billing" role="tabpanel" aria-labelledby="tab-billing" hidden>
+          <div class="settings-grid">
+
+            <section class="card">
+              <div class="card-header">
+                <div class="card-head-row">
+                  <span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg></span>
+                  <div><h2 class="card-title">Current plan</h2><p class="card-subtitle">Billed monthly · renews 1 July 2026.</p></div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="plan-card">
+                  <div class="row-between" style="align-items:flex-start;gap:var(--space-4);flex-wrap:wrap">
+                    <div>
+                      <div class="row gap-2" style="align-items:center">
+                        <span class="badge badge-primary">Studio</span>
+                        <span class="badge badge-success"><span class="dot"></span> Active</span>
+                      </div>
+                      <div style="margin-top:var(--space-3)">
+                        <span class="plan-price">$24</span>
+                        <span class="text-muted text-sm">/ month</span>
+                      </div>
+                      <p class="text-sm text-muted" style="margin-top:var(--space-2);max-width:36ch">Unlimited projects, 5 teammates, custom branding, and priority support.</p>
+                    </div>
+                    <div class="row gap-2" style="flex-wrap:wrap">
+                      <button class="btn btn-ghost btn-sm">Compare plans</button>
+                      <button class="btn btn-primary btn-sm" data-modal-open="plan-modal">Manage plan</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="row gap-4" style="margin-top:var(--space-4);flex-wrap:wrap">
+                  <div class="flow" style="gap:var(--space-1);flex:1 1 12rem">
+                    <span class="text-xs text-muted">Teammates</span>
+                    <div class="progress accent"><div class="bar" style="width:60%"></div></div>
+                    <span class="text-xs text-muted">3 of 5 seats used</span>
+                  </div>
+                  <div class="flow" style="gap:var(--space-1);flex:1 1 12rem">
+                    <span class="text-xs text-muted">Storage</span>
+                    <div class="progress"><div class="bar" style="width:42%"></div></div>
+                    <span class="text-xs text-muted">8.4 GB of 20 GB</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="card">
+              <div class="card-header">
+                <div class="card-head-row">
+                  <span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></span>
+                  <div><h2 class="card-title">Payment method</h2><p class="card-subtitle">Charged on the 1st of each month.</p></div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="pay-row">
+                  <span class="card-brand" aria-hidden="true">VISA</span>
+                  <div class="li-main">
+                    <div class="li-title">Visa ending in 4242</div>
+                    <div class="li-sub">Expires 08 / 2028 · Sofie Halvorsen</div>
+                  </div>
+                  <button class="btn btn-secondary btn-sm" data-modal-open="card-modal">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                    Edit
+                  </button>
+                </div>
+                <p class="hint" style="margin-top:var(--space-3)">A receipt is emailed to sofie@hygge.studio after each payment.</p>
+              </div>
+            </section>
+
+            <section class="card card-flush">
+              <div class="row-between" style="padding:var(--space-5) var(--space-6) var(--space-4)">
+                <div class="card-head-row">
+                  <span class="section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2Z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg></span>
+                  <div><h2 class="card-title">Invoices</h2><p class="card-subtitle">Your recent payments.</p></div>
+                </div>
+                <button class="btn btn-ghost btn-sm">View all</button>
+              </div>
+              <div class="table-wrap" style="border:none;border-radius:0">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th class="sortable">Date</th>
+                      <th class="sortable">Invoice</th>
+                      <th class="sortable td-num">Amount</th>
+                      <th class="sortable">Status</th>
+                      <th aria-label="Download"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>1 Jun 2026</td>
+                      <td class="td-strong">INV-2026-006</td>
+                      <td class="td-num" data-sort="24">$24.00</td>
+                      <td><span class="badge badge-success"><span class="dot"></span> Paid</span></td>
+                      <td class="td-num"><button class="btn btn-icon btn-ghost btn-sm" aria-label="Download invoice INV-2026-006"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></button></td>
+                    </tr>
+                    <tr>
+                      <td>1 May 2026</td>
+                      <td class="td-strong">INV-2026-005</td>
+                      <td class="td-num" data-sort="24">$24.00</td>
+                      <td><span class="badge badge-success"><span class="dot"></span> Paid</span></td>
+                      <td class="td-num"><button class="btn btn-icon btn-ghost btn-sm" aria-label="Download invoice INV-2026-005"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></button></td>
+                    </tr>
+                    <tr>
+                      <td>1 Apr 2026</td>
+                      <td class="td-strong">INV-2026-004</td>
+                      <td class="td-num" data-sort="24">$24.00</td>
+                      <td><span class="badge badge-success"><span class="dot"></span> Paid</span></td>
+                      <td class="td-num"><button class="btn btn-icon btn-ghost btn-sm" aria-label="Download invoice INV-2026-004"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></button></td>
+                    </tr>
+                    <tr>
+                      <td>1 Mar 2026</td>
+                      <td class="td-strong">INV-2026-003</td>
+                      <td class="td-num" data-sort="48">$48.00</td>
+                      <td><span class="badge badge-warning"><span class="dot"></span> Refunded</span></td>
+                      <td class="td-num"><button class="btn btn-icon btn-ghost btn-sm" aria-label="Download invoice INV-2026-003"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></button></td>
+                    </tr>
+                    <tr>
+                      <td>1 Feb 2026</td>
+                      <td class="td-strong">INV-2026-002</td>
+                      <td class="td-num" data-sort="24">$24.00</td>
+                      <td><span class="badge badge-success"><span class="dot"></span> Paid</span></td>
+                      <td class="td-num"><button class="btn btn-icon btn-ghost btn-sm" aria-label="Download invoice INV-2026-002"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="table-foot">
+                <span class="text-sm text-muted">Showing 1–5 of 14</span>
+                <nav class="pagination" aria-label="Invoice pagination">
+                  <button class="page-nav" disabled aria-label="Previous"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg></button>
+                  <button class="page" aria-current="page">1</button>
+                  <button class="page">2</button>
+                  <button class="page">3</button>
+                  <button class="page-nav" aria-label="Next"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg></button>
+                </nav>
+              </div>
+            </section>
+
+          </div>
+        </div>
+
+      </div><!-- /data-tabs -->
+
+      <!-- ============ STICKY SAVE BAR ============ -->
+      <div class="save-bar" role="region" aria-label="Save settings">
+        <span class="sb-note">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+          You have unsaved changes.
+        </span>
+        <div class="row gap-2">
+          <button class="btn btn-ghost" data-toast='{"title":"Changes reverted","msg":"Your last saved settings were restored.","variant":"info"}'>Discard</button>
+          <button class="btn btn-primary" data-toast='{"title":"Settings saved","msg":"Your preferences are tucked in safely. 🌿","variant":"success"}'>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            Save changes
+          </button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ============ DELETE WORKSPACE MODAL ============ -->
+<div class="modal" id="delete-modal" hidden role="dialog" aria-modal="true" aria-labelledby="del-title" aria-describedby="del-desc">
+  <div class="modal-panel sm">
+    <div class="modal-header">
+      <h2 class="modal-title" id="del-title">Delete workspace</h2>
+      <button class="modal-close" data-modal-close aria-label="Close"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="modal-body flow">
+      <div class="alert alert-danger" role="note">
+        <span class="alert-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg></span>
+        <div class="alert-body"><span class="alert-title">This action is irreversible.</span> All projects, orders, customers and invoices will be permanently deleted.</div>
+      </div>
+      <p id="del-desc" class="text-sm text-muted">
+        To confirm, type <strong style="color:var(--color-text)">DELETE</strong> in the box below. This cannot be undone.
+      </p>
+      <div class="field">
+        <label class="label" for="confirm-delete">Confirmation</label>
+        <input class="input" id="confirm-delete" type="text" placeholder="Type DELETE to confirm" autocomplete="off" data-autofocus aria-describedby="del-desc">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-modal-close>Cancel</button>
+      <button class="btn btn-danger" id="confirm-delete-btn" disabled
+              data-modal-close
+              data-toast='{"title":"Workspace deleted","msg":"Hygge Studio and all its data have been removed.","variant":"danger"}'>
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6M14 11v6"/></svg>
+        Delete workspace
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MANAGE PLAN MODAL ============ -->
+<div class="modal" id="plan-modal" hidden role="dialog" aria-modal="true" aria-labelledby="plan-title">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h2 class="modal-title" id="plan-title">Manage plan</h2>
+      <button class="modal-close" data-modal-close aria-label="Close"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="modal-body flow">
+      <p class="text-sm text-muted">Choose the plan that fits your studio. Changes take effect on your next billing date.</p>
+      <label class="choice-card" style="display:block">
+        <input type="radio" name="plan-choice" value="solo">
+        <div class="row-between"><div class="cc-name">Solo · $9/mo</div><div class="cc-sub">1 seat, 3 projects</div></div>
+      </label>
+      <label class="choice-card" style="display:block">
+        <input type="radio" name="plan-choice" value="studio" checked>
+        <div class="row-between"><div class="cc-name">Studio · $24/mo <span class="badge badge-primary">Current</span></div><div class="cc-sub">5 seats, unlimited</div></div>
+      </label>
+      <label class="choice-card" style="display:block">
+        <input type="radio" name="plan-choice" value="workshop">
+        <div class="row-between"><div class="cc-name">Workshop · $59/mo</div><div class="cc-sub">20 seats, SSO</div></div>
+      </label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-modal-close>Cancel</button>
+      <button class="btn btn-primary" data-modal-close data-toast='{"title":"Plan updated","msg":"Your plan changes apply on the next renewal.","variant":"success"}'>Save plan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ EDIT CARD MODAL ============ -->
+<div class="modal" id="card-modal" hidden role="dialog" aria-modal="true" aria-labelledby="card-title">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h2 class="modal-title" id="card-title">Update payment method</h2>
+      <button class="modal-close" data-modal-close aria-label="Close"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="modal-body flow">
+      <div class="field">
+        <label class="label" for="card-name">Name on card</label>
+        <input class="input" id="card-name" type="text" value="Sofie Halvorsen" data-autofocus>
+      </div>
+      <div class="field">
+        <label class="label" for="card-number">Card number</label>
+        <div class="input-group">
+          <span class="adornment" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></span>
+          <input class="input" id="card-number" type="text" inputmode="numeric" placeholder="1234 5678 9012 3456">
+        </div>
+      </div>
+      <div class="form-2col">
+        <div class="field">
+          <label class="label" for="card-exp">Expiry</label>
+          <input class="input" id="card-exp" type="text" placeholder="MM / YY" value="08 / 28">
+        </div>
+        <div class="field">
+          <label class="label" for="card-cvc">CVC</label>
+          <input class="input" id="card-cvc" type="text" inputmode="numeric" placeholder="123">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-modal-close>Cancel</button>
+      <button class="btn btn-primary" data-modal-close data-toast='{"title":"Card updated","msg":"Your payment method has been saved securely.","variant":"success"}'>Save card</button>
+    </div>
+  </div>
+</div>
+
+<script src="../app.js"></script>
+<script>
+  // Page-local enhancements only (app.js handles tabs, modals, toasts, switches, etc.)
+  (function () {
+    // Delete-workspace confirmation gate: enable the destructive button only when "DELETE" is typed.
+    var input = document.getElementById('confirm-delete');
+    var btn = document.getElementById('confirm-delete-btn');
+    if (input && btn) {
+      input.addEventListener('input', function () {
+        btn.disabled = input.value.trim().toUpperCase() !== 'DELETE';
+      });
+    }
+
+    // Reset the confirmation field each time the modal closes, so it re-locks.
+    var modal = document.getElementById('delete-modal');
+    if (modal && input && btn) {
+      modal.addEventListener('click', function (e) {
+        if (e.target.closest('[data-modal-close]')) {
+          input.value = '';
+          btn.disabled = true;
+        }
+      });
+    }
+
+    // Minimal chip-input: add a chip on Enter, remove via the × button.
+    var chipWrap = document.getElementById('skills-chip');
+    var chipInput = document.getElementById('skill-input');
+    if (chipWrap && chipInput) {
+      chipInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && chipInput.value.trim()) {
+          e.preventDefault();
+          var val = chipInput.value.trim();
+          var chip = document.createElement('span');
+          chip.className = 'chip';
+          chip.innerHTML = '<span></span><button type="button" aria-label="Remove ' + val.replace(/"/g, '') + '">×</button>';
+          chip.firstChild.textContent = val + ' ';
+          chipWrap.insertBefore(chip, chipInput);
+          chipInput.value = '';
+        }
+      });
+      chipWrap.addEventListener('click', function (e) {
+        var rm = e.target.closest('.chip button');
+        if (rm) rm.closest('.chip').remove();
+      });
+    }
+  })();
+</script>
+</body>
+</html>

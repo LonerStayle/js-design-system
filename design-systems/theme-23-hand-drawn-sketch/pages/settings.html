@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Settings — Hand-drawn Sketch</title>
+<link rel="stylesheet" href="../theme.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='16' fill='%23f7f1e3' stroke='%23243042' stroke-width='6'/><path d='M24 64 C40 40 60 40 76 60' fill='none' stroke='%23243042' stroke-width='7' stroke-linecap='round'/><circle cx='70' cy='34' r='7' fill='%23ffe45c' stroke='%23243042' stroke-width='4'/></svg>" />
+<style>
+/* PAGE-LOCAL layout only (use tokens). */
+
+/* head row keeps title + actions aligned, wraps on narrow */
+.settings-head { gap: var(--space-4); }
+.settings-head h1 { font-size: var(--text-4xl); margin: 0; }
+.settings-head .head-actions { gap: var(--space-2); }
+
+/* tablist may grow wide — let pills wrap nicely & scroll on tiny screens */
+.tablist.pills { row-gap: var(--space-2); }
+
+/* bio textarea spans both columns of the general grid */
+.span-2 { grid-column: 1 / -1; }
+@media (max-width: 768px) { .span-2 { grid-column: auto; } }
+
+/* a toggle row: label/desc on the left, the toggle control flush right */
+.toggle-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: var(--border-w-2) dashed var(--color-divider);
+}
+.toggle-row:last-child { border-bottom: none; }
+.toggle-row .tr-text { min-width: 0; }
+.toggle-row .tr-title {
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-lg);
+  color: var(--color-text);
+  letter-spacing: var(--tracking-wide);
+}
+.toggle-row .tr-desc {
+  font-family: var(--font-hand);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: var(--leading-snug);
+}
+.toggle-row .toggle { flex: 0 0 auto; margin-top: 3px; }
+
+/* a plain settings row: title/desc + a control (button / dropdown) on the right */
+.opt-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+  border-bottom: var(--border-w-2) dashed var(--color-divider);
+}
+.opt-row:last-child { border-bottom: none; }
+.opt-row .or-text { min-width: 0; }
+.opt-row .or-title {
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-lg);
+  color: var(--color-text);
+  letter-spacing: var(--tracking-wide);
+}
+.opt-row .or-desc {
+  font-family: var(--font-hand);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: var(--leading-snug);
+}
+
+/* accent-colour radio cards (Appearance) */
+.swatch-row { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.swatch {
+  position: relative;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.swatch input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+}
+.swatch .swatch-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-hand);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-md);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: var(--border-w-3) solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--sketch-shadow-sm);
+  padding: var(--space-2) var(--space-4) var(--space-2) var(--space-2);
+  transition:
+    transform var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+.swatch .swatch-dot {
+  width: 24px;
+  height: 24px;
+  border: var(--border-w-2) solid var(--ink-700);
+  border-radius: var(--radius-round);
+  flex: none;
+}
+.swatch:nth-child(even) .swatch-card { transform: rotate(-1deg); }
+.swatch:hover .swatch-card { transform: translate(-1px,-1px) rotate(-0.6deg); }
+.swatch input:checked ~ .swatch-card {
+  border-color: var(--ink-700);
+  box-shadow: var(--sketch-shadow);
+  background: var(--color-surface-2);
+}
+.swatch input:checked ~ .swatch-card::after {
+  content: "✓";
+  margin-left: auto;
+  font-family: var(--font-display);
+  font-weight: var(--weight-black);
+  color: var(--color-text);
+}
+.swatch input:focus-visible ~ .swatch-card {
+  outline: var(--ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--ring-offset);
+}
+
+/* billing — current plan band */
+.plan-band {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+.plan-band .plan-name {
+  font-family: var(--font-display);
+  font-weight: var(--weight-black);
+  font-size: var(--text-2xl);
+  color: var(--color-text);
+  letter-spacing: var(--tracking-wide);
+}
+.plan-band .plan-price {
+  font-family: var(--font-hand);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+/* a tiny brand chip for the saved card */
+.card-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 28px;
+  font-family: var(--font-sans);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-primary-fg);
+  background: var(--color-primary);
+  border: var(--border-w-2) solid var(--ink-700);
+  border-radius: var(--radius-xs);
+  flex: none;
+}
+
+/* DANGER ZONE panel — red rough border */
+.danger-zone {
+  position: relative;
+  background: var(--color-surface);
+  border: var(--border-w-3) solid var(--color-danger);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--sketch-shadow);
+  padding: var(--space-5) var(--space-6) var(--space-4);
+  transform: rotate(-0.4deg);
+}
+.danger-zone h2.scrawl { color: var(--color-danger); font-size: var(--text-3xl); }
+.danger-zone .dz-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+  border-bottom: var(--border-w-2) dashed var(--color-divider);
+}
+.danger-zone .dz-row:last-child { border-bottom: none; }
+.danger-zone .dz-title {
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  font-size: var(--text-lg);
+  color: var(--color-text);
+  letter-spacing: var(--tracking-wide);
+}
+.danger-zone .dz-desc {
+  font-family: var(--font-hand);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: var(--leading-snug);
+}
+</style>
+</head>
+<body class="paper-bg">
+<a class="skip-link" href="#main">Skip to content</a>
+
+<!-- rough-edge SVG filter (enables .rough-edge wobble) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="roughpaper"><feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="3" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2.2"/></filter></svg>
+
+<nav class="navbar" aria-label="Primary">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true">✎</span><span class="hide-mobile">sketchbook</span></a>
+  <div class="nav-links">
+    <a class="nav-link" href="dashboard.html">Dashboard</a>
+    <a class="nav-link" href="kanban.html">Board</a>
+    <a class="nav-link" href="inbox.html">Inbox</a>
+    <a class="nav-link" href="pricing.html">Pricing</a>
+  </div>
+  <div class="nav-right">
+    <button class="btn btn-ghost btn-sm" data-cmdk-open aria-label="Search"><svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3" stroke-linecap="round"/></svg><kbd class="hide-mobile">⌘K</kbd></button>
+    <button class="btn btn-icon btn-sm btn-outline" data-theme-toggle aria-label="Toggle dark mode"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19" stroke-linecap="round"/></svg></button>
+    <span class="avatar sm">JS</span>
+  </div>
+</nav>
+
+<main id="main" class="container" style="padding-block:var(--space-7)">
+  <nav class="breadcrumb mb-4" aria-label="Breadcrumb"><a href="../index.html">Home</a><span class="sep" aria-hidden="true">→</span><span class="current">Settings</span></nav>
+  <!-- ===== PAGE CONTENT ===== -->
+
+  <!-- 1) HEAD ROW -->
+  <div class="row wrap between settings-head mb-6">
+    <div>
+      <h1 class="scrawl">SETTINGS</h1>
+      <p class="text-muted font-hand mt-2">Tune your sketchbook just the way you like it.</p>
+    </div>
+    <div class="row wrap head-actions">
+      <button class="btn btn-primary" data-doodle data-toast="success" data-toast-title="Saved!" data-toast-body="Your settings have been scribbled down.">Save changes</button>
+      <button class="btn btn-ghost">Discard</button>
+    </div>
+  </div>
+
+  <!-- 2) TABS -->
+  <div class="tabs">
+    <div class="tablist pills" role="tablist" aria-label="Settings sections">
+      <button class="tab" role="tab" id="tab-general" aria-controls="panel-general" aria-selected="true" tabindex="0">General</button>
+      <button class="tab" role="tab" id="tab-notif" aria-controls="panel-notif" aria-selected="false" tabindex="-1">Notifications</button>
+      <button class="tab" role="tab" id="tab-appear" aria-controls="panel-appear" aria-selected="false" tabindex="-1">Appearance</button>
+      <button class="tab" role="tab" id="tab-billing" aria-controls="panel-billing" aria-selected="false" tabindex="-1">Billing</button>
+      <button class="tab" role="tab" id="tab-danger" aria-controls="panel-danger" aria-selected="false" tabindex="-1">Danger Zone</button>
+    </div>
+
+    <!-- ============ GENERAL ============ -->
+    <section class="tabpanel" id="panel-general" role="tabpanel" aria-labelledby="tab-general" tabindex="0">
+      <div class="grid grid-2">
+        <div class="field">
+          <label class="field-label" for="g-name">Display name</label>
+          <input class="input" id="g-name" value="Jin Park" />
+          <span class="field-hint">This is the name pinned to your notes &amp; shared boards.</span>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="g-user">Username</label>
+          <div class="input-group">
+            <span class="adornment" aria-hidden="true">@</span>
+            <input class="input" id="g-user" value="jinpark" />
+          </div>
+          <span class="field-hint">sketchbook.app/<strong>jinpark</strong></span>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="g-email">Email</label>
+          <input class="input" id="g-email" type="email" value="jin@sketchbook.app" />
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="g-tz">Timezone</label>
+          <select class="select" id="g-tz">
+            <option>(GMT+09:00) Seoul</option>
+            <option>(GMT+00:00) London</option>
+            <option>(GMT−05:00) New York</option>
+            <option>(GMT−08:00) Los Angeles</option>
+            <option>(GMT+01:00) Berlin</option>
+          </select>
+        </div>
+
+        <div class="field span-2">
+          <label class="field-label" for="g-bio">Bio</label>
+          <textarea class="textarea" id="g-bio" placeholder="A few words about you…">Product designer doodling ideas into shipped features. Always sketching, occasionally coloring inside the lines.</textarea>
+          <span class="field-hint">Up to 180 characters. Markdown not supported — just plain ink.</span>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="g-lang">Language</label>
+          <select class="select" id="g-lang">
+            <option>English (US)</option>
+            <option>한국어</option>
+            <option>日本語</option>
+            <option>Español</option>
+            <option>Français</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ NOTIFICATIONS ============ -->
+    <section class="tabpanel" id="panel-notif" role="tabpanel" aria-labelledby="tab-notif" tabindex="0" hidden>
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="card-header">Email</div>
+          <div class="card-body">
+            <div class="toggle-row">
+              <div class="tr-text">
+                <div class="tr-title">Comments</div>
+                <div class="tr-desc">Someone replies on one of your boards.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" checked /><span class="track"><span class="knob"></span></span><span class="sr-only">Comments email notifications</span></label>
+            </div>
+            <div class="toggle-row">
+              <div class="tr-text">
+                <div class="tr-title">Weekly digest</div>
+                <div class="tr-desc">A Monday recap of what your team sketched.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" checked /><span class="track"><span class="knob"></span></span><span class="sr-only">Weekly digest email</span></label>
+            </div>
+            <div class="toggle-row">
+              <div class="tr-text">
+                <div class="tr-title">Mentions</div>
+                <div class="tr-desc">When a teammate @mentions you in a note.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" checked /><span class="track"><span class="knob"></span></span><span class="sr-only">Mention emails</span></label>
+            </div>
+            <div class="toggle-row">
+              <div class="tr-text">
+                <div class="tr-title">Marketing</div>
+                <div class="tr-desc">Tips, new features &amp; the occasional doodle.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" /><span class="track"><span class="knob"></span></span><span class="sr-only">Marketing emails</span></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">Push</div>
+          <div class="card-body">
+            <div class="toggle-row">
+              <div class="tr-text">
+                <div class="tr-title">Comments</div>
+                <div class="tr-desc">Buzz me when a thread heats up.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" checked /><span class="track"><span class="knob"></span></span><span class="sr-only">Comments push notifications</span></label>
+            </div>
+            <div class="toggle-row">
+              <div class="tr-text">
+                <div class="tr-title">Mentions</div>
+                <div class="tr-desc">Direct @mentions land on your phone.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" checked /><span class="track"><span class="knob"></span></span><span class="sr-only">Mention push notifications</span></label>
+            </div>
+            <div class="toggle-row">
+              <div class="tr-text">
+                <div class="tr-title">Reminders</div>
+                <div class="tr-desc">Nudge me about due dates on cards I own.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" /><span class="track"><span class="knob"></span></span><span class="sr-only">Reminder push notifications</span></label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field mt-6">
+        <span class="field-label" id="digest-freq-label">Digest frequency</span>
+        <div class="segmented" role="group" aria-labelledby="digest-freq-label">
+          <button type="button" class="is-active" aria-pressed="true">Daily</button>
+          <button type="button" aria-pressed="false">Weekly</button>
+          <button type="button" aria-pressed="false">Off</button>
+        </div>
+        <span class="field-hint">How often we bundle your email digest.</span>
+      </div>
+    </section>
+
+    <!-- ============ APPEARANCE ============ -->
+    <section class="tabpanel" id="panel-appear" role="tabpanel" aria-labelledby="tab-appear" tabindex="0" hidden>
+      <div class="stack stack-6">
+        <div class="field">
+          <span class="field-label" id="theme-label">Theme</span>
+          <div class="segmented" id="theme-seg" role="group" aria-labelledby="theme-label">
+            <button type="button" data-value="light" aria-pressed="false">Light</button>
+            <button type="button" data-value="dark" aria-pressed="false">Dark</button>
+            <button type="button" data-value="auto" class="is-active" aria-pressed="true">Auto</button>
+          </div>
+          <span class="field-hint">Auto follows your device. Light &amp; dark are paper vs. chalkboard.</span>
+        </div>
+
+        <div class="field">
+          <span class="field-label" id="accent-label">Accent color</span>
+          <div class="swatch-row" role="radiogroup" aria-labelledby="accent-label">
+            <label class="swatch">
+              <input type="radio" name="accent" value="yellow" checked />
+              <span class="swatch-card"><span class="swatch-dot" style="background:var(--hl-yellow-300)"></span>Yellow</span>
+            </label>
+            <label class="swatch">
+              <input type="radio" name="accent" value="pink" />
+              <span class="swatch-card"><span class="swatch-dot" style="background:var(--hl-pink-300)"></span>Pink</span>
+            </label>
+            <label class="swatch">
+              <input type="radio" name="accent" value="mint" />
+              <span class="swatch-card"><span class="swatch-dot" style="background:var(--hl-mint-300)"></span>Mint</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body">
+            <div class="toggle-row">
+              <div class="tr-text">
+                <div class="tr-title">Reduce motion</div>
+                <div class="tr-desc">Calm the wobble &amp; pop animations across the app.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" /><span class="track"><span class="knob"></span></span><span class="sr-only">Reduce motion</span></label>
+            </div>
+            <div class="toggle-row">
+              <div class="tr-text">
+                <div class="tr-title">Show paper texture</div>
+                <div class="tr-desc">Keep that faint ruled note-paper grain behind everything.</div>
+              </div>
+              <label class="toggle"><input type="checkbox" checked /><span class="track"><span class="knob"></span></span><span class="sr-only">Show paper texture</span></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="field-label" id="scale-label">UI scale</span>
+          <div class="slider">
+            <input type="range" min="80" max="120" step="5" value="100" data-suffix="%" aria-labelledby="scale-label" />
+            <output class="slider-value">100%</output>
+          </div>
+          <span class="field-hint">Bump everything up or down between 80 % and 120 %.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ BILLING ============ -->
+    <section class="tabpanel" id="panel-billing" role="tabpanel" aria-labelledby="tab-billing" tabindex="0" hidden>
+      <div class="stack stack-6">
+        <div class="card">
+          <div class="card-header">Current plan</div>
+          <div class="card-body">
+            <div class="plan-band">
+              <span class="plan-name">MAKER</span>
+              <span class="plan-price">$9/mo · renews Jul 14, 2026</span>
+              <span class="badge-star" aria-label="Active plan">ACTIVE</span>
+              <a class="btn btn-outline" href="pricing.html" style="margin-left:auto">Change plan</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">Payment method</div>
+          <div class="card-body">
+            <div class="opt-row">
+              <div class="row row-3 items-start">
+                <span class="card-chip" aria-hidden="true">VISA</span>
+                <div class="or-text">
+                  <div class="or-title">Visa ···· 4242</div>
+                  <div class="or-desc">Expires 09 / 2027 · Jin Park</div>
+                </div>
+              </div>
+              <div class="menu-wrap">
+                <button class="btn btn-ghost btn-sm" data-menu="pay-menu" aria-haspopup="true" aria-expanded="false">Manage ▾</button>
+                <div class="menu align-right" id="pay-menu" role="menu" aria-label="Payment options">
+                  <button class="menu-item" role="menuitem">Edit card</button>
+                  <button class="menu-item" role="menuitem">Set as default</button>
+                  <button class="menu-item" role="menuitem">Add backup card</button>
+                  <div class="menu-sep" role="separator"></div>
+                  <button class="menu-item danger" role="menuitem">Remove card</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">Invoices</div>
+          <div class="card-body" style="padding:0">
+            <div class="table-wrap" style="border:none;box-shadow:none;border-radius:0">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">Amount</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Receipt</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Jun 14, 2026</td>
+                    <td>$9.00</td>
+                    <td><span class="badge green"><span class="dot"></span>Paid</span></td>
+                    <td><a href="#">PDF</a></td>
+                  </tr>
+                  <tr>
+                    <td>May 14, 2026</td>
+                    <td>$9.00</td>
+                    <td><span class="badge green"><span class="dot"></span>Paid</span></td>
+                    <td><a href="#">PDF</a></td>
+                  </tr>
+                  <tr>
+                    <td>Apr 14, 2026</td>
+                    <td>$9.00</td>
+                    <td><span class="badge yellow"><span class="dot"></span>Refunded</span></td>
+                    <td><a href="#">PDF</a></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ DANGER ZONE ============ -->
+    <section class="tabpanel" id="panel-danger" role="tabpanel" aria-labelledby="tab-danger" tabindex="0" hidden>
+      <div class="danger-zone">
+        <div class="alert warning mb-4" role="alert">
+          <span class="alert-icon" aria-hidden="true">!</span>
+          <div class="alert-body-wrap">
+            <div class="alert-title">Careful down here</div>
+            <div class="alert-body">These actions can erase work or close your account. Some can't be undone.</div>
+          </div>
+        </div>
+
+        <h2 class="scrawl">DANGER ZONE</h2>
+
+        <div class="dz-row">
+          <div class="or-text">
+            <div class="dz-title">Reset settings</div>
+            <div class="dz-desc">Put every preference on this page back to its default.</div>
+          </div>
+          <button class="btn btn-danger">Reset settings</button>
+        </div>
+
+        <div class="dz-row">
+          <div class="or-text">
+            <div class="dz-title">Export data</div>
+            <div class="dz-desc">Download a .zip of all your boards, notes &amp; sketches.</div>
+          </div>
+          <button class="btn btn-outline">Export data</button>
+        </div>
+
+        <div class="dz-row">
+          <div class="or-text">
+            <div class="dz-title">Delete account</div>
+            <div class="dz-desc">Permanently remove your account and everything in it.</div>
+          </div>
+          <button class="btn btn-danger" data-modal-open="del-modal">Delete account</button>
+        </div>
+      </div>
+    </section>
+  </div>
+  <!-- ===== /PAGE CONTENT ===== -->
+</main>
+
+<!-- DELETE MODAL -->
+<div class="overlay" id="del-modal" hidden>
+  <div class="modal sm" role="dialog" aria-modal="true" aria-labelledby="del-modal-t">
+    <div class="modal-header">
+      <h3 class="modal-title" id="del-modal-t">Delete account?</h3>
+      <button class="btn btn-icon btn-sm btn-outline" data-modal-close aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert danger mb-4" role="alert">
+        <span class="alert-icon" aria-hidden="true">!</span>
+        <div class="alert-body-wrap">
+          <div class="alert-title">This can't be undone</div>
+          <div class="alert-body">All boards, notes and sketches will be gone forever.</div>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label" for="del-confirm">Type <strong>DELETE</strong> to confirm</label>
+        <input class="input" id="del-confirm" placeholder="DELETE" autocomplete="off" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-modal-close>Cancel</button>
+      <button class="btn btn-danger" data-modal-close data-toast="danger" data-toast-title="Account deleted" data-toast-body="We're sorry to see you go.">Delete forever</button>
+    </div>
+  </div>
+</div>
+
+<!-- command palette (keep on every page) -->
+<div class="cmdk-overlay" role="dialog" aria-modal="true" aria-label="Command palette">
+  <div class="cmdk">
+    <div class="cmdk-input-row"><svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3" stroke-linecap="round"/></svg><input class="cmdk-input" placeholder="Type a command…" aria-label="Command input" /><kbd>ESC</kbd></div>
+    <div class="cmdk-list">
+      <div class="cmdk-group"><div class="cmdk-group-label">Go to</div>
+        <div class="cmdk-item" data-href="dashboard.html"><span class="cmdk-ico">📊</span> Dashboard</div>
+        <div class="cmdk-item" data-href="kanban.html"><span class="cmdk-ico">🗂️</span> Board</div>
+        <div class="cmdk-item" data-href="inbox.html"><span class="cmdk-ico">✉️</span> Inbox</div>
+        <div class="cmdk-item" data-href="pricing.html"><span class="cmdk-ico">🏷️</span> Pricing</div>
+        <div class="cmdk-item" data-href="settings.html"><span class="cmdk-ico">⚙️</span> Settings</div>
+        <div class="cmdk-item" data-href="profile.html"><span class="cmdk-ico">🙂</span> Profile</div>
+        <div class="cmdk-item" data-href="../index.html"><span class="cmdk-ico">🏠</span> Home</div>
+      </div>
+      <div class="cmdk-group"><div class="cmdk-group-label">Actions</div>
+        <div class="cmdk-item" data-action="toggle-theme"><span class="cmdk-ico">🌗</span> Toggle dark mode</div>
+      </div>
+      <div class="cmdk-empty" style="display:none">No results.</div>
+    </div>
+  </div>
+</div>
+
+<script src="../app.js"></script>
+<script>
+/* PAGE-LOCAL: theme segmented control (Appearance tab).
+   Light/Dark set <html data-theme>; Auto removes the attribute so the OS
+   preference (and base.css @media) take over. Keeps aria-pressed in sync. */
+(function () {
+  var seg = document.getElementById("theme-seg");
+  if (!seg) return;
+  seg.addEventListener("segment-change", function (e) {
+    var mode = e.detail && e.detail.value;
+    if (!mode) { var a = seg.querySelector(".is-active"); mode = a && a.getAttribute("data-value"); }
+    var root = document.documentElement;
+    if (mode === "light") root.dataset.theme = "light";
+    else if (mode === "dark") root.dataset.theme = "dark";
+    else delete root.dataset.theme; /* auto */
+  });
+}());
+</script>
+</body>
+</html>

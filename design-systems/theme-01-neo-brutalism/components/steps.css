@@ -1,0 +1,266 @@
+/* ============================================================================
+   COMPONENT · STEPS  (Stepper / Wizard indicator)
+   Signature: numbered square-ish circles joined by thick connector lines.
+   done = lime plane + check · active = blue plane · upcoming = outline only.
+   Horizontal + vertical layouts; also styles wizard dots + progress bar.
+   ----------------------------------------------------------------------------
+   Steps markup:
+     <ol class="steps" role="list">
+       <li class="steps__item is-done">
+         <span class="steps__marker">✓</span>
+         <span class="steps__body">
+           <span class="steps__label">Account</span>
+           <span class="steps__desc">Email & password</span>
+         </span>
+       </li>
+       <li class="steps__item is-active" aria-current="step">
+         <span class="steps__marker">2</span>
+         <span class="steps__body"><span class="steps__label">Profile</span></span>
+       </li>
+       <li class="steps__item">
+         <span class="steps__marker">3</span>
+         <span class="steps__body"><span class="steps__label">Review</span></span>
+       </li>
+     </ol>
+
+   Wizard markup (JS sets progress width inline, toggles dot states):
+     <div class="wizard" data-wizard>
+       <div class="wizard__track">
+         <div class="wizard__progress" data-wizard-progress style="width:50%"></div>
+         <span class="wizard__dot is-done"   data-wizard-dot></span>
+         <span class="wizard__dot is-active" data-wizard-dot></span>
+         <span class="wizard__dot"           data-wizard-dot></span>
+       </div>
+     </div>
+   Variants: .steps--vertical  .steps--sm|--lg
+   ============================================================================ */
+
+.steps {
+  --_marker: 40px;
+  --_done:   var(--lime-500);
+  --_active: var(--blue-500);
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-mono);
+}
+.steps--sm { --_marker: 32px; }
+.steps--lg { --_marker: 52px; }
+
+/* ---- ITEM ------------------------------------------------------------- */
+.steps__item {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding-right: var(--space-3);
+}
+.steps__item:last-child { flex: 0 1 auto; padding-right: 0; }
+
+/* connector line — drawn from marker to the next item */
+.steps__item:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: calc(var(--_marker) / 2);
+  left: var(--_marker);
+  right: 0;
+  height: var(--border-4);
+  background: var(--color-border-subtle);
+  transform: translateY(-50%);
+  z-index: 0;
+}
+/* completed connector goes solid ink */
+.steps__item.is-done:not(:last-child)::after { background: var(--color-border); }
+
+/* ---- MARKER (numbered circle) ----------------------------------------- */
+.steps__marker {
+  position: relative;
+  z-index: var(--z-raised);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--_marker);
+  height: var(--_marker);
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  font-weight: var(--weight-black);
+  line-height: 1;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: var(--border-3) solid var(--color-border);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-xs);
+}
+.steps__marker svg { width: 1.2em; height: 1.2em; }
+
+/* ---- BODY / LABELS ---------------------------------------------------- */
+.steps__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.steps__label {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.steps__desc {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- STATE · DONE (lime + check) -------------------------------------- */
+.steps__item.is-done .steps__marker {
+  background: var(--_done);
+  color: var(--ink);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-xs);
+}
+.steps__item.is-done .steps__label { color: var(--color-text); }
+
+/* ---- STATE · ACTIVE (blue) -------------------------------------------- */
+.steps__item.is-active .steps__marker,
+.steps__item[aria-current="step"] .steps__marker {
+  background: var(--_active);
+  color: var(--paper);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+.steps__item.is-active .steps__label,
+.steps__item[aria-current="step"] .steps__label {
+  color: var(--color-text);
+  font-weight: var(--weight-extra);
+}
+
+/* ---- STATE · UPCOMING (outline — default already) --------------------- */
+.steps__item.is-upcoming .steps__marker { background: var(--color-surface); color: var(--color-text-subtle); }
+
+/* ---- STATE · ERROR ---------------------------------------------------- */
+.steps__item.is-error .steps__marker {
+  background: var(--color-danger);
+  color: var(--color-danger-fg);
+  border-color: var(--color-border);
+}
+
+/* ============================================================================
+   VERTICAL layout — connector runs down the side
+   ============================================================================ */
+.steps--vertical {
+  flex-direction: column;
+  align-items: stretch;
+}
+.steps--vertical .steps__item {
+  flex: none;
+  align-items: flex-start;
+  padding-right: 0;
+  padding-bottom: var(--space-6);
+}
+.steps--vertical .steps__item:last-child { padding-bottom: 0; }
+.steps--vertical .steps__item:not(:last-child)::after {
+  top: var(--_marker);
+  bottom: 0;
+  left: calc(var(--_marker) / 2);
+  right: auto;
+  width: var(--border-4);
+  height: auto;
+  transform: translateX(-50%);
+}
+.steps--vertical .steps__body { padding-top: var(--space-1); }
+
+/* ============================================================================
+   WIZARD — slim progress track with dots (JS drives width + dot states)
+   ============================================================================ */
+.wizard {
+  --_done:   var(--lime-500);
+  --_active: var(--blue-500);
+  width: 100%;
+}
+.wizard__track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--space-3);
+  margin-block: var(--space-4);
+  background: var(--color-surface-2);
+  border: var(--border-3) solid var(--color-border);
+  border-radius: var(--radius-full);
+}
+
+/* filled progress bar — width set inline by JS */
+.wizard__progress {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background: var(--_active);
+  border-right: var(--border-3) solid var(--color-border);
+  border-radius: var(--radius-full) 0 0 var(--radius-full);
+  transition: width var(--duration-slow) var(--ease-emphasized);
+}
+
+/* dots sit on the track */
+.wizard__dot {
+  position: relative;
+  z-index: var(--z-raised);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex: none;
+  margin-inline: -2px;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-black);
+  color: var(--color-text-subtle);
+  background: var(--color-surface);
+  border: var(--border-3) solid var(--color-border);
+  border-radius: var(--radius-full);
+}
+.wizard__dot:first-of-type { margin-left: 0; }
+.wizard__dot:last-of-type  { margin-right: 0; }
+
+.wizard__dot.is-done {
+  background: var(--_done);
+  color: var(--ink);
+}
+.wizard__dot.is-active {
+  background: var(--_active);
+  color: var(--paper);
+  box-shadow: var(--shadow-xs);
+}
+
+/* optional labels beneath the track */
+.wizard__labels {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text-muted);
+}
+.wizard__labels .is-active { color: var(--color-text); }
+
+/* ---- Responsive: hide descriptions / labels, keep markers ------------- */
+@media (max-width: 640px) {
+  .steps:not(.steps--vertical) .steps__desc { display: none; }
+  .steps:not(.steps--vertical) .steps__item:not(.is-active):not([aria-current="step"]) .steps__label { display: none; }
+}

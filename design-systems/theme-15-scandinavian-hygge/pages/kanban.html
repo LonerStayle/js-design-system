@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Projects · Hygge</title>
+<meta name="description" content="Warm Kanban board for the studio, built with the Scandinavian Hygge design system.">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../semantic.css">
+<link rel="stylesheet" href="../base.css">
+<link rel="stylesheet" href="../components/buttons.css">
+<link rel="stylesheet" href="../components/forms.css">
+<link rel="stylesheet" href="../components/cards.css">
+<link rel="stylesheet" href="../components/data-display.css">
+<link rel="stylesheet" href="../components/feedback.css">
+<link rel="stylesheet" href="../components/navigation.css">
+<link rel="stylesheet" href="_shell.css">
+<style>
+  /* ---- Kanban board layout (page-local, tokens only) ---- */
+  .board {
+    display: flex;
+    gap: var(--space-5);
+    align-items: flex-start;
+    overflow-x: auto;
+    padding-bottom: var(--space-4);
+    margin-top: var(--space-6);
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+  .kcol {
+    flex: 0 0 19rem;
+    width: 19rem;
+    max-width: 88vw;
+    scroll-snap-align: start;
+    background: var(--color-surface-2);
+    border: var(--border-1) solid var(--color-border-subtle);
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 14rem);
+  }
+  .kcol-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-4) var(--space-4) var(--space-3);
+  }
+  .kcol-title {
+    font-family: var(--font-display, inherit);
+    font-weight: var(--weight-semibold);
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .kcol-dot {
+    width: 0.55rem; height: 0.55rem; border-radius: 50%;
+    background: var(--color-text-muted); flex: none;
+  }
+  .kcol-dot.backlog { background: var(--warm-neutral-400); }
+  .kcol-dot.progress { background: var(--color-primary); }
+  .kcol-dot.review { background: var(--color-info); }
+  .kcol-dot.done { background: var(--color-success); }
+  .kcol-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: 0 var(--space-3) var(--space-3);
+    overflow-y: auto;
+    flex: 1;
+    min-height: 4rem;
+  }
+  .kcol-body.is-over {
+    outline: 2px dashed var(--color-primary);
+    outline-offset: -4px;
+    border-radius: var(--radius-md);
+    background: var(--color-primary-soft);
+  }
+  .kcol .kanban-card { scroll-snap-align: none; }
+  .kc-done { opacity: 0.62; }
+  .kcol-foot { padding: var(--space-2) var(--space-3) var(--space-3); }
+  .kcol-add {
+    width: 100%;
+    justify-content: flex-start;
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+  }
+  /* avatar inside a card foot */
+  .kc-foot .avatar { flex: none; }
+  /* labels colour helpers used inside chips/badges legend */
+  @media (max-width: 600px) {
+    .kcol { flex-basis: 84vw; width: 84vw; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="app">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <div class="sidebar-head">
+      <a class="brand" href="../index.html">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 9v11a1 1 0 0 0 1 1h5v-6h6v6h5a1 1 0 0 0 1-1V9Z"/></svg></span>
+        <span class="nav-label">Hygge</span>
+      </a>
+    </div>
+    <nav class="sidebar-nav">
+      <span class="sidebar-section">Workspace</span>
+      <a class="nav-link" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h8v8H3zM13 3h8v5h-8zM13 10h8v11h-8zM3 13h8v8H3z"/></svg><span class="nav-label">Overview</span></a>
+      <a class="nav-link is-active" href="kanban.html" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h4v16H4zM10 4h4v10h-4zM16 4h4v13h-4z"/></svg><span class="nav-label">Projects</span><span class="nav-badge badge badge-primary">6</span></a>
+      <a class="nav-link" href="inbox.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5 5h14l3 7v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-6Z"/></svg><span class="nav-label">Inbox</span><span class="nav-badge badge">12</span></a>
+      <a class="nav-link" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span class="nav-label">Customers</span></a>
+      <span class="sidebar-section">Shop</span>
+      <a class="nav-link" href="product.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V6l-3-4Z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg><span class="nav-label">Products</span></a>
+      <a class="nav-link" href="pricing.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg><span class="nav-label">Plans</span></a>
+      <span class="sidebar-section">System</span>
+      <a class="nav-link" href="settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 0 1-4 0v-.1A1.6 1.6 0 0 0 7 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3.5 14a2 2 0 0 1 0-4h.1A1.6 1.6 0 0 0 4.6 7"/></svg><span class="nav-label">Settings</span></a>
+    </nav>
+    <div class="sidebar-foot">
+      <button class="btn btn-ghost btn-block" data-sidebar-toggle="sidebar" aria-label="Collapse sidebar">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        <span class="nav-label">Collapse</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="app-main">
+    <!-- top bar -->
+    <header class="navbar">
+      <button class="btn btn-icon btn-ghost menu-btn" data-sidebar-open="sidebar" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <nav class="breadcrumb hide-mobile" aria-label="Breadcrumb">
+        <a href="../index.html">Home</a>
+        <span class="sep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg></span>
+        <span aria-current="page">Projects</span>
+      </nav>
+      <span class="nav-spacer"></span>
+      <div class="navbar-actions">
+        <button class="btn btn-ghost btn-sm" data-command-open aria-label="Search commands">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <kbd>⌘K</kbd>
+        </button>
+        <div class="dropdown">
+          <button class="btn btn-icon btn-ghost" data-dropdown-toggle aria-haspopup="true" aria-expanded="false" aria-label="Notifications">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+          </button>
+          <div class="menu right" role="menu">
+            <span class="menu-label">Notifications</span>
+            <button class="menu-item" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg> Linen supplier replied</button>
+            <button class="menu-item" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg> Mug glaze approved</button>
+            <div class="menu-sep"></div>
+            <button class="menu-item" role="menuitem">View all</button>
+          </div>
+        </div>
+        <button class="btn btn-icon btn-ghost" data-theme-toggle aria-pressed="false" aria-label="Toggle dark mode">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>
+        </button>
+        <span class="avatar avatar-sm" style="background:var(--sage-200);color:var(--sage-700)">SH</span>
+      </div>
+    </header>
+
+    <main class="app-content" id="main">
+      <div class="page-head">
+        <div>
+          <h1 class="ph-title">Projects 🪵</h1>
+          <p class="ph-sub">Studio projects — drag a card to move it along the cosy little pipeline.</p>
+        </div>
+        <div class="ph-actions">
+          <div class="searchbar" style="max-width:13rem">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input class="input input-sm" type="search" placeholder="Search tasks…" aria-label="Search tasks">
+          </div>
+          <div class="segmented" role="group" aria-label="Filter tasks">
+            <button class="is-active" aria-pressed="true">All</button>
+            <button aria-pressed="false">Mine</button>
+            <button aria-pressed="false">Urgent</button>
+          </div>
+          <div class="avatar-group" aria-label="Studio teammates">
+            <span class="avatar avatar-sm" style="background:var(--sage-200);color:var(--sage-700)" title="Sofie Holm">SH</span>
+            <span class="avatar avatar-sm" style="background:var(--terracotta-200);color:var(--terracotta-700)" title="Magnus Berg">MB</span>
+            <span class="avatar avatar-sm" style="background:var(--dusty-blue-200);color:var(--dusty-blue-700)" title="Freya Lund">FL</span>
+            <span class="avatar avatar-sm" style="background:var(--clay-200);color:var(--clay-700)" title="Oskar Vik">OV</span>
+            <span class="avatar avatar-sm avatar-more" title="3 more teammates">+3</span>
+          </div>
+          <button class="btn btn-primary" data-modal-open="new-task-modal"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> New task</button>
+        </div>
+      </div>
+
+      <!-- ============ BOARD ============ -->
+      <section class="board" aria-label="Project board" id="board">
+
+        <!-- ===== BACKLOG ===== -->
+        <div class="kcol" data-col="Backlog">
+          <div class="kcol-head">
+            <span class="kcol-title"><span class="kcol-dot backlog" aria-hidden="true"></span> Backlog</span>
+            <span class="badge" data-count>5</span>
+            <span class="nav-spacer"></span>
+            <button class="btn btn-icon btn-ghost btn-sm" aria-label="Add task to Backlog" data-modal-open="new-task-modal">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+          </div>
+          <div class="kcol-body" data-dropzone>
+
+            <article class="kanban-card" draggable="true" tabindex="0" aria-label="Photograph oak side table">
+              <div class="kc-tags"><span class="badge badge-warning">Photography</span><span class="badge badge-outline">Catalogue</span></div>
+              <div class="kc-title">Photograph oak side table 🪵</div>
+              <div class="kc-desc">Natural-light shoot by the linen curtains, three angles for the autumn catalogue.</div>
+              <div class="kc-foot">
+                <div class="kc-meta">
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>3</span>
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Sep 24</span>
+                </div>
+                <span class="avatar avatar-xs" style="background:var(--sage-200);color:var(--sage-700)" title="Sofie Holm">SH</span>
+              </div>
+            </article>
+
+            <article class="kanban-card" draggable="true" tabindex="0" aria-label="Source reclaimed pine offcuts">
+              <div class="kc-tags"><span class="badge badge-info">Materials</span></div>
+              <div class="kc-title">Source reclaimed pine offcuts</div>
+              <div class="kc-desc">Call the timber yard about the leftover pine for the small shelf run.</div>
+              <div class="kc-foot">
+                <div class="kc-meta">
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>1</span>
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Sep 26</span>
+                </div>
+                <span class="avatar avatar-xs" style="background:var(--clay-200);color:var(--clay-700)" title="Oskar Vik">OV</span>
+              </div>
+            </article>
+
+            <article class="kanban-card" draggable="true" tabindex="0" aria-label="Plan candle scent line">
+              <div class="kc-tags"><span class="badge badge-accent">Product</span><span class="badge badge-outline">Idea</span></div>
+              <div class="kc-title">Plan winter candle scents 🕯️</div>
+              <div class="kc-desc">Shortlist three cosy scents: woodsmoke, fig &amp; cedar, warm vanilla.</div>
+              <div class="kc-foot">
+                <div class="kc-meta">
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>6</span>
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Oct 02</span>
+                </div>
+                <span class="avatar avatar-xs" style="background:var(--terracotta-200);color:var(--terracotta-700)" title="Magnus Berg">MB</span>
+              </div>
+            </article>
+
+            <article class="kanban-card" draggable="true" tabindex="0" aria-label="Refresh studio newsletter">
+              <div class="kc-tags"><span class="badge badge-primary">Marketing</span></div>
+              <div class="kc-title">Refresh studio newsletter 🍵</div>
+              <div class="kc-desc">Warmer header, a tea-break story, and the new sage cushion feature.</div>
+              <div class="kc-foot">
+                <div class="kc-meta">
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>2</span>
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Oct 05</span>
+                </div>
+                <span class="avatar avatar-xs" style="background:var(--dusty-blue-200);color:var(--dusty-blue-700)" title="Freya Lund">FL</span>
+              </div>
+            </article>
+
+            <article class="kanban-card" draggable="true" tabindex="0" aria-label="Repair workshop stool wobble">
+              <div class="kc-tags"><span class="badge badge-outline">Workshop</span></div>
+              <div class="kc-title">Repair wobbly workshop stool</div>
+              <div class="kc-desc">Re-glue the tenon joint and wax the seat before the open studio day.</div>
+              <div class="kc-foot">
+                <div class="kc-meta">
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>0</span>
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Oct 09</span>
+                </div>
+                <span class="avatar avatar-xs" style="background:var(--clay-200);color:var(--clay-700)" title="Oskar Vik">OV</span>
+              </div>
+            </article>
+
+          </div>
+          <div class="kcol-foot">
+            <button class="btn btn-ghost btn-sm kcol-add" data-modal-open="new-task-modal">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Add a task
+            </button>
+          </div>
+        </div>
+
+        <!-- ===== IN PROGRESS ===== -->
+        <div class="kcol" data-col="In progress">
+          <div class="kcol-head">
+            <span class="kcol-title"><span class="kcol-dot progress" aria-hidden="true"></span> In progress</span>
+            <span class="badge badge-primary" data-count>4</span>
+            <span class="nav-spacer"></span>
+            <button class="btn btn-icon btn-ghost btn-sm" aria-label="Add task to In progress" data-modal-open="new-task-modal">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+          </div>
+          <div class="kcol-body" data-dropzone>
+
+            <!-- WIP limit notification (realism) -->
+            <div class="alert alert-warning" role="status" style="padding:var(--space-3)">
+              <span class="alert-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></span>
+              <div class="alert-body"><span class="alert-title">WIP limit reached</span> Wrap one task before pulling in another.</div>
+            </div>
+
+            <article class="kanban-card" draggable="true" tabindex="0" aria-label="Sketch ceramic mug glaze">
+              <div class="kc-tags"><span class="badge badge-accent">Ceramics</span><span class="badge badge-warning">Priority</span></div>
+              <div class="kc-title">Sketch ceramic mug glaze</div>
+              <div class="kc-desc">Test the speckled sage glaze on three bisque samples; note kiln temps.</div>
+              <div class="kc-bar" aria-hidden="true"><i style="width:65%"></i></div>
+              <div class="kc-foot">
+                <div class="kc-meta">
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>4</span>
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Sep 22</span>
+                </div>
+                <span class="avatar avatar-xs" style="background:var(--terracotta-200);color:var(--terracotta-700)" title="Magnus Berg">MB</span>
+              </div>
+            </article>
+
+            <article class="kanban-card" draggable="true" tabindex="0" aria-label="Weave sage linen runner">
+              <div class="kc-tags"><span class="badge badge-info">Textiles</span></div>
+              <div class="kc-title">Weave sage linen runner 🌿</div>
+              <div class="kc-desc">Set the loom to the 2/2 twill; runner length 180cm for the long oak table.</div>
+              <div class="kc-bar" aria-hidden="true"><i style="width:40%"></i></div>
+              <div class="kc-foot">
+                <div class="kc-meta">
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>1</span>
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Sep 25</span>
+                </div>
+                <span class="avatar avatar-xs" style="background:var(--sage-200);color:var(--sage-700)" title="Sofie Holm">SH</span>
+              </div>
+            </article>
+
+            <article class="kanban-card" draggable="true" tabindex="0" aria-label="Sand and oil walnut tray">
+              <div class="kc-tags"><span class="badge badge-warning">Woodwork</span></div>
+              <div class="kc-title">Sand &amp; oil walnut tray</div>
+              <div class="kc-desc">Final 320-grit pass, then two coats of food-safe oil with a day to cure.</div>
+              <div class="kc-bar" aria-hidden="true"><i style="width:80%"></i></div>
+              <div class="kc-foot">
+                <div class="kc-meta">
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>3</span>
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Sep 21</span>
+                </div>
+                <span class="avatar avatar-xs" style="background:var(--clay-200);color:var(--clay-700)" title="Oskar Vik">OV</span>
+              </div>
+            </article>
+
+            <article class="kanban-card" draggable="true" tabindex="0" aria-label="Reply to linen supplier">
+              <div class="kc-tags"><span class="badge badge-primary">Suppliers</span><span class="badge badge-outline">Email</span></div>
+              <div class="kc-title">Reply to linen supplier</div>
+              <div class="kc-desc">Confirm the stonewashed oatmeal linen order and ask about lead time.</div>
+              <div class="kc-bar" aria-hidden="true"><i style="width:25%"></i></div>
+              <div class="kc-foot">
+                <div class="kc-meta">
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>5</span>
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Today</span>
+                </div>
+                <span class="avatar avatar-xs" style="background:var(--dusty-blue-200);color:var(--dusty-blue-700)" title="Freya Lund">FL</span>
+              </div>
+            </article>
+
+          </div>
+          <div class="kcol-foot">
+            <button class="btn btn-ghost btn-sm kcol-add" data-modal-open="new-task-modal">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Add a task
+            </button>
+          </div>
+        </div>
+
+        <!-- ===== IN REVIEW ===== -->
+        <div class="kcol" data-col="In review">
+          <div class="kcol-head">
+            <span class="kcol-title"><span class="kcol-dot review" aria-hidden="true"></span> In review</span>
+            <span class="badge badge-info" data-count>3</span>
+            <span class="nav-spacer"></span>
+            <button class="btn btn-icon btn-ghost btn-sm" aria-label="Add task to In review" data-modal-open="new-task-modal">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+          </div>
+          <div class="kcol-body" data-dropzone>
+
+            <article class="kanban-card" draggable="true" tabindex="0" aria-label="Review autumn lookbook layout">
+              <div class="kc-tags"><span class="badge badge-accent">Design</span><span class="badge badge-info">Review</span></div>
+              <div class="kc-title">Review autumn lookbook layout</div>
+              <div class="kc-desc">Check the spreads for warmth and breathing room before print proofs.</div>
+              <div class="kc-foot">
+                <div class="kc-meta">
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>8</span>
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Sep 23</span>
+                </div>
+                <span class="avatar avatar-xs" style="background:var(--sage-200);color:var(--sage-700)" title="Sofie Holm">SH</span>
+              </div>
+            </article>
+
+            <article class="kanban-card" draggable="true" tabindex="0" aria-label="Approve mug glaze samples">
+              <div class="kc-tags"><span class="badge badge-accent">Ceramics</span></div>
+              <div class="kc-title">Approve mug glaze samples</div>
+              <div class="kc-desc">Magnus to sign off the speckled sage before the full batch goes in.</div>
+              <div class="kc-foot">
+                <div class="kc-meta">
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>2</span>
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Sep 22</span>
+                </div>
+                <span class="avatar avatar-xs" style="background:var(--terracotta-200);color:var(--terracotta-700)" title="Magnus Berg">MB</span>
+              </div>
+            </article>
+
+            <article class="kanban-card" draggable="true" tabindex="0" aria-label="Proof packaging copy">
+              <div class="kc-tags"><span class="badge badge-primary">Copy</span><span class="badge badge-outline">Packaging</span></div>
+              <div class="kc-title">Proof the packaging copy</div>
+              <div class="kc-desc">Tone check on the care card — keep it warm, plain, and a touch poetic.</div>
+              <div class="kc-foot">
+                <div class="kc-meta">
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>4</span>
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Sep 24</span>
+                </div>
+                <span class="avatar avatar-xs" style="background:var(--dusty-blue-200);color:var(--dusty-blue-700)" title="Freya Lund">FL</span>
+              </div>
+            </article>
+
+          </div>
+          <div class="kcol-foot">
+            <button class="btn btn-ghost btn-sm kcol-add" data-modal-open="new-task-modal">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Add a task
+            </button>
+          </div>
+        </div>
+
+        <!-- ===== DONE ===== -->
+        <div class="kcol" data-col="Done">
+          <div class="kcol-head">
+            <span class="kcol-title"><span class="kcol-dot done" aria-hidden="true"></span> Done</span>
+            <span class="badge badge-success" data-count>4</span>
+            <span class="nav-spacer"></span>
+            <button class="btn btn-icon btn-ghost btn-sm" aria-label="Add task to Done" data-modal-open="new-task-modal">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+          </div>
+          <div class="kcol-body" data-dropzone>
+
+            <article class="kanban-card kc-done" draggable="true" tabindex="0" aria-label="Restock candle wax, completed">
+              <div class="kc-tags"><span class="badge badge-success"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px"><path d="M20 6 9 17l-5-5"/></svg>Done</span><span class="badge badge-outline">Materials</span></div>
+              <div class="kc-title">Restock candle wax 🕯️</div>
+              <div class="kc-desc">Soy wax and cotton wicks ordered; arriving Thursday morning.</div>
+              <div class="kc-foot">
+                <div class="kc-meta">
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>1</span>
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Sep 18</span>
+                </div>
+                <span class="avatar avatar-xs" style="background:var(--clay-200);color:var(--clay-700)" title="Oskar Vik">OV</span>
+              </div>
+            </article>
+
+            <article class="kanban-card kc-done" draggable="true" tabindex="0" aria-label="Photograph linen cushions, completed">
+              <div class="kc-tags"><span class="badge badge-success"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px"><path d="M20 6 9 17l-5-5"/></svg>Done</span><span class="badge badge-outline">Photography</span></div>
+              <div class="kc-title">Photograph linen cushions</div>
+              <div class="kc-desc">Sage and oatmeal sets shot on the bench; edits handed to the shop.</div>
+              <div class="kc-foot">
+                <div class="kc-meta">
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>3</span>
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Sep 16</span>
+                </div>
+                <span class="avatar avatar-xs" style="background:var(--sage-200);color:var(--sage-700)" title="Sofie Holm">SH</span>
+              </div>
+            </article>
+
+            <article class="kanban-card kc-done" draggable="true" tabindex="0" aria-label="Brew sample tea blends, completed">
+              <div class="kc-tags"><span class="badge badge-success"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px"><path d="M20 6 9 17l-5-5"/></svg>Done</span><span class="badge badge-outline">Product</span></div>
+              <div class="kc-title">Brew sample tea blends 🍵</div>
+              <div class="kc-desc">Chamomile-rooibos picked for the cosy gift set; labels in motion.</div>
+              <div class="kc-foot">
+                <div class="kc-meta">
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>2</span>
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Sep 14</span>
+                </div>
+                <span class="avatar avatar-xs" style="background:var(--terracotta-200);color:var(--terracotta-700)" title="Magnus Berg">MB</span>
+              </div>
+            </article>
+
+            <article class="kanban-card kc-done" draggable="true" tabindex="0" aria-label="Tidy and stage the showroom, completed">
+              <div class="kc-tags"><span class="badge badge-success"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px"><path d="M20 6 9 17l-5-5"/></svg>Done</span><span class="badge badge-outline">Showroom</span></div>
+              <div class="kc-title">Tidy &amp; stage the showroom</div>
+              <div class="kc-desc">Fresh eucalyptus, candles lit, oak pieces dusted for the visit.</div>
+              <div class="kc-foot">
+                <div class="kc-meta">
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>0</span>
+                  <span><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Sep 12</span>
+                </div>
+                <span class="avatar avatar-xs" style="background:var(--dusty-blue-200);color:var(--dusty-blue-700)" title="Freya Lund">FL</span>
+              </div>
+            </article>
+
+          </div>
+          <div class="kcol-foot">
+            <button class="btn btn-ghost btn-sm kcol-add" data-modal-open="new-task-modal">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Add a task
+            </button>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- ============ NEW TASK MODAL ============ -->
+<div class="modal" id="new-task-modal" hidden role="dialog" aria-modal="true" aria-labelledby="nt-title">
+  <div class="modal-panel sm">
+    <div class="modal-header">
+      <h2 class="modal-title" id="nt-title">New task 🪵</h2>
+      <button class="modal-close" data-modal-close aria-label="Close"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <form class="modal-body flow" id="new-task-form">
+      <div class="field">
+        <label class="label" for="nt-name">Task title <span class="req" aria-hidden="true">*</span></label>
+        <input class="input" id="nt-name" name="title" placeholder="Photograph oak side table" data-autofocus required>
+      </div>
+      <div class="field">
+        <label class="label" for="nt-col">Column</label>
+        <div class="select-wrap">
+          <select class="select" id="nt-col" name="column">
+            <option>Backlog</option>
+            <option>In progress</option>
+            <option>In review</option>
+            <option>Done</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label class="label" for="nt-labels">Labels</label>
+        <div class="chip-input" id="nt-labels-wrap">
+          <span class="chip"><span>Photography</span><button type="button" aria-label="Remove Photography"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></span>
+          <input id="nt-labels" type="text" placeholder="Add a label…" aria-label="Add a label">
+        </div>
+        <span class="hint">Press Enter to add a label (e.g. ceramics, linen, oak).</span>
+      </div>
+      <div class="field">
+        <label class="label" for="nt-desc">Description</label>
+        <textarea class="textarea" id="nt-desc" name="desc" rows="3" placeholder="A few cosy details — light, materials, who's helping…"></textarea>
+      </div>
+    </form>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-modal-close>Cancel</button>
+      <button class="btn btn-primary" data-modal-close data-toast='{"title":"Task created","msg":"Your new task is waiting in Backlog.","variant":"success"}'>Create task</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ KANBAN DRAG-AND-DROP (vanilla, ~40 lines) ============ -->
+<script>
+(function () {
+  var board = document.getElementById("board");
+  if (!board) return;
+  var dragged = null;
+
+  // recount cards in every column and update its badge
+  function recount() {
+    board.querySelectorAll(".kcol").forEach(function (col) {
+      var n = col.querySelectorAll(".kcol-body .kanban-card").length;
+      var badge = col.querySelector("[data-count]");
+      if (badge) badge.textContent = n;
+    });
+  }
+
+  board.addEventListener("dragstart", function (e) {
+    var card = e.target.closest(".kanban-card");
+    if (!card) return;
+    dragged = card;
+    card.classList.add("is-dragging");
+    if (e.dataTransfer) { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", ""); }
+  });
+
+  board.addEventListener("dragend", function () {
+    if (dragged) dragged.classList.remove("is-dragging");
+    board.querySelectorAll(".kcol-body.is-over").forEach(function (z) { z.classList.remove("is-over"); });
+    dragged = null;
+  });
+
+  board.querySelectorAll(".kcol-body[data-dropzone]").forEach(function (zone) {
+    zone.addEventListener("dragover", function (e) {
+      if (!dragged) return;
+      e.preventDefault();                 // allow drop
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+      zone.classList.add("is-over");
+    });
+    zone.addEventListener("dragleave", function (e) {
+      if (!zone.contains(e.relatedTarget)) zone.classList.remove("is-over");
+    });
+    zone.addEventListener("drop", function (e) {
+      e.preventDefault();
+      zone.classList.remove("is-over");
+      if (!dragged) return;
+      var after = zone.querySelector(".kanban-card.is-dragging");
+      // drop relative to the card under the cursor for natural ordering
+      var over = e.target.closest(".kanban-card");
+      if (over && over !== dragged) {
+        var box = over.getBoundingClientRect();
+        var before = e.clientY < box.top + box.height / 2;
+        zone.insertBefore(dragged, before ? over : over.nextSibling);
+      } else {
+        zone.appendChild(dragged);
+      }
+      recount();
+    });
+  });
+
+  recount();
+})();
+</script>
+<script src="../app.js"></script>
+</body>
+</html>

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>인박스 · Soft Neumorphism</title>
+<link rel="stylesheet" href="../theme.css" />
+<style>
+  /* ===== 3-panel inbox layout ===== */
+  .inbox-grid {
+    display: grid;
+    grid-template-columns: 220px 360px 1fr;
+    gap: var(--space-5);
+    align-items: start;
+    height: 100%;
+  }
+  .inbox-panel { min-width: 0; }
+
+  /* 폴더 패널 */
+  .folder-list { display:flex; flex-direction:column; gap:var(--space-1); }
+  .folder-list .nav-item { justify-content: space-between; }
+  .label-dot { width:.65rem; height:.65rem; border-radius:var(--radius-full); box-shadow: var(--shadow-flat); flex:0 0 auto; }
+
+  /* 메일 목록 패널 */
+  .mail-list { display:flex; flex-direction:column; gap:var(--space-2); margin-top:var(--space-4); }
+  .mail-item {
+    display:flex; gap:var(--space-3); align-items:flex-start;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    cursor:pointer; text-align:left; width:100%;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-flat);
+    transition: box-shadow .2s var(--ease-out), transform .2s var(--ease-out);
+    position: relative;
+  }
+  .mail-item:hover { box-shadow: var(--shadow-raised-sm); }
+  .mail-item.is-active { box-shadow: var(--shadow-pressed); }
+  .mail-item.is-unread { background: var(--color-surface); }
+  .mail-item.is-unread::before {
+    content:""; position:absolute; left:6px; top:50%; transform:translateY(-50%);
+    width:6px; height:6px; border-radius:var(--radius-full); background: var(--color-primary);
+  }
+  .mail-body { flex:1; min-width:0; }
+  .mail-row { display:flex; align-items:center; justify-content:space-between; gap:var(--space-2); }
+  .mail-from { font-size: var(--text-sm); }
+  .mail-subject { font-size: var(--text-sm); margin-top:2px; }
+  .mail-preview { font-size: var(--text-xs); margin-top:3px; }
+  .mail-time { font-size: var(--text-xs); color: var(--color-text-faint); flex:0 0 auto; }
+
+  /* 본문 리딩 패널 */
+  .reading-head { display:flex; align-items:flex-start; justify-content:space-between; gap:var(--space-4); flex-wrap:wrap; }
+  .reading-actions { display:flex; gap:var(--space-2); flex:0 0 auto; }
+  .reading-prose p { color: var(--color-text-muted); line-height:1.75; margin-bottom: var(--space-4); }
+  .reading-prose p strong { color: var(--color-text); }
+  .attach-row { display:flex; gap:var(--space-3); flex-wrap:wrap; }
+  .file-chip {
+    display:inline-flex; align-items:center; gap:var(--space-2);
+    padding: var(--space-2) var(--space-3); border-radius: var(--radius-md);
+    background: var(--color-surface); box-shadow: var(--shadow-raised-sm);
+    font-size: var(--text-sm); color: var(--color-text-muted);
+  }
+  .file-chip svg { width:1.1rem; height:1.1rem; color: var(--color-primary); flex:0 0 auto; }
+  .reply-box { margin-top: var(--space-5); }
+
+  /* ===== responsive ===== */
+  @media (max-width: 1100px) {
+    .inbox-grid { grid-template-columns: 200px 1fr; }
+    .reading-panel { display:none; }
+  }
+  @media (max-width: 760px) {
+    .inbox-grid { grid-template-columns: 1fr; }
+    .folder-panel { display:none; }
+  }
+</style>
+</head>
+<body>
+<a href="#main" class="skip-link">본문으로 건너뛰기</a>
+<div class="app-shell" id="shell">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar" aria-label="사이드바">
+    <div class="sidebar-brand">
+      <span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3Z"/></svg></span>
+      <span>Soft<span class="text-primary">UI</span></span>
+    </div>
+    <nav class="sidebar-section">
+      <a class="nav-item" href="dashboard.html"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span><span class="ni-text">대시보드</span></a>
+      <a class="nav-item" href="kanban.html"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg></span><span class="ni-text">보드</span></a>
+      <a class="nav-item is-active" href="inbox.html" aria-current="page"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="m3 7 9 6 9-6"/></svg></span><span class="ni-text">인박스</span><span class="ni-badge"><span class="badge-count">12</span></span></a>
+      <a class="nav-item" href="product.html"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg></span><span class="ni-text">상품</span></a>
+    </nav>
+    <div class="sidebar-section">
+      <div class="sidebar-label">계정</div>
+      <a class="nav-item" href="profile.html"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg></span><span class="ni-text">프로필</span></a>
+      <a class="nav-item" href="settings.html"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9 2 2 0 1 1-2.8 2.8 1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2 2 2 0 1 1-2.8-2.8A1.7 1.7 0 0 0 2 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.2-2.9 2 2 0 1 1 2.8-2.8A1.7 1.7 0 0 0 9 4.6a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.2 2 2 0 1 1 2.8 2.8A1.7 1.7 0 0 0 22 11a2 2 0 1 1 0 4Z"/></svg></span><span class="ni-text">설정</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <a class="user-chip" href="profile.html">
+        <span class="avatar avatar-sm">JS<span class="presence online"></span></span>
+        <span class="uc-text"><span class="uc-name">진섭</span><span class="uc-mail">admin@jinju-ict.com</span></span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <div class="app-main" id="main">
+    <header class="navbar">
+      <button class="btn btn-icon btn-ghost lg:hidden" data-sidebar-toggle aria-label="메뉴"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+      <button class="btn btn-icon btn-ghost md:hidden" data-collapse-sidebar aria-label="사이드바 접기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M3 12h12M3 18h18"/></svg></button>
+      <div class="searchbar flex-1" style="max-width:420px">
+        <span class="search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
+        <input class="input" placeholder="메일 검색하거나 ⌘K 를 누르세요" aria-label="메일 검색" onfocus="NM.cmdk.open();this.blur()" />
+      </div>
+      <div class="flex items-center gap-2" style="margin-left:auto">
+        <button class="theme-toggle" data-theme-toggle aria-label="테마 전환">
+          <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+          <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+        <button class="btn btn-primary" data-modal-open="compose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> 새 메일</button>
+      </div>
+    </header>
+
+    <div class="app-content">
+      <div class="inbox-grid">
+
+        <!-- ===== 좌: 폴더 패널 ===== -->
+        <aside class="inbox-panel folder-panel" aria-label="폴더">
+          <div class="card card-sm">
+            <nav class="folder-list" aria-label="메일 폴더">
+              <a class="nav-item is-active" href="#" aria-current="page">
+                <span class="flex items-center gap-2"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="m3 7 9 6 9-6"/></svg></span><span class="ni-text">받은편지함</span></span>
+                <span class="badge-count">12</span>
+              </a>
+              <a class="nav-item" href="#">
+                <span class="flex items-center gap-2"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 18l-5.8 3 1.1-6.5L2.6 9.8l6.5-.9Z"/></svg></span><span class="ni-text">별표</span></span>
+              </a>
+              <a class="nav-item" href="#">
+                <span class="flex items-center gap-2"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-8-8 18-2-7-8-3Z"/></svg></span><span class="ni-text">보낸편지함</span></span>
+              </a>
+              <a class="nav-item" href="#">
+                <span class="flex items-center gap-2"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5M8 13h8M8 17h8M8 9h2"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/></svg></span><span class="ni-text">임시보관</span></span>
+                <span class="badge-count">3</span>
+              </a>
+              <a class="nav-item" href="#">
+                <span class="flex items-center gap-2"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></span><span class="ni-text">스팸</span></span>
+              </a>
+              <a class="nav-item" href="#">
+                <span class="flex items-center gap-2"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></span><span class="ni-text">휴지통</span></span>
+              </a>
+            </nav>
+          </div>
+
+          <div class="card card-sm mt-4">
+            <div class="sidebar-label" style="padding-left:var(--space-2)">라벨</div>
+            <nav class="folder-list" aria-label="라벨">
+              <a class="nav-item" href="#"><span class="flex items-center gap-2"><span class="label-dot" style="background:var(--color-primary)"></span><span class="ni-text">업무</span></span></a>
+              <a class="nav-item" href="#"><span class="flex items-center gap-2"><span class="label-dot" style="background:var(--color-accent)"></span><span class="ni-text">개인</span></span></a>
+              <a class="nav-item" href="#"><span class="flex items-center gap-2"><span class="label-dot" style="background:var(--amber-500)"></span><span class="ni-text">뉴스레터</span></span></a>
+            </nav>
+          </div>
+        </aside>
+
+        <!-- ===== 중: 메일 목록 패널 ===== -->
+        <section class="inbox-panel list-panel" aria-label="메일 목록">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <h1 class="text-xl fw-bold">받은편지함</h1>
+            <span class="badge badge-muted badge-soft">안읽음 5</span>
+          </div>
+          <div class="searchbar mt-3">
+            <span class="search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
+            <input class="input" placeholder="이 폴더에서 검색" aria-label="폴더 내 검색" />
+          </div>
+          <div class="segmented mt-3 w-full" role="group" aria-label="정렬">
+            <button data-segment="true" class="is-active" aria-selected="true">최신순</button>
+            <button data-segment="true" aria-selected="false">안읽음</button>
+            <button data-segment="true" aria-selected="false">별표</button>
+          </div>
+
+          <div class="mail-list stagger">
+            <!-- 1 (선택 + 안읽음) -->
+            <button class="mail-item is-active is-unread" aria-current="true" aria-label="유나래: 디자인 시스템 v2 리뷰 요청">
+              <span class="avatar avatar-sm" style="margin-left:var(--space-2)">유나</span>
+              <span class="mail-body">
+                <span class="mail-row"><span class="mail-from fw-bold text-strong">유나래</span><span class="mail-time">오전 9:42</span></span>
+                <span class="mail-subject fw-bold text-strong truncate">디자인 시스템 v2 리뷰 요청</span>
+                <span class="mail-preview text-muted truncate">진섭 님, v2 컴포넌트 토큰 정리본 공유드립니다. 그림자 단계랑 라운드 값 확인 부탁…</span>
+              </span>
+            </button>
+
+            <!-- 2 (안읽음) -->
+            <button class="mail-item is-unread" aria-label="회계팀: 6월 정산 내역 첨부">
+              <span class="avatar avatar-sm" style="margin-left:var(--space-2); color:var(--mint-600)">회계</span>
+              <span class="mail-body">
+                <span class="mail-row"><span class="mail-from fw-bold text-strong">회계팀 · 박서연</span><span class="mail-time">오전 8:15</span></span>
+                <span class="mail-subject fw-bold text-strong truncate">6월 정산 내역 첨부</span>
+                <span class="mail-preview text-muted truncate">6월 매입·매출 정산표와 세금계산서 합본을 첨부했습니다. 마감 전 검토 후 회신…</span>
+              </span>
+            </button>
+
+            <!-- 3 (안읽음 + 별표) -->
+            <button class="mail-item is-unread" aria-label="GitHub: 풀 리퀘스트 머지 알림">
+              <span class="avatar avatar-sm" style="margin-left:var(--space-2); color:var(--color-text-muted)">GH</span>
+              <span class="mail-body">
+                <span class="mail-row"><span class="mail-from fw-bold text-strong">GitHub</span><span class="mail-time">어제</span></span>
+                <span class="mail-subject fw-bold text-strong truncate">#482 PR이 main에 머지되었습니다 ⭐</span>
+                <span class="mail-preview text-muted truncate">feat: 뉴모피즘 그림자 토큰 통합 — 이창민 님이 승인 후 머지했습니다. 빌드 통과…</span>
+              </span>
+            </button>
+
+            <!-- 4 -->
+            <button class="mail-item" aria-label="김도현: 주간 스프린트 회고 정리">
+              <span class="avatar avatar-sm" style="margin-left:var(--space-2)">김도</span>
+              <span class="mail-body">
+                <span class="mail-row"><span class="mail-from text-strong">김도현</span><span class="mail-time">어제</span></span>
+                <span class="mail-subject fw-semibold truncate">주간 스프린트 회고 정리</span>
+                <span class="mail-preview text-muted truncate">이번 주 완료/미완료 항목과 다음 스프린트 우선순위를 노션에 정리해 두었어요…</span>
+              </span>
+            </button>
+
+            <!-- 5 (안읽음) -->
+            <button class="mail-item is-unread" aria-label="이수민: 신규 입사자 온보딩 일정 안내">
+              <span class="avatar avatar-sm" style="margin-left:var(--space-2); color:var(--amber-600)">이수</span>
+              <span class="mail-body">
+                <span class="mail-row"><span class="mail-from fw-bold text-strong">인사팀 · 이수민</span><span class="mail-time">6월 19일</span></span>
+                <span class="mail-subject fw-bold text-strong truncate">신규 입사자 온보딩 일정 안내</span>
+                <span class="mail-preview text-muted truncate">다음 주 월요일 신규 입사자 3명 합류 예정입니다. 멘토 배정과 환영 점심 일정…</span>
+              </span>
+            </button>
+
+            <!-- 6 -->
+            <button class="mail-item" aria-label="최지우: 고객 미팅 후속 자료">
+              <span class="avatar avatar-sm" style="margin-left:var(--space-2)">최지</span>
+              <span class="mail-body">
+                <span class="mail-row"><span class="mail-from text-strong">최지우</span><span class="mail-time">6월 18일</span></span>
+                <span class="mail-subject fw-semibold truncate">고객 미팅 후속 자료 공유</span>
+                <span class="mail-preview text-muted truncate">오늘 진주ICT 미팅 감사했습니다. 논의된 요구사항 정리본과 제안서 초안을 보냅니다…</span>
+              </span>
+            </button>
+
+            <!-- 7 (안읽음) -->
+            <button class="mail-item is-unread" aria-label="Figma: 새 댓글 알림">
+              <span class="avatar avatar-sm" style="margin-left:var(--space-2); color:var(--color-primary)">Fi</span>
+              <span class="mail-body">
+                <span class="mail-row"><span class="mail-from fw-bold text-strong">Figma</span><span class="mail-time">6월 18일</span></span>
+                <span class="mail-subject fw-bold text-strong truncate">'대시보드 v2' 파일에 새 댓글 3건</span>
+                <span class="mail-preview text-muted truncate">박모아 님이 KPI 카드 간격에 대해 코멘트를 남겼습니다. 확인 후 답글을 달아주세요…</span>
+              </span>
+            </button>
+
+            <!-- 8 -->
+            <button class="mail-item" aria-label="정민호: 서버 비용 절감 보고서">
+              <span class="avatar avatar-sm" style="margin-left:var(--space-2)">정민</span>
+              <span class="mail-body">
+                <span class="mail-row"><span class="mail-from text-strong">정민호</span><span class="mail-time">6월 17일</span></span>
+                <span class="mail-subject fw-semibold truncate">서버 비용 절감 보고서 (Q2)</span>
+                <span class="mail-preview text-muted truncate">예약 인스턴스 전환과 캐시 계층 정리로 월 19% 절감했습니다. 상세 내역은 첨부…</span>
+              </span>
+            </button>
+
+            <!-- 9 -->
+            <button class="mail-item" aria-label="주간 뉴스레터: 이번 주 디자인 트렌드">
+              <span class="avatar avatar-sm" style="margin-left:var(--space-2); color:var(--amber-600)">N</span>
+              <span class="mail-body">
+                <span class="mail-row"><span class="mail-from text-strong">UX 위클리</span><span class="mail-time">6월 16일</span></span>
+                <span class="mail-subject fw-semibold truncate">이번 주 디자인 트렌드 — 뉴모피즘의 귀환</span>
+                <span class="mail-preview text-muted truncate">소프트 섀도우와 단색 표면이 다시 주목받고 있습니다. 추천 아티클 8선과 사례…</span>
+              </span>
+            </button>
+
+            <!-- 10 -->
+            <button class="mail-item" aria-label="강하늘: 휴가 신청 승인 요청">
+              <span class="avatar avatar-sm" style="margin-left:var(--space-2)">강하</span>
+              <span class="mail-body">
+                <span class="mail-row"><span class="mail-from text-strong">강하늘</span><span class="mail-time">6월 15일</span></span>
+                <span class="mail-subject fw-semibold truncate">7월 첫째 주 휴가 신청 승인 요청</span>
+                <span class="mail-preview text-muted truncate">7월 1일부터 3일까지 연차를 신청합니다. 인수인계 문서는 미리 공유드릴게요…</span>
+              </span>
+            </button>
+          </div>
+        </section>
+
+        <!-- ===== 우: 본문 리딩 패널 ===== -->
+        <section class="inbox-panel reading-panel flex-1" aria-label="메일 본문">
+          <div class="card card-lg">
+            <div class="reading-head">
+              <div style="min-width:0">
+                <h2 class="text-2xl fw-bold text-strong" style="margin-bottom:var(--space-3)">디자인 시스템 v2 리뷰 요청</h2>
+                <div class="flex items-center gap-3">
+                  <span class="avatar">유나<span class="presence online"></span></span>
+                  <div>
+                    <div class="fw-semibold text-strong">유나래 <span class="text-muted fw-normal">&lt;narae.yu@jinju-ict.com&gt;</span></div>
+                    <div class="text-xs text-faint">받는사람: 나 · 2026년 6월 21일 오전 9:42</div>
+                  </div>
+                </div>
+              </div>
+              <div class="reading-actions">
+                <button class="btn btn-icon btn-secondary" aria-label="별표" onclick="NM.toast({title:'별표 표시됨',variant:'success'})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 18l-5.8 3 1.1-6.5L2.6 9.8l6.5-.9Z"/></svg></button>
+                <button class="btn btn-icon btn-secondary" aria-label="답장" onclick="document.getElementById('reply-text').focus()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17 4 12l5-5M4 12h11a5 5 0 0 1 5 5v1"/></svg></button>
+                <button class="btn btn-icon btn-secondary" aria-label="전달" onclick="NM.toast({title:'전달 준비됨',variant:'info'})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 17 5-5-5-5M20 12H9a5 5 0 0 0-5 5v1"/></svg></button>
+                <button class="btn btn-icon btn-danger" aria-label="삭제" onclick="NM.toast({title:'휴지통으로 이동',variant:'warning'})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 mt-3 mb-5">
+              <span class="badge badge-primary badge-soft"><span class="dot"></span>업무</span>
+              <span class="badge badge-info badge-soft">디자인</span>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="reading-prose mt-5">
+              <p>안녕하세요 진섭 님,</p>
+              <p>지난 회의 때 논의했던 <strong>디자인 시스템 v2</strong> 컴포넌트 토큰 정리본을 공유드립니다. 이번 버전에서는 그림자 단계를 솟음(raised) · 눌림(pressed) · 평면(flat) 세 가지로 단순화했고, 라운드 값도 sm/md/lg/xl 네 단계로 정리했습니다.</p>
+              <p>특히 카드와 버튼은 기본적으로 솟아 있고, 인풋과 트랙류는 눌린 상태를 기본값으로 잡았습니다. 색은 인디고 primary와 민트 accent를 중심으로 절제했으니, 추가 색이 필요하면 별도로 논의했으면 합니다.</p>
+              <p>첨부한 <strong>토큰 명세서</strong>와 <strong>컴포넌트 스펙 시트</strong>를 검토하신 뒤, 그림자 단계와 라운드 값에 대한 의견을 이번 주 금요일까지 회신 부탁드립니다. 큰 이슈가 없으면 다음 스프린트에 바로 적용하려고 합니다.</p>
+              <p>감사합니다.<br/>유나래 드림</p>
+            </div>
+
+            <div class="attach-row mb-2">
+              <span class="file-chip">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/></svg>
+                디자인토큰_명세서_v2.pdf <span class="text-faint">· 1.8MB</span>
+              </span>
+              <span class="file-chip">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                컴포넌트_스펙시트.xlsx <span class="text-faint">· 642KB</span>
+              </span>
+            </div>
+
+            <!-- 답장 영역 -->
+            <div class="reply-box">
+              <div class="divider mb-4"></div>
+              <div class="field">
+                <label class="label" for="reply-text">답장</label>
+                <textarea class="textarea" id="reply-text" rows="4" placeholder="유나래 님에게 답장 작성…"></textarea>
+              </div>
+              <div class="flex items-center justify-between gap-2 mt-3">
+                <button class="btn btn-icon btn-ghost" aria-label="파일 첨부"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.4 11.1 12.3 20.2a5 5 0 0 1-7.1-7.1l9-9a3 3 0 1 1 4.3 4.3l-9.1 9a1 1 0 0 1-1.4-1.4l8.4-8.4"/></svg></button>
+                <button class="btn btn-primary" onclick="NM.toast({title:'전송됨',text:'답장을 보냈습니다.',variant:'success'})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-8-8 18-2-7-8-3Z"/></svg> 보내기</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== overlays ===== -->
+<div class="overlay"></div>
+
+<!-- 새 메일 작성 모달 -->
+<div class="modal" id="compose" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="cm-t">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 class="modal-title" id="cm-t">새 메일 작성</h3>
+      <button class="btn btn-icon btn-sm btn-ghost" data-modal-close aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="modal-body stack">
+      <div class="field"><label class="label" for="c-to">받는사람</label><input class="input" id="c-to" type="email" placeholder="name@example.com" /></div>
+      <div class="field"><label class="label" for="c-subject">제목</label><input class="input" id="c-subject" placeholder="제목을 입력하세요" /></div>
+      <div class="field"><label class="label" for="c-body">본문</label><textarea class="textarea" id="c-body" rows="6" placeholder="내용을 입력하세요…"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-modal-close onclick="NM.toast({title:'임시저장됨',text:'임시보관함에 저장했습니다.',variant:'info'})">임시저장</button>
+      <button class="btn btn-primary" data-modal-close onclick="NM.toast({title:'전송됨',variant:'success'})">보내기</button>
+    </div>
+  </div>
+</div>
+
+<!-- Command palette -->
+<div class="cmdk" id="cmdk" aria-hidden="true" role="dialog" aria-modal="true" aria-label="명령 팔레트">
+  <div class="cmdk-panel">
+    <div class="cmdk-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" placeholder="명령 또는 페이지 검색…" aria-label="검색" /><span class="kbd">ESC</span>
+    </div>
+    <div class="cmdk-list">
+      <div class="cmdk-group-label">이동</div>
+      <button class="cmdk-item" data-href="dashboard.html"><span class="ci-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span><span class="ci-label">대시보드</span></button>
+      <button class="cmdk-item" data-href="kanban.html"><span class="ci-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg></span><span class="ci-label">칸반 보드</span></button>
+      <button class="cmdk-item" data-href="../index.html"><span class="ci-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8M5 10v10h14V10"/></svg></span><span class="ci-label">홈 (허브)</span></button>
+      <div class="cmdk-group-label">동작</div>
+      <button class="cmdk-item" data-modal-open="compose"><span class="ci-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></span><span class="ci-label">새 메일 작성</span></button>
+      <button class="cmdk-item" data-theme-toggle><span class="ci-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span><span class="ci-label">테마 전환</span></button>
+      <div class="cmdk-empty" style="display:none">결과가 없습니다.</div>
+    </div>
+    <div class="cmdk-footer"><span><span class="kbd">↑</span><span class="kbd">↓</span> 이동</span><span><span class="kbd">↵</span> 선택</span><span><span class="kbd">esc</span> 닫기</span></div>
+  </div>
+</div>
+
+<script src="../app.js"></script>
+</body>
+</html>

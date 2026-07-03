@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CYBERPUNK TERMINAL // theme-07 디자인 시스템</title>
+<meta name="description" content="Cyberpunk Terminal — 깊은 보이드 CRT 디자인 시스템. 네온 시안·마젠타, 모노스페이스, 직각 모서리, 터미널 창 크롬.">
+
+<!-- design system: load order = tokens -> semantic -> base -> components -->
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="semantic.css">
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="components/button.css">
+<link rel="stylesheet" href="components/forms.css">
+<link rel="stylesheet" href="components/card.css">
+<link rel="stylesheet" href="components/display.css">
+<link rel="stylesheet" href="components/table.css">
+<link rel="stylesheet" href="components/feedback.css">
+<link rel="stylesheet" href="components/nav.css">
+
+<style>
+  /* ---- index-only layout helpers (built on the same tokens) ---- */
+  .hero {
+    position: relative;
+    padding: var(--space-14) 0 var(--space-12);
+    border-bottom: var(--border-1) solid var(--color-divider);
+    overflow: hidden;
+  }
+  .hero__glow {
+    position: absolute; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(60% 60% at 20% 0%, rgba(var(--rgb-cyan) / .14), transparent 70%),
+      radial-gradient(50% 50% at 90% 30%, rgba(var(--rgb-magenta) / .12), transparent 70%);
+  }
+  .hero__inner { position: relative; z-index: 1; }
+  .hero__kicker { color: var(--color-primary); text-shadow: var(--glow-primary); }
+  .hero h1 { font-size: clamp(2.4rem, 7vw, 5rem); margin: var(--space-3) 0; line-height: 1.04; }
+  .hero h1 .accent { color: var(--color-accent); text-shadow: var(--glow-accent); }
+  .hero__term {
+    max-width: 560px; margin-top: var(--space-6);
+    background: var(--color-bg-2); border: var(--border-1) solid var(--color-border);
+    box-shadow: var(--shadow-glow-md);
+  }
+  .hero__term-bar {
+    display: flex; align-items: center; gap: var(--space-2);
+    height: var(--card-chrome-h); padding-inline: var(--space-3);
+    background: var(--color-chrome); border-bottom: var(--border-1) solid var(--color-chrome-line);
+  }
+  .hero__term-bar .d { width: 11px; height: 11px; }
+  .hero__term-body { padding: var(--space-4); font-size: var(--text-sm); min-height: 132px; }
+  .hero__term-body .line { color: var(--color-text-muted); }
+  .hero__term-body .ok { color: var(--color-success-text); }
+
+  .swatch-row { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; }
+  .swatch { height: 46px; display: flex; align-items: flex-end; justify-content: center; font-size: 9px; color: rgba(0,0,0,.65); padding-bottom: 2px; }
+  .swatch.dark { color: rgba(255,255,255,.5); }
+  .ramp-label { font-size: var(--text-2xs); letter-spacing: var(--tracking-widest); text-transform: uppercase; color: var(--color-text-subtle); margin: var(--space-4) 0 var(--space-2); }
+
+  .demo-grid { display: grid; gap: var(--space-6); grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+  .demo { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+  .demo--col { flex-direction: column; align-items: stretch; }
+  .gallery-card { background: var(--color-surface); border: var(--border-1) solid var(--color-border); padding: var(--space-5); }
+  .gallery-card > h4 { font-size: var(--text-sm); text-transform: uppercase; letter-spacing: var(--tracking-wider); color: var(--color-primary); margin-bottom: var(--space-4); }
+
+  .type-scale > div { display: flex; align-items: baseline; gap: var(--space-4); border-bottom: 1px dashed var(--color-divider); padding: var(--space-2) 0; }
+  .type-scale .tg { color: var(--color-text-subtle); font-size: var(--text-2xs); width: 56px; flex-shrink: 0; }
+
+  .space-bar { background: var(--color-primary-weak); border-left: var(--border-2) solid var(--color-primary); height: 18px; }
+
+  .pages-grid { display: grid; gap: var(--space-5); grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .page-link {
+    display: block; padding: var(--space-5); background: var(--color-surface);
+    border: var(--border-1) solid var(--color-border); text-decoration: none;
+    transition: transform var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard), border-color var(--duration-fast);
+  }
+  .page-link:hover { transform: translateY(-3px); border-color: var(--color-primary); box-shadow: var(--shadow-glow-md); text-decoration: none; }
+  .page-link__id { font-size: var(--text-2xs); color: var(--color-accent); letter-spacing: var(--tracking-widest); }
+  .page-link__title { font-family: var(--font-display); font-size: var(--text-lg); color: var(--color-text); margin: var(--space-2) 0; }
+  .page-link__desc { font-size: var(--text-xs); color: var(--color-text-muted); }
+  .page-link__arrow { color: var(--color-primary); margin-top: var(--space-3); font-size: var(--text-sm); }
+
+  .sticky-toc { position: sticky; top: 76px; }
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main">CONTENT 로 건너뛰기</a>
+
+<!-- CRT overlay (scanlines + vignette) sits above everything, no pointer events -->
+<div class="crt-overlay" aria-hidden="true"></div>
+
+<!-- ============================== NAVBAR ============================== -->
+<header class="ct-navbar">
+  <div class="container flex items-center justify-between" style="height:60px;">
+    <a class="ct-navbar__brand" href="index.html">
+      <span class="t-accent">◢</span> CYBER<span class="t-primary">.</span>TERM
+      <span class="ct-navbar__brand-cursor" aria-hidden="true"></span>
+    </a>
+    <nav class="ct-navbar__nav" aria-label="주요">
+      <a class="ct-navbar__link is-active" href="index.html" aria-current="page">홈</a>
+      <a class="ct-navbar__link" href="#tokens">토큰</a>
+      <a class="ct-navbar__link" href="#components">컴포넌트</a>
+      <a class="ct-navbar__link" href="#pages">페이지</a>
+    </nav>
+    <div class="ct-navbar__actions flex items-center gap-2">
+      <button class="ct-btn ct-btn--secondary ct-btn--sm" data-cmdk-open aria-label="명령 팔레트 열기">
+        검색 <span class="ct-kbd">⌘K</span>
+      </button>
+      <button class="ct-btn ct-btn--icon ct-btn--sm" data-theme-toggle aria-label="테마 전환" title="다크 / 라이트">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+      <button class="ct-navbar__toggle" data-nav-toggle aria-label="메뉴" aria-expanded="false">≡</button>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="site-main">
+
+  <!-- ============================== HERO ============================== -->
+  <section class="hero">
+    <div class="hero__glow" aria-hidden="true"></div>
+    <div class="container hero__inner">
+      <span class="label hero__kicker">// THEME-07 · 디자인 시스템</span>
+      <h1 class="t-display">CYBERPUNK<br><span class="accent">TERMINAL</span></h1>
+      <p class="t-muted max-w-prose" style="font-size:var(--text-md)">
+        깊은 보이드 / CRT 터미널 미감. 네온 시안·마젠타, 전면 모노스페이스, 직각 모서리,
+        스캔라인과 글로우. 외부 프레임워크 0, 순수 CSS 토큰 + 바닐라 JS.
+      </p>
+      <div class="flex gap-3 flex-wrap mt-6">
+        <a class="ct-btn ct-btn--primary ct-btn--lg glitch" href="#components">컴포넌트 보기</a>
+        <a class="ct-btn ct-btn--secondary ct-btn--lg" href="#pages">실데모 페이지</a>
+        <button class="ct-btn ct-btn--ghost ct-btn--lg" data-cmdk-open>⌘K 커맨드</button>
+      </div>
+
+      <!-- live terminal boot -->
+      <div class="hero__term clip-corner-tr" role="img" aria-label="부팅 시퀀스 데모 터미널">
+        <div class="hero__term-bar">
+          <span class="d" style="background:var(--cyan-400);box-shadow:var(--glow-cyan)"></span>
+          <span class="d" style="background:var(--amber-400)"></span>
+          <span class="d" style="background:var(--magenta-400)"></span>
+          <span class="label" style="margin-left:auto">boot.sh</span>
+        </div>
+        <div class="hero__term-body t-mono">
+          <div data-boot="kernel modules loaded|design tokens mounted [318]|components linked [70+]|theme engine :: dark|render pipeline ready" >
+            <div data-boot-out></div>
+          </div>
+          <div data-boot-reveal style="opacity:0;transition:opacity .4s var(--ease-out);margin-top:var(--space-2)" class="is-revealed-target">
+            <span class="prompt"></span><span data-typing data-text="welcome, operator_" data-delay="900"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="container">
+
+    <!-- ============================== TOKENS ============================== -->
+    <section class="section" id="tokens" data-comp="tokens color palette">
+      <div class="section-head">
+        <span class="idx">01//</span>
+        <h2>토큰</h2>
+        <span class="label" style="margin-left:auto">tokens.css · semantic.css</span>
+      </div>
+
+      <p class="ramp-label">네온 램프</p>
+      <div class="stack-3">
+        <div>
+          <span class="label">cyan · primary</span>
+          <div class="swatch-row">
+            <div class="swatch" style="background:var(--cyan-50)">50</div><div class="swatch" style="background:var(--cyan-100)">100</div><div class="swatch" style="background:var(--cyan-200)">200</div><div class="swatch" style="background:var(--cyan-300)">300</div><div class="swatch dark" style="background:var(--cyan-400)">400</div><div class="swatch dark" style="background:var(--cyan-500)">500</div><div class="swatch dark" style="background:var(--cyan-600)">600</div><div class="swatch dark" style="background:var(--cyan-700)">700</div><div class="swatch dark" style="background:var(--cyan-800)">800</div><div class="swatch dark" style="background:var(--cyan-900)">900</div>
+          </div>
+        </div>
+        <div>
+          <span class="label">magenta · accent</span>
+          <div class="swatch-row">
+            <div class="swatch" style="background:var(--magenta-50)">50</div><div class="swatch" style="background:var(--magenta-100)">100</div><div class="swatch" style="background:var(--magenta-200)">200</div><div class="swatch dark" style="background:var(--magenta-300)">300</div><div class="swatch dark" style="background:var(--magenta-400)">400</div><div class="swatch dark" style="background:var(--magenta-500)">500</div><div class="swatch dark" style="background:var(--magenta-600)">600</div><div class="swatch dark" style="background:var(--magenta-700)">700</div><div class="swatch dark" style="background:var(--magenta-800)">800</div><div class="swatch dark" style="background:var(--magenta-900)">900</div>
+          </div>
+        </div>
+        <div>
+          <span class="label">green · success</span>
+          <div class="swatch-row">
+            <div class="swatch" style="background:var(--green-50)">50</div><div class="swatch" style="background:var(--green-100)">100</div><div class="swatch" style="background:var(--green-200)">200</div><div class="swatch" style="background:var(--green-300)">300</div><div class="swatch dark" style="background:var(--green-400)">400</div><div class="swatch dark" style="background:var(--green-500)">500</div><div class="swatch dark" style="background:var(--green-600)">600</div><div class="swatch dark" style="background:var(--green-700)">700</div><div class="swatch dark" style="background:var(--green-800)">800</div><div class="swatch dark" style="background:var(--green-900)">900</div>
+          </div>
+        </div>
+        <div>
+          <span class="label">amber · warning</span>
+          <div class="swatch-row">
+            <div class="swatch" style="background:var(--amber-50)">50</div><div class="swatch" style="background:var(--amber-100)">100</div><div class="swatch" style="background:var(--amber-200)">200</div><div class="swatch" style="background:var(--amber-300)">300</div><div class="swatch dark" style="background:var(--amber-400)">400</div><div class="swatch dark" style="background:var(--amber-500)">500</div><div class="swatch dark" style="background:var(--amber-600)">600</div><div class="swatch dark" style="background:var(--amber-700)">700</div><div class="swatch dark" style="background:var(--amber-800)">800</div><div class="swatch dark" style="background:var(--amber-900)">900</div>
+          </div>
+        </div>
+        <div>
+          <span class="label">ink · 보이드 표면</span>
+          <div class="swatch-row">
+            <div class="swatch" style="background:var(--ink-0)">0</div><div class="swatch" style="background:var(--ink-50)">50</div><div class="swatch dark" style="background:var(--ink-100)">100</div><div class="swatch dark" style="background:var(--ink-300)">300</div><div class="swatch dark" style="background:var(--ink-500)">500</div><div class="swatch dark" style="background:var(--ink-700)">700</div><div class="swatch dark" style="background:var(--ink-800)">800</div><div class="swatch dark" style="background:var(--ink-850)">850</div><div class="swatch dark" style="background:var(--ink-950)">950</div><div class="swatch dark" style="background:var(--ink-1000)">1000</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-3 mt-8">
+        <div class="gallery-card" data-comp="glow effects">
+          <h4>글로우</h4>
+          <div class="stack-3">
+            <span class="neon t-lg">시안 글로우 텍스트</span>
+            <span class="neon-magenta t-lg">마젠타 글로우</span>
+            <span class="neon-green t-lg">녹색 글로우</span>
+            <span class="neon-amber t-lg">앰버 글로우</span>
+            <div class="glow-border" style="padding:var(--space-3);margin-top:var(--space-2)">.glow-border</div>
+          </div>
+        </div>
+        <div class="gallery-card" data-comp="type scale typography">
+          <h4>타입 스케일</h4>
+          <div class="type-scale">
+            <div><span class="tg">6xl</span><span class="t-display" style="font-size:var(--text-2xl)">Aa</span></div>
+            <div><span class="tg">2xl</span><span class="t-display t-xl">Terminal</span></div>
+            <div><span class="tg">base</span><span class="t-base">monospace body 015</span></div>
+            <div><span class="tg">xs</span><span class="t-xs t-muted">// 캡션 / 메타 라인</span></div>
+          </div>
+        </div>
+        <div class="gallery-card" data-comp="spacing scale radius">
+          <h4>간격</h4>
+          <div class="stack-2">
+            <div class="space-bar" style="width:var(--space-2)"></div>
+            <div class="space-bar" style="width:var(--space-4)"></div>
+            <div class="space-bar" style="width:var(--space-6)"></div>
+            <div class="space-bar" style="width:var(--space-8)"></div>
+            <div class="space-bar" style="width:var(--space-11)"></div>
+          </div>
+          <p class="t-2xs t-subtle mt-4">RADIUS 0 · CORNER-CUT clip-path · BORDER neon</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================== COMPONENTS ============================== -->
+    <section class="section" id="components">
+      <div class="section-head">
+        <span class="idx">02//</span>
+        <h2>컴포넌트</h2>
+        <input class="ct-input ct-input--sm" data-gallery-search placeholder="필터: 컴포넌트 검색…" aria-label="컴포넌트 검색" style="margin-left:auto;max-width:240px">
+      </div>
+
+      <div class="demo-grid">
+
+        <!-- BUTTONS -->
+        <div class="gallery-card" data-comp="button btn primary secondary ghost danger icon loading">
+          <h4>버튼</h4>
+          <div class="demo">
+            <button class="ct-btn ct-btn--primary">PRIMARY</button>
+            <button class="ct-btn ct-btn--secondary">SECONDARY</button>
+            <button class="ct-btn ct-btn--ghost">GHOST</button>
+            <button class="ct-btn ct-btn--danger">DANGER</button>
+          </div>
+          <div class="demo mt-3">
+            <button class="ct-btn ct-btn--primary ct-btn--sm">SM</button>
+            <button class="ct-btn ct-btn--primary">MD</button>
+            <button class="ct-btn ct-btn--primary ct-btn--lg">LG</button>
+            <button class="ct-btn ct-btn--icon" aria-label="설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6m11-7h-6M7 12H1"/></svg></button>
+            <button class="ct-btn ct-btn--primary is-loading"><span class="ct-btn__spinner"><span class="ct-btn__spinner-glyph" data-spinner>⠋</span></span>로딩</button>
+          </div>
+          <div class="demo mt-3">
+            <div class="ct-btn-group" role="group" aria-label="뷰">
+              <button class="ct-btn ct-btn--ghost is-active" aria-pressed="true">목록</button>
+              <button class="ct-btn ct-btn--ghost" aria-pressed="false">그리드</button>
+              <button class="ct-btn ct-btn--ghost" aria-pressed="false">JSON</button>
+            </div>
+            <button class="ct-btn ct-btn--secondary" disabled>비활성</button>
+          </div>
+        </div>
+
+        <!-- INPUTS -->
+        <div class="gallery-card" data-comp="input field textarea command line prompt">
+          <h4>입력 필드</h4>
+          <div class="stack-3">
+            <div class="ct-field">
+              <label class="ct-field__label" for="g-user">사용자명 <span class="ct-field__req">*</span></label>
+              <div class="ct-input-wrap ct-input-wrap--prompt">
+                <input id="g-user" class="ct-input ct-input--prompt" placeholder="root" value="operator">
+              </div>
+              <span class="ct-field__hint">3–24자</span>
+            </div>
+            <div class="ct-field">
+              <label class="ct-field__label" for="g-bad">토큰</label>
+              <input id="g-bad" class="ct-input is-invalid" aria-invalid="true" value="xxxx" >
+              <span class="ct-field__error">서명이 올바르지 않습니다</span>
+            </div>
+            <div class="ct-searchbar">
+              <span class="ct-searchbar__prompt" aria-hidden="true">&gt;_</span>
+              <input class="ct-searchbar__input" placeholder="로그 검색" aria-label="검색">
+              <span class="ct-searchbar__hint"><span class="ct-kbd">⌘K</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- TOGGLES / SELECT -->
+        <div class="gallery-card" data-comp="checkbox radio switch toggle select segmented slider">
+          <h4>컨트롤</h4>
+          <div class="stack-3">
+            <label class="ct-checkbox"><input class="ct-checkbox__box" type="checkbox" checked><span class="ct-checkbox__label">텔레메트리 활성화</span></label>
+            <label class="ct-radio"><input class="ct-radio__box" type="radio" name="g-r" checked><span class="ct-radio__label">정식 채널</span></label>
+            <label class="ct-radio"><input class="ct-radio__box" type="radio" name="g-r"><span class="ct-radio__label">나이틀리 채널</span></label>
+            <label class="ct-switch"><input class="ct-switch__input" type="checkbox" checked><span class="ct-switch__track"><span class="ct-switch__knob"></span></span><span class="ct-switch__label">CRT 모드</span></label>
+            <div class="ct-segmented" role="group" aria-label="모드">
+              <label class="ct-segmented__option"><input class="ct-segmented__input" type="radio" name="g-seg" checked> DEV</label>
+              <label class="ct-segmented__option"><input class="ct-segmented__input" type="radio" name="g-seg"> STAGE</label>
+              <label class="ct-segmented__option"><input class="ct-segmented__input" type="radio" name="g-seg"> PROD</label>
+            </div>
+            <div class="ct-slider" data-slider>
+              <input class="ct-slider__input" type="range" min="0" max="100" value="72" aria-label="강도">
+              <output class="ct-slider__value" data-slider-value>72</output>
+            </div>
+          </div>
+        </div>
+
+        <!-- BADGES / TAGS / AVATARS -->
+        <div class="gallery-card" data-comp="badge tag avatar status chip">
+          <h4>뱃지 · 아바타</h4>
+          <div class="demo">
+            <span class="ct-badge ct-badge--primary">PRIMARY</span>
+            <span class="ct-badge ct-badge--success ct-badge--dot">온라인</span>
+            <span class="ct-badge ct-badge--warning">경고</span>
+            <span class="ct-badge ct-badge--danger ct-badge--solid">치명적</span>
+            <span class="ct-badge ct-badge--accent ct-badge--outline">v2.6</span>
+            <span class="ct-badge ct-badge--count">12</span>
+          </div>
+          <div class="demo mt-3">
+            <span class="ct-tag ct-tag--primary ct-tag--removable">kernel <button class="ct-tag__remove" aria-label="제거">✕</button></span>
+            <span class="ct-tag ct-tag--accent ct-tag--removable">neon <button class="ct-tag__remove" aria-label="제거">✕</button></span>
+          </div>
+          <div class="demo mt-4 items-center">
+            <span class="ct-avatar ct-avatar--md"><span class="ct-avatar__initials">OP</span><span class="ct-avatar__status ct-avatar__status--online"></span></span>
+            <span class="ct-avatar ct-avatar--md"><span class="ct-avatar__initials">JX</span><span class="ct-avatar__status ct-avatar__status--away"></span></span>
+            <div class="ct-avatar-group">
+              <span class="ct-avatar ct-avatar--sm"><span class="ct-avatar__initials">A</span></span>
+              <span class="ct-avatar ct-avatar--sm"><span class="ct-avatar__initials">B</span></span>
+              <span class="ct-avatar ct-avatar--sm"><span class="ct-avatar__initials">C</span></span>
+              <span class="ct-avatar ct-avatar--sm ct-avatar-group__more">+5</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD (terminal window) -->
+        <div class="gallery-card" data-comp="card terminal window stat">
+          <h4>카드 · 터미널 창</h4>
+          <div class="ct-card ct-card--glow">
+            <div class="ct-card__chrome">
+              <div class="ct-card__dots"><span class="ct-card__dot"></span><span class="ct-card__dot"></span><span class="ct-card__dot"></span></div>
+              <span class="ct-card__title">status.log</span>
+            </div>
+            <div class="ct-card__body">
+              <p class="t-sm t-muted">시스템 정상. 모든 노드 응답 중.</p>
+              <p class="t-xs t-success mt-2">› uplink stable · 42ms</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- STAT CARDS -->
+        <div class="gallery-card" data-comp="stat card hud metric kpi">
+          <h4>스탯 / HUD</h4>
+          <div class="grid-2" style="gap:var(--space-3)">
+            <div class="ct-stat">
+              <span class="ct-stat__label">가동시간</span>
+              <span class="ct-stat__value neon">99.98<span class="ct-stat__unit">%</span></span>
+              <span class="ct-stat__delta ct-stat__delta--up">▲ 0.4%</span>
+            </div>
+            <div class="ct-stat ct-stat--danger">
+              <span class="ct-stat__label">오류</span>
+              <span class="ct-stat__value">132</span>
+              <span class="ct-stat__delta ct-stat__delta--down">▼ 12</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ALERTS -->
+        <div class="gallery-card" data-comp="alert banner notification inline">
+          <h4>알림</h4>
+          <div class="stack-3">
+            <div class="ct-alert ct-alert--info" role="status"><span class="ct-alert__icon">ℹ</span><div class="ct-alert__body"><div class="ct-alert__title">동기화</div>토큰 318개 로드됨.</div></div>
+            <div class="ct-alert ct-alert--success" role="status"><span class="ct-alert__icon">✔</span><div class="ct-alert__body">배포 성공.</div></div>
+            <div class="ct-alert ct-alert--danger" role="alert"><span class="ct-alert__icon">✕</span><div class="ct-alert__body"><div class="ct-alert__title">치명적</div>uplink 손실.</div><button class="ct-alert__close" aria-label="닫기">✕</button></div>
+            <div class="ct-inline-note ct-inline-note--warning"><span class="ct-inline-note__icon">▲</span><span class="ct-inline-note__text">캐시 만료 임박</span></div>
+          </div>
+        </div>
+
+        <!-- OVERLAYS triggers -->
+        <div class="gallery-card" data-comp="modal drawer toast dialog overlay command palette">
+          <h4>오버레이</h4>
+          <div class="demo">
+            <button class="ct-btn ct-btn--secondary" data-modal-open="#demo-modal">모달</button>
+            <button class="ct-btn ct-btn--secondary" data-drawer-open="#demo-drawer">드로어</button>
+            <button class="ct-btn ct-btn--secondary" data-cmdk-open>⌘K</button>
+          </div>
+          <div class="demo mt-3">
+            <button class="ct-btn ct-btn--ghost" data-toast="배포가 큐에 등록됨" data-toast-title="대기 중" data-toast-variant="info">토스트·INFO</button>
+            <button class="ct-btn ct-btn--ghost" data-toast="작업 완료" data-toast-title="완료" data-toast-variant="success">SUCCESS</button>
+            <button class="ct-btn ct-btn--ghost" data-toast="디스크 공간 부족" data-toast-title="경고" data-toast-variant="danger">DANGER</button>
+          </div>
+        </div>
+
+        <!-- PROGRESS / SPINNER -->
+        <div class="gallery-card" data-comp="progress bar circular ascii spinner loading">
+          <h4>진행률</h4>
+          <div class="stack-4">
+            <div class="ct-progress">
+              <div class="ct-progress__head"><span class="ct-progress__label">다운로드</span><span class="ct-progress__value">68%</span></div>
+              <div class="ct-progress__track"><div class="ct-progress__fill" style="width:68%"></div></div>
+            </div>
+            <div class="ct-progress ct-progress--indeterminate">
+              <div class="ct-progress__track"><div class="ct-progress__fill"></div></div>
+            </div>
+            <div class="ct-progress ct-progress--ascii">
+              <span class="ct-progress__ascii" data-ascii-progress="42" data-width="22"></span>
+            </div>
+            <div class="demo items-center">
+              <span class="ct-spinner ct-spinner--md"><span class="ct-spinner__glyph" data-spinner>⠋</span></span>
+              <span class="ct-spinner ct-spinner--ring ct-spinner--md" aria-label="로딩"></span>
+              <span class="t-xs t-muted">동기화 중…</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- TABS -->
+        <div class="gallery-card" data-comp="tabs accordion">
+          <h4>탭 · 아코디언</h4>
+          <div class="ct-tabs ct-tabs--underline" data-tabs>
+            <div class="ct-tabs__list" role="tablist" aria-label="패널">
+              <button class="ct-tabs__tab is-active" role="tab" id="gt1" aria-controls="gp1" aria-selected="true">로그</button>
+              <button class="ct-tabs__tab" role="tab" id="gt2" aria-controls="gp2" aria-selected="false">통계</button>
+              <button class="ct-tabs__tab" role="tab" id="gt3" aria-controls="gp3" aria-selected="false">RAW</button>
+            </div>
+            <div class="ct-tabs__panels">
+              <div class="ct-tabs__panel" role="tabpanel" id="gp1" aria-labelledby="gt1"><p class="t-sm t-muted">최근 로그 스트림이 여기 표시됩니다.</p></div>
+              <div class="ct-tabs__panel" role="tabpanel" id="gp2" aria-labelledby="gt2" hidden><p class="t-sm t-muted">집계 메트릭.</p></div>
+              <div class="ct-tabs__panel" role="tabpanel" id="gp3" aria-labelledby="gt3" hidden><p class="t-sm t-muted">원시 JSON 페이로드.</p></div>
+            </div>
+          </div>
+          <div class="ct-accordion ct-accordion--bordered mt-4" data-accordion>
+            <div class="ct-accordion__item">
+              <button class="ct-accordion__trigger" aria-expanded="false">고급 옵션</button>
+              <div class="ct-accordion__panel"><div class="ct-accordion__content"><p class="t-sm t-muted">접고 펼치는 패널 콘텐츠.</p></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LIST / TIMELINE -->
+        <div class="gallery-card" data-comp="list timeline log stream">
+          <h4>로그 스트림</h4>
+          <ul class="ct-list ct-list--log">
+            <li class="ct-list__item"><span class="ct-list__time">10:42:01</span><span class="ct-list__level ct-list__level--ok">OK</span><span class="ct-list__content">node-7 클러스터 합류</span></li>
+            <li class="ct-list__item"><span class="ct-list__time">10:42:08</span><span class="ct-list__level ct-list__level--warn">WARN</span><span class="ct-list__content">지연 급증 320ms</span></li>
+            <li class="ct-list__item"><span class="ct-list__time">10:42:15</span><span class="ct-list__level ct-list__level--error">ERR</span><span class="ct-list__content">소켓이 피어에 의해 리셋됨</span></li>
+          </ul>
+        </div>
+
+        <!-- CODE -->
+        <div class="gallery-card" data-comp="code block syntax highlight copy">
+          <h4>코드 블록</h4>
+          <div class="ct-code">
+            <div class="ct-code__header"><span class="ct-code__filename">init.ts</span><span class="ct-code__lang">TS</span><button class="ct-code__copy" data-copy aria-label="복사">복사</button></div>
+            <pre class="ct-code__body"><code><span class="tok-key">const</span> <span class="tok-var">sys</span> = <span class="tok-fn">boot</span>(<span class="tok-str">'theme-07'</span>)<span class="tok-punct">;</span>
+<span class="tok-com">// neon online</span>
+<span class="tok-var">sys</span>.<span class="tok-fn">render</span>(<span class="tok-num">60</span>)<span class="tok-punct">;</span></code></pre>
+          </div>
+        </div>
+
+        <!-- DROPDOWN / MENU -->
+        <div class="gallery-card" data-comp="menu dropdown breadcrumb pagination steps">
+          <h4>내비게이션 요소</h4>
+          <nav class="ct-breadcrumb" aria-label="경로">
+            <a class="ct-breadcrumb__item ct-breadcrumb__item--root" href="#">~</a>
+            <span class="ct-breadcrumb__sep">/</span>
+            <a class="ct-breadcrumb__item" href="#">app</a>
+            <span class="ct-breadcrumb__sep">/</span>
+            <span class="ct-breadcrumb__item is-current" aria-current="page">settings</span>
+          </nav>
+          <div class="ct-dropdown mt-3" data-dropdown>
+            <button class="ct-btn ct-btn--secondary" data-dropdown-trigger aria-haspopup="menu" aria-expanded="false">작업 ▾</button>
+            <div class="ct-menu" role="menu">
+              <button class="ct-menu__item" role="menuitem"><span class="ct-menu__text">이름 변경</span><span class="ct-menu__shortcut"><span class="ct-kbd">R</span></span></button>
+              <button class="ct-menu__item" role="menuitem"><span class="ct-menu__text">복제</span></button>
+              <div class="ct-menu__sep"></div>
+              <button class="ct-menu__item ct-menu__item--danger" role="menuitem"><span class="ct-menu__text">삭제</span></button>
+            </div>
+          </div>
+          <nav class="ct-pagination mt-4" aria-label="페이지">
+            <button class="ct-pagination__prev" aria-label="이전">‹</button>
+            <button class="ct-pagination__item is-active" aria-current="page">1</button>
+            <button class="ct-pagination__item">2</button>
+            <button class="ct-pagination__item">3</button>
+            <span class="ct-pagination__ellipsis">…</span>
+            <button class="ct-pagination__item">9</button>
+            <button class="ct-pagination__next" aria-label="다음">›</button>
+          </nav>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============================== PAGES ============================== -->
+    <section class="section" id="pages">
+      <div class="section-head">
+        <span class="idx">03//</span>
+        <h2>데모 페이지</h2>
+        <span class="label" style="margin-left:auto">9 화면 · 실데이터 · 반응형</span>
+      </div>
+      <div class="pages-grid">
+        <a class="page-link clip-corner-tr" href="pages/dashboard.html"><span class="page-link__id">PAGE 01</span><div class="page-link__title">분석 대시보드</div><p class="page-link__desc">HUD 위젯 + 데이터 그리드 + 네온 차트</p><div class="page-link__arrow">실행 →</div></a>
+        <a class="page-link clip-corner-tr" href="pages/kanban.html"><span class="page-link__id">PAGE 02</span><div class="page-link__title">칸반 보드</div><p class="page-link__desc">드래그형 칼럼 + 우선순위 카드</p><div class="page-link__arrow">실행 →</div></a>
+        <a class="page-link clip-corner-tr" href="pages/inbox.html"><span class="page-link__id">PAGE 03</span><div class="page-link__title">받은편지함 · 3패널</div><p class="page-link__desc">메시지 로그풍 3패널 인박스</p><div class="page-link__arrow">실행 →</div></a>
+        <a class="page-link clip-corner-tr" href="pages/product.html"><span class="page-link__id">PAGE 04</span><div class="page-link__title">상품 상세</div><p class="page-link__desc">이커머스 상품 상세 + 갤러리</p><div class="page-link__arrow">실행 →</div></a>
+        <a class="page-link clip-corner-tr" href="pages/pricing.html"><span class="page-link__id">PAGE 05</span><div class="page-link__title">가격</div><p class="page-link__desc">플랜 3개 · 월/연 토글</p><div class="page-link__arrow">실행 →</div></a>
+        <a class="page-link clip-corner-tr" href="pages/settings.html"><span class="page-link__id">PAGE 06</span><div class="page-link__title">설정</div><p class="page-link__desc">탭 + 토글 + 위험 영역</p><div class="page-link__arrow">실행 →</div></a>
+        <a class="page-link clip-corner-tr" href="pages/onboarding.html"><span class="page-link__id">PAGE 07</span><div class="page-link__title">온보딩 마법사</div><p class="page-link__desc">Steps · 부팅 시퀀스풍</p><div class="page-link__arrow">실행 →</div></a>
+        <a class="page-link clip-corner-tr" href="pages/profile.html"><span class="page-link__id">PAGE 08</span><div class="page-link__title">프로필 / 계정</div><p class="page-link__desc">프로필 + 활동 타임라인</p><div class="page-link__arrow">실행 →</div></a>
+        <a class="page-link clip-corner-tr" href="pages/404.html"><span class="page-link__id">PAGE 09</span><div class="page-link__title">404 · 빈 상태</div><p class="page-link__desc">터미널 에러풍 + 빈 상태</p><div class="page-link__arrow">실행 →</div></a>
+      </div>
+    </section>
+
+  </div><!-- /container -->
+
+  <!-- ============================== FOOTER ============================== -->
+  <footer style="border-top:var(--border-1) solid var(--color-divider);padding:var(--space-9) 0;margin-top:var(--space-8)">
+    <div class="container flex justify-between items-center flex-wrap gap-4">
+      <div>
+        <div class="t-display t-lg">CYBER<span class="t-primary">.</span>TERM</div>
+        <p class="t-xs t-subtle mt-2">theme-07 · cyberpunk terminal · 100% CSS tokens + vanilla JS</p>
+      </div>
+      <div class="t-xs t-subtle">
+        <span class="prompt"></span>EOF — <span class="cursor-blink" aria-hidden="true"></span>
+      </div>
+    </div>
+  </footer>
+
+</main>
+
+<!-- ============================== MODAL ============================== -->
+<div class="ct-modal ct-modal--md" id="demo-modal" data-modal role="dialog" aria-modal="true" aria-labelledby="dm-title" hidden>
+  <div class="ct-modal__dialog">
+    <div class="ct-modal__chrome">
+      <div class="ct-modal__dots"><span class="ct-card__dot"></span><span class="ct-card__dot"></span><span class="ct-card__dot"></span></div>
+      <span class="ct-modal__title" id="dm-title">confirm.exe</span>
+      <button class="ct-modal__close" data-modal-close aria-label="닫기">✕</button>
+    </div>
+    <div class="ct-modal__body">
+      <p class="t-sm">이 작업은 되돌릴 수 없습니다. 노드 <span class="t-primary">node-7</span> 을 클러스터에서 제거할까요?</p>
+      <div class="ct-alert ct-alert--warning mt-4"><span class="ct-alert__icon">▲</span><div class="ct-alert__body">진행 중인 작업 3개가 재할당됩니다.</div></div>
+    </div>
+    <div class="ct-modal__footer">
+      <button class="ct-btn ct-btn--ghost" data-modal-close>취소</button>
+      <button class="ct-btn ct-btn--danger" data-modal-close>제거</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== DRAWER ============================== -->
+<div class="ct-drawer ct-drawer--right" id="demo-drawer" data-drawer role="dialog" aria-modal="true" aria-labelledby="dd-title" hidden>
+  <div class="ct-drawer__overlay"></div>
+  <div class="ct-drawer__panel">
+    <div class="ct-drawer__header">
+      <span class="ct-drawer__title" id="dd-title">~/inspector</span>
+      <button class="ct-drawer__close" data-drawer-close aria-label="닫기">✕</button>
+    </div>
+    <div class="ct-drawer__body stack-4">
+      <div class="ct-field"><label class="ct-field__label" for="dr-name">노드 이름</label><input id="dr-name" class="ct-input" value="node-7"></div>
+      <label class="ct-switch"><input class="ct-switch__input" type="checkbox" checked><span class="ct-switch__track"><span class="ct-switch__knob"></span></span><span class="ct-switch__label">자동 재시작</span></label>
+      <ul class="ct-list ct-list--bordered">
+        <li class="ct-list__item"><div class="ct-list__content"><div class="ct-list__title">리전</div><div class="ct-list__sub">ap-northeast-2</div></div></li>
+        <li class="ct-list__item"><div class="ct-list__content"><div class="ct-list__title">코어</div><div class="ct-list__sub">16 vCPU</div></div></li>
+      </ul>
+    </div>
+    <div class="ct-drawer__footer">
+      <button class="ct-btn ct-btn--primary ct-btn--block" data-drawer-close>저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== COMMAND PALETTE ============================== -->
+<div class="ct-cmdk" data-cmdk role="dialog" aria-modal="true" aria-label="명령 팔레트" hidden>
+  <div class="ct-cmdk__overlay"></div>
+  <div class="ct-cmdk__panel">
+    <div class="ct-cmdk__input-row">
+      <span class="ct-cmdk__prompt" aria-hidden="true">&gt;_</span>
+      <input class="ct-cmdk__input" placeholder="명령 또는 페이지 검색…" aria-label="명령 입력">
+      <span class="ct-cmdk__hint"><span class="ct-kbd">ESC</span></span>
+    </div>
+    <div class="ct-cmdk__list" role="listbox">
+      <div class="ct-cmdk__group">
+        <div class="ct-cmdk__group-label">페이지</div>
+        <button class="ct-cmdk__item is-active" data-cmdk-item data-href="pages/dashboard.html" data-keywords="dashboard analytics hud"><span class="ct-cmdk__icon">▤</span><span class="ct-cmdk__label">분석 대시보드</span><span class="ct-cmdk__shortcut"><span class="ct-kbd">1</span></span></button>
+        <button class="ct-cmdk__item" data-cmdk-item data-href="pages/kanban.html" data-keywords="kanban board tasks"><span class="ct-cmdk__icon">▦</span><span class="ct-cmdk__label">칸반 보드</span></button>
+        <button class="ct-cmdk__item" data-cmdk-item data-href="pages/inbox.html" data-keywords="inbox mail messages"><span class="ct-cmdk__icon">✉</span><span class="ct-cmdk__label">받은편지함</span></button>
+        <button class="ct-cmdk__item" data-cmdk-item data-href="pages/pricing.html" data-keywords="pricing plans billing"><span class="ct-cmdk__icon">$</span><span class="ct-cmdk__label">가격</span></button>
+        <button class="ct-cmdk__item" data-cmdk-item data-href="pages/settings.html" data-keywords="settings config preferences"><span class="ct-cmdk__icon">⚙</span><span class="ct-cmdk__label">설정</span></button>
+      </div>
+      <div class="ct-cmdk__group">
+        <div class="ct-cmdk__group-label">작업</div>
+        <button class="ct-cmdk__item" data-cmdk-item data-action="theme" data-keywords="theme dark light toggle"><span class="ct-cmdk__icon">◐</span><span class="ct-cmdk__label">테마 전환 (DARK/LIGHT)</span><span class="ct-cmdk__shortcut"><span class="ct-kbd">T</span></span></button>
+        <button class="ct-cmdk__item" data-cmdk-item data-action="reload tokens" data-keywords="reload tokens refresh"><span class="ct-cmdk__icon">↻</span><span class="ct-cmdk__label">토큰 리로드</span></button>
+      </div>
+      <div class="ct-cmdk__empty" hidden>NO MATCHES :: 다른 키워드를 입력하세요</div>
+    </div>
+    <div class="ct-cmdk__footer">
+      <span class="ct-cmdk__footer-hint"><span class="ct-kbd">↑</span><span class="ct-kbd">↓</span> 이동</span>
+      <span class="ct-cmdk__footer-hint"><span class="ct-kbd">↵</span> 실행</span>
+      <span class="ct-cmdk__footer-hint"><span class="ct-kbd">ESC</span> 닫기</span>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+  // reveal the boot target once boot finishes (boot reveals [data-boot-reveal])
+  document.addEventListener('DOMContentLoaded', () => {
+    const t = document.querySelector('[data-boot-reveal]');
+    const obs = new MutationObserver(() => { if (t.classList.contains('is-revealed')) t.style.opacity = '1'; });
+    if (t) obs.observe(t, { attributes: true, attributeFilter: ['class'] });
+  });
+</script>
+</body>
+</html>

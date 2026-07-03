@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Inbox · 3-pane — Swiss International</title>
+<meta name="description" content="A dense, three-pane email inbox built in the International Typographic Style: folders, message list, and reading pane. Hairlines only, one Swiss-red accent.">
+<!-- No-flash theme boot -->
+<script>(function(){try{var t=localStorage.getItem('swiss-theme');if(t)document.documentElement.setAttribute('data-theme',t);else if(matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="../theme.css">
+<style>
+  /* ---- Inbox 3-pane shell (page layout only; all values are tokens) ---- */
+  .inbox {
+    display: grid;
+    grid-template-columns: 14rem minmax(20rem, 24rem) minmax(0, 1fr);
+    height: calc(100dvh - var(--nav-height));
+    border-bottom: var(--border-1) solid var(--color-border-strong);
+  }
+  .inbox__pane { min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+  .inbox__pane--folders { border-right: var(--border-1) solid var(--color-border-strong); }
+  .inbox__pane--list { border-right: var(--border-1) solid var(--color-border-strong); }
+  .inbox__scroll { overflow-y: auto; min-height: 0; }
+
+  /* Compose button block + folder column */
+  .inbox-side__top { padding: var(--space-3); border-bottom: var(--border-1) solid var(--color-border); }
+  .inbox-side__labels { display: flex; flex-direction: column; padding: var(--space-1) var(--space-2) var(--space-3); gap: 2px; }
+  .label-row {
+    display: flex; align-items: center; gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm); font-weight: var(--weight-medium);
+    color: var(--color-text-muted);
+    border-left: var(--border-2) solid transparent;
+    transition: background var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
+  }
+  .label-row:hover { background: var(--color-surface-2); color: var(--color-text); }
+  .label-row__dot { width: 9px; height: 9px; flex: none; border: var(--border-1) solid var(--color-border-strong); }
+  .label-row__dot--accent { background: var(--color-accent); border-color: var(--color-accent); }
+  .label-row__dot--ink { background: var(--color-inverse); border-color: var(--color-inverse); }
+  .label-row__name { flex: 1 1 auto; }
+  .label-row__count { font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--color-text-faint); }
+
+  /* Toolbar header inside list + reading pane */
+  .pane-toolbar {
+    display: flex; align-items: center; gap: var(--space-3);
+    height: var(--nav-height); flex: none;
+    padding-inline: var(--space-4);
+    border-bottom: var(--border-1) solid var(--color-border-strong);
+    background: var(--color-bg);
+  }
+  .pane-toolbar__title { font-size: var(--text-sm); font-weight: var(--weight-bold); letter-spacing: var(--tracking-tight); }
+  .pane-toolbar__count { font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--color-text-faint); }
+  .pane-toolbar__spacer { flex: 1 1 auto; }
+
+  /* Message rows */
+  .msg {
+    display: grid;
+    grid-template-columns: 0.5rem 1.25rem 2rem 1fr auto;
+    align-items: start;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: var(--border-1) solid var(--color-border);
+    border-left: var(--border-2) solid transparent;
+    cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-standard);
+  }
+  .msg:last-child { border-bottom: 0; }
+  .list--hover .msg:hover { background: var(--color-surface-2); }
+  .msg[aria-current="true"] { background: var(--color-surface-2); border-left-color: var(--color-accent); }
+  .msg__dot { width: 7px; height: 7px; margin-top: 6px; flex: none; }
+  .msg__dot--unread { background: var(--color-accent); }
+  .msg__dot--read { background: transparent; border: var(--border-1) solid var(--color-border); }
+  .msg__check { margin-top: 4px; }
+  .msg__main { min-width: 0; }
+  .msg__from { display: flex; align-items: baseline; gap: var(--space-2); }
+  .msg__name { font-size: var(--text-sm); color: var(--color-text); }
+  .msg__name--unread { font-weight: var(--weight-bold); }
+  .msg__subject { font-size: var(--text-sm); margin-top: 1px; }
+  .msg__subject--unread { font-weight: var(--weight-semibold); }
+  .msg__snippet { color: var(--color-text-muted); font-size: var(--text-xs); margin-top: 2px; line-height: var(--leading-snug); }
+  .msg__trail { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); flex: none; }
+  .msg__time { font-family: var(--font-mono); font-size: var(--text-2xs); font-variant-numeric: tabular-nums; color: var(--color-text-faint); white-space: nowrap; }
+  .msg__star { display: inline-grid; place-items: center; width: 1.25rem; height: 1.25rem; color: var(--color-text-faint); transition: color var(--duration-fast) var(--ease-standard); }
+  .msg__star:hover { color: var(--color-accent); }
+  .msg__star.is-on { color: var(--color-accent); }
+  .msg__star svg { width: 0.85rem; height: 0.85rem; }
+
+  /* Reading pane */
+  .read { padding: var(--space-6) var(--space-7); max-width: 56rem; }
+  .read__subject { font-size: var(--text-2xl); font-weight: var(--weight-bold); letter-spacing: var(--tracking-tight); line-height: var(--leading-snug); }
+  .read__from { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-5); padding-bottom: var(--space-5); border-bottom: var(--border-1) solid var(--color-border); }
+  .read__from-main { flex: 1 1 auto; min-width: 0; }
+  .read__from-name { font-weight: var(--weight-semibold); font-size: var(--text-sm); }
+  .read__from-mail { font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--color-text-faint); }
+  .read__from-time { font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--color-text-faint); white-space: nowrap; }
+
+  /* Mobile: collapse to the message list only */
+  @media (max-width: 900px) {
+    .inbox { grid-template-columns: minmax(0, 1fr); height: auto; }
+    .inbox__pane--folders { display: none; }
+    .inbox__pane--reading { display: none; }
+    .inbox__pane--list { border-right: 0; }
+    .inbox__scroll { overflow-y: visible; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<!-- ===================== NAVBAR ===================== -->
+<header class="navbar">
+  <a class="navbar__brand" href="../index.html"><span class="navbar__mark" aria-hidden="true"></span> SWISS&nbsp;INT'L</a>
+  <nav class="navbar__nav" aria-label="Primary">
+    <a class="navbar__link" href="../index.html#foundations">Foundations</a>
+    <a class="navbar__link" href="../index.html#components">Components</a>
+    <a class="navbar__link" href="../index.html#screens" aria-current="page">Screens</a>
+    <a class="navbar__link" href="../README.md">Docs</a>
+  </nav>
+  <span class="navbar__spacer"></span>
+  <div class="navbar__actions">
+    <button class="btn btn--ghost btn--sm" data-action="open-cmdk" aria-label="Open command palette">
+      <svg viewBox="0 0 16 16" width="14" height="14" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg>
+      <span class="hide-md">Search</span><kbd class="kbd hide-md">⌘K</kbd>
+    </button>
+    <button class="btn--icon btn btn--secondary btn--sm" data-action="toggle-grid" aria-pressed="false" aria-label="Toggle 12-column grid overlay" title="Toggle grid (g)">
+      <svg viewBox="0 0 16 16" width="15" height="15" stroke="currentColor" stroke-width="1.2"><path d="M1 1h14v14H1zM5.66 1v14M10.33 1v14M1 5.66h14M1 10.33h14"/></svg>
+    </button>
+    <button class="btn--icon btn btn--secondary btn--sm" data-action="toggle-theme" aria-pressed="false" aria-label="Toggle dark mode">
+      <svg viewBox="0 0 16 16" width="15" height="15" stroke="currentColor" stroke-width="1.3" fill="none"><path d="M13.5 9.5A5.5 5.5 0 016.5 2.5a5.5 5.5 0 100 11 5.5 5.5 0 007-4z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+<div class="inbox">
+
+  <!-- ===================== PANE 1 · FOLDERS ===================== -->
+  <aside class="inbox__pane inbox__pane--folders" aria-label="Folders">
+    <div class="inbox-side__top">
+      <button class="btn btn--primary btn--block" data-open-drawer="#compose-drawer">
+        <svg viewBox="0 0 16 16" width="14" height="14" stroke="currentColor" stroke-width="1.4" fill="none" aria-hidden="true"><path d="M11 2l3 3-8 8H3v-3z"/><path d="M9.5 3.5l3 3"/></svg>
+        Compose
+      </button>
+    </div>
+    <div class="inbox__scroll">
+      <nav class="sidebar__nav" aria-label="Mailboxes">
+        <a class="sidebar__item" href="#" aria-current="page">
+          <svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none" aria-hidden="true"><path d="M2 4h12v8H2zM2 4l6 5 6-5"/></svg>
+          <span class="sidebar__label">Inbox</span><span class="sidebar__trail num">24</span>
+        </a>
+        <a class="sidebar__item" href="#">
+          <svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none" aria-hidden="true"><path d="M8 2l1.8 4.2 4.2.3-3.2 2.7 1 4.1L8 11.4 4.2 13.6l1-4.1L2 6.5l4.2-.3z"/></svg>
+          <span class="sidebar__label">Starred</span><span class="sidebar__trail num">6</span>
+        </a>
+        <a class="sidebar__item" href="#">
+          <svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none" aria-hidden="true"><path d="M2 8l12-5-4 11-3-4z"/><path d="M7 10l3-4"/></svg>
+          <span class="sidebar__label">Sent</span><span class="sidebar__trail num">—</span>
+        </a>
+        <a class="sidebar__item" href="#">
+          <svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none" aria-hidden="true"><path d="M11 2l3 3-8 8H3v-3z"/><path d="M9.5 3.5l3 3"/></svg>
+          <span class="sidebar__label">Drafts</span><span class="sidebar__trail num">3</span>
+        </a>
+        <a class="sidebar__item" href="#">
+          <svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none" aria-hidden="true"><path d="M2 5h12v8H2zM2 5l1.5-2h9L14 5M2 8h12"/></svg>
+          <span class="sidebar__label">Archive</span><span class="sidebar__trail num">—</span>
+        </a>
+        <a class="sidebar__item" href="#">
+          <svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 5v4M8 11v.5"/></svg>
+          <span class="sidebar__label">Spam</span><span class="sidebar__trail num">12</span>
+        </a>
+        <a class="sidebar__item" href="#">
+          <svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none" aria-hidden="true"><path d="M3 4h10M6 4V2h4v2M4.5 4l.8 10h5.4l.8-10"/></svg>
+          <span class="sidebar__label">Trash</span><span class="sidebar__trail num">—</span>
+        </a>
+      </nav>
+
+      <div class="sidebar__section">
+        <p class="sidebar__section-label">Labels</p>
+      </div>
+      <div class="inbox-side__labels">
+        <a class="label-row" href="#"><span class="label-row__dot label-row__dot--accent" aria-hidden="true"></span><span class="label-row__name">Design Review</span><span class="label-row__count num">9</span></a>
+        <a class="label-row" href="#"><span class="label-row__dot label-row__dot--ink" aria-hidden="true"></span><span class="label-row__name">Clients</span><span class="label-row__count num">14</span></a>
+        <a class="label-row" href="#"><span class="label-row__dot" aria-hidden="true"></span><span class="label-row__name">Finance</span><span class="label-row__count num">2</span></a>
+        <a class="label-row" href="#"><span class="label-row__dot" aria-hidden="true"></span><span class="label-row__name">Press</span><span class="label-row__count num">5</span></a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===================== PANE 2 · MESSAGE LIST ===================== -->
+  <section class="inbox__pane inbox__pane--list" aria-label="Message list">
+    <div class="pane-toolbar">
+      <label class="choice choice--check" aria-label="Select all messages" style="gap:0">
+        <input type="checkbox" data-select-all>
+        <span class="choice__box"><svg viewBox="0 0 16 16" stroke="currentColor" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg></span>
+      </label>
+      <span class="pane-toolbar__title">Inbox</span>
+      <span class="pane-toolbar__count">24 UNREAD · 312 TOTAL</span>
+      <span class="pane-toolbar__spacer"></span>
+      <button class="btn--icon btn btn--ghost btn--sm" data-toast data-variant="info" data-title="Refreshed" data-text="No new mail." aria-label="Refresh inbox">
+        <svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.4" fill="none" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 11-1.6-3.9M13.5 2v3h-3"/></svg>
+      </button>
+    </div>
+
+    <div class="inbox__scroll">
+      <ul class="list list--hover" style="border:0">
+
+        <li class="msg" aria-current="true" tabindex="0">
+          <span class="msg__dot msg__dot--unread" aria-hidden="true" title="Unread"></span>
+          <label class="msg__check choice choice--check" aria-label="Select message from Anni Albers" style="gap:0"><input type="checkbox" data-row-select><span class="choice__box"><svg viewBox="0 0 16 16" stroke="currentColor" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg></span></label>
+          <span class="avatar avatar--sm" aria-hidden="true">AA</span>
+          <span class="msg__main">
+            <span class="msg__from"><span class="msg__name msg__name--unread">Anni Albers</span></span>
+            <span class="msg__subject msg__subject--unread">Design review — signage system, round 3</span>
+            <span class="msg__snippet clamp-2">The grid holds beautifully at the 200×200 module, but the wayfinding type wants one more step of contrast before we ship it to the printer on Friday…</span>
+          </span>
+          <span class="msg__trail">
+            <span class="msg__time">09:42</span>
+            <button class="msg__star is-on" aria-label="Unstar message" aria-pressed="true"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.1" fill="currentColor" aria-hidden="true"><path d="M8 2l1.8 4.2 4.2.3-3.2 2.7 1 4.1L8 11.4 4.2 13.6l1-4.1L2 6.5l4.2-.3z"/></svg></button>
+            <span class="badge badge--outline-accent">Review</span>
+          </span>
+        </li>
+
+        <li class="msg" tabindex="0">
+          <span class="msg__dot msg__dot--unread" aria-hidden="true" title="Unread"></span>
+          <label class="msg__check choice choice--check" aria-label="Select message from Josef Müller-Brockmann" style="gap:0"><input type="checkbox" data-row-select><span class="choice__box"><svg viewBox="0 0 16 16" stroke="currentColor" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg></span></label>
+          <span class="avatar avatar--sm" aria-hidden="true">JM</span>
+          <span class="msg__main">
+            <span class="msg__from"><span class="msg__name msg__name--unread">Josef Müller-Brockmann</span></span>
+            <span class="msg__subject msg__subject--unread">Re: Poster series — proof corrections</span>
+            <span class="msg__snippet clamp-2">Attached the marked-up proofs. Kerning on the headline is loose at 22pt — tighten to −0.02em and we are done. Budget update in the thread below.</span>
+          </span>
+          <span class="msg__trail">
+            <span class="msg__time">08:17</span>
+            <button class="msg__star" aria-label="Star message" aria-pressed="false"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.2" fill="none" aria-hidden="true"><path d="M8 2l1.8 4.2 4.2.3-3.2 2.7 1 4.1L8 11.4 4.2 13.6l1-4.1L2 6.5l4.2-.3z"/></svg></button>
+            <span class="badge badge--muted">2 files</span>
+          </span>
+        </li>
+
+        <li class="msg" tabindex="0">
+          <span class="msg__dot msg__dot--unread" aria-hidden="true" title="Unread"></span>
+          <label class="msg__check choice choice--check" aria-label="Select message from Armin Hofmann" style="gap:0"><input type="checkbox" data-row-select><span class="choice__box"><svg viewBox="0 0 16 16" stroke="currentColor" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg></span></label>
+          <span class="avatar avatar--sm" aria-hidden="true">AH</span>
+          <span class="msg__main">
+            <span class="msg__from"><span class="msg__name msg__name--unread">Armin Hofmann</span></span>
+            <span class="msg__subject msg__subject--unread">Type specimen — final sign-off needed</span>
+            <span class="msg__snippet clamp-2">Last call before press. I need your approval on the 88px display weight by end of day so we can lock the plates for the Basel exhibition catalogue.</span>
+          </span>
+          <span class="msg__trail">
+            <span class="msg__time">07:55</span>
+            <button class="msg__star is-on" aria-label="Unstar message" aria-pressed="true"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.1" fill="currentColor" aria-hidden="true"><path d="M8 2l1.8 4.2 4.2.3-3.2 2.7 1 4.1L8 11.4 4.2 13.6l1-4.1L2 6.5l4.2-.3z"/></svg></button>
+          </span>
+        </li>
+
+        <li class="msg" tabindex="0">
+          <span class="msg__dot msg__dot--read" aria-hidden="true" title="Read"></span>
+          <label class="msg__check choice choice--check" aria-label="Select message from Emil Ruder" style="gap:0"><input type="checkbox" data-row-select><span class="choice__box"><svg viewBox="0 0 16 16" stroke="currentColor" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg></span></label>
+          <span class="avatar avatar--sm" aria-hidden="true">ER</span>
+          <span class="msg__main">
+            <span class="msg__from"><span class="msg__name">Emil Ruder</span></span>
+            <span class="msg__subject">Workshop schedule — week 14</span>
+            <span class="msg__snippet clamp-2">Confirming the typography intensive runs Mon–Wed in studio 2. Bring your baseline grids. Coffee at 08:00, first crit at 09:30 sharp.</span>
+          </span>
+          <span class="msg__trail">
+            <span class="msg__time">Yesterday</span>
+            <button class="msg__star" aria-label="Star message" aria-pressed="false"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.2" fill="none" aria-hidden="true"><path d="M8 2l1.8 4.2 4.2.3-3.2 2.7 1 4.1L8 11.4 4.2 13.6l1-4.1L2 6.5l4.2-.3z"/></svg></button>
+          </span>
+        </li>
+
+        <li class="msg" tabindex="0">
+          <span class="msg__dot msg__dot--read" aria-hidden="true" title="Read"></span>
+          <label class="msg__check choice choice--check" aria-label="Select message from Karl Gerstner" style="gap:0"><input type="checkbox" data-row-select><span class="choice__box"><svg viewBox="0 0 16 16" stroke="currentColor" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg></span></label>
+          <span class="avatar avatar--sm" aria-hidden="true">KG</span>
+          <span class="msg__main">
+            <span class="msg__from"><span class="msg__name">Karl Gerstner</span></span>
+            <span class="msg__subject">Invoice #2026-118 — net 30</span>
+            <span class="msg__snippet clamp-2">Please find the invoice for the identity programme attached. Total €18,400. Payment terms net 30 from the date of receipt.</span>
+          </span>
+          <span class="msg__trail">
+            <span class="msg__time">Yesterday</span>
+            <button class="msg__star" aria-label="Star message" aria-pressed="false"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.2" fill="none" aria-hidden="true"><path d="M8 2l1.8 4.2 4.2.3-3.2 2.7 1 4.1L8 11.4 4.2 13.6l1-4.1L2 6.5l4.2-.3z"/></svg></button>
+            <span class="badge badge--muted">1 file</span>
+          </span>
+        </li>
+
+        <li class="msg" tabindex="0">
+          <span class="msg__dot msg__dot--read" aria-hidden="true" title="Read"></span>
+          <label class="msg__check choice choice--check" aria-label="Select message from Wim Crouwel" style="gap:0"><input type="checkbox" data-row-select><span class="choice__box"><svg viewBox="0 0 16 16" stroke="currentColor" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg></span></label>
+          <span class="avatar avatar--sm" aria-hidden="true">WC</span>
+          <span class="msg__main">
+            <span class="msg__from"><span class="msg__name">Wim Crouwel</span></span>
+            <span class="msg__subject">New Alphabet — archival scans ready</span>
+            <span class="msg__snippet clamp-2">The 1967 grid drawings are scanned at 1200dpi and uploaded to the shared drive. Folder link in the body. Let me know if you need TIFFs.</span>
+          </span>
+          <span class="msg__trail">
+            <span class="msg__time">Tue</span>
+            <button class="msg__star" aria-label="Star message" aria-pressed="false"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.2" fill="none" aria-hidden="true"><path d="M8 2l1.8 4.2 4.2.3-3.2 2.7 1 4.1L8 11.4 4.2 13.6l1-4.1L2 6.5l4.2-.3z"/></svg></button>
+          </span>
+        </li>
+
+        <li class="msg" tabindex="0">
+          <span class="msg__dot msg__dot--read" aria-hidden="true" title="Read"></span>
+          <label class="msg__check choice choice--check" aria-label="Select message from Adrian Frutiger" style="gap:0"><input type="checkbox" data-row-select><span class="choice__box"><svg viewBox="0 0 16 16" stroke="currentColor" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg></span></label>
+          <span class="avatar avatar--sm" aria-hidden="true">AF</span>
+          <span class="msg__main">
+            <span class="msg__from"><span class="msg__name">Adrian Frutiger</span></span>
+            <span class="msg__subject">Univers numbering — spec sheet</span>
+            <span class="msg__snippet clamp-2">Sharing the 21-weight matrix as a single PDF. Each cell maps to a two-digit code; first digit weight, second digit width. Honest and systematic.</span>
+          </span>
+          <span class="msg__trail">
+            <span class="msg__time">Tue</span>
+            <button class="msg__star is-on" aria-label="Unstar message" aria-pressed="true"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.1" fill="currentColor" aria-hidden="true"><path d="M8 2l1.8 4.2 4.2.3-3.2 2.7 1 4.1L8 11.4 4.2 13.6l1-4.1L2 6.5l4.2-.3z"/></svg></button>
+          </span>
+        </li>
+
+        <li class="msg" tabindex="0">
+          <span class="msg__dot msg__dot--read" aria-hidden="true" title="Read"></span>
+          <label class="msg__check choice choice--check" aria-label="Select message from Studio Booking" style="gap:0"><input type="checkbox" data-row-select><span class="choice__box"><svg viewBox="0 0 16 16" stroke="currentColor" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg></span></label>
+          <span class="avatar avatar--sm avatar--ghost" aria-hidden="true">SB</span>
+          <span class="msg__main">
+            <span class="msg__from"><span class="msg__name">Studio Booking</span></span>
+            <span class="msg__subject">Reminder: photo studio held 14:00–17:00</span>
+            <span class="msg__snippet clamp-2">Your reservation for the product shoot is confirmed. Cyclorama wall, two strobes, and the copy stand are reserved under your name.</span>
+          </span>
+          <span class="msg__trail">
+            <span class="msg__time">Mon</span>
+            <button class="msg__star" aria-label="Star message" aria-pressed="false"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.2" fill="none" aria-hidden="true"><path d="M8 2l1.8 4.2 4.2.3-3.2 2.7 1 4.1L8 11.4 4.2 13.6l1-4.1L2 6.5l4.2-.3z"/></svg></button>
+          </span>
+        </li>
+
+        <li class="msg" tabindex="0">
+          <span class="msg__dot msg__dot--read" aria-hidden="true" title="Read"></span>
+          <label class="msg__check choice choice--check" aria-label="Select message from Max Bill" style="gap:0"><input type="checkbox" data-row-select><span class="choice__box"><svg viewBox="0 0 16 16" stroke="currentColor" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg></span></label>
+          <span class="avatar avatar--sm" aria-hidden="true">MB</span>
+          <span class="msg__main">
+            <span class="msg__from"><span class="msg__name">Max Bill</span></span>
+            <span class="msg__subject">Exhibition wall — concrete art layout</span>
+            <span class="msg__snippet clamp-2">Proposing a strict modular hang: nine works, three rows, equal gutters. The mathematics of the spacing should be visible to the visitor.</span>
+          </span>
+          <span class="msg__trail">
+            <span class="msg__time">Mon</span>
+            <button class="msg__star" aria-label="Star message" aria-pressed="false"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.2" fill="none" aria-hidden="true"><path d="M8 2l1.8 4.2 4.2.3-3.2 2.7 1 4.1L8 11.4 4.2 13.6l1-4.1L2 6.5l4.2-.3z"/></svg></button>
+          </span>
+        </li>
+
+        <li class="msg" tabindex="0">
+          <span class="msg__dot msg__dot--read" aria-hidden="true" title="Read"></span>
+          <label class="msg__check choice choice--check" aria-label="Select message from Helvetica Forum" style="gap:0"><input type="checkbox" data-row-select><span class="choice__box"><svg viewBox="0 0 16 16" stroke="currentColor" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg></span></label>
+          <span class="avatar avatar--sm avatar--ghost" aria-hidden="true">HF</span>
+          <span class="msg__main">
+            <span class="msg__from"><span class="msg__name">Helvetica Forum</span></span>
+            <span class="msg__subject">Weekly digest — 7 new threads</span>
+            <span class="msg__snippet clamp-2">This week: optical vs metric kerning, the case for ragged-right, and a long argument about whether the em dash needs spaces around it.</span>
+          </span>
+          <span class="msg__trail">
+            <span class="msg__time">06 JUN</span>
+            <button class="msg__star" aria-label="Star message" aria-pressed="false"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.2" fill="none" aria-hidden="true"><path d="M8 2l1.8 4.2 4.2.3-3.2 2.7 1 4.1L8 11.4 4.2 13.6l1-4.1L2 6.5l4.2-.3z"/></svg></button>
+          </span>
+        </li>
+
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===================== PANE 3 · READING PANE ===================== -->
+  <article class="inbox__pane inbox__pane--reading" aria-label="Reading pane">
+    <div class="pane-toolbar">
+      <div class="btn-toolbar" role="group" aria-label="Message actions">
+        <button class="btn--icon btn btn--ghost btn--sm" data-toast data-variant="success" data-title="Archived" data-text="Moved to Archive." aria-label="Archive">
+          <svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none" aria-hidden="true"><path d="M2 5h12v8H2zM2 5l1.5-2h9L14 5M6 8h4"/></svg>
+        </button>
+        <button class="btn--icon btn btn--ghost btn--sm" data-toast data-variant="info" data-title="Snoozed" data-text="Back tomorrow at 09:00." aria-label="Snooze">
+          <svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
+        </button>
+        <button class="btn--icon btn btn--ghost btn--sm" aria-label="Reply">
+          <svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none" aria-hidden="true"><path d="M6 4L2 8l4 4M2 8h7a4 4 0 014 4"/></svg>
+        </button>
+        <button class="btn--icon btn btn--ghost btn--sm" aria-label="Forward">
+          <svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none" aria-hidden="true"><path d="M10 4l4 4-4 4M14 8H7a4 4 0 00-4 4"/></svg>
+        </button>
+      </div>
+      <span class="pane-toolbar__spacer"></span>
+      <button class="btn--icon btn btn--ghost btn--sm" data-toast data-variant="danger" data-title="Deleted" data-text="Moved to Trash." aria-label="Delete">
+        <svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none" aria-hidden="true"><path d="M3 4h10M6 4V2h4v2M4.5 4l.8 10h5.4l.8-10"/></svg>
+      </button>
+    </div>
+
+    <div class="inbox__scroll">
+      <div class="read">
+        <div class="cluster gap-2 mb-4">
+          <span class="badge badge--outline-accent">Review</span>
+          <span class="badge badge--muted">Design</span>
+          <span class="badge badge--muted">Round 3</span>
+        </div>
+        <h1 class="read__subject">Design review — signage system, round 3</h1>
+
+        <div class="read__from">
+          <span class="avatar" aria-hidden="true">AA</span>
+          <div class="read__from-main">
+            <div class="read__from-name">Anni Albers <span class="text-muted small weight-regular">to me</span></div>
+            <div class="read__from-mail">anni.albers@bauhaus-studio.ch</div>
+          </div>
+          <div class="read__from-time">2026-06-21 · 09:42</div>
+        </div>
+
+        <div class="prose flow" style="margin-top:var(--space-6)">
+          <p>Hi — thanks for turning round the third pass so quickly. I have walked the whole wayfinding set on the 200×200 module and the structure is holding beautifully. The decision to lock everything to the eight-pixel baseline has paid off: nothing floats, every label sits exactly where the eye expects it.</p>
+          <p>Two things before we send plates to the printer on Friday. First, the directional arrows read a touch light against the concrete; bumping the rule from one to two pixels closes the gap without resorting to a heavier weight. Second, the floor-level signage wants one more step of type contrast — the current 22pt feels timid at three metres. Try the 28pt display step and tighten tracking to −0.02em.</p>
+          <p>Budget-wise we are on track. The fabrication quote came back at €48,000, which lands inside the contingency we set in March. I have attached the marked-up proof and the latest cost sheet so you have both in one place.</p>
+          <p>If you can confirm the two changes by Thursday noon, the print house will hold our Friday slot. Otherwise we slip a week, which I would rather avoid given the exhibition opening.</p>
+          <p>Best,<br>Anni</p>
+        </div>
+
+        <p class="overline mt-7 mb-3">Attachments · 2</p>
+        <div class="upload-list" style="max-width:32rem">
+          <div class="upload-list__item">
+            <span class="upload-list__icon"><svg viewBox="0 0 16 16" width="18" height="18" stroke="currentColor" stroke-width="1.3" fill="none" aria-hidden="true"><path d="M4 1.5h6l3 3V14H4z"/><path d="M10 1.5v3h3"/></svg></span>
+            <span class="upload-list__meta">
+              <span class="upload-list__name">signage-proof-r3.pdf</span>
+              <span class="upload-list__size">4.2 MB · PDF</span>
+            </span>
+            <button class="btn btn--secondary btn--sm" aria-label="Download signage-proof-r3.pdf">Download</button>
+          </div>
+          <div class="upload-list__item">
+            <span class="upload-list__icon"><svg viewBox="0 0 16 16" width="18" height="18" stroke="currentColor" stroke-width="1.3" fill="none" aria-hidden="true"><rect x="2" y="3" width="12" height="10"/><path d="M2 10l3.5-3 2.5 2 2-2 4 3"/><circle cx="6" cy="6" r="1"/></svg></span>
+            <span class="upload-list__meta">
+              <span class="upload-list__name">cost-sheet-q2.csv</span>
+              <span class="upload-list__size">38 KB · CSV</span>
+            </span>
+            <button class="btn btn--secondary btn--sm" aria-label="Download cost-sheet-q2.csv">Download</button>
+          </div>
+        </div>
+
+        <div class="cluster gap-3 mt-7 mb-4">
+          <button class="btn btn--primary" data-open-drawer="#compose-drawer">
+            <svg viewBox="0 0 16 16" width="14" height="14" stroke="currentColor" stroke-width="1.3" fill="none" aria-hidden="true"><path d="M6 4L2 8l4 4M2 8h7a4 4 0 014 4"/></svg>
+            Reply
+          </button>
+          <button class="btn btn--secondary" data-open-drawer="#compose-drawer">
+            <svg viewBox="0 0 16 16" width="14" height="14" stroke="currentColor" stroke-width="1.3" fill="none" aria-hidden="true"><path d="M10 4l4 4-4 4M14 8H7a4 4 0 00-4 4"/></svg>
+            Forward
+          </button>
+        </div>
+      </div>
+    </div>
+  </article>
+
+</div>
+</main>
+
+<!-- ===================== COMPOSE DRAWER ===================== -->
+<aside class="drawer" id="compose-drawer" role="dialog" aria-modal="true" aria-labelledby="compose-title">
+  <div class="drawer__header">
+    <h2 class="drawer__title" id="compose-title">New message</h2>
+    <button class="modal__close" data-close-drawer aria-label="Close"><svg viewBox="0 0 16 16" width="16" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+  </div>
+  <div class="drawer__body flow">
+    <div class="field">
+      <label class="field__label" for="compose-to">To <span class="field__req">*</span></label>
+      <input class="input" id="compose-to" type="email" placeholder="name@studio.ch" autocomplete="off">
+    </div>
+    <div class="field">
+      <label class="field__label" for="compose-subject">Subject</label>
+      <input class="input" id="compose-subject" placeholder="Design review — round 4">
+    </div>
+    <div class="field">
+      <label class="field__label" for="compose-body">Message</label>
+      <textarea class="textarea" id="compose-body" rows="10" placeholder="Flush left, ragged right…"></textarea>
+    </div>
+    <div class="cluster gap-3">
+      <button class="btn--icon btn btn--secondary btn--sm" aria-label="Attach file"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none" aria-hidden="true"><path d="M13 7l-5 5a3 3 0 01-4-4l5-5a2 2 0 013 3l-5 5a1 1 0 01-1-1l5-5"/></svg></button>
+      <span class="caption">Attach files — PDF · PNG · SVG, max 10MB</span>
+    </div>
+  </div>
+  <div class="drawer__footer">
+    <button class="btn btn--ghost grow" data-close-drawer data-toast data-variant="info" data-title="Draft saved" data-text="Saved to Drafts.">Save draft</button>
+    <button class="btn btn--primary grow" data-close-drawer data-toast data-variant="success" data-title="Sent" data-text="Your message is on its way.">Send</button>
+  </div>
+</aside>
+
+<!-- ===================== COMMAND PALETTE ===================== -->
+<div class="cmdk" id="command-palette" role="dialog" aria-modal="true" aria-label="Command palette">
+  <div class="cmdk__panel">
+    <div class="cmdk__search"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg><input class="cmdk__input" data-autofocus placeholder="Type a command or search…" aria-label="Command"></div>
+    <div class="cmdk__list">
+      <p class="cmdk__group-label">Navigate</p>
+      <a class="cmdk__item" data-href="dashboard.html"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3"><rect x="2" y="2" width="5" height="5"/><rect x="9" y="2" width="5" height="5"/><rect x="2" y="9" width="5" height="5"/></svg>Go to Dashboard<span class="trail">↵</span></a>
+      <a class="cmdk__item" data-href="kanban.html"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3"><rect x="2" y="2" width="3" height="12"/><rect x="6.5" y="2" width="3" height="8"/><rect x="11" y="2" width="3" height="10"/></svg>Go to Kanban</a>
+      <a class="cmdk__item" data-href="pricing.html"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3"><rect x="2" y="2" width="12" height="12"/><path d="M2 6h12"/></svg>Go to Pricing</a>
+      <p class="cmdk__group-label">Actions</p>
+      <button class="cmdk__item" data-action="toggle-theme"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3"><path d="M13.5 9.5A5.5 5.5 0 116.5 2.5a5.5 5.5 0 007 7z"/></svg>Toggle dark mode<span class="trail">⇧D</span></button>
+      <button class="cmdk__item" data-action="toggle-grid"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.2"><path d="M1 1h14v14H1zM5.66 1v14M10.33 1v14M1 5.66h14M1 10.33h14"/></svg>Toggle grid overlay<span class="trail">G</span></button>
+      <button class="cmdk__item" data-action="toast" data-title="Copied link"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3"><path d="M6 10a3 3 0 004 0l2-2a3 3 0 00-4-4M10 6a3 3 0 00-4 0L4 8a3 3 0 004 4"/></svg>Copy current URL</button>
+    </div>
+    <div class="cmdk__empty" hidden>No commands found.</div>
+    <div class="cmdk__foot"><span><kbd class="kbd">↑↓</kbd> Navigate</span><span><kbd class="kbd">↵</kbd> Select</span><span><kbd class="kbd">Esc</kbd> Close</span></div>
+  </div>
+</div>
+
+<script src="../app.js"></script>
+</body>
+</html>

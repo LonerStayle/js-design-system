@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Analytics Dashboard — Neo-Brutalism</title>
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    /* ---- Page-scoped layout shell (not a component) ---------------------- */
+    .dash {
+      display: flex;
+      align-items: stretch;
+      min-height: 100vh;
+    }
+    .dash__main {
+      flex: 1 1 auto;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .dash__inner {
+      flex: 1 1 auto;
+      width: 100%;
+      max-width: 1320px;
+      margin-inline: auto;
+      padding: var(--space-6) var(--space-6) var(--space-10);
+    }
+    /* page header row */
+    .dash__head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+    }
+    .dash__title {
+      font-family: var(--font-display);
+      font-weight: var(--weight-black);
+      font-size: var(--text-5xl);
+      line-height: 0.95;
+      letter-spacing: var(--tracking-tight);
+      margin: var(--space-2) 0 0;
+    }
+    .dash__head-actions { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+
+    /* two-column content split: charts/table left, activity right */
+    .dash__split {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: var(--space-5);
+      align-items: start;
+    }
+    @media (max-width: 1180px) {
+      .dash__split { grid-template-columns: minmax(0, 1fr); }
+    }
+
+    /* avatar chip in navbar */
+    .navbar__avatar {
+      width: 36px; height: 36px; flex: none;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-family: var(--font-display); font-weight: var(--weight-black);
+      font-size: var(--text-sm);
+      background: var(--pink-500); color: var(--paper);
+      border: var(--border-3) solid var(--color-border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-xs);
+    }
+
+    /* ---- BAR CHART (pure CSS) ------------------------------------------- */
+    .barchart { display: flex; flex-direction: column; gap: var(--space-3); }
+    .barchart__plot {
+      display: flex;
+      align-items: flex-end;
+      gap: var(--space-2);
+      height: 240px;
+      padding-top: var(--space-2);
+      border-bottom: var(--border-3) solid var(--color-border);
+    }
+    .barchart__col {
+      flex: 1 1 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      height: 100%;
+      min-width: 0;
+    }
+    .barchart__bar {
+      width: 100%;
+      background: var(--blue-500);
+      border: var(--border-3) solid var(--color-border);
+      border-bottom: none;
+      transition: transform var(--duration-base) var(--ease-snap);
+    }
+    .barchart__col:hover .barchart__bar { background: var(--pink-500); }
+    .barchart__col:nth-child(4n) .barchart__bar { background: var(--lime-500); }
+    .barchart__axis {
+      display: flex;
+      gap: var(--space-2);
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .barchart__axis li {
+      flex: 1 1 0;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: var(--text-2xs);
+      font-weight: var(--weight-bold);
+      text-transform: uppercase;
+      letter-spacing: var(--tracking-wide);
+      color: var(--color-text-muted);
+    }
+
+    /* ---- LINE CHART ----------------------------------------------------- */
+    .linechart { width: 100%; }
+    .linechart svg { display: block; width: 100%; height: auto; }
+    .chart-legend {
+      display: flex; flex-wrap: wrap; gap: var(--space-4);
+      margin-top: var(--space-3);
+    }
+    .chart-legend span {
+      display: inline-flex; align-items: center; gap: var(--space-2);
+      font-family: var(--font-mono); font-size: var(--text-2xs);
+      font-weight: var(--weight-bold); text-transform: uppercase;
+      letter-spacing: var(--tracking-wide); color: var(--color-text-muted);
+    }
+    .chart-legend i { width: 18px; height: 8px; border: var(--border-2) solid var(--color-border); flex: none; }
+
+    /* stat icon accents per card */
+    .stat--blue   .stat__icon { background: var(--blue-500);   color: var(--paper); }
+    .stat--pink   .stat__icon { background: var(--pink-500);   color: var(--paper); }
+    .stat--lime   .stat__icon { background: var(--lime-500);   color: var(--ink); }
+    .stat--yellow .stat__icon { background: var(--yellow-500); color: var(--ink); }
+    .stat .spark span:nth-child(odd)  { background: var(--color-text); }
+    .stat .spark span:last-child      { background: var(--blue-500); }
+
+    .charts-stack { display: flex; flex-direction: column; gap: var(--space-5); }
+
+    @media (max-width: 720px) {
+      .dash__inner { padding: var(--space-4) var(--space-4) var(--space-8); }
+      .dash__title { font-size: var(--text-4xl); }
+      .barchart__plot { height: 180px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ================= NAVBAR ================= -->
+  <header class="navbar navbar--sticky navbar--accent-blue">
+    <button class="navbar__burger" data-sidebar-toggle="main" aria-expanded="false" aria-label="Toggle sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true">
+        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+
+    <a class="navbar__brand" href="../index.html">
+      <span class="navbar__logo">N</span>
+      <span class="navbar__brand-text">Neobrut</span>
+    </a>
+
+    <nav class="navbar__nav" aria-label="Primary">
+      <a class="navbar__link" href="../index.html" aria-current="page">Dashboard</a>
+      <a class="navbar__link" href="#reports">Reports</a>
+      <a class="navbar__link" href="#audiences">Audiences</a>
+      <a class="navbar__link" href="#billing">Billing</a>
+    </nav>
+
+    <div class="navbar__actions">
+      <button class="btn btn--secondary btn--sm" data-command-open aria-label="Open command palette">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true" style="width:1.05em;height:1.05em">
+          <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.7" y2="16.7"/>
+        </svg>
+        <span class="hide-md-down">Search</span>
+        <kbd class="hide-md-down" style="font-family:var(--font-mono);font-size:var(--text-2xs);border:var(--border-2) solid currentColor;padding:0 4px;border-radius:var(--radius-sm)">⌘K</kbd>
+      </button>
+
+      <button class="btn btn--icon btn--secondary" data-theme-toggle aria-label="Toggle theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <circle cx="12" cy="12" r="4.5"/>
+          <line x1="12" y1="1.5" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22.5"/>
+          <line x1="1.5" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22.5" y2="12"/>
+          <line x1="4.2" y1="4.2" x2="6" y2="6"/><line x1="18" y1="18" x2="19.8" y2="19.8"/>
+          <line x1="19.8" y1="4.2" x2="18" y2="6"/><line x1="6" y1="18" x2="4.2" y2="19.8"/>
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true" hidden>
+          <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.5 6.5 0 0 0 9.8 9.8Z"/>
+        </svg>
+      </button>
+
+      <span class="navbar__divider" aria-hidden="true"></span>
+      <span class="navbar__avatar" title="Mara Velez" aria-label="Account: Mara Velez">MV</span>
+    </div>
+  </header>
+
+  <!-- ================= DASH SHELL ================= -->
+  <div class="dash">
+
+    <!-- ---------- SIDEBAR ---------- -->
+    <aside class="sidebar sidebar--accent-blue" data-sidebar="main" aria-label="Main navigation">
+      <div class="sidebar__head">
+        <a class="sidebar__brand" href="../index.html">
+          <span class="sidebar__logo">N</span>
+          <span class="sidebar__brand-text">Neobrut</span>
+        </a>
+        <button class="sidebar__collapse" data-sidebar-toggle="main" aria-expanded="true" aria-label="Collapse sidebar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true">
+            <polyline points="14 6 8 12 14 18"/>
+          </svg>
+        </button>
+      </div>
+
+      <nav class="sidebar__nav">
+        <p class="sidebar__section">Overview</p>
+        <a class="sidebar__item is-active" href="#" aria-current="page">
+          <span class="sidebar__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+          </span>
+          <span class="sidebar__label">Dashboard</span>
+        </a>
+        <a class="sidebar__item" href="#">
+          <span class="sidebar__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="4" y1="20" x2="4" y2="11"/><line x1="10" y1="20" x2="10" y2="4"/><line x1="16" y1="20" x2="16" y2="13"/><line x1="22" y1="20" x2="2" y2="20"/></svg>
+          </span>
+          <span class="sidebar__label">Analytics</span>
+        </a>
+        <a class="sidebar__item" href="#">
+          <span class="sidebar__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 5.5a3.5 3.5 0 0 1 0 6"/><path d="M18 20a6 6 0 0 0-3-5.2"/></svg>
+          </span>
+          <span class="sidebar__label">Customers</span>
+        </a>
+        <a class="sidebar__item" href="#">
+          <span class="sidebar__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 7h14l-1.2 11.5a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8Z"/><path d="M8.5 7a3.5 3.5 0 0 1 7 0"/></svg>
+          </span>
+          <span class="sidebar__label">Orders</span>
+          <span class="sidebar__badge">28</span>
+        </a>
+        <a class="sidebar__item" href="#">
+          <span class="sidebar__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M3 8 12 3l9 5-9 5Z"/><path d="M3 8v8l9 5 9-5V8"/></svg>
+          </span>
+          <span class="sidebar__label">Products</span>
+        </a>
+
+        <p class="sidebar__section">Workspace</p>
+        <a class="sidebar__item" href="#">
+          <span class="sidebar__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="9" x2="9" y2="20"/></svg>
+          </span>
+          <span class="sidebar__label">Campaigns</span>
+        </a>
+        <a class="sidebar__item" href="#">
+          <span class="sidebar__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M4 19V5a1 1 0 0 1 1-1h10l4 4v11a1 1 0 0 1-1 1Z"/><polyline points="8 9 12 9"/><polyline points="8 13 16 13"/><polyline points="8 17 16 17"/></svg>
+          </span>
+          <span class="sidebar__label">Invoices</span>
+          <span class="sidebar__badge">5</span>
+        </a>
+        <a class="sidebar__item" href="#">
+          <span class="sidebar__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
+          </span>
+          <span class="sidebar__label">Settings</span>
+        </a>
+
+        <p class="sidebar__section">Support</p>
+        <a class="sidebar__item" href="#">
+          <span class="sidebar__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .8-1 1.7"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>
+          </span>
+          <span class="sidebar__label">Help Center</span>
+        </a>
+      </nav>
+
+      <div class="sidebar__foot">
+        <span class="sidebar__avatar">MV</span>
+        <span class="sidebar__foot-meta">
+          <span class="sidebar__foot-name">Mara Velez</span>
+          <span class="sidebar__foot-sub">Owner · Pro</span>
+        </span>
+      </div>
+    </aside>
+
+    <!-- ---------- MAIN ---------- -->
+    <main class="dash__main">
+      <div class="dash__inner">
+
+        <!-- breadcrumb + title + controls -->
+        <nav class="breadcrumb breadcrumb--chevron" aria-label="Breadcrumb">
+          <ol class="breadcrumb__list" role="list">
+            <li class="breadcrumb__item"><a class="breadcrumb__link" href="../index.html">Home</a></li>
+            <li class="breadcrumb__item"><a class="breadcrumb__link" href="#">Analytics</a></li>
+            <li class="breadcrumb__item"><span class="breadcrumb__current" aria-current="page">Overview</span></li>
+          </ol>
+        </nav>
+
+        <div class="dash__head">
+          <div>
+            <p class="eyebrow">Reporting · Last sync 4 min ago</p>
+            <h1 class="dash__title">Overview</h1>
+          </div>
+          <div class="dash__head-actions">
+            <div class="segmented" role="group" aria-label="Date range">
+              <label><input type="radio" name="range" value="day"><span>Day</span></label>
+              <label><input type="radio" name="range" value="week" checked><span>Week</span></label>
+              <label><input type="radio" name="range" value="month"><span>Month</span></label>
+            </div>
+            <button class="btn btn--primary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true" style="width:1.05em;height:1.05em"><path d="M12 3v12"/><polyline points="7 10 12 15 17 10"/><line x1="4" y1="20" x2="20" y2="20"/></svg>
+              Export
+            </button>
+          </div>
+        </div>
+
+        <!-- ===== STAT CARDS ===== -->
+        <div class="grid grid-4" style="margin-bottom: var(--space-5)">
+          <div class="stat stat--blue">
+            <div class="stat__top">
+              <span class="stat__label">Revenue</span>
+              <span class="stat__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:1.1em;height:1.1em"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 6.5C17 4.6 14.8 4 12 4S7 4.9 7 7s2.5 2.6 5 3 5 1 5 3.2-2.2 3.3-5 3.3-5-.8-5-2.8"/></svg>
+              </span>
+            </div>
+            <div class="stat__value">$84,120</div>
+            <div class="stat__delta stat__delta--up">▲ 12.4% vs last wk</div>
+            <div class="spark" aria-hidden="true">
+              <span style="height:38%"></span><span style="height:52%"></span><span style="height:44%"></span><span style="height:66%"></span><span style="height:58%"></span><span style="height:74%"></span><span style="height:88%"></span>
+            </div>
+          </div>
+
+          <div class="stat stat--lime">
+            <div class="stat__top">
+              <span class="stat__label">Active users</span>
+              <span class="stat__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:1.1em;height:1.1em"><circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17" cy="8" r="2.6"/><path d="M16 14a5 5 0 0 1 5 6"/></svg>
+              </span>
+            </div>
+            <div class="stat__value">12,480</div>
+            <div class="stat__delta stat__delta--up">▲ 3.1% vs last wk</div>
+            <div class="spark" aria-hidden="true">
+              <span style="height:50%"></span><span style="height:46%"></span><span style="height:60%"></span><span style="height:55%"></span><span style="height:64%"></span><span style="height:58%"></span><span style="height:70%"></span>
+            </div>
+          </div>
+
+          <div class="stat stat--pink">
+            <div class="stat__top">
+              <span class="stat__label">Orders</span>
+              <span class="stat__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:1.1em;height:1.1em"><path d="M5 7h14l-1.2 11.5a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8Z"/><path d="M8.5 7a3.5 3.5 0 0 1 7 0"/></svg>
+              </span>
+            </div>
+            <div class="stat__value">1,204</div>
+            <div class="stat__delta stat__delta--down">▼ 2.0% vs last wk</div>
+            <div class="spark" aria-hidden="true">
+              <span style="height:72%"></span><span style="height:64%"></span><span style="height:70%"></span><span style="height:58%"></span><span style="height:62%"></span><span style="height:50%"></span><span style="height:46%"></span>
+            </div>
+          </div>
+
+          <div class="stat stat--yellow">
+            <div class="stat__top">
+              <span class="stat__label">Churn rate</span>
+              <span class="stat__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:1.1em;height:1.1em"><path d="M3 6l7 7 4-4 7 7"/><polyline points="21 11 21 16 16 16"/></svg>
+              </span>
+            </div>
+            <div class="stat__value">1.8%</div>
+            <div class="stat__delta stat__delta--flat">▬ Flat vs last wk</div>
+            <div class="spark" aria-hidden="true">
+              <span style="height:54%"></span><span style="height:52%"></span><span style="height:55%"></span><span style="height:53%"></span><span style="height:54%"></span><span style="height:52%"></span><span style="height:54%"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== SPLIT: charts/table | activity ===== -->
+        <div class="dash__split">
+
+          <!-- LEFT COLUMN -->
+          <div class="charts-stack">
+
+            <!-- BAR CHART -->
+            <section class="card" aria-labelledby="bar-h">
+              <div class="card__head">
+                <h2 class="card__title" id="bar-h">Monthly revenue</h2>
+                <span class="badge badge--lime">FY 2026 · $928K</span>
+              </div>
+              <div class="card__body">
+                <div class="barchart">
+                  <div class="barchart__plot" role="img" aria-label="Bar chart of monthly revenue from January to December 2026">
+                    <div class="barchart__col"><div class="barchart__bar" style="height:48%"></div></div>
+                    <div class="barchart__col"><div class="barchart__bar" style="height:42%"></div></div>
+                    <div class="barchart__col"><div class="barchart__bar" style="height:55%"></div></div>
+                    <div class="barchart__col"><div class="barchart__bar" style="height:63%"></div></div>
+                    <div class="barchart__col"><div class="barchart__bar" style="height:58%"></div></div>
+                    <div class="barchart__col"><div class="barchart__bar" style="height:71%"></div></div>
+                    <div class="barchart__col"><div class="barchart__bar" style="height:66%"></div></div>
+                    <div class="barchart__col"><div class="barchart__bar" style="height:78%"></div></div>
+                    <div class="barchart__col"><div class="barchart__bar" style="height:84%"></div></div>
+                    <div class="barchart__col"><div class="barchart__bar" style="height:73%"></div></div>
+                    <div class="barchart__col"><div class="barchart__bar" style="height:91%"></div></div>
+                    <div class="barchart__col"><div class="barchart__bar" style="height:100%"></div></div>
+                  </div>
+                  <ol class="barchart__axis">
+                    <li>Jan</li><li>Feb</li><li>Mar</li><li>Apr</li><li>May</li><li>Jun</li>
+                    <li>Jul</li><li>Aug</li><li>Sep</li><li>Oct</li><li>Nov</li><li>Dec</li>
+                  </ol>
+                </div>
+              </div>
+            </section>
+
+            <!-- LINE CHART -->
+            <section class="card" aria-labelledby="line-h">
+              <div class="card__head">
+                <h2 class="card__title" id="line-h">Sessions vs last period</h2>
+                <span class="badge badge--blue">+8.6% WoW</span>
+              </div>
+              <div class="card__body">
+                <div class="linechart">
+                  <svg viewBox="0 0 600 220" preserveAspectRatio="none" role="img" aria-label="Line chart comparing this period and last period sessions over 8 weeks">
+                    <!-- gridlines -->
+                    <g stroke="var(--color-border-subtle)" stroke-width="1.5">
+                      <line x1="0" y1="20" x2="600" y2="20"/>
+                      <line x1="0" y1="70" x2="600" y2="70"/>
+                      <line x1="0" y1="120" x2="600" y2="120"/>
+                      <line x1="0" y1="170" x2="600" y2="170"/>
+                      <line x1="0" y1="200" x2="600" y2="200"/>
+                    </g>
+                    <!-- comparison line (pink) -->
+                    <polyline fill="none" stroke="var(--pink-500)" stroke-width="4" stroke-dasharray="8 6"
+                      points="20,160 100,150 180,158 260,130 340,140 420,118 500,128 580,108"/>
+                    <!-- primary line (blue) -->
+                    <polyline fill="none" stroke="var(--blue-500)" stroke-width="4"
+                      points="20,140 100,120 180,128 260,96 340,104 420,70 500,84 580,44"/>
+                    <!-- primary dots -->
+                    <g fill="var(--color-surface)" stroke="var(--blue-500)" stroke-width="4">
+                      <circle cx="20" cy="140" r="5"/><circle cx="100" cy="120" r="5"/><circle cx="180" cy="128" r="5"/>
+                      <circle cx="260" cy="96" r="5"/><circle cx="340" cy="104" r="5"/><circle cx="420" cy="70" r="5"/>
+                      <circle cx="500" cy="84" r="5"/><circle cx="580" cy="44" r="5"/>
+                    </g>
+                  </svg>
+                </div>
+                <div class="chart-legend">
+                  <span><i style="background:var(--blue-500)"></i> This period</span>
+                  <span><i style="background:var(--pink-500)"></i> Last period</span>
+                  <span style="margin-left:auto">Weeks W23 → W30</span>
+                </div>
+              </div>
+            </section>
+
+            <!-- TRANSACTIONS TABLE -->
+            <section aria-labelledby="tx-h">
+              <div class="cluster" style="justify-content:space-between;margin-bottom:var(--space-3)">
+                <h2 class="card__title" id="tx-h">Recent transactions</h2>
+                <div class="cluster gap-2">
+                  <button class="btn btn--ghost btn--sm">Filter</button>
+                  <a class="btn btn--secondary btn--sm" href="#">View all</a>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table class="table table--striped">
+                  <thead>
+                    <tr>
+                      <th class="table__check"><input type="checkbox" data-select-all aria-label="Select all rows"></th>
+                      <th data-sort="text" aria-sort="ascending" class="is-sorted-asc">Customer</th>
+                      <th data-sort="text">Date</th>
+                      <th data-sort="number" class="table__num">Amount</th>
+                      <th>Method</th>
+                      <th data-sort="text">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="table__check"><input type="checkbox" class="row-check" aria-label="Select row"></td>
+                      <td>Aria Whitfield</td><td>Jun 21, 2026</td><td class="table__num">$1,280.00</td>
+                      <td>Visa ··4821</td><td><span class="table__status table__status--ok">Paid</span></td>
+                    </tr>
+                    <tr>
+                      <td class="table__check"><input type="checkbox" class="row-check" aria-label="Select row"></td>
+                      <td>Devon Park</td><td>Jun 21, 2026</td><td class="table__num">$642.50</td>
+                      <td>Mastercard ··9930</td><td><span class="table__status table__status--pending">Pending</span></td>
+                    </tr>
+                    <tr>
+                      <td class="table__check"><input type="checkbox" class="row-check" aria-label="Select row"></td>
+                      <td>Noor Hassan</td><td>Jun 20, 2026</td><td class="table__num">$3,910.00</td>
+                      <td>ACH Transfer</td><td><span class="table__status table__status--ok">Paid</span></td>
+                    </tr>
+                    <tr>
+                      <td class="table__check"><input type="checkbox" class="row-check" aria-label="Select row"></td>
+                      <td>Sloane Mercer</td><td>Jun 20, 2026</td><td class="table__num">$215.00</td>
+                      <td>PayPal</td><td><span class="table__status table__status--off">Failed</span></td>
+                    </tr>
+                    <tr>
+                      <td class="table__check"><input type="checkbox" class="row-check" aria-label="Select row"></td>
+                      <td>Mateo Rivas</td><td>Jun 19, 2026</td><td class="table__num">$1,054.99</td>
+                      <td>Visa ··1107</td><td><span class="table__status table__status--ok">Paid</span></td>
+                    </tr>
+                    <tr>
+                      <td class="table__check"><input type="checkbox" class="row-check" aria-label="Select row"></td>
+                      <td>Priya Anand</td><td>Jun 19, 2026</td><td class="table__num">$789.00</td>
+                      <td>Amex ··2003</td><td><span class="table__status table__status--pending">Pending</span></td>
+                    </tr>
+                    <tr>
+                      <td class="table__check"><input type="checkbox" class="row-check" aria-label="Select row"></td>
+                      <td>Theo Lindqvist</td><td>Jun 18, 2026</td><td class="table__num">$2,460.00</td>
+                      <td>ACH Transfer</td><td><span class="table__status table__status--ok">Paid</span></td>
+                    </tr>
+                    <tr>
+                      <td class="table__check"><input type="checkbox" class="row-check" aria-label="Select row"></td>
+                      <td>Camila Duarte</td><td>Jun 18, 2026</td><td class="table__num">$148.75</td>
+                      <td>Mastercard ··6612</td><td><span class="table__status table__status--off">Refunded</span></td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr><td colspan="6">
+                      <div class="table__foot">
+                        <span class="table__foot-info">Showing 8 of 1,204</span>
+                        <span class="table__pager">
+                          <button disabled aria-label="Previous page">‹</button>
+                          <button class="is-active" aria-current="page">1</button>
+                          <button>2</button>
+                          <button>3</button>
+                          <button>…</button>
+                          <button>151</button>
+                          <button aria-label="Next page">›</button>
+                        </span>
+                      </div>
+                    </td></tr>
+                  </tfoot>
+                </table>
+              </div>
+            </section>
+
+          </div>
+
+          <!-- RIGHT COLUMN: activity + timeline -->
+          <aside class="charts-stack" aria-label="Activity">
+
+            <section class="card" aria-labelledby="act-h">
+              <div class="card__head">
+                <h2 class="card__title" id="act-h">Live activity</h2>
+                <span class="badge badge--pink">12 new</span>
+              </div>
+              <ul class="list list--flush" role="list" style="padding:0 var(--space-4)">
+                <li class="list__row">
+                  <span class="list__lead"><span class="avatar avatar--blue">AW</span></span>
+                  <span class="list__main">
+                    <span class="list__title">Aria Whitfield upgraded to Pro</span>
+                    <span class="list__meta">Subscription · 2 min ago</span>
+                  </span>
+                  <span class="list__trail"><span class="badge badge--lime">+$96</span></span>
+                </li>
+                <li class="list__row">
+                  <span class="list__lead"><span class="avatar avatar--pink">NH</span></span>
+                  <span class="list__main">
+                    <span class="list__title">Noor Hassan paid invoice #4821</span>
+                    <span class="list__meta">Payment · 9 min ago</span>
+                  </span>
+                  <span class="list__trail"><span class="badge badge--ink">$3.9K</span></span>
+                </li>
+                <li class="list__row">
+                  <span class="list__lead">
+                    <span class="list__lead list__lead--icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:1.1em;height:1.1em"><path d="M5 7h14l-1.2 11.5a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8Z"/><path d="M8.5 7a3.5 3.5 0 0 1 7 0"/></svg>
+                    </span>
+                  </span>
+                  <span class="list__main">
+                    <span class="list__title">New order from Theo Lindqvist</span>
+                    <span class="list__meta">Order #20418 · 14 min ago</span>
+                  </span>
+                  <span class="list__trail"><span class="badge badge--blue">3 items</span></span>
+                </li>
+                <li class="list__row">
+                  <span class="list__lead"><span class="avatar avatar--lime">SM</span></span>
+                  <span class="list__main">
+                    <span class="list__title">Sloane Mercer payment failed</span>
+                    <span class="list__meta">Payment · 22 min ago</span>
+                  </span>
+                  <span class="list__trail"><span class="badge badge--danger">Retry</span></span>
+                </li>
+                <li class="list__row">
+                  <span class="list__lead"><span class="avatar avatar--ink">PA</span></span>
+                  <span class="list__main">
+                    <span class="list__title">Priya Anand left a 5★ review</span>
+                    <span class="list__meta">Feedback · 41 min ago</span>
+                  </span>
+                  <span class="list__trail"><span class="badge badge--yellow">★ 5.0</span></span>
+                </li>
+              </ul>
+            </section>
+
+            <section class="card" aria-labelledby="tl-h">
+              <div class="card__head">
+                <h2 class="card__title" id="tl-h">System events</h2>
+              </div>
+              <div class="card__body">
+                <ol class="timeline" role="list">
+                  <li class="timeline__item">
+                    <span class="timeline__node timeline__node--blue" aria-hidden="true"></span>
+                    <div class="timeline__entry">
+                      <span class="timeline__time">14:08 · Today</span>
+                      <h3 class="timeline__title">Deploy v4.2 shipped</h3>
+                      <p class="timeline__body" style="font-size:var(--text-sm);color:var(--color-text-muted)">Checkout API promoted to production with zero downtime.</p>
+                    </div>
+                  </li>
+                  <li class="timeline__item">
+                    <span class="timeline__node timeline__node--lime" aria-hidden="true"></span>
+                    <div class="timeline__entry">
+                      <span class="timeline__time">11:32 · Today</span>
+                      <h3 class="timeline__title">Nightly export complete</h3>
+                      <p class="timeline__body" style="font-size:var(--text-sm);color:var(--color-text-muted)">42,910 rows synced to the warehouse.</p>
+                    </div>
+                  </li>
+                  <li class="timeline__item">
+                    <span class="timeline__node timeline__node--pink" aria-hidden="true"></span>
+                    <div class="timeline__entry">
+                      <span class="timeline__time">09:15 · Today</span>
+                      <h3 class="timeline__title">Spike in EU traffic</h3>
+                      <p class="timeline__body" style="font-size:var(--text-sm);color:var(--color-text-muted)">+38% sessions from Berlin & Paris regions.</p>
+                    </div>
+                  </li>
+                  <li class="timeline__item">
+                    <span class="timeline__node timeline__node--num" aria-hidden="true">0</span>
+                    <div class="timeline__entry">
+                      <span class="timeline__time">02:00 · Today</span>
+                      <h3 class="timeline__title">Backups verified</h3>
+                      <p class="timeline__body" style="font-size:var(--text-sm);color:var(--color-text-muted)">All 6 region snapshots passed integrity check.</p>
+                    </div>
+                  </li>
+                </ol>
+              </div>
+            </section>
+
+          </aside>
+
+        </div>
+      </div>
+
+      <!-- FOOTER -->
+      <footer class="navbar" style="justify-content:space-between">
+        <span class="mono-label text-muted">© 2026 Neobrut Analytics</span>
+        <nav class="cluster gap-3" aria-label="Footer">
+          <a class="navbar__link" href="#">Status</a>
+          <a class="navbar__link" href="#">Docs</a>
+          <a class="navbar__link" href="#">Privacy</a>
+        </nav>
+      </footer>
+    </main>
+
+  </div>
+
+  <script src="../app.js"></script>
+</body>
+</html>

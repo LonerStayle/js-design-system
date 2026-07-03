@@ -1,0 +1,438 @@
+/* ============================================================================
+   COMPONENT · Upload + ChipInput            THEME 08 — VAPORWAVE
+   ----------------------------------------------------------------------------
+   Upload    : glassy dropzone w/ neon-dashed border · dragover state · file list
+               w/ mini progress bar + success/error states + remove button.
+   ChipInput : glassy token field w/ focus-within ring · neon-soft pill chips
+               w/ remove × · borderless flex-grow typing field · disabled.
+   Signature : glossy translucent glass, magenta/cyan neon dashed accents,
+               soft coloured glows, pink/cyan focus rings.
+   ========================================================================== */
+
+/* ============================================================================
+   UPLOAD — dropzone
+   ========================================================================== */
+.upload {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+/* the whole zone is a <label> wrapping a visually-hidden file input, so it is
+   keyboard-focusable and clicking anywhere opens the picker */
+.upload__zone {
+  --_edge: var(--color-border-strong);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  text-align: center;
+  min-height: 12rem;
+  padding: var(--space-9) var(--space-6);
+  cursor: pointer;
+  position: relative;
+  isolation: isolate;
+  color: var(--color-text);
+  background: var(--color-surface);
+  -webkit-backdrop-filter: blur(var(--card-blur)) saturate(140%);
+  backdrop-filter: blur(var(--card-blur)) saturate(140%);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-inset-gloss);
+  transition:
+    transform var(--duration-fast) var(--ease-spring),
+    box-shadow var(--duration-base) var(--ease-emphasized),
+    background-color var(--duration-base) var(--ease-standard);
+}
+
+/* NEON DASHED border drawn as a border-image so the dashes stay crisp and
+   keep the rounded corners; magenta→cyan repeating ticks */
+.upload__zone::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  padding: var(--border-2);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      var(--color-primary) 0,
+      var(--color-primary) 10px,
+      transparent 10px,
+      transparent 20px),
+    repeating-linear-gradient(
+      90deg,
+      var(--color-accent) 0,
+      var(--color-accent) 10px,
+      transparent 10px,
+      transparent 20px);
+  background-clip: padding-box, padding-box;
+  /* mask carves out the centre, leaving only the dashed ring */
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0.8;
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+
+/* top gloss sheen */
+.upload__zone::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--gloss-sheen);
+  pointer-events: none;
+}
+
+.upload__zone:hover {
+  background: var(--color-surface-2);
+  box-shadow: var(--glow-magenta), var(--shadow-inset-gloss);
+}
+.upload__zone:hover::before { opacity: 1; }
+
+/* the zone is the focusable element — pink ring on keyboard focus */
+.upload__input:focus-visible + .upload__zone,
+.upload__zone:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-pink), var(--shadow-inset-gloss);
+  z-index: var(--z-raised);
+}
+
+/* visually-hidden native input, kept reachable for AT + focus delegation */
+.upload__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- DRAGOVER (cyan glow · brighter border · slight scale) --------------- */
+.upload--dragover .upload__zone,
+.upload__zone.upload--dragover {
+  background: var(--color-surface-3);
+  transform: scale(1.015);
+  box-shadow: var(--ring-cyan), var(--glow-cyan), var(--shadow-inset-gloss);
+}
+.upload--dragover .upload__zone::before,
+.upload__zone.upload--dragover::before {
+  opacity: 1;
+  /* shift to all-cyan ticks while dragging */
+  background:
+    repeating-linear-gradient(
+      90deg,
+      var(--color-accent) 0,
+      var(--color-accent) 10px,
+      transparent 10px,
+      transparent 20px),
+    repeating-linear-gradient(
+      0deg,
+      var(--color-accent) 0,
+      var(--color-accent) 10px,
+      transparent 10px,
+      transparent 20px);
+}
+
+/* ---- zone contents ------------------------------------------------------ */
+.upload__icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  color: var(--color-accent);
+  filter: drop-shadow(0 0 10px rgba(45, 226, 230, 0.55));
+  transition:
+    transform var(--duration-base) var(--ease-spring),
+    color var(--duration-fast) var(--ease-standard);
+}
+.upload__icon > svg { width: 100%; height: 100%; }
+.upload__zone:hover .upload__icon { transform: translateY(-2px); }
+.upload--dragover .upload__icon { transform: translateY(-4px) scale(1.06); }
+
+.upload__title {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text-strong);
+}
+.upload__hint {
+  font-size: var(--text-sm);
+  color: var(--color-text-subtle);
+}
+
+/* ============================================================================
+   UPLOAD — file list
+   ========================================================================== */
+.upload__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.upload__file {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: var(--border-1) solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-inset-gloss);
+}
+
+.upload__file-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: none;
+  color: var(--color-text-muted);
+}
+.upload__file-icon > svg { width: 100%; height: 100%; }
+
+.upload__file-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+}
+.upload__file-name {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.upload__file-size {
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}
+
+/* inline mini progress bar (matches the .progress token style) */
+.upload__file-progress {
+  position: relative;
+  height: 4px;
+  margin-top: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--progress-track);
+  overflow: hidden;
+}
+.upload__file-progress::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: var(--upload-progress, 0%);
+  border-radius: inherit;
+  background: var(--progress-fill);
+  box-shadow: 0 0 10px -2px rgba(255, 106, 213, 0.6);
+  transition: width var(--duration-base) var(--ease-emphasized);
+}
+
+/* remove × button (glows on hover) */
+.upload__file-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: none;
+  font-size: var(--text-lg);
+  line-height: 1;
+  color: var(--color-text-subtle);
+  background: transparent;
+  border: var(--border-1) solid transparent;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition:
+    color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-emphasized);
+}
+.upload__file-remove:hover {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+  box-shadow: var(--glow-coral);
+}
+.upload__file-remove:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-pink);
+  z-index: var(--z-raised);
+}
+
+/* ---- per-file states (success / error icon + edge colour) --------------- */
+.upload__file--success {
+  border-color: color-mix(in srgb, var(--color-success) 55%, transparent);
+}
+.upload__file--success .upload__file-icon { color: var(--color-success); }
+.upload__file--success .upload__file-progress::before {
+  background: var(--color-success);
+  box-shadow: var(--glow-mint);
+}
+
+.upload__file--error {
+  border-color: color-mix(in srgb, var(--color-danger) 55%, transparent);
+}
+.upload__file--error .upload__file-icon { color: var(--color-danger); }
+.upload__file--error .upload__file-name { color: var(--color-danger); }
+.upload__file--error .upload__file-progress::before {
+  background: var(--color-danger);
+  box-shadow: var(--glow-coral);
+}
+
+/* ============================================================================
+   CHIP-INPUT — token field
+   ========================================================================== */
+.chip-input {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--input-height);
+  padding: var(--space-2) var(--space-3);
+  color: var(--input-fg);
+  background: var(--input-bg);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: var(--border-1) solid var(--input-border);
+  border-radius: var(--input-radius);
+  box-shadow: var(--shadow-inset-gloss);
+  cursor: text;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-base) var(--ease-emphasized);
+}
+.chip-input:hover {
+  border-color: var(--input-border-hover);
+}
+
+/* whole container lights up when the inner field is focused */
+.chip-input:focus-within {
+  border-color: transparent;
+  box-shadow: var(--ring-pink), var(--shadow-inset-gloss);
+  z-index: var(--z-raised);
+}
+
+/* ---- chip token (neon-soft pill) ---------------------------------------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 1.625rem;
+  padding-inline: var(--space-2) var(--space-1);
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  border: var(--border-1) solid var(--color-border-strong);
+  border-radius: var(--badge-radius);
+  box-shadow: var(--shadow-inset-gloss);
+  white-space: nowrap;
+}
+.chip__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 12rem;
+}
+
+/* chip remove × — hover glow */
+.chip__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  flex: none;
+  font-size: var(--text-sm);
+  line-height: 1;
+  color: inherit;
+  opacity: 0.7;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition:
+    opacity var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-emphasized);
+}
+.chip__remove:hover {
+  opacity: 1;
+  color: var(--color-text-strong);
+  box-shadow: var(--glow-magenta);
+}
+.chip__remove:focus-visible {
+  outline: none;
+  opacity: 1;
+  box-shadow: var(--ring-pink);
+  z-index: var(--z-raised);
+}
+
+/* ---- borderless typing field (flex-grows to fill the row) --------------- */
+.chip-input__field {
+  flex: 1 1 6rem;
+  min-width: 6rem;
+  height: 1.625rem;
+  color: var(--input-fg);
+  background: transparent;
+  border: 0;
+  outline: none;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+}
+.chip-input__field::placeholder { color: var(--input-placeholder); }
+.chip-input__field:focus-visible { box-shadow: none; }
+
+/* ---- disabled ----------------------------------------------------------- */
+.chip-input--disabled,
+.chip-input:has(.chip-input__field:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(0.3);
+}
+.chip-input--disabled .chip__remove,
+.chip-input--disabled .chip-input__field { pointer-events: none; }
+.chip-input--disabled:focus-within {
+  border-color: var(--input-border);
+  box-shadow: var(--shadow-inset-gloss);
+}
+
+/* ============================================================================
+   REDUCED MOTION — drop scale / glow transitions, keep states legible
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .upload__zone,
+  .upload__icon,
+  .upload__file-progress::before {
+    transition: none !important;
+  }
+  .upload--dragover .upload__zone,
+  .upload__zone.upload--dragover {
+    transform: none;
+  }
+  .upload--dragover .upload__icon {
+    transform: none;
+  }
+  .upload__zone:hover .upload__icon {
+    transform: none;
+  }
+}

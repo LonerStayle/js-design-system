@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Wire — The Ledger</title>
+<link rel="stylesheet" href="../theme.css">
+<style>
+  /* page-local layout only — the 3-panel wire-desk app shell */
+  .wire {
+    max-width: var(--measure-broadsheet);
+    margin-inline: auto;
+    display: grid;
+    grid-template-columns: 220px 340px 1fr;
+    border-top: var(--rule-heavy) solid var(--color-rule-heavy);
+    border-bottom: var(--rule-heavy) solid var(--color-rule-heavy);
+    min-height: calc(100vh - 56px);
+  }
+  .wire__panel { min-width: 0; }
+  .wire__panel--folders {
+    padding: var(--space-5);
+    border-right: var(--rule-medium) solid var(--color-rule-heavy);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+  .wire__panel--list {
+    border-right: var(--rule-medium) solid var(--color-rule-heavy);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .wire__panel--read {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  /* panel headers (ruled, sticky) */
+  .wire-head {
+    padding: var(--space-5);
+    border-bottom: var(--rule-heavy) solid var(--color-rule-heavy);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .wire-head__row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
+  .wire-head__title { font-family: var(--font-masthead); font-weight: 900; font-size: var(--text-2xl); line-height: var(--leading-tight); margin: 0; }
+
+  /* label swatches in folder panel */
+  .label-row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; font-size: var(--text-sm); }
+  .label-swatch { width: 10px; height: 10px; flex: 0 0 auto; display: inline-block; }
+  .label-row__count { margin-left: auto; color: var(--color-text-muted); font-family: var(--font-mono); font-size: var(--text-xs); }
+
+  /* message rows */
+  .msglist { overflow-y: auto; flex: 1; min-height: 0; }
+  .msg {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-5);
+    border-bottom: var(--rule-thin) solid var(--color-border);
+    cursor: pointer;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+    transition: background var(--dur-fast, .15s) var(--ease-out);
+  }
+  .msg:hover { background: var(--color-surface-2, var(--color-paper-2, rgba(0,0,0,.03))); }
+  .msg.is-active { background: var(--color-surface-2, rgba(184,30,30,.06)); box-shadow: inset 3px 0 0 0 var(--color-accent); }
+  .msg:focus-visible { outline: var(--rule-medium) solid var(--color-accent); outline-offset: -3px; }
+  .msg__body { min-width: 0; }
+  .msg__top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
+  .msg__sender { font-size: var(--text-sm); color: var(--color-text); }
+  .msg.is-unread .msg__sender { font-weight: 800; }
+  .msg__subject { font-family: var(--font-head); font-size: var(--text-base); line-height: var(--leading-snug, 1.3); margin: var(--space-1) 0; color: var(--color-text); }
+  .msg.is-unread .msg__subject { font-weight: 700; }
+  .msg__snippet {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .msg__meta { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); }
+  .msg__unread-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-accent); flex: 0 0 auto; }
+  .msg.is-unread .msg__time { color: var(--color-accent); font-weight: 700; }
+
+  /* reading pane */
+  .read-scroll { overflow-y: auto; flex: 1; min-height: 0; padding: var(--space-8); }
+  .read-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-4) var(--space-8);
+    border-bottom: var(--rule-medium) solid var(--color-border);
+    flex-wrap: wrap;
+  }
+  .read-toolbar__spacer { flex: 1; }
+  .read-from { display: flex; align-items: center; gap: var(--space-3); margin: var(--space-5) 0; }
+  .read-from__meta { min-width: 0; }
+  .read-body p { margin: 0 0 var(--space-5); }
+  .quick-reply {
+    border-top: var(--rule-medium) solid var(--color-border);
+    padding: var(--space-6) var(--space-8);
+    background: var(--color-surface-2, transparent);
+  }
+
+  [data-reveal]{ opacity:0; transform: translateY(12px); transition: opacity .5s var(--ease-out), transform .5s var(--ease-out); }
+  [data-reveal].is-revealed{ opacity:1; transform:none; }
+
+  /* responsive: collapse to single column */
+  @media (max-width: 900px){
+    .wire { grid-template-columns: 1fr; min-height: auto; }
+    .wire__panel--folders {
+      border-right: 0;
+      border-bottom: var(--rule-heavy) solid var(--color-rule-heavy);
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-4);
+    }
+    .wire__panel--list { border-right: 0; border-bottom: var(--rule-heavy) solid var(--color-rule-heavy); }
+    .msglist { max-height: 60vh; }
+  }
+  @media (max-width: 768px){
+    .read-scroll, .read-toolbar, .quick-reply { padding-inline: var(--space-5); }
+    .wire-head { padding: var(--space-4); }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<nav class="navbar no-print" aria-label="Primary">
+  <a class="navbar__brand" href="../index.html">THE&nbsp;<span class="spot">LEDGER</span></a>
+  <div class="navbar__sections" id="primary-nav">
+    <a class="navbar__link" href="dashboard.html">Desk</a>
+    <a class="navbar__link" href="kanban.html">Board</a>
+    <a class="navbar__link" href="inbox.html" aria-current="page">Wire</a>
+    <a class="navbar__link" href="pricing.html">Plans</a>
+    <a class="navbar__link" href="front-page.html">Front Page</a>
+  </div>
+  <div class="navbar__actions">
+    <button class="btn btn--ghost btn--sm" data-command-open aria-label="Search">⌘K</button>
+    <button class="btn btn--icon btn--sm" data-theme-toggle aria-pressed="false" aria-label="Toggle edition">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
+    </button>
+    <button class="btn btn--icon btn--sm navbar__toggle" data-nav-toggle="primary-nav" aria-label="Menu" aria-expanded="false">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+  </div>
+</nav>
+
+<main id="main">
+<div class="wire">
+
+  <!-- PANEL 1 — Folders / Labels -->
+  <aside class="wire__panel wire__panel--folders no-print" aria-label="Mailboxes">
+    <button class="btn btn--primary btn--block" data-modal-open="compose">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      Compose
+    </button>
+
+    <nav class="sidebar__nav" aria-label="Folders">
+      <div class="sidebar__section-title">Mailboxes</div>
+      <a class="sidebar__item" href="#" aria-current="true" data-folder="Inbox">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 6.5 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-5.5A2 2 0 0 0 16.8 5H7.2a2 2 0 0 0-1.7 1.5z"/></svg>
+        <span>Inbox</span>
+        <span class="count count--ink" id="inbox-count">3</span>
+      </a>
+      <a class="sidebar__item" href="#" data-folder="Wire Feed">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
+        <span>Wire Feed</span>
+        <span class="count">42</span>
+      </a>
+      <a class="sidebar__item" href="#" data-folder="Sent">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+        <span>Sent</span>
+      </a>
+      <a class="sidebar__item" href="#" data-folder="Drafts">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        <span>Drafts</span>
+        <span class="count">2</span>
+      </a>
+      <a class="sidebar__item" href="#" data-folder="Flagged">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg>
+        <span>Flagged</span>
+      </a>
+      <a class="sidebar__item" href="#" data-folder="Archive">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="4"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg>
+        <span>Archive</span>
+      </a>
+      <a class="sidebar__item" href="#" data-folder="Trash">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        <span>Trash</span>
+      </a>
+    </nav>
+
+    <nav aria-label="Labels">
+      <div class="sidebar__section-title">Labels</div>
+      <div class="label-row"><span class="label-swatch" style="background:var(--color-accent)"></span><span>Breaking</span><span class="label-row__count">9</span></div>
+      <div class="label-row"><span class="label-swatch" style="background:var(--color-text)"></span><span>Politics</span><span class="label-row__count">14</span></div>
+      <div class="label-row"><span class="label-swatch" style="background:var(--color-text-muted)"></span><span>Business</span><span class="label-row__count">6</span></div>
+    </nav>
+  </aside>
+
+  <!-- PANEL 2 — Message list -->
+  <section class="wire__panel wire__panel--list" aria-label="Messages">
+    <div class="wire-head">
+      <div class="wire-head__row">
+        <h2 class="wire-head__title">Inbox</h2>
+        <span class="dateline">Late City Final</span>
+      </div>
+      <div class="wire-head__row">
+        <div class="segmented" data-segmented role="tablist" aria-label="Filter messages">
+          <button class="segmented__btn" role="tab" aria-selected="true" data-value="all">All</button>
+          <button class="segmented__btn" role="tab" aria-selected="false" data-value="unread">Unread</button>
+          <button class="segmented__btn" role="tab" aria-selected="false" data-value="flagged">Flagged</button>
+        </div>
+        <button class="btn btn--ghost btn--sm" aria-label="Sort messages">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M11 5h10M11 9h7M11 13h4M3 17l3 3 3-3M6 4v16"/></svg>
+          Newest
+        </button>
+      </div>
+    </div>
+
+    <div class="msglist" role="list">
+      <!-- 1 — default selected, unread -->
+      <button type="button" class="msg is-unread is-active" role="listitem"
+        data-subject="Senate Reform Vote — final count confirmed at 58–41"
+        data-from="Margaret Reyes"
+        data-email="m.reyes@ledger.press"
+        data-initials="MR"
+        data-date="Today · 4:18 a.m."
+        data-label="Breaking">
+        <span class="avatar"><span class="avatar__initials">MR</span></span>
+        <span class="msg__body">
+          <span class="msg__top">
+            <span class="msg__sender">Margaret Reyes</span>
+            <span class="dateline msg__time">4:18a</span>
+          </span>
+          <span class="msg__subject">Senate Reform Vote — final count confirmed at 58–41</span>
+          <span class="msg__snippet">Filed the wrap from the gallery. Need a second read on the timeline graf before A1 closes.</span>
+          <span class="msg__meta"><span class="badge badge--accent">Breaking</span><span class="msg__unread-dot" aria-label="Unread"></span></span>
+        </span>
+      </button>
+
+      <!-- 2 — unread -->
+      <button type="button" class="msg is-unread" role="listitem"
+        data-subject="Transit overhaul approved 7–2 — quotes attached"
+        data-from="Liang Tanaka"
+        data-email="l.tanaka@ledger.press"
+        data-initials="LT"
+        data-date="Today · 2:51 a.m."
+        data-label="Politics">
+        <span class="avatar"><span class="avatar__initials">LT</span></span>
+        <span class="msg__body">
+          <span class="msg__top">
+            <span class="msg__sender">Liang Tanaka</span>
+            <span class="dateline msg__time">2:51a</span>
+          </span>
+          <span class="msg__subject">Transit overhaul approved 7–2 — quotes attached</span>
+          <span class="msg__snippet">Council just adjourned. Holdouts gave us usable color. Pushing 14 inches for City desk.</span>
+          <span class="msg__meta"><span class="badge badge--muted">Politics</span><span class="msg__unread-dot" aria-label="Unread"></span></span>
+        </span>
+      </button>
+
+      <!-- 3 — read -->
+      <button type="button" class="msg" role="listitem"
+        data-subject="Markets close broadly higher — chart numbers locked"
+        data-from="Rosa Okafor"
+        data-email="r.okafor@ledger.press"
+        data-initials="RO"
+        data-date="Yesterday · 9:42 p.m."
+        data-label="Business">
+        <span class="avatar"><span class="avatar__initials">RO</span></span>
+        <span class="msg__body">
+          <span class="msg__top">
+            <span class="msg__sender">Rosa Okafor</span>
+            <span class="dateline msg__time">9:42p</span>
+          </span>
+          <span class="msg__subject">Markets close broadly higher — chart numbers locked</span>
+          <span class="msg__snippet">Composite +1.8%, Tech +2.4%. Data desk signed off. Bars are ready for the B1 strip.</span>
+          <span class="msg__meta"><span class="badge badge--muted">Business</span></span>
+        </span>
+      </button>
+
+      <!-- 4 — read, flagged -->
+      <button type="button" class="msg" role="listitem"
+        data-subject="Re: Harbor United advance on penalties — keeper saved twice"
+        data-from="Sam Whitfield"
+        data-email="s.whitfield@ledger.press"
+        data-initials="SW"
+        data-date="Yesterday · 8:05 p.m."
+        data-label="Sports">
+        <span class="avatar"><span class="avatar__initials">SW</span></span>
+        <span class="msg__body">
+          <span class="msg__top">
+            <span class="msg__sender">Sam Whitfield</span>
+            <span class="dateline msg__time">8:05p</span>
+          </span>
+          <span class="msg__subject">Re: Harbor United advance on penalties — keeper saved twice</span>
+          <span class="msg__snippet">Shootout copy is filed. Flagged for the late edition stamp — confirm before C1 plates.</span>
+          <span class="msg__meta">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="var(--color-accent)" stroke="var(--color-accent)" stroke-width="2" aria-label="Flagged"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/></svg>
+          </span>
+        </span>
+      </button>
+
+      <!-- 5 — unread -->
+      <button type="button" class="msg is-unread" role="listitem"
+        data-subject="Photo desk: halftone plates ready for A1 and B6"
+        data-from="Dele Okonkwo"
+        data-email="d.okonkwo@ledger.press"
+        data-initials="DO"
+        data-date="Yesterday · 6:30 p.m."
+        data-label="Photo">
+        <span class="avatar"><span class="avatar__initials">DO</span></span>
+        <span class="msg__body">
+          <span class="msg__top">
+            <span class="msg__sender">Dele Okonkwo</span>
+            <span class="dateline msg__time">6:30p</span>
+          </span>
+          <span class="msg__subject">Photo desk: halftone plates ready for A1 and B6</span>
+          <span class="msg__snippet">Three frames from the chamber floor. Credit reads Press Gallery. Need crops by 10.</span>
+          <span class="msg__meta"><span class="badge">Photo</span><span class="msg__unread-dot" aria-label="Unread"></span></span>
+        </span>
+      </button>
+
+      <!-- 6 — read -->
+      <button type="button" class="msg" role="listitem"
+        data-subject="Copydesk: hyphenation pass complete through D-section"
+        data-from="Priya Nair"
+        data-email="p.nair@ledger.press"
+        data-initials="PN"
+        data-date="Yesterday · 5:12 p.m."
+        data-label="Copy">
+        <span class="avatar"><span class="avatar__initials">PN</span></span>
+        <span class="msg__body">
+          <span class="msg__top">
+            <span class="msg__sender">Priya Nair</span>
+            <span class="dateline msg__time">5:12p</span>
+          </span>
+          <span class="msg__subject">Copydesk: hyphenation pass complete through D-section</span>
+          <span class="msg__snippet">All justified columns checked for rivers. Two widows fixed on the Opinion strip.</span>
+          <span class="msg__meta"><span class="badge badge--muted">Copy</span></span>
+        </span>
+      </button>
+
+      <!-- 7 — read -->
+      <button type="button" class="msg" role="listitem"
+        data-subject="Weather strip — clearing by morning edition, confirmed"
+        data-from="Tomás Herrera"
+        data-email="t.herrera@ledger.press"
+        data-initials="TH"
+        data-date="Yesterday · 3:40 p.m."
+        data-label="Weather">
+        <span class="avatar"><span class="avatar__initials">TH</span></span>
+        <span class="msg__body">
+          <span class="msg__top">
+            <span class="msg__sender">Tomás Herrera</span>
+            <span class="dateline msg__time">3:40p</span>
+          </span>
+          <span class="msg__subject">Weather strip — clearing by morning edition, confirmed</span>
+          <span class="msg__snippet">City 17° clearing, Harbor 15° wind, Hills 12° fog. Updated the C8 cells for you.</span>
+          <span class="msg__meta"><span class="badge">Weather</span></span>
+        </span>
+      </button>
+
+      <!-- 8 — read -->
+      <button type="button" class="msg" role="listitem"
+        data-subject="From the Editor's Desk: tomorrow's budget meeting moved to 9"
+        data-from="The Managing Editor"
+        data-email="desk@ledger.press"
+        data-initials="ME"
+        data-date="Yesterday · 1:15 p.m."
+        data-label="Desk">
+        <span class="avatar"><span class="avatar__initials">ME</span></span>
+        <span class="msg__body">
+          <span class="msg__top">
+            <span class="msg__sender">The Managing Editor</span>
+            <span class="dateline msg__time">1:15p</span>
+          </span>
+          <span class="msg__subject">From the Editor's Desk: tomorrow's budget meeting moved to 9</span>
+          <span class="msg__snippet">Front-page budget at 9 sharp, not 10. Bring three line options for the lead head.</span>
+          <span class="msg__meta"><span class="badge badge--muted">Desk</span></span>
+        </span>
+      </button>
+    </div>
+  </section>
+
+  <!-- PANEL 3 — Reading pane -->
+  <section class="wire__panel wire__panel--read" aria-label="Reading pane">
+    <div class="read-toolbar no-print" role="toolbar" aria-label="Message actions">
+      <span data-tooltip="Reply"><button class="btn btn--icon btn--sm" id="reply-btn" aria-label="Reply">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 17 4 12l5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+      </button></span>
+      <span data-tooltip="Forward"><button class="btn btn--icon btn--sm" aria-label="Forward">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 17 5-5-5-5"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg>
+      </button></span>
+      <span data-tooltip="Archive"><button class="btn btn--icon btn--sm" aria-label="Archive" data-toast="Message moved to Archive" data-toast-title="Archived" data-toast-variant="success">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="4"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg>
+      </button></span>
+      <span data-tooltip="Flag"><button class="btn btn--icon btn--sm" aria-label="Flag" data-toast="Message flagged for late edition" data-toast-title="Flagged" data-toast-variant="warning">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg>
+      </button></span>
+      <span class="read-toolbar__spacer"></span>
+      <span data-tooltip="Delete"><button class="btn btn--icon btn--sm btn--danger" aria-label="Delete" data-toast="Message moved to Trash" data-toast-title="Deleted" data-toast-variant="danger">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      </button></span>
+    </div>
+
+    <div class="read-scroll">
+      <article class="article-header" data-reveal>
+        <span class="kicker" id="read-label">Breaking · National Affairs</span>
+        <h1 class="article-header__headline" id="read-subject" style="font-family:var(--font-masthead);font-weight:900;font-size:var(--text-4xl);line-height:var(--leading-tight);margin:var(--space-2) 0 var(--space-4)">Senate Reform Vote — final count confirmed at 58–41</h1>
+
+        <div class="read-from">
+          <span class="avatar avatar--lg"><span class="avatar__initials" id="read-initials">MR</span><span class="avatar__status avatar__status--online"></span></span>
+          <span class="read-from__meta">
+            <span class="byline">From <strong id="read-from">Margaret Reyes</strong> <span class="text-muted text-mono" id="read-email">&lt;m.reyes@ledger.press&gt;</span></span><br>
+            <span class="dateline">To: City Desk, Copydesk · <span id="read-date">Today · 4:18 a.m.</span></span>
+          </span>
+        </div>
+      </article>
+
+      <hr class="rule-medium">
+
+      <div class="read-body" style="margin-top:var(--space-6); max-width: 68ch" data-reveal>
+        <p class="drop-cap">Filed the wrap from the press gallery a few minutes after the clerk read the roll. The count held at 58–41, which is wider than the floor whip suggested last night, so we should lead with the margin rather than the procedural drama. I have the majority leader on the record outside the chamber, and a usable line from the ranking member of the opposition for balance.</p>
+        <p>The one soft spot is the timeline graf. Leadership is promising a signature "within the week," but two staffers told me privately the implementation clock does not start until the next fiscal year. I have hedged the language — please give it a second read before A1 closes so we are not overstating the speed.</p>
+        <p>Photo desk has three frames from the final hour of debate; Dele is sending crops separately. I would run the chamber-floor frame above the fold and hold the leader's portrait for the jump on A6. The pull quote — "this is what the institution looks like when it works" — is clean and verified against my recorder.</p>
+        <p>One housekeeping note: the moderate bloc that revived the bill after it died in committee deserves a sidebar of its own. I can turn 12 inches by the morning budget if the desk wants it. Let me know on the 9 o'clock call.</p>
+        <p>Sending the raw audio to the shared drive now. Holler if you need anything before the late plates lock.</p>
+        <p class="byline">— Margaret</p>
+      </div>
+    </div>
+
+    <div class="quick-reply no-print">
+      <label class="field__label" for="quick-reply-text">Quick reply</label>
+      <textarea class="textarea" id="quick-reply-text" rows="3" placeholder="Type a reply to the wire desk…"></textarea>
+      <div class="row row-between mt-2">
+        <span class="dateline">Replying to <span id="reply-to">Margaret Reyes</span></span>
+        <button class="btn btn--primary btn--sm" id="quick-send"
+          data-toast="Your reply is on the wire" data-toast-title="Reply sent" data-toast-variant="success">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+          Send
+        </button>
+      </div>
+    </div>
+  </section>
+
+</div>
+</main>
+
+<!-- Compose modal -->
+<div class="modal" id="compose" role="dialog" aria-modal="true" aria-labelledby="compose-title" hidden>
+  <div class="modal__head">
+    <h2 class="modal__title" id="compose-title">New Dispatch</h2>
+    <button class="btn btn--icon btn--sm modal__close" data-modal-close aria-label="Close compose">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="modal__body">
+    <div class="field">
+      <label class="field__label" for="compose-to">To <span class="req">*</span></label>
+      <input class="input" id="compose-to" type="email" placeholder="copydesk@ledger.press">
+    </div>
+    <div class="field mt-4">
+      <label class="field__label" for="compose-subject">Subject <span class="req">*</span></label>
+      <input class="input" id="compose-subject" type="text" placeholder="Re: morning budget — lead head options">
+    </div>
+    <div class="field mt-4">
+      <label class="field__label" for="compose-body">Message</label>
+      <textarea class="textarea" id="compose-body" rows="6" placeholder="Set your dispatch in plain, declarative copy…"></textarea>
+    </div>
+  </div>
+  <div class="modal__foot">
+    <button class="btn btn--ghost" data-modal-close>Discard</button>
+    <button class="btn btn--primary" data-modal-close
+      data-toast="Your dispatch is on the wire" data-toast-title="Dispatch sent" data-toast-variant="success">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+      Send
+    </button>
+  </div>
+</div>
+
+<!-- Command palette -->
+<div class="command" data-command role="dialog" aria-modal="true" aria-label="Command palette" hidden>
+  <div class="command__search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="Search…" aria-label="Command input"><kbd>ESC</kbd></div>
+  <div class="command__list">
+    <div class="command__group-label">Navigate</div>
+    <button class="command__item" data-href="../index.html">Back to Hub</button>
+    <button class="command__item" data-href="dashboard.html">Analytics Desk</button>
+    <button class="command__item" data-href="front-page.html">Front Page</button>
+    <div class="command__group-label">Commands</div>
+    <button class="command__item" data-action="toggle-theme">Toggle Day / Night Edition</button>
+  </div>
+  <div class="command__empty" hidden>No matching entry.</div>
+  <div class="command__foot"><span><kbd>↑</kbd><kbd>↓</kbd> nav</span><span><kbd>↵</kbd> select</span><span><kbd>esc</kbd> close</span></div>
+</div>
+
+<script src="../app.js" defer></script>
+<script>
+  // The Wire — message-row interaction (null-guarded throughout)
+  (function () {
+    var list = document.querySelector('.msglist');
+    if (!list) return;
+
+    var subjectEl  = document.getElementById('read-subject');
+    var labelEl    = document.getElementById('read-label');
+    var fromEl     = document.getElementById('read-from');
+    var emailEl    = document.getElementById('read-email');
+    var initialsEl = document.getElementById('read-initials');
+    var dateEl     = document.getElementById('read-date');
+    var replyToEl  = document.getElementById('reply-to');
+    var countEl    = document.getElementById('inbox-count');
+
+    function setText(el, value) { if (el && typeof value === 'string') el.textContent = value; }
+
+    function updatePane(row) {
+      if (!row) return;
+      var d = row.dataset || {};
+      setText(subjectEl, d.subject);
+      if (labelEl && d.label) labelEl.textContent = d.label + ' · Wire Desk';
+      setText(fromEl, d.from);
+      if (emailEl && d.email) emailEl.textContent = '<' + d.email + '>';
+      setText(initialsEl, d.initials);
+      setText(dateEl, d.date);
+      setText(replyToEl, d.from);
+    }
+
+    function decrementCount() {
+      if (!countEl) return;
+      var n = parseInt(countEl.textContent, 10);
+      if (isNaN(n) || n <= 0) return;
+      n -= 1;
+      if (n <= 0) {
+        countEl.textContent = '';
+        countEl.setAttribute('hidden', '');
+      } else {
+        countEl.textContent = String(n);
+      }
+    }
+
+    function selectRow(row) {
+      if (!row) return;
+      var rows = list.querySelectorAll('.msg');
+      for (var i = 0; i < rows.length; i++) rows[i].classList.remove('is-active');
+      row.classList.add('is-active');
+
+      // clear unread state + remove its dot + decrement Inbox count
+      if (row.classList.contains('is-unread')) {
+        row.classList.remove('is-unread');
+        var dot = row.querySelector('.msg__unread-dot');
+        if (dot && dot.parentNode) dot.parentNode.removeChild(dot);
+        decrementCount();
+      }
+
+      updatePane(row);
+    }
+
+    list.addEventListener('click', function (e) {
+      var row = e.target && e.target.closest ? e.target.closest('.msg') : null;
+      if (row) selectRow(row);
+    });
+
+    // focus the quick-reply when the toolbar Reply is pressed
+    var replyBtn = document.getElementById('reply-btn');
+    var replyText = document.getElementById('quick-reply-text');
+    if (replyBtn && replyText) {
+      replyBtn.addEventListener('click', function () { replyText.focus(); });
+    }
+
+    // clear the textarea after a successful quick send
+    var sendBtn = document.getElementById('quick-send');
+    if (sendBtn && replyText) {
+      sendBtn.addEventListener('click', function () { replyText.value = ''; });
+    }
+  })();
+</script>
+</body>
+</html>

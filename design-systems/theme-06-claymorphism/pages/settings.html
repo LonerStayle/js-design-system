@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>설정 · Claymorphism — theme-06</title>
+<meta name="description" content="클레이모피즘 디자인 시스템으로 만든 계정 설정 화면. 프로필·계정·알림·보안·결제·위험 영역을 탭으로 구성한 반응형 데모.">
+<link rel="stylesheet" href="../theme.css">
+<style>
+  /* settings 전용 데모 레이아웃 (디자인 시스템 외부 헬퍼) */
+  .page-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: var(--space-6); flex-wrap: wrap; margin-bottom: var(--space-8);
+  }
+  .page-head__titles { display: flex; flex-direction: column; gap: var(--space-2); }
+  .page-head__kicker {
+    color: var(--color-primary); font-weight: var(--weight-extrabold);
+    text-transform: uppercase; letter-spacing: var(--tracking-widest);
+    font-size: var(--text-sm); display: inline-flex; align-items: center; gap: var(--space-2);
+  }
+  .page-head__actions { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+
+  /* 설정 본문: 탭리스트는 넓은 화면에서 사이드, 좁으면 위로 스택 */
+  .settings-tabs.tabs { gap: var(--space-7); }
+  @media (min-width: 940px) {
+    .settings-tabs.tabs {
+      display: grid;
+      grid-template-columns: 16rem 1fr;
+      gap: var(--space-8);
+      align-items: start;
+    }
+    .settings-tabs .tablist {
+      flex-direction: column; align-self: stretch;
+      position: sticky; top: var(--space-5);
+      border-radius: var(--radius-lg);
+    }
+    .settings-tabs .tab { justify-content: flex-start; width: 100%; }
+  }
+  .settings-tabs .tab .icon { width: 1.2rem; height: 1.2rem; flex-shrink: 0; }
+
+  .panel-stack { display: flex; flex-direction: column; gap: var(--space-6); }
+  .field-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-6); }
+  @media (max-width: 620px) { .field-grid { grid-template-columns: 1fr; } }
+
+  /* 프로필 아바타 행 */
+  .avatar-row { display: flex; align-items: center; gap: var(--space-6); flex-wrap: wrap; }
+  .avatar-row .file-upload { flex: 1; min-width: 14rem; padding: var(--space-6); }
+
+  /* 알림/리스트 행 우측 토글 정렬 */
+  .row-toggle { display: flex; align-items: center; justify-content: space-between; gap: var(--space-5); }
+  .row-toggle__main { min-width: 0; }
+  .row-toggle__title { font-weight: var(--weight-bold); font-family: var(--font-display); }
+  .row-toggle__sub { color: var(--color-text-muted); font-size: var(--text-sm); margin-top: var(--space-1); }
+
+  .meta-divider {
+    height: 2px; background: var(--color-border);
+    margin: var(--space-5) 0; border-radius: var(--radius-full); border: none;
+  }
+  .list__icon {
+    display: grid; place-items: center; width: 2.8rem; height: 2.8rem;
+    border-radius: var(--radius-md); background: var(--color-surface-2);
+    color: var(--color-primary); box-shadow: var(--shadow-clay-sm); flex-shrink: 0;
+  }
+  .list__icon .icon { width: 1.3rem; height: 1.3rem; }
+
+  /* 결제: 현재 플랜 카드 강조 */
+  .plan-hero {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--space-6); flex-wrap: wrap;
+  }
+  .plan-price { font-family: var(--font-display); font-weight: var(--weight-extrabold);
+    font-size: var(--text-3xl); line-height: 1; }
+  .plan-price small { font-size: var(--text-base); color: var(--color-text-muted); font-weight: var(--weight-bold); }
+
+  .footer-note { text-align: center; padding-block: var(--space-9) var(--space-10); }
+</style>
+</head>
+<body>
+<a href="#main" class="skip-link">본문으로 건너뛰기</a>
+
+<!-- ========================= 계정 삭제 확인 모달 ========================= -->
+<div class="overlay" id="del" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="del-title">
+  <div class="modal modal--sm" role="document">
+    <div class="modal__icon" style="background:var(--color-danger-soft);color:var(--color-danger)">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M12 4 22 19H2Z"/><line x1="12" y1="10" x2="12" y2="14"/><circle cx="12" cy="16.8" r="0.6" fill="currentColor"/></svg>
+    </div>
+    <div class="modal__header">
+      <h2 class="modal__title" id="del-title">계정을 삭제할까요?</h2>
+      <button class="modal__close" data-close aria-label="닫기"><svg class="icon" viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
+    </div>
+    <div class="modal__body">
+      <p>이 작업은 <strong style="color:var(--color-text)">되돌릴 수 없어요.</strong> 모든 프로젝트, 결제 내역, 파일이 영구히 삭제됩니다.</p>
+      <div class="field mt-6">
+        <label class="field__label" for="del-confirm">계속하려면 <code>삭제</code> 를 입력하세요</label>
+        <input class="input" id="del-confirm" placeholder="삭제" autocomplete="off" aria-describedby="del-hint">
+        <span class="field__hint" id="del-hint">정확히 “삭제” 라고 입력해야 버튼이 활성화돼요.</span>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn-ghost" data-close>취소</button>
+      <button class="btn btn-danger" id="del-confirm-btn" disabled
+              data-close data-toast data-toast-variant="danger"
+              data-toast-title="계정 삭제 예약됨" data-toast-text="30일 내 로그인하면 복구할 수 있어요.">계정 영구 삭제</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========================= 네비게이션 ========================= -->
+<div class="container" style="padding-top:var(--space-5)">
+  <nav class="navbar navbar--sticky" aria-label="주요">
+    <a class="navbar__brand" href="../index.html">
+      <span class="logo"><svg class="icon" viewBox="0 0 24 24" style="stroke-width:2.6"><path d="M12 2a4 4 0 0 1 4 4c2 0 4 2 4 4a4 4 0 0 1-1 7H7a4 4 0 0 1-1-7c0-2 2-4 4-4a4 4 0 0 1 4-4Z"/></svg></span>
+      <span>Clay<span style="color:var(--color-primary)">UI</span></span>
+    </a>
+    <div class="navbar__nav hide-mobile">
+      <a class="nav-link" href="../index.html">← 디자인 시스템 허브</a>
+    </div>
+    <div class="navbar__actions">
+      <a class="btn btn-ghost btn-sm hide-mobile" href="../index.html">허브로</a>
+      <button class="btn-icon btn btn-secondary" data-theme-toggle aria-label="테마 전환" aria-pressed="false" data-tooltip="라이트/다크" data-tooltip-pos="bottom">
+        <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
+      </button>
+    </div>
+  </nav>
+</div>
+
+<main id="main" class="container section" style="padding-top:var(--space-8)">
+  <!-- ========================= 헤더 ========================= -->
+  <header class="page-head">
+    <div class="page-head__titles">
+      <span class="page-head__kicker">
+        <svg class="icon" viewBox="0 0 24 24" style="width:1rem;height:1rem"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8M4.6 9a1.6 1.6 0 0 0-.3-1.8"/></svg>
+        계정 관리
+      </span>
+      <h1>설정</h1>
+      <p class="text-lg text-muted" style="max-width:48ch">프로필, 알림, 보안, 결제까지 — 계정을 내 취향대로 말랑하게 다듬어 보세요.</p>
+    </div>
+    <div class="page-head__actions">
+      <button class="btn btn-ghost" type="button">변경 취소</button>
+      <button class="btn btn-primary" type="button"
+              data-toast data-toast-variant="success"
+              data-toast-title="저장 완료 🎉" data-toast-text="모든 변경 사항이 안전하게 반영됐어요.">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+        변경사항 저장
+      </button>
+    </div>
+  </header>
+
+  <!-- ========================= 탭 ========================= -->
+  <div data-tabs class="tabs settings-tabs">
+    <div class="tablist" role="tablist" aria-label="설정 섹션">
+      <button class="tab" role="tab" id="t-profile" aria-controls="p-profile" aria-selected="true">
+        <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>프로필
+      </button>
+      <button class="tab" role="tab" id="t-account" aria-controls="p-account" aria-selected="false" tabindex="-1">
+        <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8M4.6 9a1.6 1.6 0 0 0-.3-1.8"/></svg>계정
+      </button>
+      <button class="tab" role="tab" id="t-notif" aria-controls="p-notif" aria-selected="false" tabindex="-1">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>알림
+      </button>
+      <button class="tab" role="tab" id="t-security" aria-controls="p-security" aria-selected="false" tabindex="-1">
+        <svg class="icon" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>보안
+      </button>
+      <button class="tab" role="tab" id="t-billing" aria-controls="p-billing" aria-selected="false" tabindex="-1">
+        <svg class="icon" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><line x1="2" y1="10" x2="22" y2="10"/></svg>결제
+      </button>
+      <button class="tab" role="tab" id="t-danger" aria-controls="p-danger" aria-selected="false" tabindex="-1">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M12 4 22 19H2Z"/><line x1="12" y1="10" x2="12" y2="14"/></svg>위험 영역
+      </button>
+    </div>
+
+    <!-- ===================== 패널: 프로필 ===================== -->
+    <div class="tab-panel" id="p-profile" role="tabpanel" aria-labelledby="t-profile" tabindex="0">
+      <div class="panel-stack">
+        <section class="card card--pad-lg">
+          <div class="card__header">
+            <div><h2 class="card__title">프로필 사진</h2><p class="card__subtitle">팀원에게 보이는 공개 이미지예요.</p></div>
+          </div>
+          <div class="avatar-row">
+            <div class="avatar avatar--xl avatar--violet" aria-hidden="true">지수
+              <span class="avatar__status avatar__status--online"></span>
+            </div>
+            <div class="file-upload" data-file-list="#avatar-files">
+              <span class="file-upload__icon"><svg class="icon" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span>
+              <div class="file-upload__title">새 사진 올리기</div>
+              <div class="text-sm text-muted">PNG, JPG · 정사각형 권장 · 최대 5MB</div>
+              <input type="file" accept="image/png,image/jpeg" aria-label="프로필 사진 업로드">
+            </div>
+          </div>
+          <div id="avatar-files" class="stack-sm mt-5"></div>
+        </section>
+
+        <section class="card card--pad-lg">
+          <div class="card__header">
+            <div><h2 class="card__title">기본 정보</h2><p class="card__subtitle">이름과 소개는 멘션·검색에 사용됩니다.</p></div>
+          </div>
+          <div class="stack">
+            <div class="field-grid">
+              <div class="field">
+                <label class="field__label" for="pf-name">이름 <span class="req">*</span></label>
+                <input class="input" id="pf-name" value="김지수" autocomplete="name">
+              </div>
+              <div class="field">
+                <label class="field__label" for="pf-username">사용자명 <span class="req">*</span></label>
+                <div class="input-group input-group--icon-left">
+                  <span class="input-group__icon" aria-hidden="true">@</span>
+                  <input class="input" id="pf-username" value="jisoo.kim" autocomplete="username" style="padding-left:var(--space-9)">
+                </div>
+                <span class="field__hint">clay.ui/@jisoo.kim 으로 공개돼요.</span>
+              </div>
+            </div>
+            <div class="field">
+              <label class="field__label" for="pf-bio">소개</label>
+              <textarea class="textarea" id="pf-bio" placeholder="자기소개를 적어 주세요…">프로덕트 디자이너 · 말랑한 인터페이스를 좋아합니다 🫧</textarea>
+              <span class="field__hint">최대 160자 · 마크다운은 지원하지 않아요.</span>
+            </div>
+            <div class="field">
+              <label class="field__label" for="pf-web">웹사이트</label>
+              <div class="input-group input-group--icon-left">
+                <span class="input-group__icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
+                <input class="input" id="pf-web" type="url" value="https://jisoo.design" autocomplete="url" placeholder="https://example.com">
+              </div>
+            </div>
+          </div>
+          <div class="card__footer" style="justify-content:flex-end">
+            <button class="btn btn-soft" type="button">초기화</button>
+            <button class="btn btn-primary" type="button"
+                    data-toast data-toast-variant="success"
+                    data-toast-title="프로필 저장됨" data-toast-text="기본 정보가 업데이트됐어요.">프로필 저장</button>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ===================== 패널: 계정 ===================== -->
+    <div class="tab-panel" id="p-account" role="tabpanel" aria-labelledby="t-account" tabindex="0" hidden>
+      <div class="panel-stack">
+        <section class="card card--pad-lg">
+          <div class="card__header">
+            <div><h2 class="card__title">이메일 &amp; 지역</h2><p class="card__subtitle">로그인 계정과 표시 설정을 관리합니다.</p></div>
+          </div>
+          <div class="stack">
+            <div class="field">
+              <label class="field__label" for="ac-email">이메일</label>
+              <div class="input-group input-group--icon-left">
+                <span class="input-group__icon"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><polyline points="4 7 12 13 20 7"/></svg></span>
+                <input class="input" id="ac-email" type="email" value="jisoo.kim@clay.ui" autocomplete="email">
+              </div>
+              <span class="field__hint" style="display:inline-flex;align-items:center;gap:var(--space-2)">
+                <span class="badge badge--success"><svg class="icon" viewBox="0 0 24 24" style="width:1em;height:1em"><polyline points="4 12 10 18 20 6"/></svg>인증됨</span>
+                2024년 3월에 인증이 완료됐어요.
+              </span>
+            </div>
+            <div class="field-grid">
+              <div class="field">
+                <label class="field__label">언어</label>
+                <div class="segmented" role="group" aria-label="언어 선택">
+                  <label class="segmented__option"><input type="radio" name="lang" checked>한국어</label>
+                  <label class="segmented__option"><input type="radio" name="lang">English</label>
+                  <label class="segmented__option"><input type="radio" name="lang">日本語</label>
+                </div>
+              </div>
+              <div class="field">
+                <label class="field__label" for="ac-tz">시간대</label>
+                <select class="select" id="ac-tz">
+                  <option selected>(GMT+09:00) 서울</option>
+                  <option>(GMT+09:00) 도쿄</option>
+                  <option>(GMT+00:00) 런던</option>
+                  <option>(GMT−08:00) 로스앤젤레스</option>
+                  <option>(GMT−05:00) 뉴욕</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label class="field__label">테마</label>
+              <div class="segmented" role="group" aria-label="테마 선호">
+                <label class="segmented__option"><input type="radio" name="pref-theme" checked>라이트</label>
+                <label class="segmented__option"><input type="radio" name="pref-theme">다크</label>
+                <label class="segmented__option"><input type="radio" name="pref-theme">시스템</label>
+              </div>
+              <span class="field__hint">상단의 테마 버튼으로 즉시 미리볼 수 있어요.</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="card card--pad-lg">
+          <div class="card__header">
+            <div><h2 class="card__title">계정 옵션</h2></div>
+          </div>
+          <div class="stack">
+            <div class="row-toggle">
+              <div class="row-toggle__main">
+                <div class="row-toggle__title">검색에 내 프로필 노출</div>
+                <div class="row-toggle__sub">이름이나 사용자명으로 다른 사람이 나를 찾을 수 있어요.</div>
+              </div>
+              <label class="switch"><input type="checkbox" checked><span class="switch__track"><span class="switch__thumb"></span></span><span class="sr-only">검색 노출</span></label>
+            </div>
+            <hr class="meta-divider">
+            <div class="row-toggle">
+              <div class="row-toggle__main">
+                <div class="row-toggle__title">활동 상태 표시</div>
+                <div class="row-toggle__sub">온라인 여부를 팀원에게 보여줍니다.</div>
+              </div>
+              <label class="switch"><input type="checkbox" checked><span class="switch__track"><span class="switch__thumb"></span></span><span class="sr-only">활동 상태</span></label>
+            </div>
+          </div>
+          <div class="card__footer" style="justify-content:flex-end">
+            <button class="btn btn-primary" type="button"
+                    data-toast data-toast-variant="success"
+                    data-toast-title="계정 설정 저장됨" data-toast-text="지역·테마 설정이 적용됐어요.">계정 저장</button>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ===================== 패널: 알림 ===================== -->
+    <div class="tab-panel" id="p-notif" role="tabpanel" aria-labelledby="t-notif" tabindex="0" hidden>
+      <div class="panel-stack">
+        <section class="card card--pad-lg">
+          <div class="card__header">
+            <div><h2 class="card__title">이메일 알림</h2><p class="card__subtitle">받은 편지함으로 보낼 소식을 골라 주세요.</p></div>
+          </div>
+          <div class="stack">
+            <div class="row-toggle">
+              <div class="row-toggle__main">
+                <div class="row-toggle__title">제품 업데이트</div>
+                <div class="row-toggle__sub">새 기능과 개선 사항을 이메일로 받아요.</div>
+              </div>
+              <label class="switch"><input type="checkbox" checked><span class="switch__track"><span class="switch__thumb"></span></span><span class="sr-only">제품 업데이트 이메일</span></label>
+            </div>
+            <hr class="meta-divider">
+            <div class="row-toggle">
+              <div class="row-toggle__main">
+                <div class="row-toggle__title">주간 요약</div>
+                <div class="row-toggle__sub">매주 월요일 아침, 지난주 활동을 정리해 드려요.</div>
+              </div>
+              <label class="switch"><input type="checkbox" checked><span class="switch__track"><span class="switch__thumb"></span></span><span class="sr-only">주간 요약 이메일</span></label>
+            </div>
+            <hr class="meta-divider">
+            <div class="row-toggle">
+              <div class="row-toggle__main">
+                <div class="row-toggle__title">마케팅 &amp; 프로모션</div>
+                <div class="row-toggle__sub">이벤트, 할인 소식. 언제든 끌 수 있어요.</div>
+              </div>
+              <label class="switch"><input type="checkbox"><span class="switch__track"><span class="switch__thumb"></span></span><span class="sr-only">마케팅 이메일</span></label>
+            </div>
+          </div>
+        </section>
+
+        <section class="card card--pad-lg">
+          <div class="card__header">
+            <div><h2 class="card__title">푸시 알림</h2><p class="card__subtitle">앱·브라우저로 받는 실시간 알림이에요.</p></div>
+          </div>
+          <div class="stack">
+            <div class="row-toggle">
+              <div class="row-toggle__main">
+                <div class="row-toggle__title">멘션 &amp; 답글</div>
+                <div class="row-toggle__sub">누군가 나를 @멘션 하면 바로 알려드려요.</div>
+              </div>
+              <label class="switch"><input type="checkbox" checked><span class="switch__track"><span class="switch__thumb"></span></span><span class="sr-only">멘션 푸시</span></label>
+            </div>
+            <hr class="meta-divider">
+            <div class="row-toggle">
+              <div class="row-toggle__main">
+                <div class="row-toggle__title">댓글 &amp; 반응</div>
+                <div class="row-toggle__sub">내 게시물에 달린 새 활동.</div>
+              </div>
+              <label class="switch"><input type="checkbox" checked><span class="switch__track"><span class="switch__thumb"></span></span><span class="sr-only">댓글 푸시</span></label>
+            </div>
+            <hr class="meta-divider">
+            <div class="field">
+              <label class="field__label" for="ntf-quiet">방해 금지 강도 <span data-slider-output>40</span>%</label>
+              <div class="slider-wrap">
+                <input type="range" class="slider" id="ntf-quiet" min="0" max="100" value="40" aria-label="방해 금지 강도">
+              </div>
+              <span class="field__hint">높일수록 중요한 알림만 즉시 전달돼요.</span>
+            </div>
+          </div>
+          <div class="card__footer" style="justify-content:flex-end">
+            <button class="btn btn-primary" type="button"
+                    data-toast data-toast-variant="success"
+                    data-toast-title="알림 설정 저장됨" data-toast-text="새 알림 환경설정이 적용됐어요.">알림 저장</button>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ===================== 패널: 보안 ===================== -->
+    <div class="tab-panel" id="p-security" role="tabpanel" aria-labelledby="t-security" tabindex="0" hidden>
+      <div class="panel-stack">
+        <section class="card card--pad-lg">
+          <div class="card__header">
+            <div><h2 class="card__title">비밀번호 변경</h2><p class="card__subtitle">8자 이상, 숫자와 특수문자를 섞어 주세요.</p></div>
+          </div>
+          <div class="stack">
+            <div class="field">
+              <label class="field__label" for="sec-cur">현재 비밀번호</label>
+              <div class="input-group input-group--icon-left">
+                <span class="input-group__icon"><svg class="icon" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
+                <input class="input" id="sec-cur" type="password" autocomplete="current-password" placeholder="••••••••">
+              </div>
+            </div>
+            <div class="field-grid">
+              <div class="field">
+                <label class="field__label" for="sec-new">새 비밀번호</label>
+                <input class="input" id="sec-new" type="password" autocomplete="new-password" placeholder="새 비밀번호">
+              </div>
+              <div class="field">
+                <label class="field__label" for="sec-new2">새 비밀번호 확인</label>
+                <input class="input" id="sec-new2" type="password" autocomplete="new-password" placeholder="다시 입력">
+              </div>
+            </div>
+          </div>
+          <div class="card__footer" style="justify-content:flex-end">
+            <button class="btn btn-primary" type="button"
+                    data-toast data-toast-variant="success"
+                    data-toast-title="비밀번호 변경됨" data-toast-text="다음 로그인부터 새 비밀번호를 사용해 주세요.">비밀번호 변경</button>
+          </div>
+        </section>
+
+        <section class="card card--pad-lg">
+          <div class="row-toggle">
+            <div class="row-toggle__main">
+              <div class="row-toggle__title" style="display:flex;align-items:center;gap:var(--space-3)">
+                2단계 인증 (2FA)
+                <span class="badge badge--success"><span class="badge__dot"></span>활성</span>
+              </div>
+              <div class="row-toggle__sub">로그인 시 인증 앱의 코드를 추가로 요구합니다.</div>
+            </div>
+            <label class="switch"><input type="checkbox" checked><span class="switch__track"><span class="switch__thumb"></span></span><span class="sr-only">2단계 인증</span></label>
+          </div>
+        </section>
+
+        <section class="stack-sm">
+          <h2 class="card__title" style="padding-inline:var(--space-2)">활성 세션</h2>
+          <ul class="list">
+            <li class="list__item">
+              <span class="list__icon"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><line x1="8" y1="20" x2="16" y2="20"/><line x1="12" y1="16" x2="12" y2="20"/></svg></span>
+              <div class="list__main">
+                <div class="list__title">MacBook Pro · Chrome <span class="badge badge--info">현재 기기</span></div>
+                <div class="list__sub">서울, 대한민국 · 방금 활동</div>
+              </div>
+              <button class="btn btn-soft btn-sm" type="button" disabled>현재</button>
+            </li>
+            <li class="list__item">
+              <span class="list__icon"><svg class="icon" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="3"/><line x1="10" y1="18.5" x2="14" y2="18.5"/></svg></span>
+              <div class="list__main">
+                <div class="list__title">iPhone 15 · Clay 앱</div>
+                <div class="list__sub">부산, 대한민국 · 2시간 전</div>
+              </div>
+              <button class="btn btn-ghost btn-sm" type="button"
+                      data-toast data-toast-variant="success"
+                      data-toast-title="로그아웃 완료" data-toast-text="iPhone 15 세션을 종료했어요.">로그아웃</button>
+            </li>
+            <li class="list__item">
+              <span class="list__icon"><svg class="icon" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2"/><line x1="2" y1="20" x2="22" y2="20"/></svg></span>
+              <div class="list__main">
+                <div class="list__title">Windows PC · Edge</div>
+                <div class="list__sub">인천, 대한민국 · 3일 전</div>
+              </div>
+              <button class="btn btn-ghost btn-sm" type="button"
+                      data-toast data-toast-variant="success"
+                      data-toast-title="로그아웃 완료" data-toast-text="Windows PC 세션을 종료했어요.">로그아웃</button>
+            </li>
+          </ul>
+        </section>
+      </div>
+    </div>
+
+    <!-- ===================== 패널: 결제 ===================== -->
+    <div class="tab-panel" id="p-billing" role="tabpanel" aria-labelledby="t-billing" tabindex="0" hidden>
+      <div class="panel-stack">
+        <section class="card card--pad-lg card--accent">
+          <div class="plan-hero">
+            <div class="stack-sm">
+              <span class="badge badge--primary"><span class="badge__dot"></span>현재 플랜</span>
+              <h2 class="card__title" style="font-size:var(--text-2xl)">Clay Pro</h2>
+              <p class="text-muted">팀 시트 무제한 · 우선 지원 · 고급 분석</p>
+            </div>
+            <div class="stack-sm" style="text-align:right">
+              <div class="plan-price">₩19,000<small> / 월</small></div>
+              <span class="text-sm text-muted">다음 결제일 · 2026년 7월 1일</span>
+            </div>
+          </div>
+          <div class="card__footer">
+            <button class="btn btn-primary" type="button"
+                    data-toast data-toast-variant="info"
+                    data-toast-title="플랜 변경" data-toast-text="요금제 비교 화면으로 이동할게요.">플랜 변경</button>
+            <button class="btn btn-soft" type="button">청구서 다운로드</button>
+          </div>
+        </section>
+
+        <section class="stack-sm">
+          <h2 class="card__title" style="padding-inline:var(--space-2)">결제 수단</h2>
+          <ul class="list">
+            <li class="list__item">
+              <span class="list__icon" style="color:var(--sky-600)"><svg class="icon" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span>
+              <div class="list__main">
+                <div class="list__title">Visa •••• 4242 <span class="badge badge--success">기본</span></div>
+                <div class="list__sub">만료 09/27</div>
+              </div>
+              <button class="btn btn-ghost btn-sm" type="button">편집</button>
+            </li>
+            <li class="list__item">
+              <span class="list__icon" style="color:var(--coral-500)"><svg class="icon" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span>
+              <div class="list__main">
+                <div class="list__title">Mastercard •••• 8888</div>
+                <div class="list__sub">만료 12/26</div>
+              </div>
+              <button class="btn btn-ghost btn-sm" type="button">편집</button>
+            </li>
+          </ul>
+          <div class="cluster" style="padding-inline:var(--space-2);margin-top:var(--space-3)">
+            <button class="btn btn-secondary btn-sm" type="button"
+                    data-toast data-toast-title="결제 수단 추가" data-toast-text="카드 등록 폼을 열게요.">
+              <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              결제 수단 추가
+            </button>
+          </div>
+        </section>
+
+        <section class="stack-sm">
+          <h2 class="card__title" style="padding-inline:var(--space-2)">결제 내역</h2>
+          <div class="table-wrap">
+            <div class="table-scroll">
+              <table class="table table--zebra">
+                <thead>
+                  <tr><th>날짜</th><th>내역</th><th>상태</th><th class="num">금액</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>2026.06.01</td><td>Clay Pro · 월간</td><td><span class="badge badge--success">결제됨</span></td><td class="num">₩19,000</td></tr>
+                  <tr><td>2026.05.01</td><td>Clay Pro · 월간</td><td><span class="badge badge--success">결제됨</span></td><td class="num">₩19,000</td></tr>
+                  <tr><td>2026.04.01</td><td>Clay Pro · 월간</td><td><span class="badge badge--success">결제됨</span></td><td class="num">₩19,000</td></tr>
+                  <tr><td>2026.03.01</td><td>추가 시트 ×2</td><td><span class="badge badge--warning">환불</span></td><td class="num">−₩8,000</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ===================== 패널: 위험 영역 ===================== -->
+    <div class="tab-panel" id="p-danger" role="tabpanel" aria-labelledby="t-danger" tabindex="0" hidden>
+      <div class="panel-stack">
+        <div class="alert alert--warning">
+          <span class="alert__icon"><svg class="icon" viewBox="0 0 24 24"><path d="M12 4 22 19H2Z"/><line x1="12" y1="10" x2="12" y2="14"/><circle cx="12" cy="16.8" r="0.6" fill="currentColor"/></svg></span>
+          <div class="alert__body">
+            <div class="alert__title">신중하게 진행해 주세요</div>
+            <div class="alert__text">아래 작업은 계정과 데이터에 큰 영향을 주며 일부는 되돌릴 수 없어요.</div>
+          </div>
+        </div>
+
+        <section class="card card--pad-lg card--accent">
+          <div class="stack">
+            <div class="row-toggle">
+              <div class="row-toggle__main">
+                <div class="row-toggle__title">계정 비활성화</div>
+                <div class="row-toggle__sub">프로필이 숨겨지고 알림이 멈춰요. 다시 로그인하면 즉시 복구됩니다.</div>
+              </div>
+              <button class="btn btn-soft" type="button"
+                      data-toast data-toast-variant="warning"
+                      data-toast-title="계정 비활성화됨" data-toast-text="다시 로그인하면 언제든 돌아올 수 있어요.">비활성화</button>
+            </div>
+            <hr class="meta-divider">
+            <div class="row-toggle">
+              <div class="row-toggle__main">
+                <div class="row-toggle__title" style="color:var(--color-danger)">계정 삭제</div>
+                <div class="row-toggle__sub">모든 프로젝트, 결제 내역, 파일이 영구히 삭제됩니다. 되돌릴 수 없어요.</div>
+              </div>
+              <button class="btn btn-danger" type="button" data-open="#del">
+                <svg class="icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6 18 20a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                계정 삭제
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer-note">
+    <p class="text-sm text-subtle">theme-06 · Claymorphism — 설정 데모 화면 · <a href="../index.html" style="color:var(--color-primary);font-weight:var(--weight-bold)">디자인 시스템 허브로 돌아가기</a></p>
+  </footer>
+</main>
+
+<script>
+  /* 삭제 확인 모달: "삭제" 정확히 입력해야 danger 버튼 활성화 */
+  (function () {
+    var input = document.getElementById("del-confirm");
+    var btn = document.getElementById("del-confirm-btn");
+    if (!input || !btn) return;
+    var KEYWORD = "삭제";
+    function sync() { btn.disabled = input.value.trim() !== KEYWORD; }
+    input.addEventListener("input", sync);
+    // 모달이 닫힐 때 입력값 리셋 (data-close 클릭 시)
+    document.addEventListener("click", function (e) {
+      if (e.target.closest("#del [data-close]") || e.target.closest("#del-confirm-btn")) {
+        setTimeout(function () { input.value = ""; sync(); }, 50);
+      }
+    });
+    sync();
+  })();
+</script>
+<script src="../app.js"></script>
+</body>
+</html>

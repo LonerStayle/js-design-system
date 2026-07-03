@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kawaii Mail ♡ Pastel Kawaii</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../theme.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23FF8FBC' d='M12 21s-7.5-4.9-10-9.3C.3 8.6 1.6 5 5 5c2 0 3.3 1.1 4 2.3C9.7 6.1 11 5 13 5c3.4 0 4.7 3.6 3 6.7C19.5 16.1 12 21 12 21z'/%3E%3C/svg%3E">
+<style>
+  /* ── 인박스 3패널 셸 (토큰만 사용, 셸 그리드만 보강) ── */
+  .mail-app {
+    display: grid;
+    grid-template-columns: 248px minmax(320px, 400px) 1fr;
+    height: calc(100vh - var(--navbar-h));
+    min-height: 0;
+  }
+  .mail-pane { min-height: 0; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+  .mail-pane.scroll { overflow-y: auto; }
+
+  /* 좌 — 폴더 사이드 */
+  .folder-pane {
+    background: var(--sidebar-bg);
+    border-right: var(--border-2) solid var(--color-border);
+    padding: var(--space-4);
+    gap: var(--space-2);
+    overflow-y: auto;
+  }
+  .folder-pane .side-item .label-dot {
+    width: 0.85rem; height: 0.85rem; border-radius: 50%; flex-shrink: 0;
+    box-shadow: var(--shadow-xs);
+  }
+
+  /* 중 — 메일 리스트 */
+  .list-pane { border-right: var(--border-2) solid var(--color-border); background: var(--color-surface); }
+  .list-head {
+    position: sticky; top: 0; z-index: 2;
+    padding: var(--space-4);
+    background: var(--nav-bg);
+    backdrop-filter: saturate(1.4) blur(10px);
+    border-bottom: var(--border-2) solid var(--color-divider);
+    display: flex; flex-direction: column; gap: var(--space-3);
+  }
+  .mail-list { padding: var(--space-2); display: flex; flex-direction: column; gap: var(--space-1); overflow-y: auto; flex: 1; }
+  .mail-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    cursor: pointer; text-align: left; width: 100%;
+    border: var(--border-2) solid transparent;
+    transition: background var(--duration-fast) var(--ease-soft), border-color var(--duration-fast) var(--ease-soft), transform var(--duration-fast) var(--ease-emphasized);
+  }
+  .mail-row:hover { background: var(--color-surface-2); transform: translateX(2px); }
+  .mail-row.is-active { background: var(--pink-100); border-color: var(--pink-300); }
+  .mail-row.is-unread { background: var(--pink-50); }
+  .mail-row.is-unread.is-active { background: var(--pink-100); }
+  .mail-row .mr-mid { min-width: 0; }
+  .mail-row .mr-top { display: flex; align-items: center; gap: var(--space-2); }
+  .mail-row .mr-from { font-family: var(--font-display); font-weight: var(--weight-bold); color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mail-row.is-unread .mr-from { color: var(--color-text-strong); }
+  .mail-row .mr-subject { font-weight: var(--weight-semibold); color: var(--color-text); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mail-row.is-unread .mr-subject { font-weight: var(--weight-extra); }
+  .mail-row .mr-preview { font-size: var(--text-sm); color: var(--color-text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mail-row .mr-right { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); flex-shrink: 0; }
+  .mail-row .mr-time { font-size: var(--text-xs); color: var(--color-text-muted); font-weight: var(--weight-bold); white-space: nowrap; }
+  .mail-row.is-unread .mr-time { color: var(--pink-700); }
+  .mr-icons { display: inline-flex; align-items: center; gap: 4px; color: var(--color-text-subtle); }
+  .mr-icons svg { width: 1rem; height: 1rem; }
+  .mr-star { color: var(--color-border-strong); transition: transform var(--duration-fast) var(--ease-emphasized); }
+  .mr-star.is-on { color: var(--butter-500); }
+  .mr-star:hover { transform: scale(1.25) rotate(-10deg); }
+  .unread-dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--pink-500); flex-shrink: 0; box-shadow: var(--shadow-xs); }
+
+  /* 우 — 메일 상세 */
+  .detail-pane { background: var(--color-bg); }
+  .detail-scroll { flex: 1; overflow-y: auto; padding: var(--space-7); }
+  .detail-bar {
+    position: sticky; top: 0; z-index: 2;
+    display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;
+    padding: var(--space-3) var(--space-5);
+    background: var(--nav-bg); backdrop-filter: saturate(1.4) blur(10px);
+    border-bottom: var(--border-2) solid var(--color-divider);
+  }
+  .mail-body p { color: var(--color-text); line-height: var(--leading-relaxed); margin-bottom: var(--space-4); }
+  .mail-body p:last-child { margin-bottom: 0; }
+  .detail-back { display: none; }
+
+  /* 반응형: 1024 이하 = 2단(폴더 숨김/리스트+상세), 760 이하 = 1단 */
+  @media (max-width: 1024px) {
+    .mail-app { grid-template-columns: minmax(300px, 380px) 1fr; }
+    .folder-pane { display: none; }
+  }
+  @media (max-width: 760px) {
+    .mail-app { grid-template-columns: 1fr; }
+    .mail-app[data-view="detail"] .list-pane { display: none; }
+    .mail-app:not([data-view="detail"]) .detail-pane { display: none; }
+    .detail-back { display: inline-grid; }
+    .detail-scroll { padding: var(--space-5); }
+  }
+  @media (max-width: 680px) {
+    .navbar .ch-search { display: none; }
+  }
+  .navbar .ch-search { flex: 1 1 200px; max-width: 360px; }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
+
+<!-- ───────────────────────── 상단 내비 ───────────────────────── -->
+<nav class="navbar" aria-label="주요 내비게이션">
+  <a class="brand" href="../index.html" aria-label="Pastel Kawaii 홈으로">
+    <span class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 21s-7.5-4.9-10-9.3C.3 8.6 1.6 5 5 5c2 0 3.3 1.1 4 2.3C9.7 6.1 11 5 13 5c3.4 0 4.7 3.6 3 6.7C19.5 16.1 12 21 12 21z"/></svg>
+    </span>
+    <span>Kawaii&nbsp;Mail&nbsp;♡</span>
+  </a>
+  <div class="nav-links">
+    <a href="../index.html">← 홈</a>
+    <a href="dashboard.html">대시보드</a>
+    <a href="kanban.html">칸반</a>
+    <a href="inbox.html" aria-current="page">메일</a>
+  </div>
+  <div class="nav-right">
+    <button class="searchbar ch-search" data-cmdk-open aria-label="메일 검색 열기">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4" stroke-linecap="round"/></svg>
+      <span class="text-muted" style="flex:1;text-align:left">메일 검색…</span>
+      <kbd>⌘K</kbd>
+    </button>
+    <button class="btn btn--icon btn--ghost" data-theme-toggle aria-label="다크/라이트 전환" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke-linecap="round"/></svg>
+    </button>
+    <button class="btn btn--icon btn--ghost" data-cmdk-open aria-label="커맨드 팔레트 (⌘K)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M9 9h6v6H9z" stroke-linecap="round"/></svg>
+    </button>
+    <span class="avatar avatar--sm avatar--lav" title="미루미루">미</span>
+  </div>
+</nav>
+
+<!-- ───────────────────────── 3패널 메일 앱 ───────────────────────── -->
+<main id="main" class="mail-app" data-view="list" aria-label="Kawaii Mail 받은편지함">
+
+  <!-- ───── 좌 — 폴더 사이드 ───── -->
+  <aside class="mail-pane folder-pane" aria-label="메일 폴더">
+    <button class="btn btn--primary btn--block" data-modal-open="composeModal">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      메일 쓰기
+    </button>
+
+    <div class="side-section-label">메일함</div>
+    <a class="side-item is-active" href="#" aria-current="page">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4z"/><path d="M4 7l8 6 8-6" stroke-linecap="round"/></svg>
+      <span class="side-label">받은편지함</span>
+      <span class="count-badge">7</span>
+    </a>
+    <a class="side-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.6 5.6L21 9.3l-4.5 4.2L17.7 21 12 17.8 6.3 21l1.2-7.5L3 9.3l6.4-.7z" stroke-linejoin="round"/></svg>
+      <span class="side-label">별표 메일</span>
+      <span class="count-badge" style="background:var(--butter-500);color:var(--butter-900)">3</span>
+    </a>
+    <a class="side-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5l9 6 9-6M3 5h18v14H3z" stroke-linejoin="round"/></svg>
+      <span class="side-label">보낸편지함</span>
+    </a>
+    <a class="side-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h10l4 4v12H5z"/><path d="M9 12h6M9 16h6" stroke-linecap="round"/></svg>
+      <span class="side-label">임시보관</span>
+      <span class="count-badge badge--neutral" style="background:var(--color-surface-2);color:var(--color-text-muted)">2</span>
+    </a>
+    <a class="side-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l9 16H3z" stroke-linejoin="round"/><path d="M12 10v4M12 16.5v.01" stroke-linecap="round"/></svg>
+      <span class="side-label">스팸</span>
+      <span class="count-badge" style="background:var(--peach-500);color:var(--peach-900)">12</span>
+    </a>
+    <a class="side-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" stroke-linecap="round"/></svg>
+      <span class="side-label">휴지통</span>
+    </a>
+
+    <div class="side-section-label">라벨</div>
+    <a class="side-item" href="#">
+      <span class="label-dot" style="background:var(--pink-400)" aria-hidden="true"></span>
+      <span class="side-label">두근두근 ♡</span>
+    </a>
+    <a class="side-item" href="#">
+      <span class="label-dot" style="background:var(--mint-400)" aria-hidden="true"></span>
+      <span class="side-label">프로젝트</span>
+    </a>
+    <a class="side-item" href="#">
+      <span class="label-dot" style="background:var(--lavender-400)" aria-hidden="true"></span>
+      <span class="side-label">구독·뉴스레터</span>
+    </a>
+    <a class="side-item" href="#">
+      <span class="label-dot" style="background:var(--butter-400)" aria-hidden="true"></span>
+      <span class="side-label">영수증</span>
+    </a>
+    <a class="side-item" href="#">
+      <span class="label-dot" style="background:var(--sky-400)" aria-hidden="true"></span>
+      <span class="side-label">여행 계획 ✈</span>
+    </a>
+
+    <div class="sidebar-foot" style="margin-top:auto">
+      <div class="card card--candy card--flat" style="padding:var(--space-4)">
+        <div class="row row-2" style="align-items:center;margin-bottom:var(--space-2)">
+          <span style="font-size:1.3rem" aria-hidden="true">☁️</span>
+          <strong style="font-family:var(--font-display)">저장 공간</strong>
+        </div>
+        <div class="progress progress--mint" aria-label="저장공간 사용량 62%"><div class="bar" style="width:62%"></div></div>
+        <p class="text-xs text-muted" style="margin-top:var(--space-2)">9.3GB / 15GB 사용 중</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ───── 중 — 메일 리스트 ───── -->
+  <section class="mail-pane list-pane" aria-label="받은편지함 메일 목록">
+    <div class="list-head">
+      <div class="row between" style="align-items:center">
+        <div class="row row-2" style="align-items:baseline">
+          <h1 style="font-size:var(--text-xl);font-family:var(--font-display)">받은편지함</h1>
+          <span class="badge badge--solid">7 새 메일</span>
+        </div>
+        <button class="btn btn--icon btn--ghost btn--sm" aria-label="목록 새로고침" data-toast="info" data-toast-title="새로고침 완료" data-toast-msg="새 메일이 도착했는지 확인했어요 ♡">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 11a8 8 0 10-2 6m2 2v-5h-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <div class="segmented" role="tablist" aria-label="메일 필터">
+        <button role="tab" aria-selected="true">전체</button>
+        <button role="tab" aria-selected="false">안읽음</button>
+        <button role="tab" aria-selected="false">별표</button>
+      </div>
+    </div>
+
+    <div class="mail-list" role="list">
+
+      <!-- 1 (active, unread, star, attach) -->
+      <button class="mail-row is-unread is-active" role="listitem" data-mail="1">
+        <span class="avatar avatar--sm avatar--peach" aria-hidden="true">하</span>
+        <span class="mr-mid">
+          <span class="mr-top"><span class="unread-dot" aria-hidden="true"></span><span class="mr-from">하루 키친 🍰</span></span>
+          <span class="mr-subject">디저트 클래스 예약 확정되었어요 ♡</span>
+          <span class="mr-preview">안녕하세요 미루미루님! 신청하신 마카롱 원데이 클래스 자리가 확정되어 안내드려요. 준비물은…</span>
+        </span>
+        <span class="mr-right">
+          <span class="mr-time">오전 9:24</span>
+          <span class="mr-icons">
+            <svg class="mr-star is-on" viewBox="0 0 24 24" fill="currentColor" aria-label="별표됨"><path d="M12 3l2.6 5.6L21 9.3l-4.5 4.2L17.7 21 12 17.8 6.3 21l1.2-7.5L3 9.3l6.4-.7z"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-label="첨부파일"><path d="M21 12.5l-8 8a5 5 0 01-7-7l8-8a3.3 3.3 0 014.7 4.7l-8 8a1.6 1.6 0 01-2.3-2.3l7-7" stroke-linecap="round"/></svg>
+          </span>
+        </span>
+      </button>
+
+      <!-- 2 unread -->
+      <button class="mail-row is-unread" role="listitem" data-mail="2">
+        <span class="avatar avatar--sm avatar--mint" aria-hidden="true">코</span>
+        <span class="mr-mid">
+          <span class="mr-top"><span class="unread-dot" aria-hidden="true"></span><span class="mr-from">코코 디자인팀</span></span>
+          <span class="mr-subject">시안 v3 피드백 부탁드려요!</span>
+          <span class="mr-preview">방금 Figma 에 새 버전을 올렸어요. 핑크 톤을 한 단계 더 말랑하게 바꿨는데 어떠신가요?</span>
+        </span>
+        <span class="mr-right">
+          <span class="mr-time">오전 8:51</span>
+          <span class="mr-icons"><span class="badge badge--lav" style="padding:1px 8px">프로젝트</span></span>
+        </span>
+      </button>
+
+      <!-- 3 unread star -->
+      <button class="mail-row is-unread" role="listitem" data-mail="3">
+        <span class="avatar avatar--sm avatar--lav" aria-hidden="true">루</span>
+        <span class="mr-mid">
+          <span class="mr-top"><span class="unread-dot" aria-hidden="true"></span><span class="mr-from">루루 ♡</span></span>
+          <span class="mr-subject">주말에 벚꽃 보러 갈래?</span>
+          <span class="mr-preview">날씨 보니까 토요일이 딱 좋을 것 같아! 도시락은 내가 쌀게. 너는 돗자리랑 카메라만 챙겨와~</span>
+        </span>
+        <span class="mr-right">
+          <span class="mr-time">어제</span>
+          <span class="mr-icons">
+            <svg class="mr-star is-on" viewBox="0 0 24 24" fill="currentColor" aria-label="별표됨"><path d="M12 3l2.6 5.6L21 9.3l-4.5 4.2L17.7 21 12 17.8 6.3 21l1.2-7.5L3 9.3l6.4-.7z"/></svg>
+          </span>
+        </span>
+      </button>
+
+      <!-- 4 unread badge -->
+      <button class="mail-row is-unread" role="listitem" data-mail="4">
+        <span class="avatar avatar--sm avatar--sky" aria-hidden="true">N</span>
+        <span class="mr-mid">
+          <span class="mr-top"><span class="unread-dot" aria-hidden="true"></span><span class="mr-from">Notion 알림</span></span>
+          <span class="mr-subject">3개의 페이지에 새 댓글이 달렸어요</span>
+          <span class="mr-preview">'2분기 로드맵' 외 2개 문서에서 멘션되었습니다. 지금 확인하고 답글을 달아보세요.</span>
+        </span>
+        <span class="mr-right">
+          <span class="mr-time">어제</span>
+          <span class="mr-icons"><span class="badge badge--info" style="padding:1px 8px">알림</span></span>
+        </span>
+      </button>
+
+      <!-- 5 read -->
+      <button class="mail-row" role="listitem" data-mail="5">
+        <span class="avatar avatar--sm" aria-hidden="true">민</span>
+        <span class="mr-mid">
+          <span class="mr-top"><span class="mr-from">민트 베이커리</span></span>
+          <span class="mr-subject">이번 주 신메뉴 — 말차 구름빵 ☁️</span>
+          <span class="mr-preview">폭신폭신한 말차 구름빵이 새로 나왔어요! 멤버십 회원님께만 드리는 10% 쿠폰도 함께…</span>
+        </span>
+        <span class="mr-right">
+          <span class="mr-time">수요일</span>
+          <span class="mr-icons"><span class="badge badge--lav" style="padding:1px 8px">구독</span></span>
+        </span>
+      </button>
+
+      <!-- 6 unread attach -->
+      <button class="mail-row is-unread" role="listitem" data-mail="6">
+        <span class="avatar avatar--sm avatar--peach" aria-hidden="true">청</span>
+        <span class="mr-mid">
+          <span class="mr-top"><span class="unread-dot" aria-hidden="true"></span><span class="mr-from">청구·결제</span></span>
+          <span class="mr-subject">6월 영수증이 발행되었습니다</span>
+          <span class="mr-preview">Kawaii Pro 멤버십 6월 이용 요금 영수증을 첨부해 드려요. 결제 금액은 ₩12,900 입니다.</span>
+        </span>
+        <span class="mr-right">
+          <span class="mr-time">월요일</span>
+          <span class="mr-icons">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-label="첨부파일"><path d="M21 12.5l-8 8a5 5 0 01-7-7l8-8a3.3 3.3 0 014.7 4.7l-8 8a1.6 1.6 0 01-2.3-2.3l7-7" stroke-linecap="round"/></svg>
+          </span>
+        </span>
+      </button>
+
+      <!-- 7 read star -->
+      <button class="mail-row" role="listitem" data-mail="7">
+        <span class="avatar avatar--sm avatar--mint" aria-hidden="true">팀</span>
+        <span class="mr-mid">
+          <span class="mr-top"><span class="mr-from">팀 위클리</span></span>
+          <span class="mr-subject">이번 주 회고 & 다음 스프린트 안건</span>
+          <span class="mr-preview">모두 고생 많았어요! 지난 스프린트 완료율 92% 달성했습니다 🎉 다음 안건은 첨부 참고…</span>
+        </span>
+        <span class="mr-right">
+          <span class="mr-time">6월 14일</span>
+          <span class="mr-icons">
+            <svg class="mr-star is-on" viewBox="0 0 24 24" fill="currentColor" aria-label="별표됨"><path d="M12 3l2.6 5.6L21 9.3l-4.5 4.2L17.7 21 12 17.8 6.3 21l1.2-7.5L3 9.3l6.4-.7z"/></svg>
+          </span>
+        </span>
+      </button>
+
+      <!-- 8 unread -->
+      <button class="mail-row is-unread" role="listitem" data-mail="8">
+        <span class="avatar avatar--sm avatar--lav" aria-hidden="true">여</span>
+        <span class="mr-mid">
+          <span class="mr-top"><span class="unread-dot" aria-hidden="true"></span><span class="mr-from">여행 메이트</span></span>
+          <span class="mr-subject">제주 2박 3일 일정표 초안 ✈</span>
+          <span class="mr-preview">우리 숙소랑 카페 동선 맞춰서 짜봤어! 둘째 날 오후는 비워뒀으니 가고 싶은 곳 말해줘~</span>
+        </span>
+        <span class="mr-right">
+          <span class="mr-time">6월 13일</span>
+          <span class="mr-icons"><span class="badge badge--sky" style="padding:1px 8px">여행</span></span>
+        </span>
+      </button>
+
+      <!-- 9 read -->
+      <button class="mail-row" role="listitem" data-mail="9">
+        <span class="avatar avatar--sm" aria-hidden="true">G</span>
+        <span class="mr-mid">
+          <span class="mr-top"><span class="mr-from">GitHub</span></span>
+          <span class="mr-subject">[kawaii-ui] PR #142 가 병합되었어요</span>
+          <span class="mr-preview">코코님이 'feat: 말랑 토글 애니메이션' PR 을 main 에 머지했습니다. 변경 12 파일…</span>
+        </span>
+        <span class="mr-right">
+          <span class="mr-time">6월 12일</span>
+          <span class="mr-icons"><span class="badge badge--mint" style="padding:1px 8px">완료</span></span>
+        </span>
+      </button>
+
+      <!-- 10 read -->
+      <button class="mail-row" role="listitem" data-mail="10">
+        <span class="avatar avatar--sm avatar--peach" aria-hidden="true">달</span>
+        <span class="mr-mid">
+          <span class="mr-top"><span class="mr-from">달콤 구독</span></span>
+          <span class="mr-subject">결제 예정 안내 — 7월 1일</span>
+          <span class="mr-preview">다음 정기 결제가 7월 1일에 진행될 예정이에요. 변경이 필요하면 언제든 알려주세요.</span>
+        </span>
+        <span class="mr-right">
+          <span class="mr-time">6월 11일</span>
+          <span class="mr-icons"><span class="badge badge--butter" style="padding:1px 8px">영수증</span></span>
+        </span>
+      </button>
+
+    </div>
+  </section>
+
+  <!-- ───── 우 — 메일 상세 ───── -->
+  <section class="mail-pane detail-pane" aria-label="메일 상세">
+    <div class="detail-bar">
+      <button class="btn btn--icon btn--ghost btn--sm detail-back" data-detail-back aria-label="목록으로 돌아가기">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <button class="btn btn--secondary btn--sm" data-toast="success" data-toast-title="답장 준비 완료" data-toast-msg="아래에서 메시지를 작성해 보세요 ♡">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17l-6-5 6-5v3c5 0 8 2 9 8-2.5-3-5-4-9-4z"/></svg>
+        답장
+      </button>
+      <button class="btn btn--ghost btn--sm" data-toast="info" data-toast-title="전달 준비" data-toast-msg="받는 사람을 선택해 주세요.">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 17l6-5-6-5v3c-5 0-8 2-9 8 2.5-3 5-4 9-4z"/></svg>
+        전달
+      </button>
+      <button class="btn btn--icon btn--ghost btn--sm" aria-label="별표" title="별표 표시">
+        <svg viewBox="0 0 24 24" fill="var(--butter-400)" stroke="var(--butter-500)" stroke-width="1.6"><path d="M12 3l2.6 5.6L21 9.3l-4.5 4.2L17.7 21 12 17.8 6.3 21l1.2-7.5L3 9.3l6.4-.7z"/></svg>
+      </button>
+      <button class="btn btn--icon btn--ghost btn--sm" aria-label="보관" title="보관함으로">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10h14V9M10 13h4" stroke-linecap="round"/></svg>
+      </button>
+      <button class="btn btn--icon btn--danger btn--sm" style="margin-left:auto" data-toast="error" data-toast-title="휴지통으로 이동" data-toast-msg="메일이 휴지통으로 이동했어요." aria-label="삭제">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+
+    <div class="mail-pane scroll detail-scroll">
+      <div class="stack-5">
+        <div>
+          <div class="row row-2 wrap mb-3" style="align-items:center">
+            <span class="badge badge--solid">받은편지함</span>
+            <span class="badge badge--lav">두근두근 ♡</span>
+            <span class="badge badge--peach">디저트</span>
+          </div>
+          <h2 style="font-size:var(--text-2xl);font-family:var(--font-display);line-height:1.25">디저트 클래스 예약 확정되었어요 ♡</h2>
+        </div>
+
+        <div class="row between wrap" style="align-items:center;gap:var(--space-3)">
+          <div class="row row-3" style="align-items:center">
+            <span class="avatar avatar--lg avatar--peach" aria-hidden="true">하<span class="status-dot online" aria-hidden="true"></span></span>
+            <div class="stack-1">
+              <div class="row row-2" style="align-items:center">
+                <strong style="font-family:var(--font-display);font-size:var(--text-md)">하루 키친 🍰</strong>
+                <span class="badge badge--mint">인증된 발신자</span>
+              </div>
+              <div class="text-sm text-muted">haru.kitchen@kawaiimail.com</div>
+              <div class="text-xs text-subtle">나에게 · 2026년 6월 21일 오전 9:24</div>
+            </div>
+          </div>
+          <div class="row row-1">
+            <span class="tooltip-wrap">
+              <button class="btn btn--icon btn--ghost btn--sm" aria-label="발신자 정보">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01" stroke-linecap="round"/></svg>
+              </button>
+              <span class="tooltip" role="tooltip">발신자 안전 확인됨 ♡</span>
+            </span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="mail-body">
+          <p>미루미루님, 안녕하세요! 따뜻한 오전이에요 ☀️ 신청해 주셔서 정말 고마워요.</p>
+          <p>지난주에 신청해 주신 <strong>마카롱 원데이 클래스</strong> 자리가 무사히 확정되어 기쁜 마음으로 안내드려요. 정원 6명 중 마지막 한 자리였답니다. 운이 정말 좋으셨어요!</p>
+          <p>수업은 <strong>6월 28일(토) 오후 2시</strong>, 합정 하루 키친 공방에서 약 두 시간 동안 진행돼요. 코코아·딸기·말차 세 가지 색의 코크를 직접 짜보고, 마지막에는 예쁜 박스에 포장까지 도와드릴게요. 만든 마카롱 12개는 모두 가져가실 수 있어요 ♡</p>
+          <p>준비물은 따로 없어요! 앞치마와 재료는 모두 저희가 준비해 둘게요. 다만 머리가 긴 분은 묶을 수 있는 끈 하나만 챙겨오시면 더 편하실 거예요. 자세한 위치와 시간표, 그리고 알레르기 안내는 아래 첨부 파일에 정리해 두었어요.</p>
+          <p>혹시 일정 변경이 필요하시면 수업 3일 전까지 이 메일에 답장만 주시면 돼요. 그날 폭신폭신 달콤한 시간으로 가득 채워드릴게요. 곧 만나요!</p>
+          <p style="color:var(--color-text-muted)">— 하루 키친 드림 🧁</p>
+        </div>
+
+        <div class="card card--soft card--flat" style="padding:var(--space-4)">
+          <div class="row between" style="align-items:center;margin-bottom:var(--space-3)">
+            <strong style="font-family:var(--font-display)">첨부파일 2개</strong>
+            <span class="text-xs text-muted">총 3.1MB</span>
+          </div>
+          <div class="row wrap" style="gap:var(--space-3)">
+            <span class="file-chip">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--pink-600)" stroke-width="2"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5" stroke-linejoin="round"/></svg>
+              <span>클래스_안내문.pdf</span>
+              <span class="text-xs text-muted">820KB</span>
+            </span>
+            <span class="file-chip">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--mint-600)" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5L5 21" stroke-linejoin="round"/></svg>
+              <span>공방_위치_지도.png</span>
+              <span class="text-xs text-muted">2.3MB</span>
+            </span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- 답장 영역 -->
+        <div class="stack-3">
+          <div class="row row-2" style="align-items:center">
+            <span class="avatar avatar--sm avatar--lav" aria-hidden="true">미</span>
+            <strong style="font-family:var(--font-display)">하루 키친 🍰 님에게 답장</strong>
+          </div>
+          <div class="field">
+            <label class="sr-only" for="replyBody">답장 내용</label>
+            <textarea class="textarea" id="replyBody" placeholder="따뜻한 답장을 적어보세요… ♡" rows="4">안녕하세요! 확정 안내 정말 감사해요 :) 28일 토요일 2시에 맞춰 꼭 갈게요. 기대돼요 ♡</textarea>
+          </div>
+          <div class="row between wrap" style="align-items:center;gap:var(--space-3)">
+            <div class="row row-1">
+              <button class="btn btn--icon btn--ghost btn--sm" aria-label="이모지 추가"><span aria-hidden="true">😊</span></button>
+              <button class="btn btn--icon btn--ghost btn--sm" aria-label="파일 첨부">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.5l-8 8a5 5 0 01-7-7l8-8a3.3 3.3 0 014.7 4.7l-8 8a1.6 1.6 0 01-2.3-2.3l7-7" stroke-linecap="round"/></svg>
+              </button>
+            </div>
+            <div class="row row-2">
+              <button class="btn btn--ghost btn--sm" data-toast="info" data-toast-title="임시저장 완료" data-toast-msg="임시보관함에 저장했어요.">임시저장</button>
+              <button class="btn btn--primary btn--sm" data-sparkle="12" data-toast="success" data-toast-title="답장 보냈어요! ♡" data-toast-msg="하루 키친 🍰 님에게 메일이 전송됐어요.">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+                보내기
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ───────────────────────── 메일 쓰기 모달 ───────────────────────── -->
+<div class="modal" id="composeModal" role="dialog" aria-modal="true" aria-labelledby="composeTitle">
+  <div class="modal-box">
+    <button class="modal-close" data-modal-close aria-label="닫기">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <div class="modal-art" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="var(--pink-800)" stroke-width="2" stroke-linejoin="round"><path d="M3 5h18v14H3z"/><path d="M3 7l9 6 9-6"/></svg>
+    </div>
+    <h2 id="composeTitle">새 메일 쓰기 ♡</h2>
+    <p class="text-muted" style="margin-bottom:var(--space-5)">달콤한 메시지를 보내볼까요?</p>
+
+    <div class="stack-4">
+      <div class="field">
+        <label class="field-label" for="cTo">받는 사람 <span class="req" aria-hidden="true">*</span></label>
+        <div class="input-wrap">
+          <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6" stroke-linecap="round"/></svg>
+          <input class="input" id="cTo" type="email" placeholder="friend@kawaiimail.com" autocomplete="off">
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label" for="cSubject">제목</label>
+        <input class="input" id="cSubject" type="text" placeholder="예) 오늘 같이 디저트 먹을래요? 🍰">
+      </div>
+      <div class="field">
+        <label class="field-label" for="cBody">내용</label>
+        <textarea class="textarea" id="cBody" placeholder="여기에 마음을 담아 적어보세요… ♡" rows="5"></textarea>
+        <span class="field-hint">Shift + Enter 로 줄바꿈, 자동 저장돼요.</span>
+      </div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn btn--ghost" data-modal-close>취소</button>
+      <button class="btn btn--primary" data-modal-close data-sparkle="14" data-toast="success" data-toast-title="메일을 보냈어요! ♡" data-toast-msg="상대방에게 폭신한 메시지가 전송됐어요.">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+        보내기
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ───────────────────────── 커맨드 팔레트 (⌘K) ───────────────────────── -->
+<div class="cmdk" role="dialog" aria-modal="true" aria-label="커맨드 팔레트">
+  <div class="cmdk-box">
+    <div class="cmdk-input-row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4" stroke-linecap="round"/></svg>
+      <input placeholder="메일·사람·명령 검색…" aria-label="명령 검색">
+      <kbd>ESC</kbd>
+    </div>
+    <div class="cmdk-list">
+      <div class="cmdk-group-label">빠른 동작</div>
+      <div class="cmdk-item is-active" role="button" tabindex="0" data-modal-open="composeModal"><span class="cmdk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg></span><span class="cmdk-label">새 메일 쓰기</span><kbd>C</kbd></div>
+      <div class="cmdk-item" role="button" tabindex="0"><span class="cmdk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 11a8 8 0 10-2 6m2 2v-5h-5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="cmdk-label">받은편지함 새로고침</span><kbd>R</kbd></div>
+      <div class="cmdk-item" role="button" tabindex="0"><span class="cmdk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2" stroke-linecap="round"/></svg></span><span class="cmdk-label">다크/라이트 전환</span><kbd>T</kbd></div>
+      <div class="cmdk-group-label">이동</div>
+      <div class="cmdk-item" role="button" tabindex="0"><span class="cmdk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.6 5.6L21 9.3l-4.5 4.2L17.7 21 12 17.8 6.3 21l1.2-7.5L3 9.3z" stroke-linejoin="round"/></svg></span><span class="cmdk-label">별표 메일로 이동</span><kbd>G S</kbd></div>
+      <div class="cmdk-item" role="button" tabindex="0"><span class="cmdk-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5l9 6 9-6M3 5h18v14H3z" stroke-linejoin="round"/></svg></span><span class="cmdk-label">보낸편지함으로 이동</span><kbd>G T</kbd></div>
+      <div class="cmdk-empty" style="display:none">결과가 없어요 🥲</div>
+    </div>
+    <div class="cmdk-foot"><span><kbd>↑</kbd><kbd>↓</kbd> 이동</span><span><kbd>↵</kbd> 선택</span><span><kbd>esc</kbd> 닫기</span></div>
+  </div>
+</div>
+
+<script src="../app.js"></script>
+<script>
+/* 인박스 전용 미니 로직: 행 선택(active) + 별표 토글 + 모바일 상세 전환 */
+(function () {
+  var app = document.querySelector(".mail-app");
+  var rows = document.querySelectorAll(".mail-row");
+
+  rows.forEach(function (row) {
+    row.addEventListener("click", function (e) {
+      // 별표 클릭이면 선택은 막고 토글만
+      var star = e.target.closest(".mr-star");
+      if (star) {
+        e.stopPropagation();
+        star.classList.toggle("is-on");
+        return;
+      }
+      rows.forEach(function (r) { r.classList.remove("is-active"); });
+      row.classList.add("is-active");
+      row.classList.remove("is-unread");
+      var dot = row.querySelector(".unread-dot");
+      if (dot) dot.remove();
+      if (app) app.setAttribute("data-view", "detail"); // 모바일: 상세 보기로
+    });
+  });
+
+  // 모바일 상세 → 목록 뒤로
+  var back = document.querySelector("[data-detail-back]");
+  if (back) back.addEventListener("click", function () {
+    if (app) app.setAttribute("data-view", "list");
+  });
+})();
+</script>
+</body>
+</html>

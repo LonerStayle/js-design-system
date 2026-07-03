@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kanban Board — Neo-Brutalism</title>
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    /* Page-local layout glue only — no component reinvention */
+    .board-wrap { padding: var(--space-5); }
+    .board-toolbar {
+      display: flex; align-items: center; flex-wrap: wrap;
+      gap: var(--space-3) var(--space-4);
+      padding: var(--space-4) 0;
+    }
+    .board-toolbar__group { display: inline-flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+    .board-toolbar__spacer { margin-left: auto; }
+    .board-title { display: inline-flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; }
+    .board-title h1 {
+      font-family: var(--font-display); font-weight: var(--weight-black);
+      font-size: var(--text-xl); letter-spacing: var(--tracking-tight); line-height: 1;
+    }
+    .navbar__title { display: inline-flex; align-items: baseline; gap: var(--space-3); min-width: 0; }
+    .navbar__title strong {
+      font-family: var(--font-display); font-weight: var(--weight-black);
+      font-size: var(--text-base); letter-spacing: var(--tracking-tight);
+      white-space: nowrap;
+    }
+    .kanban-card__foot .avatar-group .avatar { width: 26px; height: 26px; font-size: 10px; }
+    .modal__body .field + .field { margin-top: var(--space-4); }
+    .field-row { display: flex; gap: var(--space-4); flex-wrap: wrap; }
+    .field-row > .field { flex: 1 1 180px; }
+    .drawer__body .filter-block + .filter-block { margin-top: var(--space-6); }
+    .filter-block__head {
+      font-family: var(--font-mono); font-size: var(--text-2xs); font-weight: var(--weight-bold);
+      text-transform: uppercase; letter-spacing: var(--tracking-widest);
+      color: var(--color-text-muted); margin-bottom: var(--space-3);
+      padding-bottom: var(--space-1); border-bottom: var(--border-2) solid var(--color-border-subtle);
+    }
+    .filter-block .check, .filter-block .radio { display: flex; padding: var(--space-1) 0; }
+    @media (max-width: 640px) { .board-wrap { padding: var(--space-3); } }
+  </style>
+</head>
+<body>
+  <!-- ============================ NAVBAR ============================ -->
+  <header class="navbar navbar--sticky navbar--accent-blue">
+    <a class="navbar__brand" href="../index.html">
+      <span class="navbar__logo">N</span>
+      <span class="navbar__brand-text">NEOBRUT</span>
+    </a>
+    <div class="navbar__title">
+      <span class="eyebrow">Board</span>
+      <strong>Sprint 24 · Neo Platform</strong>
+    </div>
+
+    <div class="navbar__actions">
+      <label class="searchbar hide-md-down" aria-label="Search tasks" style="max-width:240px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3"></path>
+        </svg>
+        <input type="search" placeholder="Search tasks…" name="q">
+        <kbd>/</kbd>
+      </label>
+
+      <button class="btn btn--icon btn--secondary" data-theme-toggle aria-label="Toggle theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"></path>
+        </svg>
+      </button>
+
+      <button class="btn btn--secondary btn--sm" data-drawer-open="filters">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" aria-hidden="true" style="width:1.05em;height:1.05em;">
+          <path d="M3 5h18M6 12h12M10 19h4"></path>
+        </svg>
+        Filters
+      </button>
+
+      <button class="btn btn--primary btn--sm" data-modal-open="new-task">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true" style="width:1.05em;height:1.05em;">
+          <path d="M12 5v14M5 12h14"></path>
+        </svg>
+        New task
+      </button>
+
+      <button class="navbar__burger" data-sidebar-toggle aria-expanded="false" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true">
+          <path d="M3 6h18M3 12h18M3 18h18"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="board-wrap">
+    <!-- ====================== BOARD TOOLBAR ====================== -->
+    <section class="board-toolbar" aria-label="Board controls">
+      <div class="board-toolbar__group">
+        <span class="eyebrow">Team</span>
+        <span class="avatar-group" aria-label="Assignees on this sprint">
+          <span class="avatar avatar--blue avatar--round" title="Dana Whitfield">DW</span>
+          <span class="avatar avatar--pink avatar--round" title="Marcus Lee">ML</span>
+          <span class="avatar avatar--lime avatar--round" title="Priya Anand">PA</span>
+          <span class="avatar avatar--ink avatar--round" title="Tom Okafor">TO</span>
+          <span class="avatar avatar--round" title="Sora Kim">SK</span>
+          <span class="avatar avatar--more avatar--round" title="6 more">+6</span>
+        </span>
+      </div>
+
+      <div class="board-toolbar__group">
+        <span class="eyebrow">Group by</span>
+        <div class="segmented" role="radiogroup" aria-label="Group cards by">
+          <label><input type="radio" name="groupby" checked><span>Status</span></label>
+          <label><input type="radio" name="groupby"><span>Assignee</span></label>
+          <label><input type="radio" name="groupby"><span>Priority</span></label>
+        </div>
+      </div>
+
+      <div class="board-toolbar__group board-toolbar__spacer">
+        <span class="badge badge--ink">18 OPEN</span>
+        <span class="badge badge--lime">7 IN&nbsp;PROGRESS</span>
+        <span class="badge badge--danger">3 BLOCKED</span>
+        <span class="badge badge--success">12 DONE</span>
+      </div>
+    </section>
+
+    <!-- ========================== KANBAN ========================== -->
+    <div class="kanban">
+
+      <!-- ============= BACKLOG ============= -->
+      <section class="kanban-col" data-kanban-col aria-label="Backlog column">
+        <header class="kanban-col__head">
+          <span class="kanban-col__title">Backlog</span>
+          <span class="kanban-col__count">5</span>
+          <button class="kanban-col__add" aria-label="Add card to Backlog">+</button>
+        </header>
+        <div class="kanban-list">
+          <article class="kanban-card" draggable="true">
+            <span class="kanban-card__label kanban-card__label--blue">Feat</span>
+            <h4 class="kanban-card__title">SSO via SAML for enterprise tenants</h4>
+            <p class="kanban-card__desc">Okta + Azure AD metadata import, JIT provisioning.</p>
+            <footer class="kanban-card__foot">
+              <span class="kanban-card__meta">NEO-412</span>
+              <span class="avatar-group">
+                <span class="avatar avatar--blue avatar--round" title="Marcus Lee">ML</span>
+              </span>
+            </footer>
+          </article>
+
+          <article class="kanban-card" draggable="true">
+            <span class="kanban-card__label">Chore</span>
+            <h4 class="kanban-card__title">Upgrade Postgres 14 → 16</h4>
+            <p class="kanban-card__desc">Test logical replication + pgvector compat.</p>
+            <footer class="kanban-card__foot">
+              <span class="kanban-card__meta">NEO-388</span>
+              <span class="avatar-group">
+                <span class="avatar avatar--ink avatar--round" title="Tom Okafor">TO</span>
+              </span>
+            </footer>
+          </article>
+
+          <article class="kanban-card" draggable="true">
+            <span class="kanban-card__label kanban-card__label--pink">Bug</span>
+            <h4 class="kanban-card__title">Webhook retries hammer dead endpoints</h4>
+            <footer class="kanban-card__foot">
+              <span class="kanban-card__meta">NEO-401</span>
+              <span class="avatar-group">
+                <span class="avatar avatar--pink avatar--round" title="Priya Anand">PA</span>
+              </span>
+            </footer>
+          </article>
+
+          <article class="kanban-card" draggable="true">
+            <span class="kanban-card__label kanban-card__label--lime">Design</span>
+            <h4 class="kanban-card__title">Onboarding wizard refresh</h4>
+            <p class="kanban-card__desc">3-step flow, progress dots, empty states.</p>
+            <footer class="kanban-card__foot">
+              <span class="kanban-card__due">JUL 02</span>
+              <span class="avatar-group">
+                <span class="avatar avatar--lime avatar--round" title="Sora Kim">SK</span>
+              </span>
+            </footer>
+          </article>
+
+          <article class="kanban-card" draggable="true">
+            <span class="kanban-card__label">Docs</span>
+            <h4 class="kanban-card__title">Public API reference for v2 endpoints</h4>
+            <footer class="kanban-card__foot">
+              <span class="kanban-card__meta">NEO-360</span>
+              <span class="avatar-group">
+                <span class="avatar avatar--round" title="Dana Whitfield">DW</span>
+              </span>
+            </footer>
+          </article>
+        </div>
+      </section>
+
+      <!-- ============= TO DO ============= -->
+      <section class="kanban-col kanban-col--blue" data-kanban-col aria-label="To Do column">
+        <header class="kanban-col__head">
+          <span class="kanban-col__title">To Do</span>
+          <span class="kanban-col__count">4</span>
+          <button class="kanban-col__add" aria-label="Add card to To Do">+</button>
+        </header>
+        <div class="kanban-list">
+          <article class="kanban-card" draggable="true">
+            <span class="kanban-card__label kanban-card__label--blue">Feat</span>
+            <h4 class="kanban-card__title">Rate-limit headers on REST gateway</h4>
+            <p class="kanban-card__desc">X-RateLimit-* + 429 backoff, per-key buckets.</p>
+            <footer class="kanban-card__foot">
+              <span class="kanban-card__due">JUN 24</span>
+              <span class="avatar-group">
+                <span class="avatar avatar--blue avatar--round" title="Marcus Lee">ML</span>
+                <span class="avatar avatar--ink avatar--round" title="Tom Okafor">TO</span>
+              </span>
+            </footer>
+          </article>
+
+          <article class="kanban-card" draggable="true">
+            <span class="kanban-card__label kanban-card__label--pink">Bug</span>
+            <h4 class="kanban-card__title">Timezone offset wrong on weekly digest</h4>
+            <p class="kanban-card__desc">DST edge — emails fire 1h early in EU.</p>
+            <footer class="kanban-card__foot">
+              <span class="kanban-card__due kanban-card__due--late">JUN 19</span>
+              <span class="avatar-group">
+                <span class="avatar avatar--pink avatar--round" title="Priya Anand">PA</span>
+              </span>
+            </footer>
+          </article>
+
+          <article class="kanban-card" draggable="true">
+            <span class="kanban-card__label kanban-card__label--lime">Design</span>
+            <h4 class="kanban-card__title">Empty-state illustrations set</h4>
+            <footer class="kanban-card__foot">
+              <span class="kanban-card__due">JUN 27</span>
+              <span class="avatar-group">
+                <span class="avatar avatar--lime avatar--round" title="Sora Kim">SK</span>
+              </span>
+            </footer>
+          </article>
+
+          <article class="kanban-card" draggable="true">
+            <span class="kanban-card__label">Chore</span>
+            <h4 class="kanban-card__title">Migrate CI from CircleCI to GH Actions</h4>
+            <p class="kanban-card__desc">Cache layers, matrix builds, OIDC deploy.</p>
+            <footer class="kanban-card__foot">
+              <span class="kanban-card__meta">NEO-377</span>
+              <span class="avatar-group">
+                <span class="avatar avatar--ink avatar--round" title="Tom Okafor">TO</span>
+              </span>
+            </footer>
+          </article>
+        </div>
+      </section>
+
+      <!-- ============= IN PROGRESS ============= -->
+      <section class="kanban-col kanban-col--yellow" data-kanban-col aria-label="In Progress column">
+        <header class="kanban-col__head">
+          <span class="kanban-col__title">In Progress</span>
+          <span class="kanban-col__count">4</span>
+          <button class="kanban-col__add" aria-label="Add card to In Progress">+</button>
+        </header>
+        <div class="kanban-list">
+          <article class="kanban-card" draggable="true">
+            <span class="kanban-card__label kanban-card__label--blue">Feat</span>
+            <h4 class="kanban-card__title">Realtime presence on board cards</h4>
+            <p class="kanban-card__desc">WebSocket cursors + avatar pile per column.</p>
+            <div class="kanban-card__progress"><span style="width:70%"></span></div>
+            <footer class="kanban-card__foot">
+              <span class="kanban-card__due">JUN 25</span>
+              <span class="avatar-group">
+                <span class="avatar avatar--blue avatar--round" title="Dana Whitfield">DW</span>
+                <span class="avatar avatar--pink avatar--round" title="Priya Anand">PA</span>
+              </span>
+            </footer>
+          </article>
+
+          <article class="kanban-card" draggable="true">
+            <span class="kanban-card__label kanban-card__label--pink">Bug</span>
+            <h4 class="kanban-card__title">Drag-drop drops card on wrong column on touch</h4>
+            <p class="kanban-card__desc">Pointer events vs touch — Safari iOS only.</p>
+            <div class="kanban-card__progress"><span style="width:40%"></span></div>
+            <footer class="kanban-card__foot">
+              <span class="kanban-card__due kanban-card__due--late">JUN 18</span>
+              <span class="avatar-group">
+                <span class="avatar avatar--round" title="Marcus Lee">ML</span>
+              </span>
+            </footer>
+          </article>
+
+          <article class="kanban-card" draggable="true">
+            <span class="kanban-card__label">Chore</span>
+            <h4 class="kanban-card__title">Tree-shake icon bundle (−84kb)</h4>
+            <div class="kanban-card__progress"><span style="width:90%"></span></div>
+            <footer class="kanban-card__foot">
+              <span class="kanban-card__meta">NEO-355</span>
+              <span class="avatar-group">
+                <span class="avatar avatar--ink avatar--round" title="Tom Okafor">TO</span>
+              </span>
+            </footer>
+          </article>
+
+          <article class="kanban-card" draggable="true">
+            <span class="kanban-card__label kanban-card__label--lime">Design</span>
+            <h4 class="kanban-card__title">Dark-mode token audit</h4>
+            <p class="kanban-card__desc">Contrast pass on all 4 accent planes.</p>
+            <div class="kanban-card__progress"><span style="width:55%"></span></div>
+            <footer class="kanban-card__foot">
+              <span class="kanban-card__due">JUN 28</span>
+              <span class="avatar-group">
+                <span class="avatar avatar--lime avatar--round" title="Sora Kim">SK</span>
+              </span>
+            </footer>
+          </article>
+        </div>
+      </section>
+
+      <!-- ============= REVIEW ============= -->
+      <section class="kanban-col kanban-col--pink" data-kanban-col aria-label="Review column">
+        <header class="kanban-col__head">
+          <span class="kanban-col__title">Review</span>
+          <span class="kanban-col__count">3</span>
+          <button class="kanban-col__add" aria-label="Add card to Review">+</button>
+        </header>
+        <div class="kanban-list">
+          <article class="kanban-card" draggable="true">
+            <span class="kanban-card__label kanban-card__label--blue">Feat</span>
+            <h4 class="kanban-card__title">Bulk archive from list view</h4>
+            <p class="kanban-card__desc">PR #1842 — needs second approval.</p>
+            <footer class="kanban-card__foot">
+              <span class="kanban-card__meta">PR #1842</span>
+              <span class="avatar-group">
+                <span class="avatar avatar--blue avatar--round" title="Marcus Lee">ML</span>
+                <span class="avatar avatar--ink avatar--round" title="Dana Whitfield">DW</span>
+              </span>
+            </footer>
+          </article>
+
+          <article class="kanban-card" draggable="true">
+            <span class="kanban-card__label kanban-card__label--pink">Bug</span>
+            <h4 class="kanban-card__title">CSV export truncates UTF-8 names</h4>
+            <footer class="kanban-card__foot">
+              <span class="kanban-card__due">JUN 23</span>
+              <span class="avatar-group">
+                <span class="avatar avatar--pink avatar--round" title="Priya Anand">PA</span>
+              </span>
+            </footer>
+          </article>
+
+          <article class="kanban-card" draggable="true">
+            <span class="kanban-card__label">Docs</span>
+            <h4 class="kanban-card__title">Migration guide: v1 → v2 auth</h4>
+            <p class="kanban-card__desc">Reviewed by docs team, awaiting eng sign-off.</p>
+            <footer class="kanban-card__foot">
+              <span class="kanban-card__meta">NEO-340</span>
+              <span class="avatar-group">
+                <span class="avatar avatar--round" title="Sora Kim">SK</span>
+              </span>
+            </footer>
+          </article>
+        </div>
+      </section>
+
+      <!-- ============= DONE ============= -->
+      <section class="kanban-col kanban-col--lime" data-kanban-col aria-label="Done column">
+        <header class="kanban-col__head">
+          <span class="kanban-col__title">Done</span>
+          <span class="kanban-col__count">4</span>
+          <button class="kanban-col__add" aria-label="Add card to Done">+</button>
+        </header>
+        <div class="kanban-list">
+          <article class="kanban-card" draggable="true">
+            <span class="kanban-card__label kanban-card__label--blue">Feat</span>
+            <h4 class="kanban-card__title">Keyboard shortcuts (⌘K palette)</h4>
+            <div class="kanban-card__progress"><span style="width:100%"></span></div>
+            <footer class="kanban-card__foot">
+              <span class="kanban-card__meta">SHIPPED</span>
+              <span class="avatar-group">
+                <span class="avatar avatar--blue avatar--round" title="Dana Whitfield">DW</span>
+              </span>
+            </footer>
+          </article>
+
+          <article class="kanban-card" draggable="true">
+            <span class="kanban-card__label kanban-card__label--pink">Bug</span>
+            <h4 class="kanban-card__title">Fix flash of unstyled board on cold load</h4>
+            <footer class="kanban-card__foot">
+              <span class="kanban-card__meta">NEO-318</span>
+              <span class="avatar-group">
+                <span class="avatar avatar--ink avatar--round" title="Tom Okafor">TO</span>
+              </span>
+            </footer>
+          </article>
+
+          <article class="kanban-card" draggable="true">
+            <span class="kanban-card__label">Chore</span>
+            <h4 class="kanban-card__title">Bump Node 18 → 20 across services</h4>
+            <div class="kanban-card__progress"><span style="width:100%"></span></div>
+            <footer class="kanban-card__foot">
+              <span class="kanban-card__meta">NEO-301</span>
+              <span class="avatar-group">
+                <span class="avatar avatar--round" title="Marcus Lee">ML</span>
+              </span>
+            </footer>
+          </article>
+
+          <article class="kanban-card" draggable="true">
+            <span class="kanban-card__label kanban-card__label--lime">Design</span>
+            <h4 class="kanban-card__title">New brand sticker set + tilt tokens</h4>
+            <footer class="kanban-card__foot">
+              <span class="kanban-card__meta">SHIPPED</span>
+              <span class="avatar-group">
+                <span class="avatar avatar--lime avatar--round" title="Sora Kim">SK</span>
+                <span class="avatar avatar--pink avatar--round" title="Priya Anand">PA</span>
+              </span>
+            </footer>
+          </article>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ====================== NEW TASK MODAL ====================== -->
+  <div class="modal" data-modal="new-task" hidden aria-hidden="true">
+    <div class="modal__panel modal__panel--md" role="dialog" aria-modal="true" aria-labelledby="new-task-title">
+      <header class="modal__head modal__head--blue">
+        <span class="modal__eyebrow">Sprint 24</span>
+        <h2 class="modal__title" id="new-task-title">New task</h2>
+        <button class="modal__close" data-modal-close aria-label="Close">×</button>
+      </header>
+      <div class="modal__body">
+        <form id="new-task-form">
+          <div class="field">
+            <label class="field-label" for="nt-title">Title</label>
+            <input class="input" id="nt-title" name="title" type="text" placeholder="e.g. Add audit log to settings" required>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label" for="nt-label">Label</label>
+              <select class="select" id="nt-label" name="label">
+                <option value="feat">Feature</option>
+                <option value="bug">Bug</option>
+                <option value="chore">Chore</option>
+                <option value="design">Design</option>
+                <option value="docs">Docs</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label" for="nt-assignee">Assignee</label>
+              <select class="select" id="nt-assignee" name="assignee">
+                <option>Dana Whitfield</option>
+                <option>Marcus Lee</option>
+                <option>Priya Anand</option>
+                <option>Tom Okafor</option>
+                <option>Sora Kim</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label" for="nt-due">Due date</label>
+              <input class="input" id="nt-due" name="due" type="date" value="2026-06-27">
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="nt-desc">Description</label>
+            <textarea class="textarea" id="nt-desc" name="desc" rows="4" placeholder="Acceptance criteria, links, context…"></textarea>
+            <span class="field-help">Markdown supported. Mention teammates with @.</span>
+          </div>
+        </form>
+      </div>
+      <footer class="modal__foot">
+        <button class="btn btn--secondary" data-modal-close>Cancel</button>
+        <button class="btn btn--primary" type="submit" form="new-task-form">Create task</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ======================= FILTERS DRAWER ======================= -->
+  <div class="drawer" data-drawer="filters" data-side="right" hidden aria-hidden="true">
+    <aside class="drawer__panel" role="dialog" aria-modal="true" aria-labelledby="filters-title">
+      <header class="drawer__head">
+        <span class="drawer__eyebrow">Refine</span>
+        <h2 class="drawer__title" id="filters-title">Filters</h2>
+        <button class="drawer__close" data-drawer-close aria-label="Close">×</button>
+      </header>
+      <div class="drawer__body">
+        <form id="filters-form">
+          <div class="filter-block">
+            <div class="filter-block__head">Labels</div>
+            <label class="check"><input type="checkbox" name="label" value="feat" checked><span class="check__box"></span> Feature</label>
+            <label class="check"><input type="checkbox" name="label" value="bug" checked><span class="check__box"></span> Bug</label>
+            <label class="check"><input type="checkbox" name="label" value="chore"><span class="check__box"></span> Chore</label>
+            <label class="check"><input type="checkbox" name="label" value="design"><span class="check__box"></span> Design</label>
+            <label class="check"><input type="checkbox" name="label" value="docs"><span class="check__box"></span> Docs</label>
+          </div>
+
+          <div class="filter-block">
+            <div class="filter-block__head">Assignee</div>
+            <label class="check"><input type="checkbox" name="assignee" value="dw" checked><span class="check__box"></span> Dana Whitfield</label>
+            <label class="check"><input type="checkbox" name="assignee" value="ml"><span class="check__box"></span> Marcus Lee</label>
+            <label class="check"><input type="checkbox" name="assignee" value="pa"><span class="check__box"></span> Priya Anand</label>
+            <label class="check"><input type="checkbox" name="assignee" value="to"><span class="check__box"></span> Tom Okafor</label>
+            <label class="check"><input type="checkbox" name="assignee" value="sk"><span class="check__box"></span> Sora Kim</label>
+          </div>
+
+          <div class="filter-block">
+            <div class="filter-block__head">Priority</div>
+            <label class="radio"><input type="radio" name="priority" value="any" checked><span class="radio__box"></span> Any</label>
+            <label class="radio"><input type="radio" name="priority" value="high"><span class="radio__box"></span> High &amp; up</label>
+            <label class="radio"><input type="radio" name="priority" value="urgent"><span class="radio__box"></span> Urgent only</label>
+          </div>
+
+          <div class="filter-block">
+            <div class="filter-block__head">Other</div>
+            <label class="check"><input type="checkbox" name="other" value="overdue"><span class="check__box"></span> Overdue only</label>
+            <label class="check"><input type="checkbox" name="other" value="mine"><span class="check__box"></span> Assigned to me</label>
+          </div>
+        </form>
+      </div>
+      <footer class="drawer__foot">
+        <button class="btn btn--ghost" type="reset" form="filters-form">Reset</button>
+        <button class="btn btn--primary btn--block" data-drawer-close>Apply filters</button>
+      </footer>
+    </aside>
+  </div>
+
+  <script src="../app.js"></script>
+  <script>
+    // Tiny enhancement: closing the new-task modal via Create shows a toast.
+    (function () {
+      var form = document.getElementById("new-task-form");
+      if (!form) return;
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var title = (form.querySelector('[name="title"]').value || "").trim() || "Untitled task";
+        var modal = document.querySelector('[data-modal="new-task"]');
+        if (modal) {
+          var closer = modal.querySelector("[data-modal-close]");
+          if (closer) closer.click();
+        }
+        form.reset();
+        if (window.NB && NB.toast) {
+          NB.toast({ title: "Task created", message: '“' + title + '” added to Backlog.', variant: "success" });
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

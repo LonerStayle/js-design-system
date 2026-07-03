@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Scriptorium Board · Folio 24</title>
+<link rel="stylesheet" href="../base.css">
+<link rel="stylesheet" href="../components/buttons.css">
+<link rel="stylesheet" href="../components/forms.css">
+<link rel="stylesheet" href="../components/display.css">
+<link rel="stylesheet" href="../components/feedback.css">
+<link rel="stylesheet" href="../components/navigation.css">
+<style>
+/* ---- Board Layout --------------------------------------------------- */
+.board-page { display: flex; flex-direction: column; min-height: 100vh; }
+
+.board-toolbar {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  flex-wrap: wrap;
+}
+
+.board-toolbar__title-group { flex: 0 0 auto; }
+.board-toolbar__title-group .eyebrow { font-size: var(--text-2xs); }
+.board-toolbar__title-group h1 {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-strong);
+  margin: 0; line-height: 1.2;
+}
+
+.board-toolbar__search { flex: 1 1 200px; max-width: 320px; }
+
+.board-toolbar__spacer { flex: 1 1 auto; }
+
+.board-toolbar__actions {
+  display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;
+}
+
+/* ---- Board Scroll Container ----------------------------------------- */
+.board-scroll {
+  flex: 1 1 auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: var(--space-5) var(--space-6);
+  padding-bottom: var(--space-8);
+}
+
+.board {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+  min-width: max-content;
+  height: calc(100vh - 180px);
+}
+
+/* ---- Column --------------------------------------------------------- */
+.kanban-col {
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+  min-width: 280px;
+  max-height: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.kanban-col__header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  flex-shrink: 0;
+}
+
+.kanban-col__title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-strong);
+  display: flex; align-items: center; gap: var(--space-2);
+}
+
+.kanban-col__title .col-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+
+.col-dot--proposed { background: var(--color-text-muted); }
+.col-dot--in-progress { background: var(--color-warning-fg); }
+.col-dot--review { background: var(--color-primary); }
+.col-dot--done { background: var(--color-success); }
+
+.kanban-col__cards {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 60px;
+}
+
+/* Drop target highlight */
+.kanban-col__cards.drag-over {
+  background: var(--color-accent-soft);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  outline: 2px dashed var(--color-accent);
+  outline-offset: -4px;
+}
+
+/* ---- Card extras ---------------------------------------------------- */
+.kanban-card {
+  outline: none;
+}
+.kanban-card:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+.kanban-card__badge-row {
+  display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.kanban-card__meta {
+  display: flex; align-items: center; justify-content: space-between; margin-top: var(--space-3);
+}
+
+.kanban-card__meta-left {
+  display: flex; align-items: center; gap: var(--space-2);
+}
+
+.kanban-card__meta-right {
+  display: flex; align-items: center; gap: var(--space-3);
+}
+
+.kanban-card__micro {
+  display: flex; align-items: center; gap: var(--space-1);
+  font-size: var(--text-2xs); color: var(--color-text-subtle);
+}
+
+.kanban-card__due {
+  font-size: var(--text-2xs);
+  color: var(--color-text-subtle);
+  font-family: var(--font-display);
+  letter-spacing: var(--tracking-wide);
+}
+
+.kanban-card__due--overdue { color: var(--color-danger-fg); }
+.kanban-card__due--soon { color: var(--color-warning-fg); }
+
+/* ---- Column add button --------------------------------------------- */
+.kanban-col__footer {
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+/* ---- DnD ghost placeholder ----------------------------------------- */
+.card-placeholder {
+  height: 80px;
+  border: 2px dashed var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-soft);
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+/* ---- Responsive ------------------------------------------------------- */
+@media (max-width: 768px) {
+  .board-scroll {
+    padding: var(--space-3);
+  }
+  .board {
+    height: auto;
+    min-width: unset;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  .kanban-col {
+    width: 260px;
+    min-width: 260px;
+    max-height: 70vh;
+  }
+  .board-toolbar {
+    padding: var(--space-3) var(--space-4);
+  }
+  .board-toolbar__search {
+    max-width: 100%;
+    flex: 1 1 100%;
+    order: 10;
+  }
+}
+
+/* ---- Scrollbar styling ---------------------------------------------- */
+.kanban-col__cards::-webkit-scrollbar { width: 4px; }
+.kanban-col__cards::-webkit-scrollbar-track { background: transparent; }
+.kanban-col__cards::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 2px;
+}
+
+/* ---- View note ------------------------------------------------------ */
+.dnd-note {
+  font-size: var(--text-2xs);
+  color: var(--color-text-subtle);
+  font-style: italic;
+  padding: var(--space-2) var(--space-6);
+  border-top: 1px solid var(--color-border);
+  text-align: center;
+  background: var(--color-surface);
+}
+</style>
+</head>
+<body class="board-page">
+<a class="skip-link" href="#main">Skip to content</a>
+
+<!-- ===================== NAVBAR ===================== -->
+<nav class="navbar" aria-label="Primary">
+  <a class="navbar__brand" href="../index.html">
+    <span class="mark" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 5a2 2 0 0 1 2-2h6v18H5a2 2 0 0 1-2-2zM21 5a2 2 0 0 0-2-2h-6v18h6a2 2 0 0 0 2-2z"/></svg></span>
+    <span>Folio<span class="text-accent">·</span>24</span>
+  </a>
+  <div class="navbar__nav">
+    <a class="nav-link" href="dashboard.html">Dashboard</a>
+    <a class="nav-link is-active" href="kanban.html" aria-current="page">Board</a>
+    <a class="nav-link" href="inbox.html">Letters</a>
+    <a class="nav-link" href="article.html">Reading Room</a>
+  </div>
+  <span class="navbar__spacer"></span>
+  <div class="navbar__actions">
+    <button class="btn btn--ghost btn--sm" data-cmdk-open aria-label="Open command palette">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <kbd>⌘K</kbd>
+    </button>
+    <button class="btn btn--secondary btn--sm" data-theme-toggle aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      <span data-theme-label>Parchment</span>
+    </button>
+  </div>
+</nav>
+
+<!-- ===================== TOOLBAR ===================== -->
+<div class="board-toolbar" role="region" aria-label="Board toolbar">
+  <!-- Title group -->
+  <div class="board-toolbar__title-group">
+    <p class="eyebrow">Manuscriptum · A.D. MDCCCXLII</p>
+    <h1>The Scriptorium Board</h1>
+  </div>
+
+  <!-- Search / filter -->
+  <div class="board-toolbar__search">
+    <div class="searchbar" role="search">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input
+        type="search"
+        id="board-filter"
+        data-filter="#board"
+        placeholder="Search the manuscripts…"
+        aria-label="Filter cards by keyword"
+        autocomplete="off"
+      />
+    </div>
+  </div>
+
+  <span class="board-toolbar__spacer"></span>
+
+  <!-- Right-side actions -->
+  <div class="board-toolbar__actions">
+    <!-- Contributors avatar group -->
+    <div class="avatar-group" aria-label="Contributors: Brother Aldric, Sister Isolde, Brother Matthias, Sister Rowena, and 2 others">
+      <div class="avatar avatar--sm avatar--ring" title="Frater Aldric of Mercia" aria-label="Frater Aldric">AL</div>
+      <div class="avatar avatar--sm avatar--ring" title="Soror Isolde of Winchester" aria-label="Soror Isolde">IS</div>
+      <div class="avatar avatar--sm avatar--ring" title="Frater Matthias de Cologne" aria-label="Frater Matthias">MK</div>
+      <div class="avatar avatar--sm avatar--ring" title="Soror Rowena of York" aria-label="Soror Rowena">RY</div>
+      <div class="avatar avatar--sm avatar--more" title="2 more scholars" aria-label="+2 more">+2</div>
+    </div>
+
+    <!-- Segmented view selector -->
+    <div class="segmented" role="group" aria-label="Board view">
+      <button aria-selected="true" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="18" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg>
+        Board
+      </button>
+      <button aria-selected="false" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1"/><circle cx="3" cy="12" r="1"/><circle cx="3" cy="18" r="1"/></svg>
+        List
+      </button>
+    </div>
+
+    <!-- New leaf button -->
+    <button class="btn btn--primary btn--sm" type="button" aria-label="Add a new manuscript task">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      New Leaf
+    </button>
+  </div>
+</div>
+
+<!-- ===================== BOARD ===================== -->
+<main id="main" class="board-scroll" aria-label="Manuscript production board">
+  <div class="board" id="board">
+
+    <!-- ============= COLUMN 1: Proposed ============= -->
+    <div class="kanban-col" role="region" aria-label="Proposed column">
+      <div class="kanban-col__header">
+        <span class="kanban-col__title">
+          <span class="col-dot col-dot--proposed" aria-hidden="true"></span>
+          Proposed
+        </span>
+        <span class="badge badge--pill" id="count-proposed" aria-label="4 cards in Proposed">4</span>
+      </div>
+      <div class="kanban-col__cards" id="col-proposed" data-col="proposed"
+           role="list" aria-label="Proposed tasks">
+
+        <!-- Card P1 -->
+        <article class="kanban-card"
+                 role="listitem"
+                 draggable="true"
+                 tabindex="0"
+                 data-filter-item
+                 data-card-id="p1"
+                 aria-label="Transcribe the Marginal Glosses of Codex Aurelianus — Proposed">
+          <div class="kanban-card__badge-row">
+            <span class="badge badge--wax">Palaeography</span>
+          </div>
+          <p class="kanban-card__title">Transcribe the Marginal Glosses of Codex Aurelianus</p>
+          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
+            XVII folios of minute Caroline minuscule; requires magnification glass &amp; steady hand.
+          </p>
+          <div class="kanban-card__meta">
+            <div class="kanban-card__meta-left">
+              <div class="avatar avatar--sm" title="Frater Aldric" aria-label="Assigned to Frater Aldric">AL</div>
+              <span class="kanban-card__due">Kal. Mar.</span>
+            </div>
+            <div class="kanban-card__meta-right">
+              <span class="kanban-card__micro" aria-label="3 comments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                3
+              </span>
+              <span class="kanban-card__micro" aria-label="1 attachment">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                1
+              </span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card P2 -->
+        <article class="kanban-card kanban-card--danger"
+                 role="listitem"
+                 draggable="true"
+                 tabindex="0"
+                 data-filter-item
+                 data-card-id="p2"
+                 aria-label="Catalogue the Uncatalogued Herbarium of Brother Theophilus — Proposed, high priority">
+          <div class="kanban-card__badge-row">
+            <span class="badge badge--danger badge--pill">Urgent</span>
+            <span class="badge">Cataloguing</span>
+          </div>
+          <p class="kanban-card__title">Catalogue the Uncatalogued Herbarium of Brother Theophilus</p>
+          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
+            Pressed specimens dating from MDCXXIII; ink annotations in three hands.
+          </p>
+          <div class="kanban-card__meta">
+            <div class="kanban-card__meta-left">
+              <div class="avatar avatar--sm" title="Soror Rowena" aria-label="Assigned to Soror Rowena">RY</div>
+              <span class="kanban-card__due kanban-card__due--overdue">Id. Ian.</span>
+            </div>
+            <div class="kanban-card__meta-right">
+              <span class="kanban-card__micro" aria-label="7 comments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                7
+              </span>
+              <span class="kanban-card__micro" aria-label="3 attachments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                3
+              </span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card P3 -->
+        <article class="kanban-card"
+                 role="listitem"
+                 draggable="true"
+                 tabindex="0"
+                 data-filter-item
+                 data-card-id="p3"
+                 aria-label="Verify the Provenance of the Antiphonary Fragment — Proposed">
+          <div class="kanban-card__badge-row">
+            <span class="badge badge--info badge--pill">Research</span>
+          </div>
+          <p class="kanban-card__title">Verify the Provenance of the Antiphonary Fragment</p>
+          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
+            Partial leaf, XII cent., discovered inside the binding of Psalterium MS.47.
+          </p>
+          <div class="kanban-card__meta">
+            <div class="kanban-card__meta-left">
+              <div class="avatar avatar--sm" title="Frater Matthias" aria-label="Assigned to Frater Matthias">MK</div>
+              <span class="kanban-card__due">Prid. Non. Apr.</span>
+            </div>
+            <div class="kanban-card__meta-right">
+              <span class="kanban-card__micro" aria-label="2 comments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                2
+              </span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card P4 -->
+        <article class="kanban-card"
+                 role="listitem"
+                 draggable="true"
+                 tabindex="0"
+                 data-filter-item
+                 data-card-id="p4"
+                 aria-label="Commission a New Binding for Tractatus de Stellis — Proposed">
+          <div class="kanban-card__badge-row">
+            <span class="badge badge--wax">Conservation</span>
+          </div>
+          <p class="kanban-card__title">Commission a New Binding for <em>Tractatus de Stellis</em></p>
+          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
+            Spine detached; quires loose. Requires full re-sewn binding in calf vellum.
+          </p>
+          <div class="kanban-card__meta">
+            <div class="kanban-card__meta-left">
+              <div class="avatar avatar--sm" title="Soror Isolde" aria-label="Assigned to Soror Isolde">IS</div>
+              <span class="kanban-card__due">Non. Mai.</span>
+            </div>
+            <div class="kanban-card__meta-right">
+              <span class="kanban-card__micro" aria-label="0 comments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                0
+              </span>
+              <span class="kanban-card__micro" aria-label="2 attachments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                2
+              </span>
+            </div>
+          </div>
+        </article>
+
+      </div>
+      <div class="kanban-col__footer">
+        <button class="btn btn--ghost btn--sm" style="width:100%;justify-content:flex-start;" type="button">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Add leaf
+        </button>
+      </div>
+    </div>
+
+    <!-- ============= COLUMN 2: In the Scriptorium ============= -->
+    <div class="kanban-col" role="region" aria-label="In the Scriptorium column">
+      <div class="kanban-col__header">
+        <span class="kanban-col__title">
+          <span class="col-dot col-dot--in-progress" aria-hidden="true"></span>
+          In the Scriptorium
+        </span>
+        <span class="badge badge--warning badge--pill" id="count-scriptorium" aria-label="4 cards in Scriptorium">4</span>
+      </div>
+      <div class="kanban-col__cards" id="col-scriptorium" data-col="scriptorium"
+           role="list" aria-label="In the Scriptorium tasks">
+
+        <!-- Card S1 -->
+        <article class="kanban-card"
+                 role="listitem"
+                 draggable="true"
+                 tabindex="0"
+                 data-filter-item
+                 data-card-id="s1"
+                 aria-label="Transcribe the Marginalia of Folio 12r from the Bestiary of Exeter — In Progress">
+          <div class="kanban-card__badge-row">
+            <span class="badge badge--accent badge--pill">In Progress</span>
+            <span class="badge">Palaeography</span>
+          </div>
+          <p class="kanban-card__title">Transcribe the Marginalia of Folio 12r from the Bestiary of Exeter</p>
+          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
+            Pen-and-ink drawings alongside Old English interlinear glosses. Hairy vellum; handle with silk gloves.
+          </p>
+          <div class="kanban-card__meta">
+            <div class="kanban-card__meta-left">
+              <div class="avatar avatar--sm" title="Frater Aldric" aria-label="Assigned to Frater Aldric">AL</div>
+              <span class="kanban-card__due kanban-card__due--soon">Kal. Feb.</span>
+            </div>
+            <div class="kanban-card__meta-right">
+              <span class="kanban-card__micro" aria-label="5 comments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                5
+              </span>
+              <span class="kanban-card__micro" aria-label="4 attachments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                4
+              </span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card S2 -->
+        <article class="kanban-card kanban-card--danger"
+                 role="listitem"
+                 draggable="true"
+                 tabindex="0"
+                 data-filter-item
+                 data-card-id="s2"
+                 aria-label="Restore the Water-Damaged Psalter, MS.Bodl.33 — In Progress, high priority">
+          <div class="kanban-card__badge-row">
+            <span class="badge badge--danger badge--pill">Urgent</span>
+            <span class="badge">Conservation</span>
+          </div>
+          <p class="kanban-card__title">Restore the Water-Damaged Psalter, MS.Bodl.33</p>
+          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
+            Tide marks on quires VI–XII; pigment lifting on the Beatus initial. Humidification required.
+          </p>
+          <div class="kanban-card__meta">
+            <div class="kanban-card__meta-left">
+              <div class="avatar avatar--sm" title="Soror Isolde" aria-label="Assigned to Soror Isolde">IS</div>
+              <span class="kanban-card__due kanban-card__due--overdue">Id. Ian. (overdue)</span>
+            </div>
+            <div class="kanban-card__meta-right">
+              <span class="kanban-card__micro" aria-label="12 comments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                12
+              </span>
+              <span class="kanban-card__micro" aria-label="6 attachments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                6
+              </span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card S3 -->
+        <article class="kanban-card"
+                 role="listitem"
+                 draggable="true"
+                 tabindex="0"
+                 data-filter-item
+                 data-card-id="s3"
+                 aria-label="Render Gold Leaf Borders for the December Calendar Page — In Progress">
+          <div class="kanban-card__badge-row">
+            <span class="badge badge--wax">Illumination</span>
+          </div>
+          <p class="kanban-card__title">Render Gold Leaf Borders for the December Calendar Page</p>
+          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
+            Burnish gold over gesso; acanthus scrollwork in ultramarine. Cf. Book of Hours, Paris school.
+          </p>
+          <div class="kanban-card__meta">
+            <div class="kanban-card__meta-left">
+              <div class="avatar avatar--sm" title="Soror Rowena" aria-label="Assigned to Soror Rowena">RY</div>
+              <span class="kanban-card__due">XV Kal. Dec.</span>
+            </div>
+            <div class="kanban-card__meta-right">
+              <span class="kanban-card__micro" aria-label="4 comments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                4
+              </span>
+              <span class="kanban-card__micro" aria-label="2 attachments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                2
+              </span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card S4 -->
+        <article class="kanban-card"
+                 role="listitem"
+                 draggable="true"
+                 tabindex="0"
+                 data-filter-item
+                 data-card-id="s4"
+                 aria-label="Compose Rubricated Chapter Headings for Liber Moralium — In Progress">
+          <div class="kanban-card__badge-row">
+            <span class="badge badge--primary badge--pill">Scribal</span>
+          </div>
+          <p class="kanban-card__title">Compose Rubricated Chapter Headings for <em>Liber Moralium</em></p>
+          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
+            Red and blue alternating initials; each chapter incipit to be set in uncial script.
+          </p>
+          <div class="kanban-card__meta">
+            <div class="kanban-card__meta-left">
+              <div class="avatar avatar--sm" title="Frater Matthias" aria-label="Assigned to Frater Matthias">MK</div>
+              <span class="kanban-card__due kanban-card__due--soon">III Non. Mar.</span>
+            </div>
+            <div class="kanban-card__meta-right">
+              <span class="kanban-card__micro" aria-label="1 comment">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                1
+              </span>
+            </div>
+          </div>
+        </article>
+
+      </div>
+      <div class="kanban-col__footer">
+        <button class="btn btn--ghost btn--sm" style="width:100%;justify-content:flex-start;" type="button">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Add leaf
+        </button>
+      </div>
+    </div>
+
+    <!-- ============= COLUMN 3: Under Review ============= -->
+    <div class="kanban-col" role="region" aria-label="Under Review column">
+      <div class="kanban-col__header">
+        <span class="kanban-col__title">
+          <span class="col-dot col-dot--review" aria-hidden="true"></span>
+          Under Review
+        </span>
+        <span class="badge badge--primary badge--pill" id="count-review" aria-label="3 cards in Under Review">3</span>
+      </div>
+      <div class="kanban-col__cards" id="col-review" data-col="review"
+           role="list" aria-label="Under Review tasks">
+
+        <!-- Card R1 -->
+        <article class="kanban-card kanban-card--success"
+                 role="listitem"
+                 draggable="true"
+                 tabindex="0"
+                 data-filter-item
+                 data-card-id="r1"
+                 aria-label="Collate Variants in the Benedictine Rule, Chapter VII — Under Review">
+          <div class="kanban-card__badge-row">
+            <span class="badge badge--success badge--pill">In Review</span>
+            <span class="badge">Textual Criticism</span>
+          </div>
+          <p class="kanban-card__title">Collate Variants in the Benedictine Rule, Chapter VII</p>
+          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
+            Cross-reference seven manuscript witnesses: Sangallensis, Oxoniensis, Cassino, et alii.
+          </p>
+          <div class="kanban-card__meta">
+            <div class="kanban-card__meta-left">
+              <div class="avatar avatar--sm" title="Frater Aldric" aria-label="Assigned to Frater Aldric">AL</div>
+              <span class="kanban-card__due">Kal. Apr.</span>
+            </div>
+            <div class="kanban-card__meta-right">
+              <span class="kanban-card__micro" aria-label="9 comments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                9
+              </span>
+              <span class="kanban-card__micro" aria-label="7 attachments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                7
+              </span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card R2 -->
+        <article class="kanban-card"
+                 role="listitem"
+                 draggable="true"
+                 tabindex="0"
+                 data-filter-item
+                 data-card-id="r2"
+                 aria-label="Prepare Critical Edition of the Lapidary of Bishop Marbode — Under Review">
+          <div class="kanban-card__badge-row">
+            <span class="badge badge--info badge--pill">In Review</span>
+          </div>
+          <p class="kanban-card__title">Prepare Critical Edition of the Lapidary of Bishop Marbode</p>
+          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
+            <em>De Lapidibus</em>, ca. MCXI. Comparing Rennes and Paris recensions.
+          </p>
+          <div class="kanban-card__meta">
+            <div class="kanban-card__meta-left">
+              <div class="avatar avatar--sm" title="Soror Isolde" aria-label="Assigned to Soror Isolde">IS</div>
+              <span class="kanban-card__due">VI Id. Jun.</span>
+            </div>
+            <div class="kanban-card__meta-right">
+              <span class="kanban-card__micro" aria-label="6 comments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                6
+              </span>
+              <span class="kanban-card__micro" aria-label="3 attachments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                3
+              </span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card R3 -->
+        <article class="kanban-card kanban-card--danger"
+                 role="listitem"
+                 draggable="true"
+                 tabindex="0"
+                 data-filter-item
+                 data-card-id="r3"
+                 aria-label="Index the Alchemical Receipts in Sloane MS 2628 — Under Review, high priority">
+          <div class="kanban-card__badge-row">
+            <span class="badge badge--danger badge--pill">Urgent</span>
+            <span class="badge">Indexing</span>
+          </div>
+          <p class="kanban-card__title">Index the Alchemical Receipts in Sloane MS 2628</p>
+          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
+            Receipts for the Philosopher's Stone; coded references to <em>sulphur philosophicum</em>.
+          </p>
+          <div class="kanban-card__meta">
+            <div class="kanban-card__meta-left">
+              <div class="avatar avatar--sm" title="Frater Matthias" aria-label="Assigned to Frater Matthias">MK</div>
+              <span class="kanban-card__due kanban-card__due--overdue">Prid. Non. Ian.</span>
+            </div>
+            <div class="kanban-card__meta-right">
+              <span class="kanban-card__micro" aria-label="3 comments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                3
+              </span>
+              <span class="kanban-card__micro" aria-label="5 attachments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                5
+              </span>
+            </div>
+          </div>
+        </article>
+
+      </div>
+      <div class="kanban-col__footer">
+        <button class="btn btn--ghost btn--sm" style="width:100%;justify-content:flex-start;" type="button">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Add leaf
+        </button>
+      </div>
+    </div>
+
+    <!-- ============= COLUMN 4: Illuminated (Done) ============= -->
+    <div class="kanban-col" role="region" aria-label="Illuminated Done column">
+      <div class="kanban-col__header">
+        <span class="kanban-col__title">
+          <span class="col-dot col-dot--done" aria-hidden="true"></span>
+          Illuminated
+          <span class="text-subtle" style="font-weight:normal;font-size:var(--text-xs);">(Done)</span>
+        </span>
+        <span class="badge badge--success badge--pill" id="count-done" aria-label="3 cards done">3</span>
+      </div>
+      <div class="kanban-col__cards" id="col-done" data-col="done"
+           role="list" aria-label="Completed illuminated tasks">
+
+        <!-- Card D1 -->
+        <article class="kanban-card kanban-card--success"
+                 role="listitem"
+                 draggable="true"
+                 tabindex="0"
+                 data-filter-item
+                 data-card-id="d1"
+                 aria-label="Paint the Historiated Initial B for the Breviary of Sarum — Completed">
+          <div class="kanban-card__badge-row">
+            <span class="badge badge--success badge--pill">Illuminated</span>
+            <span class="badge badge--wax">Illumination</span>
+          </div>
+          <p class="kanban-card__title">Paint the Historiated Initial B for the Breviary of Sarum</p>
+          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
+            Beatus initial with King David playing the harp; lapis lazuli background, vermillion drapery.
+          </p>
+          <div class="kanban-card__meta">
+            <div class="kanban-card__meta-left">
+              <div class="avatar avatar--sm" title="Soror Rowena" aria-label="Assigned to Soror Rowena">RY</div>
+              <span class="kanban-card__due">Completum · IV Kal. Jan.</span>
+            </div>
+            <div class="kanban-card__meta-right">
+              <span class="kanban-card__micro" aria-label="11 comments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                11
+              </span>
+              <span class="kanban-card__micro" aria-label="8 attachments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                8
+              </span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card D2 -->
+        <article class="kanban-card kanban-card--success"
+                 role="listitem"
+                 draggable="true"
+                 tabindex="0"
+                 data-filter-item
+                 data-card-id="d2"
+                 aria-label="Translate Portions of the Physiologus from Greek — Completed">
+          <div class="kanban-card__badge-row">
+            <span class="badge badge--success badge--pill">Illuminated</span>
+            <span class="badge">Translation</span>
+          </div>
+          <p class="kanban-card__title">Translate Portions of the <em>Physiologus</em> from Greek</p>
+          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
+            Chapters I–XIV rendered into Vulgate Latin. Chapters on the pelican and the phoenix completed.
+          </p>
+          <div class="kanban-card__meta">
+            <div class="kanban-card__meta-left">
+              <div class="avatar avatar--sm" title="Frater Aldric" aria-label="Assigned to Frater Aldric">AL</div>
+              <span class="kanban-card__due">Completum · Non. Dec.</span>
+            </div>
+            <div class="kanban-card__meta-right">
+              <span class="kanban-card__micro" aria-label="8 comments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                8
+              </span>
+              <span class="kanban-card__micro" aria-label="5 attachments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                5
+              </span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Card D3 -->
+        <article class="kanban-card kanban-card--success"
+                 role="listitem"
+                 draggable="true"
+                 tabindex="0"
+                 data-filter-item
+                 data-card-id="d3"
+                 aria-label="Prepare Digitisation Surrogate of the Necrologium Veronense — Completed">
+          <div class="kanban-card__badge-row">
+            <span class="badge badge--success badge--pill">Illuminated</span>
+            <span class="badge">Digitisation</span>
+          </div>
+          <p class="kanban-card__title">Prepare Digitisation Surrogate of the <em>Necrologium Veronense</em></p>
+          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
+            602 folios photographed at 400 ppi under raking light. Metadata encoded in TEI-XML.
+          </p>
+          <div class="kanban-card__meta">
+            <div class="kanban-card__meta-left">
+              <div class="avatar avatar--sm" title="Soror Isolde" aria-label="Assigned to Soror Isolde">IS</div>
+              <span class="kanban-card__due">Completum · VIII Id. Nov.</span>
+            </div>
+            <div class="kanban-card__meta-right">
+              <span class="kanban-card__micro" aria-label="15 comments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                15
+              </span>
+              <span class="kanban-card__micro" aria-label="12 attachments">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                12
+              </span>
+            </div>
+          </div>
+        </article>
+
+      </div>
+      <div class="kanban-col__footer">
+        <button class="btn btn--ghost btn--sm" style="width:100%;justify-content:flex-start;" type="button">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Add leaf
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /.board -->
+</main>
+
+<!-- DnD note -->
+<p class="dnd-note" role="note">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="display:inline;vertical-align:middle;"><path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8zM6 1v3M10 1v3M14 1v3"/></svg>
+  Drag leaves between columns to advance the manuscript through its stages of production.
+  Cards are focusable via keyboard; drag-and-drop requires a pointing device.
+</p>
+
+<!-- Footer ornament -->
+<footer style="text-align:center;padding:var(--space-4) var(--space-6);border-top:1px solid var(--color-border);">
+  <div class="fleur" aria-hidden="true"></div>
+  <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-2);">
+    <em>Nunc dimittis servum tuum in pace</em> &mdash; Folio·24 Scriptorium &copy; MDCCCXLII
+  </p>
+</footer>
+
+<script src="../app.js"></script>
+<script>
+/* ========================================================
+   SCRIPTORIUM BOARD — Drag-and-Drop (HTML5 native)
+   No libraries. Vanilla JS only.
+   ======================================================== */
+(function () {
+  'use strict';
+
+  let draggedCard = null;
+  let dragSourceCol = null;
+  let placeholder = null;
+
+  // Column count badge map
+  const countBadgeIds = {
+    'proposed':    'count-proposed',
+    'scriptorium': 'count-scriptorium',
+    'review':      'count-review',
+    'done':        'count-done',
+  };
+
+  function getCardList(colEl) {
+    return Array.from(colEl.querySelectorAll('.kanban-card'));
+  }
+
+  function updateCount(colEl) {
+    const col = colEl.dataset.col;
+    const badge = document.getElementById(countBadgeIds[col]);
+    if (!badge) return;
+    const count = getCardList(colEl).length;
+    badge.textContent = count;
+    badge.setAttribute('aria-label', count + ' cards in ' + col);
+  }
+
+  function createPlaceholder() {
+    const ph = document.createElement('div');
+    ph.className = 'card-placeholder';
+    ph.setAttribute('aria-hidden', 'true');
+    return ph;
+  }
+
+  function getCardAfterCursor(colCards, y) {
+    const cards = Array.from(colCards.querySelectorAll('.kanban-card:not(.dragging)'));
+    return cards.reduce((closest, card) => {
+      const box = card.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) {
+        return { offset, element: card };
+      }
+      return closest;
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+  }
+
+  // ---- Attach events to each card ----
+  function initCard(card) {
+    card.addEventListener('dragstart', function (e) {
+      draggedCard = card;
+      dragSourceCol = card.closest('[data-col]');
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', card.dataset.cardId || '');
+      // Small delay so the card doesn't vanish under cursor immediately
+      setTimeout(() => { card.style.opacity = '0.45'; }, 0);
+
+      placeholder = createPlaceholder();
+    });
+
+    card.addEventListener('dragend', function () {
+      card.classList.remove('dragging');
+      card.style.opacity = '';
+      draggedCard = null;
+      dragSourceCol = null;
+      if (placeholder && placeholder.parentNode) {
+        placeholder.parentNode.removeChild(placeholder);
+      }
+      placeholder = null;
+
+      // Remove drag-over highlights
+      document.querySelectorAll('.kanban-col__cards.drag-over').forEach(function (c) {
+        c.classList.remove('drag-over');
+      });
+    });
+  }
+
+  // ---- Attach events to each column drop zone ----
+  function initColumn(colCards) {
+    colCards.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      colCards.classList.add('drag-over');
+
+      if (!draggedCard || !placeholder) return;
+
+      const after = getCardAfterCursor(colCards, e.clientY);
+      if (after == null) {
+        colCards.appendChild(placeholder);
+      } else {
+        colCards.insertBefore(placeholder, after);
+      }
+    });
+
+    colCards.addEventListener('dragleave', function (e) {
+      // Only remove highlight if leaving the column entirely
+      if (!colCards.contains(e.relatedTarget)) {
+        colCards.classList.remove('drag-over');
+        if (placeholder && placeholder.parentNode === colCards) {
+          // keep placeholder until drop or dragend
+        }
+      }
+    });
+
+    colCards.addEventListener('drop', function (e) {
+      e.preventDefault();
+      colCards.classList.remove('drag-over');
+
+      if (!draggedCard) return;
+
+      const after = getCardAfterCursor(colCards, e.clientY);
+      if (placeholder && placeholder.parentNode) {
+        placeholder.parentNode.removeChild(placeholder);
+      }
+
+      if (after == null) {
+        colCards.appendChild(draggedCard);
+      } else {
+        colCards.insertBefore(draggedCard, after);
+      }
+
+      // Update counts for source and destination columns
+      if (dragSourceCol) updateCount(dragSourceCol);
+      updateCount(colCards);
+    });
+  }
+
+  // ---- Boot ----
+  function init() {
+    document.querySelectorAll('.kanban-card').forEach(initCard);
+    document.querySelectorAll('.kanban-col__cards').forEach(initColumn);
+  }
+
+  // Run after DOM ready (script is at end of body, but safe guard)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

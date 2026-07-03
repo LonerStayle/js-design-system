@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>칸반 보드 · Maison Déco</title>
+<meta name="description" content="제작 보드 — 드래그 가능한 골드 컬럼의 칸반. Art Deco 디자인 시스템 데모." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Poiret+One&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../tokens.css" />
+<link rel="stylesheet" href="../semantic.css" />
+<link rel="stylesheet" href="../base.css" />
+<link rel="stylesheet" href="../components/index.css" />
+<style>
+  /* 페이지 전용 보조 레이아웃만 여기에 */
+  .board-wrap { padding-inline: clamp(var(--space-4), 4vw, var(--space-10)); padding-bottom: var(--space-12); }
+  .board {
+    display: flex;
+    gap: var(--space-5);
+    overflow-x: auto;
+    padding-block: var(--space-4) var(--space-6);
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+  .board::-webkit-scrollbar { height: 10px; }
+  .board::-webkit-scrollbar-thumb { background: rgba(var(--rgb-gold), .25); border-radius: var(--radius-pill); }
+  .board::-webkit-scrollbar-track { background: transparent; }
+  .column {
+    min-width: 300px;
+    width: 300px;
+    flex: 0 0 300px;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    background: var(--color-surface);
+    border: var(--border-1) solid var(--color-border-muted);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    position: relative;
+  }
+  /* 컬럼 상단 골드 라인 */
+  .column::before {
+    content: "";
+    position: absolute;
+    top: 0; left: var(--space-4); right: var(--space-4);
+    height: 2px;
+    background: var(--metal-gold);
+    border-radius: var(--radius-pill);
+  }
+  .column.is-over {
+    border-color: var(--color-border-strong);
+    box-shadow: var(--glow-gold-sm);
+  }
+  .column-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding-top: var(--space-2);
+  }
+  .column-head .ch-title {
+    font-family: var(--font-display);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    font-size: var(--text-sm);
+    color: var(--color-text-strong);
+  }
+  .column-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-height: 48px;
+    flex: 1 1 auto;
+  }
+  .kanban-card { scroll-snap-align: start; }
+  .kanban-card:focus-visible { outline: 2px solid var(--color-border-strong); outline-offset: 2px; }
+  .kanban-card[aria-grabbed="true"] { box-shadow: var(--glow-gold); }
+  .kc-head { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); flex-wrap: wrap; }
+  .kc-desc { font-size: var(--text-sm); color: var(--color-text-muted); margin-top: 2px; line-height: 1.4; }
+  .kc-meta .kc-date { display: inline-flex; align-items: center; gap: 5px; font-size: var(--text-xs); color: var(--color-text-subtle); font-family: var(--font-mono); }
+  .kc-meta .kc-date svg { width: 13px; height: 13px; }
+  .kc-meta .kc-right { display: inline-flex; align-items: center; gap: var(--space-3); }
+  .kc-count { display: inline-flex; align-items: center; gap: 3px; font-size: var(--text-xs); color: var(--color-text-subtle); }
+  .kc-count svg { width: 13px; height: 13px; }
+  .page-head { padding-inline: clamp(var(--space-4), 4vw, var(--space-10)); padding-block: var(--space-7) var(--space-2); }
+  .checklist { display: flex; flex-direction: column; gap: var(--space-2); }
+  .checklist-prog { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-text-subtle); }
+  @media (max-width: 680px) {
+    .column { min-width: 84vw; width: 84vw; flex-basis: 84vw; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
+
+<!-- ============================ NAVBAR ============================ -->
+<header class="navbar">
+  <a class="navbar-brand" href="../index.html">
+    <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 1 31 16 16 31 1 16Z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M16 6 26 16 16 26 6 16Z" fill="none" stroke="currentColor" stroke-width="1"/><path d="M16 11v10M11 16h10" stroke="currentColor" stroke-width="1"/></svg>
+    Maison&nbsp;Déco
+  </a>
+  <nav class="navbar-nav" aria-label="주요">
+    <a class="navbar-link" href="dashboard.html">대시보드</a>
+    <a class="navbar-link" aria-current="page" href="kanban.html">제작 보드</a>
+    <a class="navbar-link" href="inbox.html">인박스</a>
+    <a class="navbar-link" href="profile.html">팀</a>
+  </nav>
+  <div class="navbar-actions">
+    <div class="searchbar" style="width:200px">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="1.6"/></svg>
+      <input placeholder="카드 검색…" aria-label="카드 검색" />
+      <kbd>⌘K</kbd>
+    </div>
+    <button class="btn btn--icon btn--bare" data-theme-toggle aria-label="테마 전환" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+    </button>
+    <button class="btn btn--primary btn--sm" data-drawer-open="cardDrawer" data-new-card="1">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2"/></svg>
+      새 카드
+    </button>
+    <span class="avatar" aria-label="내 계정 · Évelyne Roux"><span class="status online"></span>ÉR</span>
+  </div>
+</header>
+
+<main id="main">
+  <!-- ============================ PAGE HEADER ============================ -->
+  <div class="page-head">
+    <nav class="breadcrumb" aria-label="현재 위치">
+      <a href="../index.html">홈</a><span class="sep">/</span>
+      <a href="dashboard.html">제작</a><span class="sep">/</span>
+      <a href="kanban.html" aria-current="page">제작 보드</a>
+    </nav>
+    <div class="between wrap mt-4" style="align-items:flex-end;gap:var(--space-5)">
+      <div class="stack-2">
+        <p class="eyebrow">Atelier · Q3 컬렉션</p>
+        <h1 class="display text-gold fs-4xl">제작 보드</h1>
+        <p class="text-muted fs-sm">17개 작업 · 4명 담당 · 마감 2026.07.31</p>
+      </div>
+      <div class="row-wrap" style="gap:var(--space-4);align-items:center">
+        <span class="avatar-group" aria-label="담당자 5명">
+          <span class="avatar avatar--sm" aria-label="Daisy Buchanan">DB</span>
+          <span class="avatar avatar--sm avatar--emerald" aria-label="Nick Carraway">NC</span>
+          <span class="avatar avatar--sm" aria-label="Jordan Baker">JB</span>
+          <span class="avatar avatar--sm avatar--emerald" aria-label="Tom Buchanan">TB</span>
+          <span class="avatar avatar--sm more" aria-label="외 1명">+1</span>
+        </span>
+        <div class="dropdown">
+          <button class="btn btn--secondary btn--sm" data-dropdown-toggle aria-haspopup="true" aria-expanded="false">
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M3 5h18M6 12h12M10 19h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            필터 ▾
+          </button>
+          <div class="menu" hidden role="menu">
+            <div class="menu-label">라벨</div>
+            <button class="menu-item" role="menuitem"><span class="badge badge--gold">디자인</span></button>
+            <button class="menu-item" role="menuitem"><span class="badge badge--info">개발</span></button>
+            <button class="menu-item" role="menuitem"><span class="badge badge--danger">버그</span></button>
+            <button class="menu-item" role="menuitem"><span class="badge badge--emerald">문서</span></button>
+            <div class="menu-sep"></div>
+            <div class="menu-label">담당자</div>
+            <button class="menu-item" role="menuitem"><span class="avatar avatar--sm">DB</span> Daisy Buchanan</button>
+            <button class="menu-item" role="menuitem"><span class="avatar avatar--sm avatar--emerald">NC</span> Nick Carraway</button>
+            <div class="menu-sep"></div>
+            <button class="menu-item menu-item--danger" role="menuitem">필터 초기화</button>
+          </div>
+        </div>
+        <div class="segmented" role="tablist" aria-label="뷰 전환">
+          <button aria-selected="true" class="is-active">보드</button>
+          <button aria-selected="false">리스트</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="deco-rule" aria-hidden="true" style="margin-inline:clamp(var(--space-4),4vw,var(--space-10))" />
+
+  <!-- ============================ KANBAN BOARD ============================ -->
+  <div class="board-wrap">
+    <div class="board" id="board">
+
+      <!-- ===== 백로그 ===== -->
+      <section class="column" data-column="백로그" aria-label="백로그 컬럼">
+        <div class="column-head">
+          <span class="ch-title">백로그 <span class="badge badge--gold" data-count>5</span></span>
+          <button class="btn btn--icon btn--bare btn--sm" aria-label="백로그 컬럼 옵션">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>
+          </button>
+        </div>
+        <div class="column-stack" data-stack>
+
+          <article class="kanban-card" draggable="true" tabindex="0" aria-grabbed="false"
+            data-title="라운지 컬렉션 무드보드"
+            data-desc="1920년대 갈라 무드를 담은 레퍼런스 큐레이션 — 골드·제이드 팔레트 확정."
+            data-label="디자인" data-due="2026-07-04" data-assignee="Daisy Buchanan">
+            <div class="kc-head"><span class="badge badge--gold">디자인</span></div>
+            <p class="kc-title">라운지 컬렉션 무드보드</p>
+            <p class="kc-desc">1920년대 갈라 무드 레퍼런스 큐레이션.</p>
+            <div class="kc-meta">
+              <span class="kc-date"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6"/></svg>7월 4일</span>
+              <span class="kc-right">
+                <span class="kc-count" aria-label="댓글 3개"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4V5Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>3</span>
+                <span class="avatar avatar--sm" aria-label="Daisy Buchanan">DB</span>
+              </span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" tabindex="0" aria-grabbed="false"
+            data-title="에메랄드 자수 패턴 시안"
+            data-desc="제이드 톤 자수 모티프 3종 드래프트 — 셰브론/지구라트/선버스트."
+            data-label="디자인" data-due="2026-07-09" data-assignee="Jordan Baker">
+            <div class="kc-head"><span class="badge badge--gold">디자인</span></div>
+            <p class="kc-title">에메랄드 자수 패턴 시안</p>
+            <p class="kc-desc">제이드 자수 모티프 3종 드래프트.</p>
+            <div class="kc-meta">
+              <span class="kc-date"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6"/></svg>7월 9일</span>
+              <span class="kc-right">
+                <span class="kc-count" aria-label="첨부 2개"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12 12 21a5 5 0 0 1-7-7l9-9a3.5 3.5 0 0 1 5 5l-9 9a2 2 0 0 1-3-3l8-8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>2</span>
+                <span class="avatar avatar--sm" aria-label="Jordan Baker">JB</span>
+              </span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" tabindex="0" aria-grabbed="false"
+            data-title="치수표 데이터 마이그레이션"
+            data-desc="레거시 스프레드시트를 신규 사이즈 스키마로 이관."
+            data-label="개발" data-due="2026-07-15" data-assignee="Nick Carraway">
+            <div class="kc-head"><span class="badge badge--info">개발</span></div>
+            <p class="kc-title">치수표 데이터 마이그레이션</p>
+            <p class="kc-desc">레거시 시트를 신규 사이즈 스키마로 이관.</p>
+            <div class="kc-meta">
+              <span class="kc-date"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6"/></svg>7월 15일</span>
+              <span class="kc-right">
+                <span class="kc-count" aria-label="댓글 1개"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4V5Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>1</span>
+                <span class="avatar avatar--sm avatar--emerald" aria-label="Nick Carraway">NC</span>
+              </span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" tabindex="0" aria-grabbed="false"
+            data-title="원단 공급사 단가 정리 문서"
+            data-desc="실크·벨벳·라메 3개 공급사 견적 비교표 작성."
+            data-label="문서" data-due="2026-07-18" data-assignee="Tom Buchanan">
+            <div class="kc-head"><span class="badge badge--emerald">문서</span></div>
+            <p class="kc-title">원단 공급사 단가 정리</p>
+            <p class="kc-desc">실크·벨벳·라메 견적 비교표.</p>
+            <div class="kc-meta">
+              <span class="kc-date"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6"/></svg>7월 18일</span>
+              <span class="kc-right">
+                <span class="avatar avatar--sm" aria-label="Tom Buchanan">TB</span>
+              </span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" tabindex="0" aria-grabbed="false"
+            data-title="시즌 룩북 촬영 일정 조율"
+            data-desc="스튜디오·모델·헤어 3개 부서 가용 일정 협의."
+            data-label="기획" data-due="2026-07-22" data-assignee="Daisy Buchanan">
+            <div class="kc-head"><span class="badge badge--warning">기획</span></div>
+            <p class="kc-title">룩북 촬영 일정 조율</p>
+            <p class="kc-desc">스튜디오·모델·헤어 일정 협의.</p>
+            <div class="kc-meta">
+              <span class="kc-date"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6"/></svg>7월 22일</span>
+              <span class="kc-right">
+                <span class="kc-count" aria-label="댓글 5개"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4V5Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>5</span>
+                <span class="avatar-group">
+                  <span class="avatar avatar--sm" aria-label="Daisy Buchanan">DB</span>
+                  <span class="avatar avatar--sm avatar--emerald" aria-label="Jordan Baker">JB</span>
+                </span>
+              </span>
+            </div>
+          </article>
+
+        </div>
+        <button class="btn btn--ghost btn--block btn--sm" data-add-card aria-label="백로그에 카드 추가">+ 카드 추가</button>
+      </section>
+
+      <!-- ===== 진행 중 ===== -->
+      <section class="column" data-column="진행 중" aria-label="진행 중 컬럼">
+        <div class="column-head">
+          <span class="ch-title">진행 중 <span class="badge badge--gold" data-count>4</span></span>
+          <button class="btn btn--icon btn--bare btn--sm" aria-label="진행 중 컬럼 옵션">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>
+          </button>
+        </div>
+        <div class="column-stack" data-stack>
+
+          <article class="kanban-card" draggable="true" tabindex="0" aria-grabbed="false"
+            data-title="이브닝 가운 패턴 재단"
+            data-desc="시그니처 가운 본 패턴 — 1차 토일 재단 진행 중."
+            data-label="디자인" data-due="2026-07-06" data-assignee="Jordan Baker">
+            <div class="kc-head"><span class="badge badge--gold">디자인</span></div>
+            <p class="kc-title">이브닝 가운 패턴 재단</p>
+            <p class="kc-desc">시그니처 가운 1차 토일 재단.</p>
+            <div class="kc-meta">
+              <span class="kc-date"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6"/></svg>7월 6일</span>
+              <span class="kc-right">
+                <span class="kc-count" aria-label="첨부 4개"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12 12 21a5 5 0 0 1-7-7l9-9a3.5 3.5 0 0 1 5 5l-9 9a2 2 0 0 1-3-3l8-8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>4</span>
+                <span class="avatar avatar--sm" aria-label="Jordan Baker">JB</span>
+              </span>
+            </div>
+          </article>
+
+          <article class="kanban-card kanban-card--danger" draggable="true" tabindex="0" aria-grabbed="false"
+            data-title="체크아웃 결제 게이트웨이 오류"
+            data-desc="라메 컬렉션 카드 결제 시 3DS 인증 단계에서 타임아웃 — 차단됨."
+            data-label="버그" data-due="2026-07-02" data-assignee="Nick Carraway">
+            <div class="kc-head"><span class="badge badge--danger">버그</span><span class="badge badge--warning">막힘</span></div>
+            <p class="kc-title">결제 게이트웨이 3DS 타임아웃</p>
+            <p class="kc-desc">카드 결제 인증 단계에서 차단됨.</p>
+            <div class="kc-meta">
+              <span class="kc-date"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6"/></svg>7월 2일</span>
+              <span class="kc-right">
+                <span class="kc-count" aria-label="댓글 8개"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4V5Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>8</span>
+                <span class="avatar avatar--sm avatar--emerald" aria-label="Nick Carraway">NC</span>
+              </span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" tabindex="0" aria-grabbed="false"
+            data-title="상품 상세 페이지 갤러리 구현"
+            data-desc="줌·캐러셀·360° 뷰어 컴포넌트 통합 작업."
+            data-label="개발" data-due="2026-07-11" data-assignee="Nick Carraway">
+            <div class="kc-head"><span class="badge badge--info">개발</span></div>
+            <p class="kc-title">상품 상세 갤러리 구현</p>
+            <p class="kc-desc">줌·캐러셀·360° 뷰어 통합.</p>
+            <div class="kc-meta">
+              <span class="kc-date"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6"/></svg>7월 11일</span>
+              <span class="kc-right">
+                <span class="kc-count" aria-label="댓글 2개"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4V5Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>2</span>
+                <span class="avatar-group">
+                  <span class="avatar avatar--sm avatar--emerald" aria-label="Nick Carraway">NC</span>
+                  <span class="avatar avatar--sm" aria-label="Daisy Buchanan">DB</span>
+                </span>
+              </span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" tabindex="0" aria-grabbed="false"
+            data-title="브랜드 보이스 카피 가이드"
+            data-desc="제품 설명·태그라인 톤앤매너 문서 초안 집필."
+            data-label="문서" data-due="2026-07-14" data-assignee="Tom Buchanan">
+            <div class="kc-head"><span class="badge badge--emerald">문서</span></div>
+            <p class="kc-title">브랜드 보이스 카피 가이드</p>
+            <p class="kc-desc">태그라인 톤앤매너 문서 초안.</p>
+            <div class="kc-meta">
+              <span class="kc-date"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6"/></svg>7월 14일</span>
+              <span class="kc-right">
+                <span class="avatar avatar--sm" aria-label="Tom Buchanan">TB</span>
+              </span>
+            </div>
+          </article>
+
+        </div>
+        <button class="btn btn--ghost btn--block btn--sm" data-add-card aria-label="진행 중에 카드 추가">+ 카드 추가</button>
+      </section>
+
+      <!-- ===== 리뷰 ===== -->
+      <section class="column" data-column="리뷰" aria-label="리뷰 컬럼">
+        <div class="column-head">
+          <span class="ch-title">리뷰 <span class="badge badge--gold" data-count>3</span></span>
+          <button class="btn btn--icon btn--bare btn--sm" aria-label="리뷰 컬럼 옵션">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>
+          </button>
+        </div>
+        <div class="column-stack" data-stack>
+
+          <article class="kanban-card" draggable="true" tabindex="0" aria-grabbed="false"
+            data-title="선버스트 헤더 애니메이션 QA"
+            data-desc="히어로 선버스트 모션 — 저사양 기기 프레임드롭 점검."
+            data-label="개발" data-due="2026-07-05" data-assignee="Jordan Baker">
+            <div class="kc-head"><span class="badge badge--info">개발</span></div>
+            <p class="kc-title">선버스트 헤더 애니메이션 QA</p>
+            <p class="kc-desc">저사양 기기 프레임드롭 점검.</p>
+            <div class="kc-meta">
+              <span class="kc-date"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6"/></svg>7월 5일</span>
+              <span class="kc-right">
+                <span class="kc-count" aria-label="댓글 4개"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4V5Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>4</span>
+                <span class="avatar avatar--sm" aria-label="Jordan Baker">JB</span>
+              </span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" tabindex="0" aria-grabbed="false"
+            data-title="포장 박스 골드 인쇄 교정"
+            data-desc="포일 스탬핑 색상 핀톤 컨펌 — 인쇄소 1차 교정지 검토."
+            data-label="디자인" data-due="2026-07-08" data-assignee="Daisy Buchanan">
+            <div class="kc-head"><span class="badge badge--gold">디자인</span></div>
+            <p class="kc-title">포장 박스 골드 인쇄 교정</p>
+            <p class="kc-desc">포일 스탬핑 핀톤 컨펌.</p>
+            <div class="kc-meta">
+              <span class="kc-date"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6"/></svg>7월 8일</span>
+              <span class="kc-right">
+                <span class="kc-count" aria-label="첨부 3개"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12 12 21a5 5 0 0 1-7-7l9-9a3.5 3.5 0 0 1 5 5l-9 9a2 2 0 0 1-3-3l8-8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>3</span>
+                <span class="avatar avatar--sm" aria-label="Daisy Buchanan">DB</span>
+              </span>
+            </div>
+          </article>
+
+          <article class="kanban-card" draggable="true" tabindex="0" aria-grabbed="false"
+            data-title="재고 동기화 API 회귀 테스트"
+            data-desc="창고 ERP 연동 후 재고 카운트 정합성 회귀 검증."
+            data-label="버그" data-due="2026-07-10" data-assignee="Nick Carraway">
+            <div class="kc-head"><span class="badge badge--danger">버그</span></div>
+            <p class="kc-title">재고 동기화 API 회귀 테스트</p>
+            <p class="kc-desc">ERP 연동 재고 정합성 검증.</p>
+            <div class="kc-meta">
+              <span class="kc-date"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6"/></svg>7월 10일</span>
+              <span class="kc-right">
+                <span class="kc-count" aria-label="댓글 6개"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4V5Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>6</span>
+                <span class="avatar avatar--sm avatar--emerald" aria-label="Nick Carraway">NC</span>
+              </span>
+            </div>
+          </article>
+
+        </div>
+        <button class="btn btn--ghost btn--block btn--sm" data-add-card aria-label="리뷰에 카드 추가">+ 카드 추가</button>
+      </section>
+
+      <!-- ===== 완료 ===== -->
+      <section class="column" data-column="완료" aria-label="완료 컬럼">
+        <div class="column-head">
+          <span class="ch-title">완료 <span class="badge badge--emerald" data-count>4</span></span>
+          <button class="btn btn--icon btn--bare btn--sm" aria-label="완료 컬럼 옵션">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>
+          </button>
+        </div>
+        <div class="column-stack" data-stack>
+
+          <article class="kanban-card kanban-card--emerald" draggable="true" tabindex="0" aria-grabbed="false"
+            data-title="컬러 팔레트 토큰 확정"
+            data-desc="골드·에메랄드·크림 램프 10단계 디자인 토큰 승인 완료."
+            data-label="디자인" data-due="2026-06-20" data-assignee="Daisy Buchanan">
+            <div class="kc-head"><span class="badge badge--gold">디자인</span><span class="badge badge--success"><span class="dot"></span>승인</span></div>
+            <p class="kc-title">컬러 팔레트 토큰 확정</p>
+            <p class="kc-desc">램프 10단계 토큰 승인 완료.</p>
+            <div class="kc-meta">
+              <span class="kc-date"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6"/></svg>6월 20일</span>
+              <span class="kc-right">
+                <span class="avatar avatar--sm" aria-label="Daisy Buchanan">DB</span>
+              </span>
+            </div>
+          </article>
+
+          <article class="kanban-card kanban-card--emerald" draggable="true" tabindex="0" aria-grabbed="false"
+            data-title="네비게이션 컴포넌트 빌드"
+            data-desc="네비바·사이드바·브레드크럼 마크업 & 접근성 패스."
+            data-label="개발" data-due="2026-06-18" data-assignee="Nick Carraway">
+            <div class="kc-head"><span class="badge badge--info">개발</span><span class="badge badge--success"><span class="dot"></span>병합</span></div>
+            <p class="kc-title">네비게이션 컴포넌트 빌드</p>
+            <p class="kc-desc">네비바·사이드바·브레드크럼 완료.</p>
+            <div class="kc-meta">
+              <span class="kc-date"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6"/></svg>6월 18일</span>
+              <span class="kc-right">
+                <span class="kc-count" aria-label="첨부 5개"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12 12 21a5 5 0 0 1-7-7l9-9a3.5 3.5 0 0 1 5 5l-9 9a2 2 0 0 1-3-3l8-8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>5</span>
+                <span class="avatar avatar--sm avatar--emerald" aria-label="Nick Carraway">NC</span>
+              </span>
+            </div>
+          </article>
+
+          <article class="kanban-card kanban-card--emerald" draggable="true" tabindex="0" aria-grabbed="false"
+            data-title="타이포그래피 스케일 문서화"
+            data-desc="Cinzel·Cormorant·DM Mono 스케일 가이드 페이지 게시."
+            data-label="문서" data-due="2026-06-15" data-assignee="Tom Buchanan">
+            <div class="kc-head"><span class="badge badge--emerald">문서</span><span class="badge badge--success"><span class="dot"></span>게시</span></div>
+            <p class="kc-title">타이포그래피 스케일 문서화</p>
+            <p class="kc-desc">폰트 스케일 가이드 페이지 게시.</p>
+            <div class="kc-meta">
+              <span class="kc-date"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6"/></svg>6월 15일</span>
+              <span class="kc-right">
+                <span class="kc-count" aria-label="댓글 2개"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4V5Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>2</span>
+                <span class="avatar avatar--sm" aria-label="Tom Buchanan">TB</span>
+              </span>
+            </div>
+          </article>
+
+          <article class="kanban-card kanban-card--emerald" draggable="true" tabindex="0" aria-grabbed="false"
+            data-title="런웨이 초대장 RSVP 폼"
+            data-desc="갈라 RSVP 폼 검증·이메일 발송 플로우 출시."
+            data-label="개발" data-due="2026-06-12" data-assignee="Jordan Baker">
+            <div class="kc-head"><span class="badge badge--info">개발</span><span class="badge badge--success"><span class="dot"></span>출시</span></div>
+            <p class="kc-title">런웨이 RSVP 폼</p>
+            <p class="kc-desc">검증·이메일 발송 플로우 출시.</p>
+            <div class="kc-meta">
+              <span class="kc-date"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6"/></svg>6월 12일</span>
+              <span class="kc-right">
+                <span class="avatar-group">
+                  <span class="avatar avatar--sm avatar--emerald" aria-label="Jordan Baker">JB</span>
+                  <span class="avatar avatar--sm" aria-label="Nick Carraway">NC</span>
+                </span>
+              </span>
+            </div>
+          </article>
+
+        </div>
+        <button class="btn btn--ghost btn--block btn--sm" data-add-card aria-label="완료에 카드 추가">+ 카드 추가</button>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<!-- ============================ CARD DETAIL DRAWER ============================ -->
+<div class="drawer-overlay overlay" id="cardDrawer" hidden style="place-items:stretch;padding:0">
+  <div class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="cardDrawerTitle" style="margin-left:auto">
+    <div class="drawer-head">
+      <div class="stack-2">
+        <span class="eyebrow" id="cardDrawerLabel">디자인</span>
+        <h3 class="drawer-title" id="cardDrawerTitle">카드 상세</h3>
+      </div>
+      <button class="btn btn--icon btn--bare" data-drawer-close aria-label="닫기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.6"/></svg></button>
+    </div>
+    <div class="drawer-body stack-6">
+      <div class="field">
+        <span class="label">설명</span>
+        <p class="text-serif text-muted" id="cardDrawerDesc">선택한 카드의 상세 설명이 여기에 표시됩니다.</p>
+      </div>
+
+      <hr class="deco-rule" aria-hidden="true" />
+
+      <div class="field">
+        <div class="between">
+          <span class="label">체크리스트</span>
+          <span class="checklist-prog" id="cardChecklistProg">2 / 4</span>
+        </div>
+        <div class="checklist" id="cardChecklist">
+          <label class="check"><input type="checkbox" checked /><span class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span> 레퍼런스 무드보드 수집</label>
+          <label class="check"><input type="checkbox" checked /><span class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span> 팔레트 1차 시안 공유</label>
+          <label class="check"><input type="checkbox" /><span class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span> 디렉터 피드백 반영</label>
+          <label class="check"><input type="checkbox" /><span class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span> 최종 에셋 업로드</label>
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="label">담당자</span>
+        <div class="row">
+          <span class="avatar avatar--sm" id="cardDrawerAvatar">DB</span>
+          <span class="text-serif" id="cardDrawerAssignee">Daisy Buchanan</span>
+          <span class="badge badge--success" style="margin-left:auto"><span class="dot"></span>활동 중</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="label">라벨</span>
+        <div class="row-wrap gap-2">
+          <span class="badge badge--gold">디자인</span>
+          <span class="badge badge--info">개발</span>
+          <span class="badge badge--danger">버그</span>
+          <span class="badge badge--emerald">문서</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label" for="cardDue">마감일</label>
+        <div class="datepicker">
+          <input class="input" id="cardDue" data-datepicker-toggle placeholder="YYYY-MM-DD" readonly value="2026-07-04" />
+          <div class="calendar" data-calendar hidden>
+            <div class="cal-head"><button class="cal-nav cal-prev" aria-label="이전">‹</button><span class="cal-title"></span><button class="cal-nav cal-next" aria-label="다음">›</button></div>
+            <div class="cal-grid"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="drawer-foot">
+      <button class="btn btn--ghost grow" data-drawer-close>닫기</button>
+      <button class="btn btn--primary grow" data-drawer-close data-toast="success" data-toast-title="저장됨" data-toast-msg="카드 변경사항이 보관되었습니다.">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-region" aria-live="polite" aria-atomic="false"></div>
+
+<script src="../app.js"></script>
+<script>
+/* ====================== 칸반 드래그앤드롭 + 드로어 ====================== */
+(function () {
+  "use strict";
+  var board = document.getElementById("board");
+  if (!board) return;
+
+  var toast = function (opts) {
+    if (window.Deco && typeof window.Deco.toast === "function") window.Deco.toast(opts);
+  };
+
+  /* 각 컬럼 개수 badge 갱신 */
+  function refreshCounts() {
+    board.querySelectorAll(".column").forEach(function (col) {
+      var n = col.querySelectorAll("[data-stack] > .kanban-card").length;
+      var b = col.querySelector("[data-count]");
+      if (b) b.textContent = n;
+    });
+  }
+
+  /* ---------- 드래그 (마우스) ---------- */
+  var dragged = null;
+
+  board.addEventListener("dragstart", function (e) {
+    var card = e.target.closest(".kanban-card");
+    if (!card) return;
+    dragged = card;
+    card.classList.add("is-dragging");
+    card.setAttribute("aria-grabbed", "true");
+    if (e.dataTransfer) { e.dataTransfer.effectAllowed = "move"; try { e.dataTransfer.setData("text/plain", card.dataset.title || ""); } catch (err) {} }
+  });
+
+  board.addEventListener("dragend", function () {
+    if (dragged) { dragged.classList.remove("is-dragging"); dragged.setAttribute("aria-grabbed", "false"); }
+    board.querySelectorAll(".column.is-over").forEach(function (c) { c.classList.remove("is-over"); });
+    dragged = null;
+  });
+
+  /* 드롭 위치 계산: 커서 Y 기준 바로 아래 카드 앞에 삽입 */
+  function afterCard(stack, y) {
+    var cards = Array.prototype.slice.call(stack.querySelectorAll(".kanban-card:not(.is-dragging)"));
+    var closest = null, closestOffset = -Infinity;
+    cards.forEach(function (c) {
+      var box = c.getBoundingClientRect();
+      var offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closestOffset) { closestOffset = offset; closest = c; }
+    });
+    return closest;
+  }
+
+  board.querySelectorAll(".column").forEach(function (col) {
+    var stack = col.querySelector("[data-stack]");
+    col.addEventListener("dragover", function (e) {
+      if (!dragged) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+      col.classList.add("is-over");
+      var ref = afterCard(stack, e.clientY);
+      if (ref == null) stack.appendChild(dragged);
+      else stack.insertBefore(dragged, ref);
+    });
+    col.addEventListener("dragleave", function (e) {
+      if (!col.contains(e.relatedTarget)) col.classList.remove("is-over");
+    });
+    col.addEventListener("drop", function (e) {
+      if (!dragged) return;
+      e.preventDefault();
+      col.classList.remove("is-over");
+      var title = dragged.dataset.title || "카드";
+      refreshCounts();
+      toast({ title: "이동 완료", message: "「" + title + "」 → " + col.dataset.column, variant: "success" });
+    });
+  });
+
+  /* ---------- 키보드 대체 수단 ---------- */
+  var grabbed = null;
+  board.addEventListener("keydown", function (e) {
+    var card = e.target.closest(".kanban-card");
+    if (!card) return;
+    var cols = Array.prototype.slice.call(board.querySelectorAll(".column"));
+    var curCol = card.closest(".column");
+    var idx = cols.indexOf(curCol);
+
+    if (e.key === " " || e.key === "Enter") {
+      // Enter 는 드로어 열기에 양보 → 스페이스로 잡기/놓기
+      if (e.key !== " ") return;
+      e.preventDefault();
+      if (grabbed === card) {
+        grabbed = null; card.setAttribute("aria-grabbed", "false"); card.classList.remove("is-dragging");
+        refreshCounts();
+        toast({ title: "놓음", message: "「" + (card.dataset.title || "카드") + "」 → " + curCol.dataset.column, variant: "success" });
+      } else {
+        if (grabbed) { grabbed.setAttribute("aria-grabbed", "false"); grabbed.classList.remove("is-dragging"); }
+        grabbed = card; card.setAttribute("aria-grabbed", "true"); card.classList.add("is-dragging");
+        toast({ title: "잡음", message: "← → 로 컬럼 이동, Space 로 놓기", variant: "info" });
+      }
+      return;
+    }
+
+    if (grabbed === card && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+      e.preventDefault();
+      var target = e.key === "ArrowLeft" ? cols[idx - 1] : cols[idx + 1];
+      if (!target) return;
+      target.querySelector("[data-stack]").appendChild(card);
+      card.focus();
+      refreshCounts();
+    }
+  });
+
+  /* ---------- 카드 클릭/Enter → 상세 드로어 ---------- */
+  var dLabel = document.getElementById("cardDrawerLabel");
+  var dTitle = document.getElementById("cardDrawerTitle");
+  var dDesc = document.getElementById("cardDrawerDesc");
+  var dAssignee = document.getElementById("cardDrawerAssignee");
+  var dAvatar = document.getElementById("cardDrawerAvatar");
+  var dDue = document.getElementById("cardDue");
+
+  function initials(name) {
+    if (!name) return "?";
+    var parts = name.trim().split(/\s+/);
+    return ((parts[0] || "")[0] || "") + ((parts[1] || "")[0] || "");
+  }
+
+  function openCard(card) {
+    if (dLabel) dLabel.textContent = card.dataset.label || "작업";
+    if (dTitle) dTitle.textContent = card.dataset.title || "카드 상세";
+    if (dDesc) dDesc.textContent = card.dataset.desc || "";
+    if (dAssignee) dAssignee.textContent = card.dataset.assignee || "미지정";
+    if (dAvatar) dAvatar.textContent = initials(card.dataset.assignee).toUpperCase();
+    if (dDue && card.dataset.due) dDue.value = card.dataset.due;
+    if (window.Deco && typeof window.Deco.openDrawer === "function") window.Deco.openDrawer("cardDrawer");
+  }
+
+  board.addEventListener("click", function (e) {
+    if (e.target.closest("button, a, input, label")) return; // 컬럼 옵션/추가 버튼 제외
+    var card = e.target.closest(".kanban-card");
+    if (card) openCard(card);
+  });
+  board.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter") return;
+    var card = e.target.closest(".kanban-card");
+    if (card && e.target === card) { e.preventDefault(); openCard(card); }
+  });
+
+  /* "새 카드" 버튼 — 빈 드로어 */
+  var newBtn = document.querySelector("[data-new-card]");
+  if (newBtn) newBtn.addEventListener("click", function () {
+    if (dLabel) dLabel.textContent = "새 카드";
+    if (dTitle) dTitle.textContent = "새 카드 만들기";
+    if (dDesc) dDesc.textContent = "제목과 설명을 입력해 새 작업을 추가하세요.";
+  });
+
+  /* 컬럼 하단 "+ 카드 추가" — 토스트로 안내 (데모) */
+  board.querySelectorAll("[data-add-card]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var col = btn.closest(".column");
+      toast({ title: col.dataset.column, message: "새 카드 입력 폼을 여세요.", variant: "info" });
+    });
+  });
+
+  /* 체크리스트 진행도 갱신 */
+  var checklist = document.getElementById("cardChecklist");
+  var checklistProg = document.getElementById("cardChecklistProg");
+  if (checklist && checklistProg) {
+    checklist.addEventListener("change", function () {
+      var boxes = checklist.querySelectorAll("input[type=checkbox]");
+      var done = checklist.querySelectorAll("input[type=checkbox]:checked").length;
+      checklistProg.textContent = done + " / " + boxes.length;
+    });
+  }
+
+  refreshCounts();
+})();
+</script>
+</body>
+</html>

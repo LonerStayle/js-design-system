@@ -1,0 +1,254 @@
+/* ============================================================================
+   COMPONENT · MENU  (Dropdown + Context Menu)
+   Signature: bordered panel floating on a hard offset shadow; rows fill with
+   a flat plane on hover; mono section labels; danger rows; right-aligned kbd
+   shortcuts; check / active items.
+   ----------------------------------------------------------------------------
+   Dropdown markup:
+     <div class="dropdown" data-dropdown>
+       <button class="btn btn--secondary" data-dropdown-trigger
+               aria-expanded="false" aria-haspopup="menu">Actions ▾</button>
+       <div class="menu" data-dropdown-menu role="menu">
+         <p class="menu__label">Account</p>
+         <button class="menu__item" data-menu-item role="menuitem">
+           <span class="menu__icon">▣</span>
+           <span class="menu__text">Profile</span>
+           <kbd class="menu__kbd">⌘P</kbd>
+         </button>
+         <button class="menu__item is-checked" data-menu-item role="menuitemcheckbox" aria-checked="true">
+           <span class="menu__text">Show grid</span></button>
+         <div class="menu__separator" role="separator"></div>
+         <button class="menu__item menu__item--danger" data-menu-item role="menuitem">
+           <span class="menu__text">Delete</span></button>
+       </div>
+     </div>
+
+   Context menu markup (position:fixed, JS sets left/top + .is-open):
+     <div class="menu menu--context" data-context-menu="ID" role="menu">…</div>
+   ============================================================================ */
+
+/* ---- DROPDOWN WRAPPER (positioning context) --------------------------- */
+.dropdown {
+  position: relative;
+  display: inline-flex;
+}
+
+/* trigger reflects open state via aria-expanded */
+[data-dropdown-trigger][aria-expanded="true"] { z-index: var(--z-raised); }
+
+/* ============================================================================
+   MENU PANEL
+   ============================================================================ */
+.menu {
+  --_accent: var(--blue-500);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 220px;
+  max-width: 320px;
+  padding: var(--space-2);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: var(--border-3) solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  font-family: var(--font-sans);
+}
+.menu--accent-blue   { --_accent: var(--blue-500); }
+.menu--accent-pink   { --_accent: var(--pink-500); }
+.menu--accent-lime   { --_accent: var(--lime-500); }
+.menu--accent-yellow { --_accent: var(--yellow-500); }
+
+/* dropdown-attached menu: absolutely positioned popup, hidden until open */
+.dropdown [data-dropdown-menu],
+.menu[data-dropdown-menu] {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  z-index: var(--z-dropdown);
+  opacity: 0;
+  transform: translateY(-6px);
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--duration-fast) var(--ease-standard),
+              transform var(--duration-fast) var(--ease-snap),
+              visibility 0s linear var(--duration-fast);
+}
+.menu[data-dropdown-menu].menu--right { left: auto; right: 0; }
+
+/* .is-open lives on the wrapper (per JS contract) and reveals the menu */
+.dropdown.is-open [data-dropdown-menu],
+[data-dropdown-menu].is-open {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+
+/* ---- SECTION LABEL (mono) --------------------------------------------- */
+.menu__label {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-widest);
+  color: var(--color-text-subtle);
+  padding: var(--space-2) var(--space-2) var(--space-1);
+}
+
+/* ---- ITEM ROW --------------------------------------------------------- */
+.menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  text-align: left;
+  padding: var(--space-2) var(--space-2);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+  background: transparent;
+  border: var(--border-2) solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color var(--duration-fast) var(--ease-standard),
+              color var(--duration-fast) var(--ease-standard),
+              border-color var(--duration-fast) var(--ease-standard);
+}
+.menu__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+.menu__icon svg { width: 1.15em; height: 1.15em; }
+.menu__text { flex: 1; min-width: 0; }
+.menu__sub {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--color-text-subtle);
+}
+
+/* hover / focus fill — flat accent plane */
+.menu__item:hover,
+.menu__item:focus-visible,
+.menu__item.is-highlighted {
+  background: var(--_accent);
+  color: var(--paper);
+  border-color: var(--color-border);
+  outline: none;
+}
+.menu--accent-lime .menu__item:hover,
+.menu--accent-lime .menu__item.is-highlighted,
+.menu--accent-yellow .menu__item:hover,
+.menu--accent-yellow .menu__item.is-highlighted { color: var(--ink); }
+.menu__item:hover .menu__sub,
+.menu__item:hover .menu__kbd { color: inherit; }
+
+/* DISABLED row */
+.menu__item[aria-disabled="true"],
+.menu__item:disabled,
+.menu__item.is-disabled {
+  color: var(--color-disabled-fg);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ---- KBD SHORTCUT (right aligned) ------------------------------------- */
+.menu__kbd {
+  margin-left: auto;
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-subtle);
+  background: var(--color-inset);
+  border: var(--border-2) solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 1px var(--space-1);
+  line-height: 1.4;
+}
+
+/* ---- CHECK / ACTIVE item ---------------------------------------------- */
+.menu__check {
+  width: 18px;
+  flex: none;
+  display: inline-flex;
+  justify-content: center;
+  font-weight: var(--weight-black);
+  visibility: hidden;
+}
+.menu__item.is-checked .menu__check,
+.menu__item[aria-checked="true"] .menu__check,
+.menu__item[aria-current="true"] .menu__check { visibility: visible; }
+.menu__item.is-active,
+.menu__item[aria-current="true"] {
+  background: var(--color-surface-2);
+  border-color: var(--color-border);
+}
+.menu__item.is-checked::before,
+.menu__item[aria-checked="true"]::before {
+  content: "✓";
+  font-weight: var(--weight-black);
+  color: var(--_accent);
+  width: 16px;
+  flex: none;
+}
+.menu__item:hover.is-checked::before,
+.menu__item:hover[aria-checked="true"]::before { color: currentColor; }
+
+/* ---- DANGER item ------------------------------------------------------ */
+.menu__item--danger { color: var(--color-danger); }
+.menu__item--danger:hover,
+.menu__item--danger:focus-visible,
+.menu__item--danger.is-highlighted {
+  background: var(--color-danger);
+  color: var(--color-danger-fg);
+  border-color: var(--color-border);
+}
+
+/* ---- SEPARATOR -------------------------------------------------------- */
+.menu__separator {
+  height: var(--border-2);
+  margin: var(--space-1) calc(-1 * var(--space-1));
+  background: var(--color-border);
+  border: none;
+}
+
+/* submenu chevron */
+.menu__item--has-sub .menu__arrow { margin-left: auto; flex: none; font-weight: var(--weight-black); }
+
+/* ============================================================================
+   CONTEXT MENU — position:fixed, JS sets inline left/top + toggles .is-open
+   ============================================================================ */
+.menu--context,
+[data-context-menu] {
+  position: fixed;
+  z-index: var(--z-popover);
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  transform: scale(0.96);
+  transform-origin: top left;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--duration-fast) var(--ease-standard),
+              transform var(--duration-fast) var(--ease-snap),
+              visibility 0s linear var(--duration-fast);
+}
+[data-context-menu].is-open,
+.menu--context.is-open {
+  opacity: 1;
+  transform: scale(1);
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+
+/* ---- Sizes ------------------------------------------------------------ */
+.menu--sm .menu__item { font-size: var(--text-xs); padding: var(--space-1) var(--space-2); }
+.menu--lg .menu__item { font-size: var(--text-base); padding: var(--space-3) var(--space-3); }

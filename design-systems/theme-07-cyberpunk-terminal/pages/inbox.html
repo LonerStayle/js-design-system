@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INBOX // CYBER.TERM</title>
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../semantic.css">
+<link rel="stylesheet" href="../base.css">
+<link rel="stylesheet" href="../components/button.css">
+<link rel="stylesheet" href="../components/forms.css">
+<link rel="stylesheet" href="../components/card.css">
+<link rel="stylesheet" href="../components/display.css">
+<link rel="stylesheet" href="../components/table.css">
+<link rel="stylesheet" href="../components/feedback.css">
+<link rel="stylesheet" href="../components/nav.css">
+<style>
+  /* ============================================================
+     INBOX — page-only layout (tokens only). 3-pane mail client.
+     ============================================================ */
+  .mail {
+    display: grid;
+    grid-template-columns: 220px 360px 1fr;
+    /* fill viewport under the 60px navbar */
+    height: calc(100dvh - 60px);
+    min-height: 0;
+    border-top: var(--border-1) solid var(--color-divider);
+    background: var(--color-bg-2);
+  }
+  .mail__pane {
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    border-right: var(--border-1) solid var(--color-divider);
+    background: var(--color-bg);
+  }
+  .mail__pane:last-child { border-right: none; }
+
+  /* ---------- PANE 1 · folders ---------- */
+  .mail__folders { background: var(--color-bg-2); }
+  .mail__compose-wrap { padding: var(--space-4) var(--space-3) var(--space-3); }
+  .mail__scroll { overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+  .mail__section-label {
+    display: flex; align-items: center; gap: var(--space-2);
+    padding: var(--space-3) var(--space-4) var(--space-2);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-widest);
+    text-transform: uppercase;
+    color: var(--color-text-subtle);
+  }
+  .mail__section-label::before { content: ""; }
+  .mail__folders .ct-list__item { padding-block: var(--space-2); }
+  .mail__folder-glyph {
+    width: 1.1em; flex-shrink: 0; text-align: center;
+    color: var(--color-text-muted);
+  }
+  .mail__dot {
+    width: 9px; height: 9px; flex-shrink: 0;
+    display: inline-block;
+    box-shadow: 0 0 6px currentColor;
+  }
+  .mail__dot--danger  { background: var(--color-danger);  color: var(--color-danger); }
+  .mail__dot--success { background: var(--color-success); color: var(--color-success); }
+  .mail__dot--info    { background: var(--color-info);    color: var(--color-info); }
+  .mail__dot--warning { background: var(--color-warning); color: var(--color-warning); }
+
+  /* ---------- PANE 2 · message list ---------- */
+  .mail__toolbar {
+    display: flex; align-items: center; gap: var(--space-2);
+    padding: var(--space-3);
+    border-bottom: var(--border-1) solid var(--color-divider);
+    background: var(--color-bg-2);
+    flex-shrink: 0;
+  }
+  .mail__toolbar .ct-searchbar { flex: 1 1 auto; min-width: 0; }
+
+  .mail__list { display: flex; flex-direction: column; }
+  .mail-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    gap: var(--space-3);
+    align-items: start;
+    padding: var(--space-3) var(--space-4);
+    cursor: pointer;
+    border-bottom: var(--border-1) solid var(--color-divider);
+    transition: background var(--duration-fast) var(--ease-standard);
+  }
+  .mail-row:hover { background: var(--color-surface-2); }
+  .mail-row.is-selected { background: var(--color-surface); }
+  .mail-row.is-selected::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    border-left: var(--border-2) solid var(--color-accent);
+    box-shadow: inset 0 0 14px rgba(var(--rgb-magenta) / .14);
+  }
+  /* unread neon left accent */
+  .mail-row.is-unread::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0;
+    width: var(--border-2);
+    background: var(--color-primary);
+    box-shadow: var(--glow-primary);
+  }
+  .mail-row__check { margin-top: 3px; }
+  .mail-row__main { min-width: 0; }
+  .mail-row__top {
+    display: flex; align-items: baseline; gap: var(--space-2);
+  }
+  .mail-row__from {
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    font-weight: var(--weight-bold);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .mail-row.is-unread .mail-row__from { color: var(--color-primary-bright); }
+  .mail-row__time {
+    margin-left: auto; flex-shrink: 0;
+    font-size: var(--text-2xs);
+    color: var(--color-text-subtle);
+    font-variant-numeric: tabular-nums;
+  }
+  .mail-row__subject {
+    display: flex; align-items: center; gap: var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--color-text);
+    margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .mail-row.is-unread .mail-row__subject { color: var(--color-text); }
+  .mail-row:not(.is-unread) .mail-row__subject { color: var(--color-text-muted); }
+  .mail-row__snippet {
+    font-size: var(--text-2xs);
+    color: var(--color-text-subtle);
+    margin-top: 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .mail-row__star {
+    background: none; border: none; cursor: pointer; padding: 0;
+    color: var(--color-text-subtle); font-size: var(--text-sm); line-height: 1;
+    flex-shrink: 0;
+  }
+  .mail-row__star:hover { color: var(--color-warning); }
+  .mail-row__star.is-on { color: var(--color-warning); text-shadow: var(--glow-amber); }
+  .mail-row__star:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+  .mail-row__label-dot {
+    width: 7px; height: 7px; display: inline-block; flex-shrink: 0;
+    box-shadow: 0 0 6px currentColor;
+  }
+
+  /* ---------- PANE 3 · reading pane ---------- */
+  .mail__reader { background: var(--color-bg); }
+  .mail__reader-inner {
+    flex: 1 1 auto; min-height: 0;
+    padding: var(--space-5);
+    overflow-y: auto;
+  }
+  .mail__reader .ct-card { height: 100%; display: flex; flex-direction: column; }
+  .reader__head {
+    padding: var(--space-5) var(--space-5) var(--space-4);
+    border-bottom: var(--border-1) solid var(--color-divider);
+  }
+  .reader__title {
+    font-size: var(--text-xl);
+    line-height: 1.2;
+    color: var(--color-text);
+    margin: 0 0 var(--space-3);
+  }
+  .reader__meta {
+    display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4);
+    align-items: center;
+    font-size: var(--text-2xs);
+    color: var(--color-text-subtle);
+  }
+  .reader__meta b { color: var(--color-text-muted); font-weight: var(--weight-medium); }
+  .reader__actions {
+    display: flex; align-items: center; gap: var(--space-2);
+    margin-top: var(--space-4);
+  }
+  .reader__actions .ct-dropdown { margin-left: auto; }
+  .reader__body {
+    flex: 1 1 auto; min-height: 0; overflow-y: auto;
+    padding: var(--space-5);
+    font-size: var(--text-sm);
+    line-height: 1.7;
+    color: var(--color-text-muted);
+  }
+  .reader__body p { margin: 0 0 var(--space-4); }
+  .reader__body p strong { color: var(--color-text); }
+  .reader__quote {
+    border-left: var(--border-2) solid var(--color-border);
+    padding: var(--space-1) var(--space-4);
+    color: var(--color-text-subtle);
+    margin: var(--space-4) 0;
+    font-size: var(--text-xs);
+  }
+  .reader__reply {
+    border-top: var(--border-1) solid var(--color-divider);
+    padding: var(--space-4) var(--space-5);
+    background: var(--color-bg-2);
+    flex-shrink: 0;
+  }
+  .reader__reply-actions {
+    display: flex; align-items: center; gap: var(--space-2);
+    margin-top: var(--space-3);
+  }
+
+  /* mobile-only "back to list" affordance label */
+  .mail__mobile-tabbar { display: none; }
+
+  /* ============================================================
+     RESPONSIVE — stack panes vertically. List + reader scroll
+     within the page; folders become a horizontal scroll row.
+     ============================================================ */
+  @media (max-width: 960px) {
+    .mail {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto 1fr;
+      height: auto;
+      min-height: calc(100dvh - 60px);
+    }
+    .mail__pane {
+      border-right: none;
+      border-bottom: var(--border-1) solid var(--color-divider);
+    }
+    /* PANE 1 → horizontal scroll strip of folders */
+    .mail__folders { background: var(--color-bg-2); }
+    .mail__compose-wrap { padding: var(--space-3); }
+    .mail__folders .mail__scroll {
+      display: flex;
+      flex-direction: row;
+      overflow-x: auto;
+      overflow-y: hidden;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      align-items: stretch;
+    }
+    .mail__folders .ct-list { flex-direction: row; gap: var(--space-1); }
+    .mail__folders .mail__section-label {
+      flex-direction: column; justify-content: center;
+      padding: var(--space-2);
+      border-left: var(--border-1) solid var(--color-divider);
+      white-space: nowrap;
+    }
+    .mail__folders .ct-list__item {
+      white-space: nowrap;
+      border: var(--border-1) solid var(--color-border-muted);
+      padding: var(--space-2) var(--space-3);
+    }
+    /* list capped, reader flows below */
+    .mail__list-pane { max-height: 46vh; }
+  }
+
+  @media (max-width: 560px) {
+    .mail__list-pane { max-height: 50vh; }
+    .reader__title { font-size: var(--text-lg); }
+    .mail__reader-inner { padding: var(--space-3); }
+    .reader__actions { flex-wrap: wrap; }
+    .reader__actions .ct-dropdown { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">CONTENT 로 건너뛰기</a>
+<div class="crt-overlay" aria-hidden="true"></div>
+
+<header class="ct-navbar">
+  <div class="container flex items-center justify-between" style="height:60px;">
+    <a class="ct-navbar__brand" href="../index.html"><span class="t-accent">◢</span> CYBER<span class="t-primary">.</span>TERM</a>
+    <nav class="ct-navbar__nav" aria-label="주요">
+      <a class="ct-navbar__link" href="../index.html">HOME</a>
+      <a class="ct-navbar__link" href="dashboard.html">DASH</a>
+      <a class="ct-navbar__link" href="kanban.html">KANBAN</a>
+      <a class="ct-navbar__link is-active" href="inbox.html" aria-current="page">INBOX</a>
+      <a class="ct-navbar__link" href="settings.html">SETTINGS</a>
+    </nav>
+    <div class="ct-navbar__actions flex items-center gap-2">
+      <button class="ct-btn ct-btn--secondary ct-btn--sm" data-cmdk-open>SEARCH <span class="ct-kbd">⌘K</span></button>
+      <button class="ct-btn ct-btn--icon ct-btn--sm" data-theme-toggle aria-label="테마 전환"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+      <button class="ct-navbar__toggle" data-nav-toggle aria-label="메뉴" aria-expanded="false">≡</button>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="site-main">
+<div class="mail">
+
+  <!-- ============================================================
+       PANE 1 — FOLDERS + LABELS
+       ============================================================ -->
+  <section class="mail__pane mail__folders" aria-label="폴더 및 라벨">
+    <div class="mail__compose-wrap">
+      <button class="ct-btn ct-btn--primary ct-btn--block" data-drawer-open="#compose">
+        ✉ COMPOSE
+      </button>
+    </div>
+    <div class="mail__scroll">
+      <nav class="ct-list ct-list--interactive" aria-label="메일함">
+        <a class="ct-list__item is-active" href="#" aria-current="page">
+          <span class="mail__folder-glyph" aria-hidden="true">▤</span>
+          <span class="ct-list__content"><span class="ct-list__title">INBOX</span></span>
+          <span class="ct-badge ct-badge--count" aria-label="안 읽음 12">12</span>
+        </a>
+        <a class="ct-list__item" href="#">
+          <span class="mail__folder-glyph" aria-hidden="true">★</span>
+          <span class="ct-list__content"><span class="ct-list__title">STARRED</span></span>
+          <span class="ct-badge ct-badge--count">3</span>
+        </a>
+        <a class="ct-list__item" href="#">
+          <span class="mail__folder-glyph" aria-hidden="true">↗</span>
+          <span class="ct-list__content"><span class="ct-list__title">SENT</span></span>
+        </a>
+        <a class="ct-list__item" href="#">
+          <span class="mail__folder-glyph" aria-hidden="true">▣</span>
+          <span class="ct-list__content"><span class="ct-list__title">ARCHIVE</span></span>
+        </a>
+        <a class="ct-list__item" href="#">
+          <span class="mail__folder-glyph" aria-hidden="true">⌫</span>
+          <span class="ct-list__content"><span class="ct-list__title">TRASH</span></span>
+        </a>
+      </nav>
+
+      <div class="mail__section-label">~/LABELS</div>
+      <nav class="ct-list ct-list--interactive" aria-label="라벨">
+        <a class="ct-list__item" href="#">
+          <span class="mail__dot mail__dot--danger" aria-hidden="true"></span>
+          <span class="ct-list__content"><span class="ct-list__title">ALERTS</span></span>
+          <span class="ct-badge ct-badge--count">5</span>
+        </a>
+        <a class="ct-list__item" href="#">
+          <span class="mail__dot mail__dot--success" aria-hidden="true"></span>
+          <span class="ct-list__content"><span class="ct-list__title">DEPLOYS</span></span>
+          <span class="ct-badge ct-badge--count">8</span>
+        </a>
+        <a class="ct-list__item" href="#">
+          <span class="mail__dot mail__dot--info" aria-hidden="true"></span>
+          <span class="ct-list__content"><span class="ct-list__title">TEAM</span></span>
+          <span class="ct-badge ct-badge--count">14</span>
+        </a>
+        <a class="ct-list__item" href="#">
+          <span class="mail__dot mail__dot--warning" aria-hidden="true"></span>
+          <span class="ct-list__content"><span class="ct-list__title">BILLING</span></span>
+          <span class="ct-badge ct-badge--count">2</span>
+        </a>
+      </nav>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       PANE 2 — MESSAGE LIST
+       ============================================================ -->
+  <section class="mail__pane mail__list-pane" aria-label="메시지 목록">
+    <div class="mail__toolbar">
+      <label class="ct-checkbox" title="모두 선택">
+        <input class="ct-checkbox__box" type="checkbox" data-select-all aria-label="모두 선택">
+        <span class="ct-checkbox__label" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">모두 선택</span>
+      </label>
+      <div class="ct-searchbar">
+        <span class="ct-searchbar__prompt" aria-hidden="true"></span>
+        <input class="ct-searchbar__input" placeholder="search mail" aria-label="메일 검색">
+      </div>
+      <button class="ct-btn ct-btn--icon ct-btn--sm" data-toast="메일함을 새로고침했습니다" data-toast-title="REFRESH" data-toast-variant="info" aria-label="새로고침" title="새로고침">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.5 9a9 9 0 0 1 14.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0 0 20.5 15"/></svg>
+      </button>
+    </div>
+
+    <div class="mail__scroll">
+      <div class="mail__list" role="list">
+
+        <!-- 1 · selected + unread · CI failure -->
+        <article class="mail-row is-unread is-selected" role="listitem" aria-current="true">
+          <input class="ct-checkbox__box mail-row__check" type="checkbox" data-row-check aria-label="선택: CI 실패">
+          <span class="ct-avatar ct-avatar--sm"><span class="ct-avatar__initials">CI</span><span class="ct-avatar__status ct-avatar__status--busy"></span></span>
+          <div class="mail-row__main">
+            <div class="mail-row__top">
+              <span class="mail-row__from">ci-bot@pipeline</span>
+              <span class="mail-row__time">09:42</span>
+            </div>
+            <div class="mail-row__subject">
+              <span class="mail__label-dot mail__dot--danger" aria-hidden="true"></span>
+              <span class="ct-badge ct-badge--danger ct-badge--sm">FAILED</span>
+              build #4821 실패 — auth-service test suite
+            </div>
+            <div class="mail-row__snippet">2 tests failed in tests/auth/test_session.py · job exited code 1</div>
+          </div>
+          <button class="mail-row__star is-on" aria-label="별표 해제" aria-pressed="true">★</button>
+        </article>
+
+        <!-- 2 · unread · deploy -->
+        <article class="mail-row is-unread" role="listitem">
+          <input class="ct-checkbox__box mail-row__check" type="checkbox" data-row-check aria-label="선택: 배포 알림">
+          <span class="ct-avatar ct-avatar--sm"><span class="ct-avatar__initials">DP</span><span class="ct-avatar__status ct-avatar__status--online"></span></span>
+          <div class="mail-row__main">
+            <div class="mail-row__top">
+              <span class="mail-row__from">deploy@argocd</span>
+              <span class="mail-row__time">09:31</span>
+            </div>
+            <div class="mail-row__subject">
+              <span class="mail__label-dot mail__dot--success" aria-hidden="true"></span>
+              <span class="ct-badge ct-badge--success ct-badge--sm">DEPLOYED</span>
+              prod release v2.6.1 rollout complete
+            </div>
+            <div class="mail-row__snippet">5/5 replicas healthy · canary promoted · 23s 만에 완료</div>
+          </div>
+          <button class="mail-row__star" aria-label="별표" aria-pressed="false">☆</button>
+        </article>
+
+        <!-- 3 · PR review request -->
+        <article class="mail-row" role="listitem">
+          <input class="ct-checkbox__box mail-row__check" type="checkbox" data-row-check aria-label="선택: PR 리뷰 요청">
+          <span class="ct-avatar ct-avatar--sm"><span class="ct-avatar__initials">JH</span><span class="ct-avatar__status ct-avatar__status--online"></span></span>
+          <div class="mail-row__main">
+            <div class="mail-row__top">
+              <span class="mail-row__from">정하늘</span>
+              <span class="mail-row__time">08:57</span>
+            </div>
+            <div class="mail-row__subject">
+              <span class="mail__label-dot mail__dot--info" aria-hidden="true"></span>
+              리뷰 요청: #1284 rate-limiter 미들웨어 추가
+            </div>
+            <div class="mail-row__snippet">토큰 버킷 구현했습니다. Redis 키 만료 로직만 한번 봐주세요 🙏</div>
+          </div>
+          <button class="mail-row__star is-on" aria-label="별표 해제" aria-pressed="true">★</button>
+        </article>
+
+        <!-- 4 · unread · on-call page -->
+        <article class="mail-row is-unread" role="listitem">
+          <input class="ct-checkbox__box mail-row__check" type="checkbox" data-row-check aria-label="선택: 온콜 호출">
+          <span class="ct-avatar ct-avatar--sm"><span class="ct-avatar__initials">PD</span><span class="ct-avatar__status ct-avatar__status--busy"></span></span>
+          <div class="mail-row__main">
+            <div class="mail-row__top">
+              <span class="mail-row__from">pagerduty</span>
+              <span class="mail-row__time">08:40</span>
+            </div>
+            <div class="mail-row__subject">
+              <span class="mail__label-dot mail__dot--danger" aria-hidden="true"></span>
+              <span class="ct-badge ct-badge--warning ct-badge--sm">P2</span>
+              [TRIGGERED] api-gateway p99 latency &gt; 800ms
+            </div>
+            <div class="mail-row__snippet">ap-northeast-2 · 5분간 지속 · 담당: operator (you)</div>
+          </div>
+          <button class="mail-row__star" aria-label="별표" aria-pressed="false">☆</button>
+        </article>
+
+        <!-- 5 · billing -->
+        <article class="mail-row" role="listitem">
+          <input class="ct-checkbox__box mail-row__check" type="checkbox" data-row-check aria-label="선택: 청구서">
+          <span class="ct-avatar ct-avatar--sm"><span class="ct-avatar__initials">$</span><span class="ct-avatar__status ct-avatar__status--away"></span></span>
+          <div class="mail-row__main">
+            <div class="mail-row__top">
+              <span class="mail-row__from">billing@cloudhost</span>
+              <span class="mail-row__time">어제</span>
+            </div>
+            <div class="mail-row__subject">
+              <span class="mail__label-dot mail__dot--warning" aria-hidden="true"></span>
+              6월 사용량 청구서 — ₩1,284,500
+            </div>
+            <div class="mail-row__snippet">전월 대비 +12% · 컴퓨트 ₩842k · 스토리지 ₩221k · 트래픽 ₩221k</div>
+          </div>
+          <button class="mail-row__star" aria-label="별표" aria-pressed="false">☆</button>
+        </article>
+
+        <!-- 6 · team standup notes -->
+        <article class="mail-row" role="listitem">
+          <input class="ct-checkbox__box mail-row__check" type="checkbox" data-row-check aria-label="선택: 스탠드업 노트">
+          <span class="ct-avatar ct-avatar--sm"><span class="ct-avatar__initials">SY</span><span class="ct-avatar__status ct-avatar__status--away"></span></span>
+          <div class="mail-row__main">
+            <div class="mail-row__top">
+              <span class="mail-row__from">서연우</span>
+              <span class="mail-row__time">어제</span>
+            </div>
+            <div class="mail-row__subject">
+              <span class="mail__label-dot mail__dot--info" aria-hidden="true"></span>
+              데일리 스탠드업 요약 06/20 — 스프린트 34
+            </div>
+            <div class="mail-row__snippet">블로커 2건, 인증 마이그레이션 진행 중. 오늘 회고 16:00.</div>
+          </div>
+          <button class="mail-row__star" aria-label="별표" aria-pressed="false">☆</button>
+        </article>
+
+        <!-- 7 · unread · security advisory -->
+        <article class="mail-row is-unread" role="listitem">
+          <input class="ct-checkbox__box mail-row__check" type="checkbox" data-row-check aria-label="선택: 보안 권고">
+          <span class="ct-avatar ct-avatar--sm"><span class="ct-avatar__initials">SE</span><span class="ct-avatar__status ct-avatar__status--busy"></span></span>
+          <div class="mail-row__main">
+            <div class="mail-row__top">
+              <span class="mail-row__from">security@dependabot</span>
+              <span class="mail-row__time">어제</span>
+            </div>
+            <div class="mail-row__subject">
+              <span class="mail__label-dot mail__dot--danger" aria-hidden="true"></span>
+              <span class="ct-badge ct-badge--danger ct-badge--sm">HIGH</span>
+              취약점 경보: openssl 1.1.1k → 3.0.13
+            </div>
+            <div class="mail-row__snippet">CVE-2024-XXXX · 3개 저장소 영향 · 자동 PR 생성됨</div>
+          </div>
+          <button class="mail-row__star" aria-label="별표" aria-pressed="false">☆</button>
+        </article>
+
+        <!-- 8 · cron job report -->
+        <article class="mail-row" role="listitem">
+          <input class="ct-checkbox__box mail-row__check" type="checkbox" data-row-check aria-label="선택: 백업 리포트">
+          <span class="ct-avatar ct-avatar--sm"><span class="ct-avatar__initials">CR</span><span class="ct-avatar__status ct-avatar__status--online"></span></span>
+          <div class="mail-row__main">
+            <div class="mail-row__top">
+              <span class="mail-row__from">cron@backup</span>
+              <span class="mail-row__time">06/19</span>
+            </div>
+            <div class="mail-row__subject">
+              <span class="mail__label-dot mail__dot--success" aria-hidden="true"></span>
+              야간 DB 스냅샷 완료 — postgres-primary
+            </div>
+            <div class="mail-row__snippet">42.8GB · 무결성 검증 OK · S3 ap-northeast-2 보관</div>
+          </div>
+          <button class="mail-row__star" aria-label="별표" aria-pressed="false">☆</button>
+        </article>
+
+        <!-- 9 · welcome / onboarding -->
+        <article class="mail-row" role="listitem">
+          <input class="ct-checkbox__box mail-row__check" type="checkbox" data-row-check aria-label="선택: 환영 메일">
+          <span class="ct-avatar ct-avatar--sm"><span class="ct-avatar__initials">MR</span><span class="ct-avatar__status ct-avatar__status--offline"></span></span>
+          <div class="mail-row__main">
+            <div class="mail-row__top">
+              <span class="mail-row__from">민래오 (신규 합류)</span>
+              <span class="mail-row__time">06/18</span>
+            </div>
+            <div class="mail-row__subject">
+              <span class="mail__label-dot mail__dot--info" aria-hidden="true"></span>
+              플랫폼팀 합류 인사 + VPN 접근 요청
+            </div>
+            <div class="mail-row__snippet">이번 주부터 함께합니다! 인프라 온보딩 문서 링크 부탁드려요.</div>
+          </div>
+          <button class="mail-row__star" aria-label="별표" aria-pressed="false">☆</button>
+        </article>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       PANE 3 — READING PANE
+       ============================================================ -->
+  <section class="mail__pane mail__reader" aria-label="메시지 보기">
+    <div class="mail__reader-inner">
+      <div class="ct-card ct-card--glow">
+        <div class="ct-card__chrome">
+          <div class="ct-card__dots"><span class="ct-card__dot"></span><span class="ct-card__dot"></span><span class="ct-card__dot"></span></div>
+          <span class="ct-card__title">message :: build-4821.log</span>
+        </div>
+
+        <header class="reader__head">
+          <h1 class="reader__title">build #4821 실패 — auth-service test suite</h1>
+          <div class="reader__meta">
+            <span><b>FROM</b> ci-bot@pipeline.internal</span>
+            <span><b>TO</b> operator@cyber.term</span>
+            <span><b>LABEL</b> <span class="ct-badge ct-badge--danger ct-badge--sm">ALERTS</span></span>
+            <span><b>AT</b> 2026-06-21 09:42:07 KST</span>
+          </div>
+          <div class="reader__actions">
+            <button class="ct-btn ct-btn--secondary ct-btn--sm" aria-label="답장">↩ REPLY</button>
+            <button class="ct-btn ct-btn--ghost ct-btn--icon ct-btn--sm" aria-label="전달" title="전달">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 4l6 6-6 6"/><path d="M21 10H8a5 5 0 0 0-5 5v3"/></svg>
+            </button>
+            <button class="ct-btn ct-btn--ghost ct-btn--icon ct-btn--sm" data-toast="메시지를 보관함으로 이동했습니다" data-toast-title="ARCHIVED" data-toast-variant="success" aria-label="보관" title="보관">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="4"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg>
+            </button>
+            <button class="ct-btn ct-btn--ghost ct-btn--icon ct-btn--sm" aria-label="별표" title="별표" style="color:var(--color-warning)">★</button>
+            <button class="ct-btn ct-btn--ghost ct-btn--icon ct-btn--sm" data-toast="메시지를 휴지통으로 이동했습니다" data-toast-title="DELETED" data-toast-variant="danger" aria-label="삭제" title="삭제">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+            </button>
+            <div class="ct-dropdown" data-dropdown>
+              <button class="ct-btn ct-btn--ghost ct-btn--icon ct-btn--sm" data-dropdown-trigger aria-haspopup="menu" aria-expanded="false" aria-label="더보기">⋯</button>
+              <div class="ct-menu ct-menu--end" role="menu">
+                <button class="ct-menu__item" role="menuitem"><span class="ct-menu__text">읽지 않음으로 표시</span><span class="ct-menu__shortcut"><span class="ct-kbd">U</span></span></button>
+                <button class="ct-menu__item" role="menuitem"><span class="ct-menu__text">스누즈</span><span class="ct-menu__shortcut"><span class="ct-kbd">Z</span></span></button>
+                <button class="ct-menu__item" role="menuitem"><span class="ct-menu__text">라벨 적용…</span></button>
+                <div class="ct-menu__sep"></div>
+                <button class="ct-menu__item ct-menu__item--danger" role="menuitem"><span class="ct-menu__text">발신자 차단</span></button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div class="reader__body">
+          <p><strong>파이프라인 빌드 #4821 이 실패했습니다.</strong> <code class="ct-code-inline">auth-service</code> 의 테스트 단계에서 2개 테스트가 깨졌습니다. 직전 커밋 <code class="ct-code-inline">a3f9c1d</code> (세션 토큰 만료 로직 변경) 이후 처음 발생한 회귀입니다.</p>
+
+          <p>실패 지점은 세션 만료 경계값 계산 — 만료까지 남은 시간이 0 이하일 때 <code class="ct-code-inline">refresh()</code> 가 호출되지 않고 그대로 통과합니다.</p>
+
+          <div class="ct-code">
+            <div class="ct-code__header">
+              <span class="ct-code__filename">tests/auth/test_session.py</span>
+              <span class="ct-code__lang">PYTEST</span>
+              <button class="ct-code__copy" data-copy aria-label="복사">COPY</button>
+            </div>
+            <pre class="ct-code__body"><code><span class="tok-com"># FAILED tests/auth/test_session.py::test_expired_token_refresh</span>
+<span class="tok-key">assert</span> session.<span class="tok-fn">is_expired</span>(<span class="tok-num">0</span>) <span class="tok-key">is</span> <span class="tok-num">True</span>
+<span class="tok-com">&gt;       E   assert False is True</span>
+<span class="tok-com"># FAILED tests/auth/test_session.py::test_grace_window</span>
+<span class="tok-key">assert</span> session.<span class="tok-fn">grace_left</span>() <span class="tok-punct">==</span> <span class="tok-num">30</span>  <span class="tok-com"># got -1</span></code></pre>
+          </div>
+
+          <div class="ct-inline-note ct-inline-note--danger">
+            <span class="ct-inline-note__icon" aria-hidden="true">✕</span>
+            <span class="ct-inline-note__text"><strong>경계 조건 버그.</strong> <code class="ct-code-inline">is_expired</code> 가 <code class="ct-code-inline">&gt;</code> 대신 <code class="ct-code-inline">&gt;=</code> 를 써야 합니다. 머지 전 핫픽스 필요.</span>
+          </div>
+
+          <p>로그 전문과 아티팩트는 CI 콘솔에서 확인할 수 있습니다. 재현 명령은 아래와 같습니다.</p>
+
+          <div class="reader__quote">
+            $ pytest tests/auth/test_session.py -k "expired or grace" -x<br>
+            $ git log --oneline a3f9c1d -1
+          </div>
+
+          <p>이 빌드는 <strong>main</strong> 브랜치로의 머지를 차단합니다. 수정 후 <code class="ct-code-inline">/retry</code> 로 재실행하거나, 담당자가 직접 핫픽스 PR 을 올려주세요.</p>
+
+          <p class="t-xs t-subtle">— ci-bot · pipeline runner v4 · ap-northeast-2</p>
+        </div>
+
+        <div class="reader__reply">
+          <label class="ct-field__label" for="quick-reply">빠른 답장</label>
+          <textarea id="quick-reply" class="ct-textarea" rows="2" placeholder="ci-bot@pipeline 에게 답장… (핫픽스 PR 링크 첨부)"></textarea>
+          <div class="reader__reply-actions">
+            <button class="ct-btn ct-btn--primary" data-toast="답장을 전송했습니다" data-toast-title="SENT" data-toast-variant="success">↩ SEND</button>
+            <button class="ct-btn ct-btn--ghost ct-btn--sm" aria-label="첨부">📎 첨부</button>
+            <span class="t-2xs t-subtle" style="margin-left:auto">⌘↵ 로 전송</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</main>
+
+<!-- ============================================================
+     COMPOSE DRAWER (right)
+     ============================================================ -->
+<div class="ct-drawer ct-drawer--right" id="compose" data-drawer role="dialog" aria-modal="true" aria-labelledby="compose-title" hidden>
+  <div class="ct-drawer__overlay"></div>
+  <div class="ct-drawer__panel">
+    <div class="ct-drawer__header">
+      <span class="ct-drawer__title" id="compose-title">~/compose --new</span>
+      <button class="ct-drawer__close" data-drawer-close aria-label="닫기">✕</button>
+    </div>
+    <div class="ct-drawer__body">
+      <div class="ct-field">
+        <label class="ct-field__label" for="compose-to">TO</label>
+        <div class="ct-chipinput" data-chipinput>
+          <span class="ct-chipinput__chip">team@cyber.term <button class="ct-chipinput__remove" aria-label="제거"></button></span>
+          <span class="ct-chipinput__chip">정하늘 <button class="ct-chipinput__remove" aria-label="제거"></button></span>
+          <input id="compose-to" class="ct-chipinput__input" placeholder="수신자 추가…" aria-label="수신자">
+        </div>
+      </div>
+      <div class="ct-field">
+        <label class="ct-field__label" for="compose-subject">SUBJECT</label>
+        <input id="compose-subject" class="ct-input" placeholder="제목을 입력하세요" value="Re: build #4821 핫픽스">
+      </div>
+      <div class="ct-field">
+        <label class="ct-field__label" for="compose-body">BODY</label>
+        <textarea id="compose-body" class="ct-textarea" rows="10" placeholder="메시지를 입력하세요…">is_expired 의 비교 연산자를 &gt;= 로 수정한 PR #1291 올렸습니다. 리뷰 후 머지하면 빌드 차단 해제됩니다.</textarea>
+      </div>
+    </div>
+    <div class="ct-drawer__footer">
+      <button class="ct-btn ct-btn--ghost" data-drawer-close>DISCARD</button>
+      <button class="ct-btn ct-btn--primary" data-drawer-close data-toast="메시지를 전송했습니다" data-toast-title="SENT" data-toast-variant="success">SEND ↗</button>
+    </div>
+  </div>
+</div>
+
+<script src="../app.js"></script>
+</body>
+</html>

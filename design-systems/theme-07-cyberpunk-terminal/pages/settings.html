@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SETTINGS // CYBER.TERM</title>
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../semantic.css">
+<link rel="stylesheet" href="../base.css">
+<link rel="stylesheet" href="../components/button.css">
+<link rel="stylesheet" href="../components/forms.css">
+<link rel="stylesheet" href="../components/card.css">
+<link rel="stylesheet" href="../components/display.css">
+<link rel="stylesheet" href="../components/table.css">
+<link rel="stylesheet" href="../components/feedback.css">
+<link rel="stylesheet" href="../components/nav.css">
+<style>
+  /* ---- settings-only layout — tokens only ---- */
+  .settings-head {
+    padding: var(--space-8) 0 var(--space-6);
+    border-bottom: var(--border-1) solid var(--color-divider);
+    margin-bottom: var(--space-7);
+  }
+  .settings-head__top {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+  }
+  .settings-head h1 {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    line-height: 1.04;
+    margin-top: var(--space-3);
+  }
+  .settings-head h1 .accent { color: var(--color-accent); text-shadow: var(--glow-accent); }
+
+  /* sticky save bar — floats above the tab layout */
+  .save-bar {
+    position: sticky;
+    top: 68px;
+    z-index: var(--z-raised);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-6);
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-bg-2);
+    border: var(--border-1) solid var(--color-border);
+    border-left: var(--border-2) solid var(--color-primary);
+    box-shadow: var(--shadow-glow-sm);
+  }
+  .save-bar__status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+  .save-bar__dot {
+    width: 8px; height: 8px;
+    background: var(--color-warning);
+    box-shadow: var(--glow-amber);
+  }
+  .save-bar__actions { margin-left: auto; display: flex; gap: var(--space-2); flex-wrap: wrap; }
+
+  /* a "setting row" = label/desc left, control right, divider between */
+  .set-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
+    gap: var(--space-5);
+    align-items: start;
+    padding: var(--space-5) 0;
+    border-bottom: var(--border-1) dashed var(--color-divider);
+  }
+  .set-row:last-child { border-bottom: none; }
+  .set-row__label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--color-text);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+  }
+  .set-row__desc {
+    margin-top: var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    line-height: var(--leading-normal);
+    text-transform: none;
+    letter-spacing: normal;
+    max-width: 46ch;
+  }
+  .set-row__control {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    align-items: stretch;
+    justify-self: end;
+    width: 100%;
+  }
+  /* a control row that should sit right-aligned (switches, segmented) */
+  .set-row__control--end { align-items: flex-end; }
+
+  /* panel header line inside each tab panel */
+  .panel-head {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-3);
+    margin-bottom: var(--space-2);
+  }
+  .panel-head__idx { font-size: var(--text-2xs); color: var(--color-accent); letter-spacing: var(--tracking-widest); }
+  .panel-head h2 { font-size: var(--text-lg); color: var(--color-primary); text-shadow: var(--glow-primary); }
+  .panel-sub { font-size: var(--text-xs); color: var(--color-text-subtle); margin-bottom: var(--space-4); }
+
+  /* accent color swatch buttons */
+  .swatch-grid { display: flex; gap: var(--space-3); flex-wrap: wrap; }
+  .accent-swatch {
+    position: relative;
+    width: 40px; height: 40px;
+    border: var(--border-1) solid var(--color-border-strong);
+    border-radius: var(--radius-0);
+    cursor: pointer;
+    transition: transform var(--duration-fast) var(--ease-standard),
+                box-shadow var(--duration-fast) var(--ease-standard),
+                border-color var(--duration-fast) var(--ease-standard);
+  }
+  .accent-swatch:hover { transform: translateY(-2px); }
+  .accent-swatch:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+  .accent-swatch.is-active { border-color: var(--color-text); }
+  .accent-swatch.is-active::after {
+    content: "✓";
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-1000); font-weight: var(--weight-bold);
+  }
+
+  /* DANGER ZONE — red bordered block */
+  .danger-zone {
+    margin-top: var(--space-2);
+    border: var(--border-1) solid var(--color-danger);
+    box-shadow: 0 0 18px -6px rgba(var(--rgb-red) / .5);
+    background:
+      linear-gradient(180deg, rgba(var(--rgb-red) / .06), transparent 60%),
+      var(--color-surface);
+  }
+  .danger-zone__chrome {
+    display: flex; align-items: center; gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    background: rgba(var(--rgb-red) / .10);
+    border-bottom: var(--border-1) solid var(--color-danger);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-widest);
+    color: var(--color-danger-text);
+  }
+  .danger-zone__body { padding: var(--space-2) var(--space-5) var(--space-4); }
+  .danger-zone .set-row { border-bottom-color: rgba(var(--rgb-red) / .25); }
+
+  /* modal confirm helper */
+  .confirm-name {
+    font-family: var(--font-mono);
+    color: var(--color-danger-text);
+    font-weight: var(--weight-bold);
+  }
+
+  /* stat-ish mini badges row */
+  .meta-line { display: flex; gap: var(--space-4); flex-wrap: wrap; font-size: var(--text-xs); color: var(--color-text-subtle); }
+
+  /* responsive: stack setting rows; vertical tabs collapse handled by component CSS (<=768px) */
+  @media (max-width: 720px) {
+    .set-row { grid-template-columns: 1fr; gap: var(--space-3); }
+    .set-row__control { justify-self: stretch; }
+    .set-row__control--end { align-items: stretch; }
+    .save-bar { top: 60px; }
+  }
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main">CONTENT 로 건너뛰기</a>
+<div class="crt-overlay" aria-hidden="true"></div>
+
+<header class="ct-navbar">
+  <div class="container flex items-center justify-between" style="height:60px;">
+    <a class="ct-navbar__brand" href="../index.html">
+      <span class="t-accent">◢</span> CYBER<span class="t-primary">.</span>TERM
+      <span class="ct-navbar__brand-cursor" aria-hidden="true"></span>
+    </a>
+    <nav class="ct-navbar__nav" aria-label="주요">
+      <a class="ct-navbar__link" href="../index.html">HOME</a>
+      <a class="ct-navbar__link" href="dashboard.html">DASH</a>
+      <a class="ct-navbar__link" href="kanban.html">KANBAN</a>
+      <a class="ct-navbar__link" href="inbox.html">INBOX</a>
+      <a class="ct-navbar__link is-active" href="settings.html" aria-current="page">SETTINGS</a>
+    </nav>
+    <div class="ct-navbar__actions flex items-center gap-2">
+      <button class="ct-btn ct-btn--secondary ct-btn--sm" data-cmdk-open aria-label="명령 팔레트 열기">SEARCH <span class="ct-kbd">⌘K</span></button>
+      <button class="ct-btn ct-btn--icon ct-btn--sm" data-theme-toggle aria-label="테마 전환" title="DARK / LIGHT"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+      <button class="ct-navbar__toggle" data-nav-toggle aria-label="메뉴" aria-expanded="false">≡</button>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="site-main">
+  <div class="container">
+
+    <!-- ============== HEAD ============== -->
+    <div class="settings-head">
+      <div class="settings-head__top">
+        <div>
+          <nav class="ct-breadcrumb" aria-label="경로">
+            <a class="ct-breadcrumb__item ct-breadcrumb__item--root" href="../index.html">~</a>
+            <span class="ct-breadcrumb__sep">/</span>
+            <a class="ct-breadcrumb__item" href="profile.html">account</a>
+            <span class="ct-breadcrumb__sep">/</span>
+            <span class="ct-breadcrumb__item is-current" aria-current="page">settings</span>
+          </nav>
+          <h1 class="t-display">SET<span class="accent">TINGS</span></h1>
+          <p class="meta-line">
+            <span>operator :: <span class="t-primary">node_runner</span></span>
+            <span>workspace :: void-collective</span>
+            <span>role :: <span class="ct-badge ct-badge--accent ct-badge--outline">ADMIN</span></span>
+          </p>
+        </div>
+        <div class="ct-avatar ct-avatar--xl" aria-hidden="true" style="background:linear-gradient(135deg,var(--cyan-700),var(--magenta-800));">
+          <span class="ct-avatar__initials">NR</span>
+          <span class="ct-avatar__status ct-avatar__status--online"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============== STICKY SAVE BAR ============== -->
+    <div class="save-bar" role="region" aria-label="변경사항 저장">
+      <span class="save-bar__status">
+        <span class="save-bar__dot" aria-hidden="true"></span>
+        저장되지 않은 변경사항 <span class="t-warning">2</span>
+      </span>
+      <div class="save-bar__actions">
+        <button class="ct-btn ct-btn--ghost ct-btn--sm" type="reset">되돌리기</button>
+        <button class="ct-btn ct-btn--primary ct-btn--sm" data-toast="모든 설정이 동기화되었습니다" data-toast-title="SAVED" data-toast-variant="success">변경사항 저장</button>
+      </div>
+    </div>
+
+    <!-- ============== VERTICAL TABS ============== -->
+    <div class="ct-tabs ct-tabs--vertical" data-tabs>
+      <div class="ct-tabs__list" role="tablist" aria-label="설정 메뉴">
+        <button class="ct-tabs__tab is-active" role="tab" id="t-profile"  aria-controls="p-profile"  aria-selected="true">◈ PROFILE</button>
+        <button class="ct-tabs__tab"           role="tab" id="t-appear"   aria-controls="p-appear"   aria-selected="false">◐ APPEARANCE</button>
+        <button class="ct-tabs__tab"           role="tab" id="t-notify"   aria-controls="p-notify"   aria-selected="false">▲ NOTIFICATIONS</button>
+        <button class="ct-tabs__tab"           role="tab" id="t-security" aria-controls="p-security" aria-selected="false">⛨ SECURITY</button>
+        <button class="ct-tabs__tab"           role="tab" id="t-danger"   aria-controls="p-danger"   aria-selected="false">✕ DANGER ZONE</button>
+      </div>
+
+      <div class="ct-tabs__panels">
+
+        <!-- =========================================================== PROFILE -->
+        <section class="ct-tabs__panel" role="tabpanel" id="p-profile" aria-labelledby="t-profile">
+          <div class="panel-head"><span class="panel-head__idx">01//</span><h2>PROFILE</h2></div>
+          <p class="panel-sub">공개 프로필과 워크스페이스 표시 정보를 관리합니다.</p>
+
+          <div class="set-row">
+            <div>
+              <div class="set-row__label">DISPLAY NAME</div>
+              <p class="set-row__desc">동료에게 보이는 이름. 댓글·멘션·활동 로그에 표시됩니다.</p>
+            </div>
+            <div class="set-row__control">
+              <input class="ct-input" type="text" value="Noah Renner" aria-label="표시 이름" maxlength="48">
+            </div>
+          </div>
+
+          <div class="set-row">
+            <div>
+              <div class="set-row__label">HANDLE</div>
+              <p class="set-row__desc">고유 핸들. URL과 @멘션에 사용됩니다. 영문 소문자·숫자·언더스코어.</p>
+            </div>
+            <div class="set-row__control">
+              <div class="ct-input-wrap ct-input-wrap--prompt">
+                <input class="ct-input ct-input--prompt" type="text" value="node_runner" aria-label="핸들" pattern="[a-z0-9_]+">
+              </div>
+              <span class="ct-field__hint">cyber.term/u/<span class="t-primary">node_runner</span></span>
+            </div>
+          </div>
+
+          <div class="set-row">
+            <div>
+              <div class="set-row__label">BIO</div>
+              <p class="set-row__desc">짧은 자기소개. 프로필 카드 상단에 노출됩니다. 최대 160자.</p>
+            </div>
+            <div class="set-row__control">
+              <textarea class="ct-textarea" aria-label="소개" maxlength="160" rows="3">시스템 신뢰성 엔지니어. 새벽 배포와 네온 터미널을 좋아합니다. ap-northeast-2 거주.</textarea>
+              <span class="ct-field__hint">127 / 160</span>
+            </div>
+          </div>
+
+          <div class="set-row">
+            <div>
+              <div class="set-row__label">AVATAR</div>
+              <p class="set-row__desc">프로필 이미지. PNG·JPG·WEBP, 최대 2MB, 권장 512×512.</p>
+            </div>
+            <div class="set-row__control">
+              <div class="ct-fileupload" data-fileupload>
+                <label class="ct-fileupload__zone">
+                  <span class="ct-fileupload__glyph" aria-hidden="true">⬡</span>
+                  <span class="ct-fileupload__copy">이미지를 드래그하거나 <span class="ct-fileupload__cta">[ SELECT ]</span></span>
+                  <span class="ct-fileupload__meta">PNG · JPG · WEBP · ≤ 2MB</span>
+                  <input class="ct-fileupload__input" type="file" accept="image/png,image/jpeg,image/webp" aria-label="아바타 업로드">
+                </label>
+                <div class="ct-fileupload__list">
+                  <div class="ct-fileupload__file">
+                    <span class="ct-fileupload__name">avatar_nr_512.png</span>
+                    <span class="ct-fileupload__size">184 KB</span>
+                    <button class="ct-fileupload__remove" type="button" aria-label="현재 아바타 제거"></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="set-row">
+            <div>
+              <div class="set-row__label">TIMEZONE</div>
+              <p class="set-row__desc">활동 시간과 알림 스케줄 계산에 사용되는 기준 시간대.</p>
+            </div>
+            <div class="set-row__control">
+              <div class="ct-select-wrap">
+                <select class="ct-select" aria-label="시간대">
+                  <option value="kst" selected>(GMT+09:00) Asia/Seoul — KST</option>
+                  <option value="jst">(GMT+09:00) Asia/Tokyo — JST</option>
+                  <option value="utc">(GMT+00:00) UTC — Coordinated Universal Time</option>
+                  <option value="pst">(GMT-08:00) America/Los_Angeles — PST</option>
+                  <option value="cet">(GMT+01:00) Europe/Berlin — CET</option>
+                  <option value="sgt">(GMT+08:00) Asia/Singapore — SGT</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="ct-form-actions">
+            <button class="ct-btn ct-btn--ghost" type="reset">취소</button>
+            <button class="ct-btn ct-btn--primary" data-toast="프로필이 업데이트되었습니다" data-toast-title="PROFILE" data-toast-variant="success">저장</button>
+          </div>
+        </section>
+
+        <!-- =========================================================== APPEARANCE -->
+        <section class="ct-tabs__panel" role="tabpanel" id="p-appear" aria-labelledby="t-appear" hidden>
+          <div class="panel-head"><span class="panel-head__idx">02//</span><h2>APPEARANCE</h2></div>
+          <p class="panel-sub">터미널의 외관과 CRT 효과를 조정합니다.</p>
+
+          <div class="set-row">
+            <div>
+              <div class="set-row__label">THEME</div>
+              <p class="set-row__desc">전역 색 모드. AUTO 는 시스템 설정을 따릅니다. 토글로 즉시 미리보기.</p>
+            </div>
+            <div class="set-row__control set-row__control--end">
+              <div class="ct-segmented" role="group" aria-label="테마 모드">
+                <label class="ct-segmented__option"><input class="ct-segmented__input" type="radio" name="theme-mode" value="dark" checked> DARK</label>
+                <label class="ct-segmented__option"><input class="ct-segmented__input" type="radio" name="theme-mode" value="light"> LIGHT</label>
+                <label class="ct-segmented__option"><input class="ct-segmented__input" type="radio" name="theme-mode" value="auto"> AUTO</label>
+              </div>
+              <button class="ct-btn ct-btn--secondary ct-btn--sm" data-theme-toggle>◐ 라이브 토글</button>
+            </div>
+          </div>
+
+          <div class="set-row">
+            <div>
+              <div class="set-row__label">CRT SCANLINES</div>
+              <p class="set-row__desc">화면 전체에 스캔라인 오버레이를 그립니다. 시각적 진정성 ↑, 가독성에는 영향 없음.</p>
+            </div>
+            <div class="set-row__control set-row__control--end">
+              <label class="ct-switch"><input class="ct-switch__input" type="checkbox" checked><span class="ct-switch__track"><span class="ct-switch__knob"></span></span><span class="ct-switch__label">스캔라인</span></label>
+            </div>
+          </div>
+
+          <div class="set-row">
+            <div>
+              <div class="set-row__label">GLOW INTENSITY</div>
+              <p class="set-row__desc">네온 글로우의 강도. 0 = 평면, 100 = 최대 발광. 저전력 모드에서는 낮게.</p>
+            </div>
+            <div class="set-row__control">
+              <div class="ct-slider" data-slider>
+                <input class="ct-slider__input" type="range" min="0" max="100" value="68" aria-label="글로우 강도">
+                <output class="ct-slider__value" data-slider-value>68</output>
+              </div>
+            </div>
+          </div>
+
+          <div class="set-row">
+            <div>
+              <div class="set-row__label">ACCENT COLOR</div>
+              <p class="set-row__desc">강조 색. 버튼·링크·포커스 링에 적용됩니다. 기본값은 네온 시안.</p>
+            </div>
+            <div class="set-row__control">
+              <div class="swatch-grid" role="radiogroup" aria-label="강조 색">
+                <button class="accent-swatch is-active" type="button" role="radio" aria-checked="true"  aria-label="시안"   style="background:var(--cyan-400);box-shadow:var(--glow-cyan)"></button>
+                <button class="accent-swatch"           type="button" role="radio" aria-checked="false" aria-label="마젠타" style="background:var(--magenta-400)"></button>
+                <button class="accent-swatch"           type="button" role="radio" aria-checked="false" aria-label="앰버"   style="background:var(--amber-400)"></button>
+                <button class="accent-swatch"           type="button" role="radio" aria-checked="false" aria-label="그린"   style="background:var(--green-400)"></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="set-row">
+            <div>
+              <div class="set-row__label">MOTION</div>
+              <p class="set-row__desc">글리치·타이핑·트랜지션 애니메이션. 끄면 시스템 reduce-motion 과 동일하게 동작.</p>
+            </div>
+            <div class="set-row__control set-row__control--end">
+              <label class="ct-switch"><input class="ct-switch__input" type="checkbox" checked><span class="ct-switch__track"><span class="ct-switch__knob"></span></span><span class="ct-switch__label">모션</span></label>
+            </div>
+          </div>
+        </section>
+
+        <!-- =========================================================== NOTIFICATIONS -->
+        <section class="ct-tabs__panel" role="tabpanel" id="p-notify" aria-labelledby="t-notify" hidden>
+          <div class="panel-head"><span class="panel-head__idx">03//</span><h2>NOTIFICATIONS</h2></div>
+          <p class="panel-sub">어떤 이벤트를, 얼마나 자주 받을지 설정합니다.</p>
+
+          <div class="set-row">
+            <div>
+              <div class="set-row__label">DEPLOY ALERTS</div>
+              <p class="set-row__desc">배포 시작·성공·실패 시 알림. 프로덕션 파이프라인에 권장.</p>
+            </div>
+            <div class="set-row__control set-row__control--end">
+              <label class="ct-switch"><input class="ct-switch__input" type="checkbox" checked><span class="ct-switch__track"><span class="ct-switch__knob"></span></span><span class="ct-switch__label">ON</span></label>
+            </div>
+          </div>
+
+          <div class="set-row">
+            <div>
+              <div class="set-row__label">INCIDENT PAGES</div>
+              <p class="set-row__desc">SEV-1 / SEV-2 인시던트 발생 시 즉시 호출. 온콜 로테이션과 연동됩니다.</p>
+            </div>
+            <div class="set-row__control set-row__control--end">
+              <label class="ct-switch"><input class="ct-switch__input" type="checkbox" checked><span class="ct-switch__track"><span class="ct-switch__knob"></span></span><span class="ct-switch__label">ON</span></label>
+            </div>
+          </div>
+
+          <div class="set-row">
+            <div>
+              <div class="set-row__label">WEEKLY DIGEST</div>
+              <p class="set-row__desc">매주 월요일 09:00 KST, 지난주 활동 요약을 이메일로 발송.</p>
+            </div>
+            <div class="set-row__control set-row__control--end">
+              <label class="ct-switch"><input class="ct-switch__input" type="checkbox"><span class="ct-switch__track"><span class="ct-switch__knob"></span></span><span class="ct-switch__label">OFF</span></label>
+            </div>
+          </div>
+
+          <div class="set-row">
+            <div>
+              <div class="set-row__label">MENTIONS</div>
+              <p class="set-row__desc">@핸들로 멘션되거나 스레드에 답글이 달릴 때 알림.</p>
+            </div>
+            <div class="set-row__control set-row__control--end">
+              <label class="ct-switch"><input class="ct-switch__input" type="checkbox" checked><span class="ct-switch__track"><span class="ct-switch__knob"></span></span><span class="ct-switch__label">ON</span></label>
+            </div>
+          </div>
+
+          <div class="set-row">
+            <div>
+              <div class="set-row__label">DELIVERY FREQUENCY</div>
+              <p class="set-row__desc">알림을 묶어서 받을 주기. 인시던트 페이지는 이 설정과 무관하게 즉시 전송됩니다.</p>
+            </div>
+            <div class="set-row__control">
+              <div role="radiogroup" aria-label="알림 빈도" class="stack-3">
+                <label class="ct-radio"><input class="ct-radio__box" type="radio" name="freq" checked><span class="ct-radio__label">즉시 (instant)</span></label>
+                <label class="ct-radio"><input class="ct-radio__box" type="radio" name="freq"><span class="ct-radio__label">시간별 요약 (hourly)</span></label>
+                <label class="ct-radio"><input class="ct-radio__box" type="radio" name="freq"><span class="ct-radio__label">일별 요약 (daily)</span></label>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =========================================================== SECURITY -->
+        <section class="ct-tabs__panel" role="tabpanel" id="p-security" aria-labelledby="t-security" hidden>
+          <div class="panel-head"><span class="panel-head__idx">04//</span><h2>SECURITY</h2></div>
+          <p class="panel-sub">비밀번호, 2단계 인증, 활성 세션, API 키를 관리합니다.</p>
+
+          <div class="set-row">
+            <div>
+              <div class="set-row__label">CHANGE PASSWORD</div>
+              <p class="set-row__desc">최소 12자, 대소문자·숫자·기호 포함 권장. 변경 시 다른 세션은 로그아웃됩니다.</p>
+            </div>
+            <div class="set-row__control">
+              <div class="ct-field">
+                <label class="ct-field__label" for="pw-current">현재 비밀번호</label>
+                <input id="pw-current" class="ct-input" type="password" value="............" autocomplete="current-password">
+              </div>
+              <div class="ct-field">
+                <label class="ct-field__label" for="pw-new">새 비밀번호</label>
+                <input id="pw-new" class="ct-input" type="password" placeholder="새 비밀번호" autocomplete="new-password">
+                <span class="ct-field__hint">12자 이상</span>
+              </div>
+              <div class="ct-field">
+                <label class="ct-field__label" for="pw-confirm">새 비밀번호 확인</label>
+                <input id="pw-confirm" class="ct-input" type="password" placeholder="다시 입력" autocomplete="new-password">
+              </div>
+              <button class="ct-btn ct-btn--secondary" data-toast="비밀번호가 변경되었습니다" data-toast-title="PASSWORD" data-toast-variant="success">비밀번호 변경</button>
+            </div>
+          </div>
+
+          <div class="set-row">
+            <div>
+              <div class="set-row__label">TWO-FACTOR AUTH (2FA)</div>
+              <p class="set-row__desc">TOTP 인증 앱으로 2단계 인증. 강력히 권장됩니다. 현재 <span class="t-success">활성</span>.</p>
+            </div>
+            <div class="set-row__control set-row__control--end">
+              <label class="ct-switch"><input class="ct-switch__input" type="checkbox" checked><span class="ct-switch__track"><span class="ct-switch__knob"></span></span><span class="ct-switch__label">ON</span></label>
+            </div>
+          </div>
+
+          <div class="set-row" style="grid-template-columns:1fr;">
+            <div>
+              <div class="set-row__label">ACTIVE SESSIONS</div>
+              <p class="set-row__desc">현재 계정에 로그인된 기기. 의심스러운 세션은 즉시 해지하세요.</p>
+              <div class="ct-table-wrap" style="margin-top:var(--space-4);">
+                <div class="ct-table-wrap__chrome">sessions.log</div>
+                <table class="ct-table ct-table--compact" data-table>
+                  <thead>
+                    <tr>
+                      <th scope="col">DEVICE</th>
+                      <th scope="col">LOCATION</th>
+                      <th scope="col">LAST ACTIVE</th>
+                      <th scope="col"><span class="sr-only">작업</span></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>MacBook Pro · Chrome 128 <span class="ct-badge ct-badge--success ct-badge--dot ct-badge--sm">THIS DEVICE</span></td>
+                      <td>Seoul, KR</td>
+                      <td class="ct-table__status ct-table__status--live">방금 전</td>
+                      <td><button class="ct-btn ct-btn--ghost ct-btn--sm" disabled>현재</button></td>
+                    </tr>
+                    <tr>
+                      <td>iPhone 15 · Safari Mobile</td>
+                      <td>Seoul, KR</td>
+                      <td>14분 전</td>
+                      <td><button class="ct-btn ct-btn--danger ct-btn--sm" data-toast="iPhone 15 세션이 해지되었습니다" data-toast-title="REVOKED" data-toast-variant="warning">해지</button></td>
+                    </tr>
+                    <tr>
+                      <td>ThinkPad X1 · Firefox 129</td>
+                      <td>Tokyo, JP</td>
+                      <td>3시간 전</td>
+                      <td><button class="ct-btn ct-btn--danger ct-btn--sm" data-toast="ThinkPad X1 세션이 해지되었습니다" data-toast-title="REVOKED" data-toast-variant="warning">해지</button></td>
+                    </tr>
+                    <tr>
+                      <td>Unknown · curl/8.4</td>
+                      <td>Frankfurt, DE</td>
+                      <td>2일 전</td>
+                      <td><button class="ct-btn ct-btn--danger ct-btn--sm" data-toast="알 수 없는 세션이 해지되었습니다" data-toast-title="REVOKED" data-toast-variant="danger">해지</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="set-row" style="grid-template-columns:1fr;">
+            <div>
+              <div class="set-row__label">API KEYS</div>
+              <p class="set-row__desc">서비스 통합용 비밀 키. 키는 한 번만 표시됩니다. 노출 시 즉시 폐기하세요.</p>
+              <ul class="ct-list ct-list--bordered" style="margin-top:var(--space-4);">
+                <li class="ct-list__item">
+                  <div class="ct-list__content">
+                    <div class="ct-list__title">production · deploy-bot</div>
+                    <div class="ct-list__sub">생성 2025-11-02 · 마지막 사용 12분 전</div>
+                  </div>
+                  <div class="ct-list__meta flex items-center gap-2">
+                    <code class="ct-code-inline" id="key-prod">ct_live_9fK2…a71Z</code>
+                    <button class="ct-btn ct-btn--ghost ct-btn--sm" data-copy="#key-prod" aria-label="production 키 복사">COPY</button>
+                  </div>
+                </li>
+                <li class="ct-list__item">
+                  <div class="ct-list__content">
+                    <div class="ct-list__title">staging · ci-runner</div>
+                    <div class="ct-list__sub">생성 2026-01-18 · 마지막 사용 1일 전</div>
+                  </div>
+                  <div class="ct-list__meta flex items-center gap-2">
+                    <code class="ct-code-inline" id="key-stage">ct_test_3pQ7…b04M</code>
+                    <button class="ct-btn ct-btn--ghost ct-btn--sm" data-copy="#key-stage" aria-label="staging 키 복사">COPY</button>
+                  </div>
+                </li>
+                <li class="ct-list__item">
+                  <div class="ct-list__content">
+                    <div class="ct-list__title">readonly · metrics-export</div>
+                    <div class="ct-list__sub">생성 2026-03-09 · 마지막 사용 5시간 전</div>
+                  </div>
+                  <div class="ct-list__meta flex items-center gap-2">
+                    <code class="ct-code-inline" id="key-ro">ct_ro_8wZ1…c66T</code>
+                    <button class="ct-btn ct-btn--ghost ct-btn--sm" data-copy="#key-ro" aria-label="readonly 키 복사">COPY</button>
+                  </div>
+                </li>
+              </ul>
+              <div class="flex justify-end" style="margin-top:var(--space-3);">
+                <button class="ct-btn ct-btn--secondary ct-btn--sm" data-toast="새 API 키가 생성되었습니다 — 지금 복사하세요" data-toast-title="NEW KEY" data-toast-variant="info">+ 키 생성</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =========================================================== DANGER ZONE -->
+        <section class="ct-tabs__panel" role="tabpanel" id="p-danger" aria-labelledby="t-danger" hidden>
+          <div class="panel-head"><span class="panel-head__idx">05//</span><h2 style="color:var(--color-danger-text);text-shadow:var(--glow-red)">DANGER ZONE</h2></div>
+          <p class="panel-sub">되돌릴 수 없는 작업. 신중하게 진행하세요.</p>
+
+          <div class="ct-alert ct-alert--danger" role="alert">
+            <span class="ct-alert__icon" aria-hidden="true">✕</span>
+            <div class="ct-alert__body">
+              <div class="ct-alert__title">주의 — 파괴적 작업 구역</div>
+              아래 작업은 데이터를 영구 삭제하거나 소유권을 이전합니다. 실행 후에는 복구할 수 없습니다.
+            </div>
+          </div>
+
+          <div class="danger-zone">
+            <div class="danger-zone__chrome">⚠ irreversible.sh</div>
+            <div class="danger-zone__body">
+
+              <div class="set-row">
+                <div>
+                  <div class="set-row__label">EXPORT ACCOUNT DATA</div>
+                  <p class="set-row__desc">프로필·활동·설정 전체를 JSON 아카이브로 내보냅니다. 다운로드 링크가 이메일로 전송됩니다.</p>
+                </div>
+                <div class="set-row__control set-row__control--end">
+                  <button class="ct-btn ct-btn--secondary" data-toast="데이터 내보내기를 준비 중입니다 — 곧 이메일로 전송됩니다" data-toast-title="EXPORT" data-toast-variant="info">데이터 내보내기</button>
+                </div>
+              </div>
+
+              <div class="set-row">
+                <div>
+                  <div class="set-row__label">TRANSFER OWNERSHIP</div>
+                  <p class="set-row__desc">워크스페이스 소유권을 다른 관리자에게 이전합니다. 이전 후 본인은 일반 멤버가 됩니다.</p>
+                </div>
+                <div class="set-row__control">
+                  <div class="ct-select-wrap">
+                    <select class="ct-select" aria-label="이전 대상">
+                      <option value="" selected disabled>대상 관리자 선택…</option>
+                      <option value="lyra">@lyra_ops — Lyra Kang</option>
+                      <option value="dex">@dex_sre — Dexter Cho</option>
+                      <option value="mara">@mara_pm — Mara Lin</option>
+                    </select>
+                  </div>
+                  <button class="ct-btn ct-btn--danger" data-toast="소유권 이전 요청이 전송되었습니다 — 대상의 수락 대기 중" data-toast-title="TRANSFER" data-toast-variant="warning">소유권 이전</button>
+                </div>
+              </div>
+
+              <div class="set-row">
+                <div>
+                  <div class="set-row__label">DELETE ACCOUNT</div>
+                  <p class="set-row__desc">계정과 모든 데이터를 영구 삭제합니다. 진행 중인 배포·API 키·세션이 즉시 종료됩니다. 되돌릴 수 없습니다.</p>
+                </div>
+                <div class="set-row__control set-row__control--end">
+                  <button class="ct-btn ct-btn--danger" data-modal-open="#delete-modal">DELETE ACCOUNT</button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+  <footer style="border-top:var(--border-1) solid var(--color-divider);padding:var(--space-9) 0;margin-top:var(--space-10)">
+    <div class="container flex justify-between items-center flex-wrap gap-4">
+      <div>
+        <div class="t-display t-lg">CYBER<span class="t-primary">.</span>TERM</div>
+        <p class="t-xs t-subtle mt-2">settings · operator console · 100% CSS tokens</p>
+      </div>
+      <div class="t-xs t-subtle"><span class="prompt"></span>~/account/settings — <span class="cursor-blink" aria-hidden="true"></span></div>
+    </div>
+  </footer>
+</main>
+
+<!-- ============================== DELETE CONFIRM MODAL ============================== -->
+<div class="ct-modal ct-modal--md" id="delete-modal" data-modal role="dialog" aria-modal="true" aria-labelledby="del-title" hidden>
+  <div class="ct-modal__dialog">
+    <div class="ct-modal__chrome">
+      <div class="ct-modal__dots"><i></i></div>
+      <span class="ct-modal__title" id="del-title">delete_account.sh</span>
+      <button class="ct-modal__close" data-modal-close aria-label="닫기"></button>
+    </div>
+    <div class="ct-modal__body">
+      <div class="ct-alert ct-alert--danger" role="alert">
+        <span class="ct-alert__icon" aria-hidden="true">✕</span>
+        <div class="ct-alert__body">
+          <div class="ct-alert__title">이 작업은 영구적입니다</div>
+          계정 <span class="confirm-name">void-collective/node_runner</span> 과 연결된 모든 데이터가 삭제됩니다. 30일 유예 없이 즉시 제거됩니다.
+        </div>
+      </div>
+      <p class="t-sm t-muted">계속하려면 아래에 정확히 <span class="confirm-name">node_runner</span> 를 입력하세요.</p>
+      <div class="ct-field">
+        <label class="ct-field__label" for="confirm-input">계정 이름 확인</label>
+        <input id="confirm-input" class="ct-input" type="text" placeholder="node_runner" autocomplete="off" aria-describedby="confirm-hint">
+        <span class="ct-field__hint" id="confirm-hint">대소문자를 정확히 일치시켜야 합니다.</span>
+      </div>
+    </div>
+    <div class="ct-modal__footer ct-modal__footer--between">
+      <button class="ct-btn ct-btn--ghost" data-modal-close>취소</button>
+      <button class="ct-btn ct-btn--danger" id="confirm-delete-btn" disabled>계정 영구 삭제</button>
+    </div>
+  </div>
+</div>
+
+<script src="../app.js"></script>
+<script>
+  // ---- accent swatch radiogroup (page-local, mirrors aria-checked + .is-active) ----
+  (function () {
+    const swatches = Array.from(document.querySelectorAll('.accent-swatch'));
+    swatches.forEach(sw => sw.addEventListener('click', () => {
+      swatches.forEach(s => { s.classList.remove('is-active'); s.setAttribute('aria-checked', 'false'); });
+      sw.classList.add('is-active');
+      sw.setAttribute('aria-checked', 'true');
+    }));
+  })();
+
+  // ---- delete-confirm: enable destructive button only when name matches exactly ----
+  (function () {
+    const REQUIRED = 'node_runner';
+    const input = document.getElementById('confirm-input');
+    const btn   = document.getElementById('confirm-delete-btn');
+    if (!input || !btn) return;
+    input.addEventListener('input', () => { btn.disabled = input.value !== REQUIRED; });
+    btn.addEventListener('click', () => {
+      if (input.value !== REQUIRED) return;
+      const modal = document.getElementById('delete-modal');
+      // close modal via its close hook
+      modal.querySelector('[data-modal-close]')?.click();
+      input.value = ''; btn.disabled = true;
+      // surface a confirming toast through app.js imperative API
+      window.CT?.toast({ title: 'DELETED', msg: '계정 삭제가 큐에 등록되었습니다', variant: 'danger' });
+    });
+  })();
+</script>
+</body>
+</html>

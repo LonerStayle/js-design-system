@@ -1,0 +1,91 @@
+/* ============================================================================
+   COMPONENTS · CHARTS & HUD WIDGETS  ·  theme-27-scifi-hud
+   Glow line/area charts · bar charts · sparklines · data readouts ·
+   bar-gauge meters · ticker · coordinate frame · mini-map.
+   Charts are pure inline SVG + CSS; decorative chrome is aria-hidden.
+   ========================================================================== */
+
+/* ---- Chart frame ---- */
+.chart {
+  position: relative;
+  width: 100%;
+  background: linear-gradient(180deg, rgba(34,224,255,0.03), transparent);
+}
+.chart svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.chart .grid-line { stroke: var(--color-border-faint); stroke-width: 1; }
+.chart .axis-label { fill: var(--color-text-faint); font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.04em; }
+.chart .line { fill: none; stroke: var(--color-primary); stroke-width: 2; filter: drop-shadow(0 0 4px var(--glow-cyan)); stroke-linecap: round; stroke-linejoin: round; }
+.chart .line.amber { stroke: var(--color-accent); filter: drop-shadow(0 0 4px var(--glow-amber)); }
+.chart .line.green { stroke: var(--color-success); filter: drop-shadow(0 0 4px var(--glow-green)); }
+.chart .area { fill: url(#cyanArea); opacity: 0.7; }
+.chart .dot { fill: var(--color-bg); stroke: var(--color-primary); stroke-width: 2; }
+.chart .marker { fill: var(--color-primary); filter: drop-shadow(0 0 4px var(--glow-cyan)); }
+
+/* Animated draw-in for chart lines (JS toggles .is-drawn). */
+.chart .line.draw { stroke-dasharray: var(--len, 1000); stroke-dashoffset: var(--len, 1000); }
+.chart.is-drawn .line.draw { stroke-dashoffset: 0; transition: stroke-dashoffset 1.4s var(--ease-out); }
+
+/* ---- Bar chart ---- */
+.bars { display: flex; align-items: flex-end; gap: var(--space-2); height: 140px; }
+.bars .bar { flex: 1; position: relative; background: linear-gradient(180deg, var(--color-primary), var(--cyan-700)); box-shadow: 0 0 10px var(--glow-cyan); clip-path: polygon(0 6px, 50% 0, 100% 6px, 100% 100%, 0 100%); transition: height var(--duration-slow) var(--ease-out); min-height: 4px; }
+.bars .bar.amber { background: linear-gradient(180deg, var(--color-accent), var(--amber-700)); box-shadow: 0 0 10px var(--glow-amber); }
+.bars .bar::after { content: attr(data-val); position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--color-primary); white-space: nowrap; }
+.bars-labels { display: flex; gap: var(--space-2); margin-top: var(--space-2); }
+.bars-labels span { flex: 1; text-align: center; font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--color-text-faint); }
+
+/* ---- Sparkline ---- */
+.spark { width: 100px; height: 32px; }
+.spark .line { fill: none; stroke: var(--color-primary); stroke-width: 1.5; }
+.spark.up .line { stroke: var(--color-success); }
+.spark.down .line { stroke: var(--color-danger); }
+
+/* ---- Data readout grid (telemetry) ---- */
+.readout { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 1px; background: var(--color-border-faint); border: var(--border-1); clip-path: var(--clip-bevel); --bevel: 8px; }
+.readout .ro-cell { background: var(--color-surface); padding: var(--space-3); display: grid; gap: 4px; }
+.readout .ro-key { font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: var(--tracking-wide); text-transform: uppercase; color: var(--color-text-faint); }
+.readout .ro-val { font-family: var(--font-display); font-size: var(--text-lg); font-weight: var(--weight-bold); color: var(--color-primary); letter-spacing: var(--tracking-wide); }
+.readout .ro-val.amber { color: var(--color-accent); }
+.readout .ro-val.danger { color: var(--color-danger); }
+.readout .ro-val.green { color: var(--color-success); }
+
+/* ---- Horizontal bar-gauge meter ---- */
+.meter { display: grid; gap: var(--space-1); }
+.meter-top { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--color-text-muted); letter-spacing: var(--tracking-wide); }
+.meter-top .mt-val { color: var(--color-primary); }
+.meter-track { height: 10px; background: var(--gauge-track); border: 1px solid var(--color-border-faint); position: relative; overflow: hidden; clip-path: var(--clip-bevel); --bevel: 3px; }
+.meter-fill { height: 100%; background: linear-gradient(90deg, var(--cyan-600), var(--color-primary)); box-shadow: 0 0 8px var(--glow-cyan); transition: width var(--duration-slow) var(--ease-out); }
+.meter-fill.amber { background: linear-gradient(90deg, var(--amber-600), var(--color-accent)); box-shadow: 0 0 8px var(--glow-amber); }
+.meter-fill.danger { background: linear-gradient(90deg, var(--alert-red-600), var(--color-danger)); box-shadow: 0 0 8px var(--glow-red); }
+.meter-fill.green { background: linear-gradient(90deg, var(--green-600), var(--color-success)); box-shadow: 0 0 8px var(--glow-green); }
+/* segmented meter ticks */
+.meter-track.segmented-ticks::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 11px, rgba(6,11,22,0.6) 11px 12px); pointer-events: none; }
+
+/* ---- Ticker (scrolling marquee data strip) ---- */
+.ticker { overflow: hidden; border-block: 1px solid var(--color-border-faint); background: rgba(34,224,255,0.03); }
+.ticker-track { display: inline-flex; gap: var(--space-6); white-space: nowrap; padding: var(--space-2) 0; animation: hud-ticker 30s linear infinite; will-change: transform; }
+.ticker:hover .ticker-track { animation-play-state: paused; }
+.ticker-item { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-text-muted); letter-spacing: var(--tracking-wide); display: inline-flex; align-items: center; gap: var(--space-2); }
+.ticker-item b { color: var(--color-primary); }
+.ticker-item .up { color: var(--color-success); }
+.ticker-item .down { color: var(--color-danger); }
+
+/* ---- Coordinate corner frame (decorative HUD overlay for hero/panels) ---- */
+.coord-frame { position: relative; }
+.coord-frame .cf-tl, .coord-frame .cf-tr, .coord-frame .cf-bl, .coord-frame .cf-br { position: absolute; font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--color-text-faint); letter-spacing: var(--tracking-wide); }
+.coord-frame .cf-tl { top: var(--space-2); left: var(--space-2); }
+.coord-frame .cf-tr { top: var(--space-2); right: var(--space-2); }
+.coord-frame .cf-bl { bottom: var(--space-2); left: var(--space-2); }
+.coord-frame .cf-br { bottom: var(--space-2); right: var(--space-2); }
+
+/* ---- Reticle target widget ---- */
+.reticle { width: 120px; height: 120px; background-image: var(--reticle); background-size: contain; background-repeat: no-repeat; background-position: center; }
+.reticle.spin { animation: hud-spin 12s linear infinite; }
+
+/* ---- Donut / segmented status ring legend ---- */
+.legend { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.legend-item { display: inline-flex; align-items: center; gap: var(--space-2); font-family: var(--font-mono); font-size: var(--text-xs); color: var(--color-text-muted); }
+.legend-item .swatch { width: 10px; height: 10px; clip-path: var(--clip-bevel); --bevel: 2px; }
+.legend-item .swatch.cyan { background: var(--color-primary); box-shadow: 0 0 6px var(--glow-cyan); }
+.legend-item .swatch.amber { background: var(--color-accent); }
+.legend-item .swatch.green { background: var(--color-success); }
+.legend-item .swatch.red { background: var(--color-danger); }

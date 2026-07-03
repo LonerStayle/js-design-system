@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Correspondence · Folio 24</title>
+<link rel="stylesheet" href="../base.css">
+<link rel="stylesheet" href="../components/buttons.css">
+<link rel="stylesheet" href="../components/forms.css">
+<link rel="stylesheet" href="../components/display.css">
+<link rel="stylesheet" href="../components/feedback.css">
+<link rel="stylesheet" href="../components/navigation.css">
+<style>
+  /* Page-scoped layout — 3-panel inbox */
+  .inbox-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .inbox-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    border-top: 1px solid var(--color-border-subtle);
+  }
+
+  /* LEFT PANEL — folders */
+  .panel-folders {
+    width: 220px;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--color-border-subtle);
+    overflow-y: auto;
+    background: var(--color-surface-1);
+    padding: var(--space-4) 0;
+    gap: 0;
+  }
+
+  .panel-folders__compose {
+    padding: 0 var(--space-3) var(--space-4);
+  }
+
+  .panel-folders__section-label {
+    font-family: var(--font-display);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-widest);
+    text-transform: uppercase;
+    color: var(--color-text-subtle);
+    padding: var(--space-3) var(--space-4) var(--space-1);
+  }
+
+  .folder-link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-4);
+    border-left: 2px solid transparent;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    font-family: var(--font-serif);
+    transition: background var(--duration-fast), color var(--duration-fast), border-color var(--duration-fast);
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  .folder-link:hover {
+    background: color-mix(in srgb, var(--gold-500) 8%, transparent);
+    color: var(--color-text);
+  }
+
+  .folder-link.is-active {
+    background: var(--sidebar-active);
+    color: var(--color-text-strong);
+    border-left-color: var(--color-accent);
+  }
+
+  .folder-link svg {
+    width: 1rem;
+    height: 1rem;
+    flex: none;
+    color: var(--color-text-subtle);
+  }
+
+  .folder-link.is-active svg {
+    color: var(--color-accent);
+  }
+
+  .folder-link .badge {
+    margin-left: auto;
+  }
+
+  .label-dot {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 50%;
+    flex: none;
+  }
+
+  /* MIDDLE PANEL — letter list */
+  .panel-list {
+    width: 340px;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--color-border-subtle);
+    overflow: hidden;
+    background: var(--color-bg);
+  }
+
+  .panel-list__search {
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--color-border-subtle);
+    flex: none;
+  }
+
+  .panel-list__scroll {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .letter-item {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-border-subtle);
+    cursor: pointer;
+    position: relative;
+    transition: background var(--duration-fast);
+    align-items: flex-start;
+  }
+
+  .letter-item:hover {
+    background: color-mix(in srgb, var(--gold-500) 6%, transparent);
+  }
+
+  .letter-item.is-active {
+    background: color-mix(in srgb, var(--burgundy-700) 14%, transparent);
+    border-left: 2px solid var(--color-primary);
+  }
+
+  .letter-item__body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .letter-item__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-1);
+  }
+
+  .letter-item__sender {
+    font-family: var(--font-display);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-strong);
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .letter-item__time {
+    font-size: var(--text-xs);
+    color: var(--color-text-subtle);
+    flex: none;
+    white-space: nowrap;
+  }
+
+  .letter-item__subject {
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    font-weight: var(--weight-medium);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: var(--space-1);
+  }
+
+  .letter-item__snippet {
+    font-size: var(--text-xs);
+    color: var(--color-text-subtle);
+    font-style: italic;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .letter-item__meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+  }
+
+  .unread-dot {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    background: var(--color-accent);
+    flex: none;
+  }
+
+  .letter-item__star {
+    position: absolute;
+    top: var(--space-3);
+    right: var(--space-3);
+    color: var(--color-text-subtle);
+    line-height: 1;
+  }
+
+  .letter-item__star.is-starred {
+    color: var(--gold-400);
+  }
+
+  /* RIGHT PANEL — reading pane */
+  .panel-reading {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--color-bg);
+  }
+
+  .reading-header {
+    padding: var(--space-5) var(--space-6) var(--space-4);
+    border-bottom: 1px solid var(--color-border-subtle);
+    flex: none;
+  }
+
+  .reading-header__top {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-4);
+    margin-bottom: var(--space-3);
+  }
+
+  .reading-header__info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .reading-header__subject {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    color: var(--color-text-strong);
+    letter-spacing: var(--tracking-wide);
+    margin-bottom: var(--space-1);
+  }
+
+  .reading-header__from {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .reading-header__from strong {
+    color: var(--color-text);
+  }
+
+  .reading-header__date {
+    font-size: var(--text-xs);
+    color: var(--color-text-subtle);
+    font-style: italic;
+    margin-top: var(--space-1);
+  }
+
+  .reading-header__actions {
+    display: flex;
+    gap: var(--space-2);
+    align-items: flex-start;
+    flex: none;
+  }
+
+  .reading-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-6) var(--space-8);
+  }
+
+  .reading-body .letter-prose {
+    max-width: 64ch;
+  }
+
+  .letter-prose p {
+    margin-bottom: var(--space-5);
+    line-height: var(--leading-relaxed);
+    font-size: var(--text-md);
+    color: var(--color-text);
+  }
+
+  .letter-prose .closing {
+    margin-top: var(--space-6);
+    font-style: italic;
+    color: var(--color-text-muted);
+  }
+
+  .letter-prose .signature {
+    font-family: var(--font-display);
+    font-size: var(--text-md);
+    letter-spacing: var(--tracking-wide);
+    color: var(--color-accent);
+    margin-top: var(--space-2);
+  }
+
+  .letter-prose .postscript {
+    margin-top: var(--space-4);
+    font-size: var(--text-sm);
+    color: var(--color-text-subtle);
+    font-style: italic;
+    padding-left: var(--space-4);
+    border-left: 2px solid var(--color-border);
+  }
+
+  .quick-reply {
+    border-top: 1px solid var(--color-border-subtle);
+    padding: var(--space-4) var(--space-6);
+    flex: none;
+    background: var(--color-surface-1);
+  }
+
+  .quick-reply__label {
+    font-family: var(--font-display);
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-widest);
+    text-transform: uppercase;
+    color: var(--color-text-subtle);
+    margin-bottom: var(--space-2);
+  }
+
+  .quick-reply__row {
+    display: flex;
+    gap: var(--space-3);
+    align-items: flex-end;
+  }
+
+  .quick-reply__textarea {
+    flex: 1;
+  }
+
+  /* Responsive breakpoints */
+  @media (max-width: 1024px) {
+    .panel-folders {
+      width: 60px;
+      overflow: hidden;
+    }
+    .folder-link span,
+    .folder-link .badge,
+    .panel-folders__section-label,
+    .panel-folders__compose .btn span {
+      display: none;
+    }
+    .panel-folders__compose .btn {
+      padding: 0.55rem;
+      aspect-ratio: 1;
+      justify-content: center;
+    }
+    .folder-link {
+      justify-content: center;
+      padding: var(--space-3);
+    }
+    .panel-list {
+      width: 280px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .panel-folders {
+      display: none;
+    }
+    .panel-reading {
+      display: none;
+    }
+    .panel-list {
+      width: 100%;
+      flex: 1;
+    }
+    .letter-item.is-active + .panel-reading {
+      display: flex;
+    }
+    .mobile-back-btn {
+      display: flex !important;
+    }
+    .panel-reading {
+      position: fixed;
+      inset: 0;
+      z-index: var(--z-drawer);
+      background: var(--color-bg);
+    }
+    .panel-reading.is-open {
+      display: flex;
+    }
+  }
+
+  .mobile-back-btn {
+    display: none;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-border-subtle);
+    font-size: var(--text-sm);
+    color: var(--color-accent);
+    cursor: pointer;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--color-border-subtle);
+    width: 100%;
+    text-align: left;
+  }
+
+  .ornate-separator {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
+    margin: var(--space-5) 0;
+    opacity: 0.4;
+  }
+
+  .reading-ornament {
+    display: flex;
+    justify-content: center;
+    margin: var(--space-4) 0;
+    color: var(--color-accent);
+    opacity: 0.5;
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<!-- NAVBAR -->
+<nav class="navbar" aria-label="Primary">
+  <a class="navbar__brand" href="../index.html">
+    <span class="mark" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 5a2 2 0 0 1 2-2h6v18H5a2 2 0 0 1-2-2zM21 5a2 2 0 0 0-2-2h-6v18h6a2 2 0 0 0 2-2z"/></svg></span>
+    <span>Folio<span class="text-accent">·</span>24</span>
+  </a>
+  <div class="navbar__nav">
+    <a class="nav-link" href="dashboard.html">Dashboard</a>
+    <a class="nav-link" href="kanban.html">Board</a>
+    <a class="nav-link" aria-current="page" href="inbox.html">Letters</a>
+    <a class="nav-link" href="article.html">Reading Room</a>
+  </div>
+  <span class="navbar__spacer"></span>
+  <div class="navbar__actions">
+    <button class="btn btn--ghost btn--sm" data-cmdk-open aria-label="Open command palette">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <kbd>⌘K</kbd>
+    </button>
+    <button class="btn btn--secondary btn--sm" data-theme-toggle aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      <span data-theme-label>Parchment</span>
+    </button>
+  </div>
+</nav>
+
+<!-- INBOX SHELL -->
+<div class="inbox-shell" id="main">
+  <div class="inbox-body">
+
+    <!-- LEFT PANEL: Folders -->
+    <aside class="panel-folders" aria-label="Folders">
+      <div class="panel-folders__compose">
+        <button class="btn btn--primary btn--block" aria-label="Compose new letter">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          <span>Compose Letter</span>
+        </button>
+      </div>
+
+      <div class="panel-folders__section-label">Postboxes</div>
+
+      <a href="#" class="folder-link is-active" aria-current="page" aria-label="Inbox — 7 unread">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="16" height="16" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+        <span>Inbox</span>
+        <span class="badge badge--primary badge--pill">7</span>
+      </a>
+
+      <a href="#" class="folder-link" aria-label="Sent — 23 letters">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="16" height="16" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>
+        <span>Sent</span>
+        <span class="badge badge--pill" style="font-size:var(--text-2xs);opacity:0.7">23</span>
+      </a>
+
+      <a href="#" class="folder-link" aria-label="Drafts — 2 drafts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="16" height="16" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+        <span>Drafts</span>
+        <span class="badge badge--warning badge--pill">2</span>
+      </a>
+
+      <a href="#" class="folder-link" aria-label="Archive">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="16" height="16" aria-hidden="true"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+        <span>Archive</span>
+      </a>
+
+      <a href="#" class="folder-link" aria-label="Sealed — 3 unopened">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="16" height="16" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        <span>Sealed</span>
+        <span class="badge badge--danger badge--pill">3</span>
+      </a>
+
+      <div class="panel-folders__section-label" style="margin-top:var(--space-3)">Labels</div>
+
+      <a href="#" class="folder-link" aria-label="Label: Manuscripts">
+        <span class="label-dot" style="background:#a6843c;" aria-hidden="true"></span>
+        <span>Manuscripts</span>
+      </a>
+      <a href="#" class="folder-link" aria-label="Label: Society">
+        <span class="label-dot" style="background:#5a7c5a;" aria-hidden="true"></span>
+        <span>Society</span>
+      </a>
+      <a href="#" class="folder-link" aria-label="Label: Enquiries">
+        <span class="label-dot" style="background:#7b4f6e;" aria-hidden="true"></span>
+        <span>Enquiries</span>
+      </a>
+      <a href="#" class="folder-link" aria-label="Label: Urgent">
+        <span class="label-dot" style="background:#8b2020;" aria-hidden="true"></span>
+        <span>Urgent</span>
+      </a>
+    </aside>
+
+    <!-- MIDDLE PANEL: Letter list -->
+    <section class="panel-list" aria-label="Letters">
+      <div class="panel-list__search">
+        <div class="searchbar" role="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input
+            type="search"
+            placeholder="Search correspondence…"
+            aria-label="Search letters"
+            data-filter="#letter-list"
+          >
+        </div>
+      </div>
+
+      <div class="panel-list__scroll" id="letter-list" role="list">
+
+        <!-- Letter 1 — ACTIVE/SELECTED -->
+        <article class="letter-item is-active" role="listitem" tabindex="0" aria-label="Letter from Professor Edmund Ashworth, selected" data-filter-item>
+          <div class="avatar avatar--sm" aria-hidden="true" style="background: var(--color-primary-soft); color: var(--color-primary-soft-fg); flex: none;">EA</div>
+          <div class="letter-item__body">
+            <div class="letter-item__header">
+              <span class="letter-item__sender">Prof. Edmund Ashworth</span>
+              <span class="letter-item__time">XIV Nov</span>
+            </div>
+            <div class="letter-item__subject">Re: The Aldine Virgil — Authentication</div>
+            <div class="letter-item__snippet">I have examined the colophon most carefully, and I confess the doubts…</div>
+            <div class="letter-item__meta">
+              <span class="unread-dot" aria-label="Unread"></span>
+              <span class="badge badge--pill" style="font-size:var(--text-2xs)">Manuscripts</span>
+            </div>
+          </div>
+          <span class="letter-item__star is-starred" aria-label="Starred" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+          </span>
+        </article>
+
+        <!-- Letter 2 -->
+        <article class="letter-item" role="listitem" tabindex="0" aria-label="Letter from Lady Constance Fairweather" data-filter-item>
+          <div class="avatar avatar--sm" aria-hidden="true" style="background: color-mix(in srgb, #7b4f6e 25%, var(--color-surface-2)); color: #c9a0c9; flex: none;">CF</div>
+          <div class="letter-item__body">
+            <div class="letter-item__header">
+              <span class="letter-item__sender">Lady Constance Fairweather</span>
+              <span class="letter-item__time">XII Nov</span>
+            </div>
+            <div class="letter-item__subject">The Westbrook Bequest — A Grievous Error</div>
+            <div class="letter-item__snippet">My late uncle's library was promised in its entirety to the college…</div>
+            <div class="letter-item__meta">
+              <span class="unread-dot" aria-label="Unread"></span>
+              <span class="badge badge--pill" style="font-size:var(--text-2xs)">Enquiries</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Letter 3 -->
+        <article class="letter-item" role="listitem" tabindex="0" aria-label="Letter from Dr. Hieronymus Vane" data-filter-item>
+          <div class="avatar avatar--sm" aria-hidden="true" style="background: color-mix(in srgb, #5a7c5a 25%, var(--color-surface-2)); color: #8fb98f; flex: none;">HV</div>
+          <div class="letter-item__body">
+            <div class="letter-item__header">
+              <span class="letter-item__sender">Dr. Hieronymus Vane</span>
+              <span class="letter-item__time">X Nov</span>
+            </div>
+            <div class="letter-item__subject">Michaelmas Lecture — Request for Commentary</div>
+            <div class="letter-item__snippet">Your discourse upon the Neoplatonists of the Florentine Academy…</div>
+            <div class="letter-item__meta">
+              <span class="badge badge--pill" style="font-size:var(--text-2xs)">Society</span>
+            </div>
+          </div>
+          <span class="letter-item__star is-starred" aria-label="Starred" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+          </span>
+        </article>
+
+        <!-- Letter 4 -->
+        <article class="letter-item" role="listitem" tabindex="0" aria-label="Letter from The Bodleian Library" data-filter-item>
+          <div class="avatar avatar--sm" aria-hidden="true" style="background: color-mix(in srgb, #a6843c 25%, var(--color-surface-2)); color: #d4aa55; flex: none;">BL</div>
+          <div class="letter-item__body">
+            <div class="letter-item__header">
+              <span class="letter-item__sender">The Bodleian Library</span>
+              <span class="letter-item__time">VII Nov</span>
+            </div>
+            <div class="letter-item__subject">Loan Renewal — MS. Rawl. D. 864</div>
+            <div class="letter-item__snippet">We write to advise that the loan period for the above-referenced…</div>
+          </div>
+        </article>
+
+        <!-- Letter 5 -->
+        <article class="letter-item" role="listitem" tabindex="0" aria-label="Letter from Reverend Octavius Greele" data-filter-item>
+          <div class="avatar avatar--sm" aria-hidden="true" style="background: color-mix(in srgb, #8b2020 22%, var(--color-surface-2)); color: #c97070; flex: none;">OG</div>
+          <div class="letter-item__body">
+            <div class="letter-item__header">
+              <span class="letter-item__sender">Rev. Octavius Greele</span>
+              <span class="letter-item__time">V Nov</span>
+            </div>
+            <div class="letter-item__subject">A Most Alarming Discovery in the Crypt Archives</div>
+            <div class="letter-item__snippet">I must implore your counsel with the utmost urgency, for what…</div>
+            <div class="letter-item__meta">
+              <span class="unread-dot" aria-label="Unread"></span>
+              <span class="badge badge--danger badge--pill" style="font-size:var(--text-2xs)">Urgent</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Letter 6 -->
+        <article class="letter-item" role="listitem" tabindex="0" aria-label="Letter from Miss Agatha Penrose" data-filter-item>
+          <div class="avatar avatar--sm" aria-hidden="true" style="background: color-mix(in srgb, var(--gold-700) 20%, var(--color-surface-2)); color: var(--gold-400); flex: none;">AP</div>
+          <div class="letter-item__body">
+            <div class="letter-item__header">
+              <span class="letter-item__sender">Miss Agatha Penrose</span>
+              <span class="letter-item__time">III Nov</span>
+            </div>
+            <div class="letter-item__subject">Translation of the Thuringian Chronicle</div>
+            <div class="letter-item__snippet">I have completed the first quatrain of the Thuringian text, though…</div>
+            <div class="letter-item__meta">
+              <span class="badge badge--pill" style="font-size:var(--text-2xs)">Manuscripts</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Letter 7 -->
+        <article class="letter-item" role="listitem" tabindex="0" aria-label="Letter from Professor Aldric Munn" data-filter-item>
+          <div class="avatar avatar--sm" aria-hidden="true" style="background: color-mix(in srgb, var(--color-info-bg) 60%, transparent); color: var(--color-info-fg); flex: none;">AM</div>
+          <div class="letter-item__body">
+            <div class="letter-item__header">
+              <span class="letter-item__sender">Prof. Aldric Munn</span>
+              <span class="letter-item__time">XXIX Oct</span>
+            </div>
+            <div class="letter-item__subject">The Frankfurt Fair — Acquisitions Report</div>
+            <div class="letter-item__snippet">I am pleased to report that the Frankfurt book fair yielded three…</div>
+          </div>
+        </article>
+
+        <!-- Letter 8 -->
+        <article class="letter-item" role="listitem" tabindex="0" aria-label="Letter from The Antiquarian Society of London" data-filter-item>
+          <div class="avatar avatar--sm avatar--square" aria-hidden="true" style="background: color-mix(in srgb, #5a7c5a 25%, var(--color-surface-2)); color: #8fb98f; flex: none;">AS</div>
+          <div class="letter-item__body">
+            <div class="letter-item__header">
+              <span class="letter-item__sender">Antiquarian Society, London</span>
+              <span class="letter-item__time">XXVII Oct</span>
+            </div>
+            <div class="letter-item__subject">Annual Symposium — Invitation &amp; Programme</div>
+            <div class="letter-item__snippet">The Society cordially invites you to deliver the Cavendish Memorial…</div>
+            <div class="letter-item__meta">
+              <span class="badge badge--pill" style="font-size:var(--text-2xs)">Society</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Letter 9 -->
+        <article class="letter-item" role="listitem" tabindex="0" aria-label="Letter from Mr. Cornelius Blackwood" data-filter-item>
+          <div class="avatar avatar--sm" aria-hidden="true" style="background: color-mix(in srgb, #a6843c 20%, var(--color-surface-2)); color: var(--gold-300); flex: none;">CB</div>
+          <div class="letter-item__body">
+            <div class="letter-item__header">
+              <span class="letter-item__sender">Mr. Cornelius Blackwood</span>
+              <span class="letter-item__time">XXIV Oct</span>
+            </div>
+            <div class="letter-item__subject">Regarding the Grimoire of Paracelsus</div>
+            <div class="letter-item__snippet">I come to you not as a buyer but as a custodian; the volume requires…</div>
+          </div>
+          <span class="letter-item__star is-starred" aria-label="Starred" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+          </span>
+        </article>
+
+        <!-- Letter 10 -->
+        <article class="letter-item" role="listitem" tabindex="0" aria-label="Letter from Dean Hartley-Browne" data-filter-item>
+          <div class="avatar avatar--sm" aria-hidden="true" style="background: color-mix(in srgb, var(--color-text-subtle) 20%, var(--color-surface-2)); color: var(--color-text-subtle); flex: none;">HB</div>
+          <div class="letter-item__body">
+            <div class="letter-item__header">
+              <span class="letter-item__sender">Dean Hartley-Browne</span>
+              <span class="letter-item__time">XX Oct</span>
+            </div>
+            <div class="letter-item__subject">Trinity Term — Fellowship Renewal Notice</div>
+            <div class="letter-item__snippet">The Governing Body met in camera on Tuesday last to consider…</div>
+          </div>
+        </article>
+
+      </div><!-- /panel-list__scroll -->
+    </section>
+
+    <!-- RIGHT PANEL: Reading pane -->
+    <main class="panel-reading" id="reading-pane" aria-label="Open letter">
+
+      <button class="mobile-back-btn" id="back-to-list" aria-label="Back to letter list">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        Back to Inbox
+      </button>
+
+      <div class="reading-header">
+        <div class="reading-header__top">
+          <div class="avatar avatar--ring" aria-hidden="true" style="background: var(--color-primary-soft); color: var(--color-primary-soft-fg);">EA</div>
+          <div class="reading-header__info">
+            <div class="reading-header__subject">Re: The Aldine Virgil — Authentication &amp; Provenance</div>
+            <div class="reading-header__from">
+              <strong>Professor Edmund Ashworth</strong>
+              <span class="text-subtle">·</span>
+              <span>e.ashworth@magdalen.ox.ac.uk</span>
+            </div>
+            <div class="reading-header__date">
+              <span class="text-subtle">To:</span> Dr. R. Blackthorn &nbsp;·&nbsp;
+              <em>14th November, Anno Domini MDCCCXCII &nbsp;·&nbsp; Magdalen College, Oxford</em>
+            </div>
+          </div>
+          <div class="reading-header__actions">
+            <span class="tooltip" data-tip="Reply">
+              <button class="btn btn--ghost btn--icon" aria-label="Reply">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="m9 17-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+              </button>
+            </span>
+            <span class="tooltip" data-tip="Forward">
+              <button class="btn btn--ghost btn--icon" aria-label="Forward">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="m15 17 5-5-5-5"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg>
+              </button>
+            </span>
+            <span class="tooltip" data-tip="Archive">
+              <button class="btn btn--ghost btn--icon" aria-label="Archive letter"
+                data-toast="Letter consigned to the archive."
+                data-toast-title="Archived"
+                data-toast-variant="success">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+              </button>
+            </span>
+            <span class="tooltip" data-tip="Delete">
+              <button class="btn btn--ghost btn--icon" aria-label="Delete letter"
+                data-toast="Letter committed to the flames."
+                data-toast-title="Destroyed"
+                data-toast-variant="danger">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+              </button>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="reading-body">
+        <div class="letter-prose reveal" data-delay="1">
+
+          <div class="reading-ornament" aria-hidden="true">
+            <svg width="120" height="12" viewBox="0 0 120 12"><line x1="0" y1="6" x2="50" y2="6" stroke="currentColor" stroke-width="0.8"/><circle cx="60" cy="6" r="3" fill="none" stroke="currentColor" stroke-width="0.8"/><path d="M56 6 Q60 2 64 6 Q60 10 56 6Z" fill="currentColor" opacity="0.5"/><line x1="70" y1="6" x2="120" y2="6" stroke="currentColor" stroke-width="0.8"/></svg>
+          </div>
+
+          <p class="has-dropcap">I have examined the colophon most carefully, as you requested, and I confess the doubts which you raised in your previous communication have only deepened upon closer scrutiny. The Aldine device — that handsome anchor and dolphin, <em>festina lente</em>, which old Aldus set upon his title pages with such proud economy — presents certain irregularities in the present specimen that give me considerable pause. The ink itself is consistent with a late fifteenth-century Venetian printing house, yet the quiring speaks against it. Allow me to elaborate at some length, for this matter touches upon the very authenticity of what may be the finest acquisition your institution has made in living memory, or alternatively, its most costly embarrassment.</p>
+
+          <p>The watermark in gathering C — a crowned eagle rampant, bearing a shield charged with a cross of St. George — is, I am reliably informed, peculiar to the Treviso paper-mills of Bartolomeo Moranzone, whose output was extensively documented by the late Professor Kuchenbecker in his monumental <em>Papiergeschichte des Veneto</em> of 1871. This watermark, crucially, does not appear in any documented Aldine imprint before the year 1501, whereas the colophon before us claims a date of MCCCCXCVIII. The discrepancy is not merely a curiosity; it is, if I am not greatly mistaken, a damnation. Forgeries of the Aldine press were, I need not remind you, a considerable industry in the seventeenth century, particularly in Lyon, where a certain master printer whose name historians continue to dispute produced some fifty simulacra of considerable virtuosity.</p>
+
+          <p>And yet — and here I must urge you to resist the temptation of premature despair — there remains one possibility which the forger hypothesis cannot easily accommodate. The marginalia in the hand that appears throughout gathering A–D are, beyond any reasonable doubt, authentic to the period. I have compared them at length with three holograph specimens in the Ashmolean, and the formation of the Greek minuscules, particularly the characteristic sigma and the peculiar elongation of the descenders in phi and psi, correspond precisely to the hand of one Giacomo Contarini, patrician of Venice, known to have numbered among Aldus's inner circle. If Contarini wrote in this book, it is exceedingly difficult to account for his presence in a forgery. Men of his station did not annotate fraudulent editions, even excellent ones.</p>
+
+          <p>I propose, therefore, that we arrange a meeting at your earliest convenience, at which time I shall bring both the specimens from the Ashmolean and a typed transcript of Kuchenbecker's relevant chapter, which my research assistant Miss Penrose has most obligingly rendered into English for our purposes. The matter is urgent: I understand from Dr. Munn that a certain party in Frankfurt has expressed interest in the same volume, and that the original vendor — I shall not name him in writing — is not above conducting parallel negotiations. The field, my dear Blackthorn, does not reward the contemplative disposition in matters of acquisition.</p>
+
+          <div class="ornate-separator" aria-hidden="true"></div>
+
+          <p class="closing">
+            I remain, with the highest esteem and the sincerest apprehension for our shared endeavour,
+          </p>
+          <p class="signature">
+            Edmund Ashworth, F.B.A.<br>
+            <small class="text-subtle italic" style="font-family:var(--font-serif)">Fellow &amp; Librarian, Magdalen College, Oxford</small>
+          </p>
+
+          <p class="postscript">
+            <em>P.S.</em> — I enclose a tracing of the watermark, which my wife executed with admirable precision by candlelight last Thursday evening. The original is too fragile for postal transit, but you will find the tracing sufficient for comparison with the Kuchenbecker plates.
+          </p>
+
+          <div class="reading-ornament" aria-hidden="true" style="margin-top: var(--space-6);">
+            <svg width="60" height="20" viewBox="0 0 60 20">
+              <path d="M30 4 L34 10 L30 16 L26 10 Z" fill="none" stroke="currentColor" stroke-width="0.8"/>
+              <path d="M30 1 L30 4 M30 16 L30 19" stroke="currentColor" stroke-width="0.8"/>
+              <circle cx="30" cy="10" r="2.5" fill="currentColor" opacity="0.3"/>
+            </svg>
+          </div>
+
+        </div>
+      </div><!-- /reading-body -->
+
+      <!-- Quick Reply -->
+      <div class="quick-reply">
+        <div class="quick-reply__label">Reply to Prof. Ashworth</div>
+        <div class="quick-reply__row">
+          <div class="quick-reply__textarea field">
+            <textarea
+              class="textarea"
+              rows="3"
+              placeholder="Compose your reply in the antiquarian spirit… (Shift+Enter for newline)"
+              aria-label="Quick reply to Professor Ashworth"
+              style="min-height: 4rem; resize: none;"
+            ></textarea>
+          </div>
+          <button
+            class="btn btn--primary"
+            data-toast="Your letter has been dispatched by the college messenger."
+            data-toast-title="Letter Sent"
+            data-toast-variant="success"
+            aria-label="Send reply"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>
+            Dispatch
+          </button>
+        </div>
+      </div>
+
+    </main><!-- /panel-reading -->
+
+  </div><!-- /inbox-body -->
+</div><!-- /inbox-shell -->
+
+<!-- Mobile reading pane open/close wiring -->
+<script>
+  (function () {
+    var items = document.querySelectorAll('.letter-item');
+    var readingPane = document.getElementById('reading-pane');
+    var backBtn = document.getElementById('back-to-list');
+    items.forEach(function (item) {
+      item.addEventListener('click', function () {
+        items.forEach(function (i) { i.classList.remove('is-active'); });
+        item.classList.add('is-active');
+        if (window.innerWidth <= 768) {
+          readingPane.classList.add('is-open');
+        }
+      });
+      item.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.click(); }
+      });
+    });
+    if (backBtn) {
+      backBtn.addEventListener('click', function () {
+        readingPane.classList.remove('is-open');
+      });
+    }
+  })();
+</script>
+
+<script src="../app.js"></script>
+</body>
+</html>

@@ -1,0 +1,813 @@
+/* ============================================================================
+   THEME 09 — Y2K / FRUTIGER AERO
+   components/forms-advanced.css — ADVANCED FORM CONTROLS
+   ----------------------------------------------------------------------------
+   Load order: tokens.css → semantic.css → base.css → components/*
+
+   Glossy "wet glass" advanced inputs: slider, stepper, file upload, chip input,
+   rating, multi-select, combobox, and a calendar / datepicker. Everything reads
+   semantic + component tokens only; hardcoded hex appears solely inside
+   decorative gradients / SVG-shaped accents. Hi-gloss top shine, soft bottom
+   reflection, bright edge rim, rounded corners, hover lift + aqua focus ring,
+   disabled states, and automatic dark-theme support throughout.
+   ========================================================================== */
+
+/* ==========================================================================
+   1. SLIDER — input[type=range].slider
+   --------------------------------------------------------------------------
+   Glossy sunken track filled by --track-fill, with a water-bubble thumb
+   (white gloss + aqua rim). Styled cross-browser (WebKit + Firefox). The
+   filled-portion feel comes from a track gradient overlay sized to the value.
+   ========================================================================== */
+.slider {
+  --slider-track-h: 10px;
+  --slider-thumb-d: 24px;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: var(--slider-thumb-d);
+  margin: 0;
+  padding: 0;
+  background: transparent;          /* track painted by ::track pseudo-els */
+  cursor: pointer;
+  border-radius: var(--radius-full);
+  vertical-align: middle;
+}
+.slider:focus { outline: none; }
+
+/* --- WebKit / Blink track ------------------------------------------------ */
+.slider::-webkit-slider-runnable-track {
+  height: var(--slider-track-h);
+  border-radius: var(--radius-full);
+  background: var(--track-bg);
+  box-shadow:
+    inset 0 2px 5px rgba(10, 59, 97, 0.22),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.45),
+    var(--surface-rim);
+  /* glossy filled portion: JS may set --slider-fill (e.g. 64%) */
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,0.40), rgba(255,255,255,0) 55%),
+    var(--track-fill);
+  background-repeat: no-repeat;
+  background-size: var(--slider-fill, 50%) 100%, var(--slider-fill, 50%) 100%;
+}
+/* --- WebKit / Blink thumb (water bubble) --------------------------------- */
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--slider-thumb-d);
+  height: var(--slider-thumb-d);
+  margin-top: calc((var(--slider-track-h) - var(--slider-thumb-d)) / 2);
+  border-radius: 50%;
+  border: 2px solid var(--color-accent);
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.45) 26%, rgba(174,224,255,0.30) 58%, rgba(0,214,200,0.22) 100%);
+  box-shadow:
+    0 3px 8px rgba(10, 59, 97, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -4px 6px -2px rgba(0, 120, 130, 0.20);
+  transition: transform var(--duration-fast) var(--ease-spring),
+              box-shadow var(--duration-fast) var(--ease-standard);
+}
+.slider:hover::-webkit-slider-thumb { transform: scale(1.08); }
+.slider:active::-webkit-slider-thumb { transform: scale(0.96); }
+.slider:focus-visible::-webkit-slider-thumb { box-shadow: var(--ring); }
+
+/* --- Firefox track ------------------------------------------------------- */
+.slider::-moz-range-track {
+  height: var(--slider-track-h);
+  border-radius: var(--radius-full);
+  background: var(--track-bg);
+  box-shadow:
+    inset 0 2px 5px rgba(10, 59, 97, 0.22),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.45);
+}
+/* Firefox paints the filled portion natively with ::-moz-range-progress */
+.slider::-moz-range-progress {
+  height: var(--slider-track-h);
+  border-radius: var(--radius-full);
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,0.40), rgba(255,255,255,0) 55%),
+    var(--track-fill);
+}
+/* --- Firefox thumb (water bubble) ---------------------------------------- */
+.slider::-moz-range-thumb {
+  width: var(--slider-thumb-d);
+  height: var(--slider-thumb-d);
+  border-radius: 50%;
+  border: 2px solid var(--color-accent);
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.45) 26%, rgba(174,224,255,0.30) 58%, rgba(0,214,200,0.22) 100%);
+  box-shadow:
+    0 3px 8px rgba(10, 59, 97, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  transition: transform var(--duration-fast) var(--ease-spring);
+}
+.slider:hover::-moz-range-thumb { transform: scale(1.08); }
+.slider:active::-moz-range-thumb { transform: scale(0.96); }
+.slider:focus-visible::-moz-range-thumb { box-shadow: var(--ring); }
+
+/* lime variant — leaf-tinted fill */
+.slider--lime::-webkit-slider-runnable-track {
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,0.40), rgba(255,255,255,0) 55%),
+    var(--track-fill-lime);
+}
+.slider--lime::-moz-range-progress {
+  background-image:
+    linear-gradient(180deg, rgba(255,255,255,0.40), rgba(255,255,255,0) 55%),
+    var(--track-fill-lime);
+}
+
+/* disabled */
+.slider:disabled,
+.slider[aria-disabled="true"] { opacity: 0.55; cursor: not-allowed; }
+.slider:disabled::-webkit-slider-thumb { cursor: not-allowed; }
+
+/* --- .slider-group + value bubble ---------------------------------------- */
+.slider-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+}
+.slider-group .slider { flex: 1; }
+/* glossy value pill, fed by JS via [data-slider-value] text content */
+.slider-group [data-slider-value],
+.slider__value {
+  flex: none;
+  min-width: 3.25rem;
+  text-align: center;
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--radius-full);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-on-primary);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0) 55%),
+    var(--track-fill);
+  box-shadow:
+    var(--shadow-sky),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* ==========================================================================
+   2. STEPPER — .stepper / .stepper__btn / .stepper__input
+   --------------------------------------------------------------------------
+   A glossy well holding round − / + buttons and a centered number input.
+   ========================================================================== */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1);
+  border-radius: var(--radius-full);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  box-shadow: var(--input-shadow);
+}
+.stepper__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: none;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  color: var(--color-text-on-primary);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background:
+    var(--btn-shine),
+    var(--btn-primary-bg);
+  box-shadow:
+    var(--btn-primary-shadow),
+    var(--gloss-inset);
+  transition: transform var(--duration-fast) var(--ease-spring),
+              filter var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-fast) var(--ease-standard);
+}
+.stepper__btn:hover { transform: translateY(-1px); filter: brightness(1.06); }
+.stepper__btn:active { transform: translateY(0) scale(0.95); filter: brightness(0.97); }
+.stepper__btn:focus-visible { outline: 2px solid transparent; box-shadow: var(--ring); }
+.stepper__btn:disabled,
+.stepper__btn[aria-disabled="true"] {
+  opacity: 0.55;
+  pointer-events: none;
+  transform: none;
+}
+.stepper__input {
+  width: 3.25rem;
+  text-align: center;
+  border: none;
+  background: transparent;
+  color: var(--input-fg);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.stepper__input::-webkit-outer-spin-button,
+.stepper__input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.stepper__input:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: var(--ring);
+  border-radius: var(--radius-sm);
+}
+
+/* ==========================================================================
+   3. FILE UPLOAD — .file-upload (dropzone) + list / items
+   --------------------------------------------------------------------------
+   Dashed glossy dropzone; hover / .is-dragover brightens + lifts. Room left
+   for an inline SVG cloud in .file-upload__icon. A file list shows name, size,
+   remove control and a mini progress bar.
+   ========================================================================== */
+.file-upload {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  text-align: center;
+  padding: var(--space-8) var(--space-6);
+  border-radius: var(--radius-lg);
+  border: 2px dashed var(--input-border);
+  background:
+    var(--surface-gloss-top),
+    var(--color-surface-2);
+  color: var(--color-text-muted);
+  box-shadow: var(--surface-rim);
+  cursor: pointer;
+  transition: border-color var(--duration-base) var(--ease-standard),
+              background var(--duration-base) var(--ease-standard),
+              transform var(--duration-base) var(--ease-emphasized),
+              box-shadow var(--duration-base) var(--ease-standard);
+}
+.file-upload:hover,
+.file-upload.is-dragover {
+  border-color: var(--color-accent);
+  background:
+    var(--surface-gloss-top),
+    var(--color-surface);
+  transform: translateY(-2px);
+  filter: brightness(1.03);
+  box-shadow: var(--surface-rim), var(--glow-aqua);
+}
+.file-upload.is-dragover { border-style: solid; }
+.file-upload:focus-within {
+  outline: 2px solid transparent;
+  box-shadow: var(--surface-rim), var(--ring);
+}
+.file-upload__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  color: var(--color-primary);
+  filter: drop-shadow(0 4px 8px rgba(57, 182, 255, 0.35));
+}
+.file-upload__icon svg { width: 100%; height: 100%; }
+.file-upload__title { color: var(--color-text); font-weight: var(--weight-bold); }
+.file-upload__hint { font-size: var(--text-sm); color: var(--color-text-subtle); }
+.file-upload[aria-disabled="true"],
+.file-upload.is-disabled {
+  opacity: 0.55;
+  pointer-events: none;
+  transform: none;
+}
+
+/* --- file list ----------------------------------------------------------- */
+.file-upload__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  margin-top: var(--space-3);
+  list-style: none;
+  padding: 0;
+}
+.file-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-soft);
+  box-shadow: var(--shadow-xs), var(--surface-rim);
+}
+.file-item__icon {
+  display: inline-flex;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--color-primary);
+}
+.file-item__icon svg { width: 100%; height: 100%; }
+.file-item__name {
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-item__size {
+  font-size: var(--text-sm);
+  color: var(--color-text-subtle);
+  font-variant-numeric: tabular-nums;
+}
+.file-item__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  color: var(--color-text-muted);
+  transition: color var(--duration-fast) var(--ease-standard),
+              background var(--duration-fast) var(--ease-standard),
+              transform var(--duration-fast) var(--ease-spring);
+}
+.file-item__remove:hover {
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+  transform: scale(1.08);
+}
+.file-item__remove:focus-visible { outline: 2px solid transparent; box-shadow: var(--ring); }
+.file-item__remove svg { width: 0.9rem; height: 0.9rem; }
+/* mini progress bar spanning the row */
+.file-item__progress {
+  grid-column: 1 / -1;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--track-bg);
+  box-shadow: inset 0 1px 3px rgba(10, 59, 97, 0.20);
+  overflow: hidden;
+}
+.file-item__progress > i {
+  display: block;
+  height: 100%;
+  width: var(--file-progress, 0%);
+  border-radius: var(--radius-full);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0) 60%),
+    var(--track-fill);
+  transition: width var(--duration-base) var(--ease-out);
+}
+.file-item.is-error .file-item__progress > i {
+  background: linear-gradient(90deg, var(--danger-400), var(--danger-500));
+}
+.file-item.is-done .file-item__progress > i {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0) 60%),
+    linear-gradient(90deg, var(--success-400), var(--success-500));
+}
+
+/* ==========================================================================
+   4. CHIP INPUT — .chip-input wrapper + .chip / .chip__remove + inline input
+   --------------------------------------------------------------------------
+   Looks like an input well. Holds soft pill chips and a borderless field.
+   ========================================================================== */
+.chip-input {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  min-height: 2.75rem;
+  border-radius: var(--input-radius);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  box-shadow: var(--input-shadow);
+  cursor: text;
+  transition: border-color var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-fast) var(--ease-standard);
+}
+.chip-input:hover { border-color: var(--input-border-hover); }
+.chip-input:focus-within {
+  border-color: var(--input-border-focus);
+  outline: 2px solid transparent;
+  box-shadow: var(--input-shadow), var(--ring);
+}
+.chip-input > input {
+  flex: 1;
+  min-width: 6ch;
+  border: none;
+  background: transparent;
+  color: var(--input-fg);
+  padding: 0.2rem 0;
+}
+.chip-input > input::placeholder { color: var(--input-placeholder); }
+.chip-input > input:focus { outline: none; }
+
+/* --- .chip (shared pill, kept consistent with tag/badge use) ------------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.2rem 0.4rem 0.2rem 0.7rem;
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  line-height: 1.2;
+  color: var(--color-accent-fg);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0) 60%),
+    var(--color-accent-soft);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: var(--shadow-xs), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.chip__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  color: var(--color-accent-fg);
+  background: rgba(255, 255, 255, 0.45);
+  font-size: var(--text-xs);
+  line-height: 1;
+  transition: background var(--duration-fast) var(--ease-standard),
+              transform var(--duration-fast) var(--ease-spring),
+              color var(--duration-fast) var(--ease-standard);
+}
+.chip__remove:hover {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  transform: scale(1.12);
+}
+.chip__remove:focus-visible { outline: 2px solid transparent; box-shadow: var(--ring); }
+.chip__remove svg { width: 0.7rem; height: 0.7rem; }
+
+/* ==========================================================================
+   5. RATING — .rating / .rating__star (.is-on) with hover preview
+   --------------------------------------------------------------------------
+   Keyboard-focusable stars; filled get a warm/lime gloss. Hover preview is
+   driven by :hover propagation (CSS) and finalized via .is-on (JS).
+   ========================================================================== */
+.rating {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.rating__star {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  color: var(--track-bg);                 /* empty star = sunken track tint */
+  border-radius: var(--radius-sm);
+  transition: color var(--duration-fast) var(--ease-standard),
+              transform var(--duration-fast) var(--ease-spring),
+              filter var(--duration-fast) var(--ease-standard);
+}
+.rating__star svg { width: 100%; height: 100%; }
+.rating__star.is-on {
+  color: var(--warning-400);
+  filter: drop-shadow(0 2px 4px rgba(245, 166, 35, 0.45));
+}
+.rating--lime .rating__star.is-on {
+  color: var(--lime-400);
+  filter: drop-shadow(0 2px 4px rgba(102, 174, 44, 0.45));
+}
+/* hover preview: hovered star + all preceding siblings glow warm */
+.rating:hover .rating__star { color: var(--warning-400); }
+.rating .rating__star:hover ~ .rating__star { color: var(--track-bg); }
+.rating:hover .rating__star { transform: translateY(-1px); }
+.rating .rating__star:hover { transform: scale(1.15); }
+.rating__star:focus-visible { outline: 2px solid transparent; box-shadow: var(--ring); }
+.rating[aria-disabled="true"],
+.rating.is-disabled { opacity: 0.55; pointer-events: none; }
+
+/* ==========================================================================
+   6. MULTISELECT — .multiselect control + .multiselect__menu (glass)
+   --------------------------------------------------------------------------
+   Control shows selected .chips and a chevron; opens a glass dropdown of
+   checkable options (built on the .menu look).
+   ========================================================================== */
+.multiselect { position: relative; }
+.multiselect__control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-8) var(--space-2) var(--space-3);
+  border-radius: var(--input-radius);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  box-shadow: var(--input-shadow);
+  color: var(--input-fg);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-fast) var(--ease-standard);
+}
+.multiselect__control:hover { border-color: var(--input-border-hover); }
+.multiselect__control:focus-visible,
+.multiselect.is-open .multiselect__control {
+  border-color: var(--input-border-focus);
+  outline: 2px solid transparent;
+  box-shadow: var(--input-shadow), var(--ring);
+}
+.multiselect__placeholder { color: var(--input-placeholder); }
+/* chevron at the trailing edge */
+.multiselect__chevron {
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-text-muted);
+  pointer-events: none;
+  transition: transform var(--duration-base) var(--ease-emphasized);
+}
+.multiselect.is-open .multiselect__chevron { transform: translateY(-50%) rotate(180deg); }
+.multiselect__chevron svg { width: 100%; height: 100%; }
+
+/* the glass dropdown menu */
+.multiselect__menu {
+  position: absolute;
+  z-index: var(--z-dropdown);
+  top: calc(100% + var(--space-2));
+  left: 0;
+  right: 0;
+  max-height: 16rem;
+  overflow-y: auto;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--popover-bg);
+  border: 1px solid var(--popover-border);
+  box-shadow: var(--popover-shadow), var(--surface-rim);
+  -webkit-backdrop-filter: blur(var(--color-backdrop-blur)) saturate(1.4);
+  backdrop-filter: blur(var(--color-backdrop-blur)) saturate(1.4);
+}
+.multiselect__option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-standard);
+}
+.multiselect__option:hover,
+.multiselect__option.is-active { background: var(--sidebar-item-hover); }
+.multiselect__option[aria-selected="true"] { background: var(--sidebar-item-active); }
+.multiselect__option:focus-visible { outline: 2px solid transparent; box-shadow: var(--ring); }
+/* jelly checkbox indicator */
+.multiselect__check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--input-border);
+  background: var(--input-bg);
+  color: transparent;
+  transition: background var(--duration-fast) var(--ease-standard),
+              border-color var(--duration-fast) var(--ease-standard),
+              color var(--duration-fast) var(--ease-standard);
+}
+.multiselect__check svg { width: 0.8rem; height: 0.8rem; }
+.multiselect__option[aria-selected="true"] .multiselect__check {
+  border-color: var(--color-accent);
+  color: var(--color-text-on-primary);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0) 60%),
+    var(--btn-accent-bg);
+}
+.multiselect[aria-disabled="true"] .multiselect__control,
+.multiselect.is-disabled .multiselect__control { opacity: 0.55; pointer-events: none; }
+
+/* ==========================================================================
+   7. COMBOBOX / AUTOCOMPLETE — .combobox + .combobox__menu listbox
+   --------------------------------------------------------------------------
+   An .input paired with a glass listbox; the active option highlights via
+   [aria-selected].
+   ========================================================================== */
+.combobox { position: relative; }
+/* .combobox uses the shared .input from forms.css for its field; we only add
+   trailing room for a chevron/spinner and the listbox below. */
+.combobox__field { position: relative; }
+.combobox__chevron {
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+.combobox__chevron svg { width: 100%; height: 100%; }
+
+.combobox__menu {
+  position: absolute;
+  z-index: var(--z-dropdown);
+  top: calc(100% + var(--space-2));
+  left: 0;
+  right: 0;
+  max-height: 16rem;
+  overflow-y: auto;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--popover-bg);
+  border: 1px solid var(--popover-border);
+  box-shadow: var(--popover-shadow), var(--surface-rim);
+  -webkit-backdrop-filter: blur(var(--color-backdrop-blur)) saturate(1.4);
+  backdrop-filter: blur(var(--color-backdrop-blur)) saturate(1.4);
+}
+.combobox__option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-standard),
+              color var(--duration-fast) var(--ease-standard);
+}
+.combobox__option:hover,
+.combobox__option.is-active,
+.combobox__option[aria-selected="true"] {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.30), rgba(255,255,255,0) 60%),
+    var(--sidebar-item-active);
+  color: var(--color-text);
+}
+.combobox__option:focus-visible { outline: 2px solid transparent; box-shadow: var(--ring); }
+.combobox__option mark {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-fg);
+  border-radius: var(--radius-sm);
+  padding: 0 0.1em;
+  font-weight: var(--weight-bold);
+}
+.combobox__empty {
+  padding: var(--space-3);
+  text-align: center;
+  color: var(--color-text-subtle);
+  font-size: var(--text-sm);
+}
+
+/* ==========================================================================
+   8. CALENDAR + DATEPICKER — .calendar grid, .datepicker (input + popover)
+   --------------------------------------------------------------------------
+   .calendar: header (month + prev/next), 7-col grid of weekday labels and
+   days. Day states: .is-today (aqua ring), .is-selected (glossy primary),
+   .is-muted (other month), .is-disabled. .datepicker = an .input that opens a
+   .popover holding a .calendar.
+   ========================================================================== */
+.calendar {
+  width: 18rem;
+  max-width: 100%;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--popover-bg);
+  border: 1px solid var(--popover-border);
+  box-shadow: var(--surface-rim);
+  color: var(--color-text);
+}
+.calendar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.calendar__title {
+  font-weight: var(--weight-bold);
+  font-size: var(--text-base);
+  text-align: center;
+  flex: 1;
+}
+/* round glossy prev/next nav buttons */
+.calendar__nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex: none;
+  border-radius: 50%;
+  color: var(--color-primary);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background:
+    var(--btn-shine),
+    var(--btn-secondary-bg);
+  box-shadow: var(--shadow-xs), var(--gloss-inset);
+  transition: transform var(--duration-fast) var(--ease-spring),
+              filter var(--duration-fast) var(--ease-standard);
+}
+.calendar__nav:hover { transform: translateY(-1px); filter: brightness(1.05); }
+.calendar__nav:active { transform: translateY(0) scale(0.94); }
+.calendar__nav:focus-visible { outline: 2px solid transparent; box-shadow: var(--ring); }
+.calendar__nav:disabled { opacity: 0.55; pointer-events: none; }
+.calendar__nav svg { width: 1rem; height: 1rem; }
+
+.calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.calendar__weekday {
+  text-align: center;
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+  padding-bottom: var(--space-1);
+}
+.calendar__day {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  width: 100%;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  background: transparent;
+  transition: background var(--duration-fast) var(--ease-standard),
+              color var(--duration-fast) var(--ease-standard),
+              transform var(--duration-fast) var(--ease-spring),
+              box-shadow var(--duration-fast) var(--ease-standard);
+}
+.calendar__day:hover { background: var(--sidebar-item-hover); transform: translateY(-1px); }
+.calendar__day:focus-visible { outline: 2px solid transparent; box-shadow: var(--ring); }
+/* today — aqua ring */
+.calendar__day.is-today {
+  box-shadow: inset 0 0 0 2px var(--color-accent);
+  color: var(--color-accent-hover);
+}
+/* selected — glossy primary jelly */
+.calendar__day.is-selected {
+  color: var(--color-text-on-primary);
+  background:
+    var(--btn-shine),
+    var(--btn-primary-bg);
+  box-shadow: var(--btn-primary-shadow), var(--gloss-inset);
+}
+.calendar__day.is-selected:hover { filter: brightness(1.05); }
+/* other-month days */
+.calendar__day.is-muted { color: var(--color-text-subtle); opacity: 0.55; }
+/* disabled days */
+.calendar__day.is-disabled,
+.calendar__day:disabled {
+  color: var(--color-text-subtle);
+  opacity: 0.35;
+  pointer-events: none;
+  text-decoration: line-through;
+}
+
+/* --- .datepicker (input that opens a popover calendar) ------------------- */
+.datepicker { position: relative; display: inline-block; }
+.datepicker__field { position: relative; }
+.datepicker__icon {
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.1rem;
+  height: 1.1rem;
+  color: var(--color-primary);
+  pointer-events: none;
+}
+.datepicker__icon svg { width: 100%; height: 100%; }
+/* the floating popover wrapper holding a .calendar */
+.datepicker__popover {
+  position: absolute;
+  z-index: var(--z-popover);
+  top: calc(100% + var(--space-2));
+  left: 0;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--popover-bg);
+  border: 1px solid var(--popover-border);
+  box-shadow: var(--popover-shadow), var(--surface-rim);
+  -webkit-backdrop-filter: blur(var(--color-backdrop-blur)) saturate(1.4);
+  backdrop-filter: blur(var(--color-backdrop-blur)) saturate(1.4);
+}
+/* nested calendar inside the popover sheds its own chrome */
+.datepicker__popover .calendar {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  padding: var(--space-1);
+}
