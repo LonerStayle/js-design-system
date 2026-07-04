@@ -1,14 +1,29 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+/* apply saved theme before first paint (no light flash) + mark JS available */
+(function () {
+  try {
+    var t = localStorage.getItem("nm-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+  document.documentElement.classList.add("js");
+})();
+</script>
 <title>칸반 보드 · Soft Neumorphism</title>
 <link rel="stylesheet" href="../theme.css" />
 <style>
   .page-head { display:flex; align-items:flex-end; justify-content:space-between; gap:var(--space-4); flex-wrap:wrap; margin-bottom:var(--space-6); }
   .page-head h1 { font-size: var(--text-3xl); }
   .head-tools { display:flex; align-items:center; gap:var(--space-3); flex-wrap:wrap; }
+
+  /* navbar search is a button that opens the palette — no dead input */
+  .searchbar-trigger { display:flex; align-items:center; gap:var(--space-2); text-align:left; cursor:pointer; color:var(--color-text-muted); font-weight:var(--weight-medium); }
+  .searchbar-trigger .kbd { margin-left:auto; }
 
   /* board: horizontal columns, scroll on small screens */
   .board { display:flex; gap:var(--space-5); align-items:flex-start; overflow-x:auto; padding-bottom:var(--space-4); -webkit-overflow-scrolling:touch; }
@@ -17,10 +32,31 @@
   .col-name { display:inline-flex; align-items:center; gap:var(--space-2); font-weight:var(--weight-bold); color:var(--color-text-strong); }
   .col-cards { display:flex; flex-direction:column; gap:var(--space-4); min-height:8px; }
 
-  .kanban-card { cursor:grab; }
+  /* grab affordance only when JS can actually move the card (no false affordance) */
+  .kanban-card { cursor:default; }
+  html.js .kanban-card { cursor:grab; }
+  html.js .kanban-card:active { cursor:grabbing; }
   .kanban-card .k-meta { display:flex; align-items:center; justify-content:space-between; gap:var(--space-2); margin-top:var(--space-3); }
   .k-comments { display:inline-flex; align-items:center; gap:4px; color:var(--color-text-muted); font-size:var(--text-xs); }
   .k-due { display:inline-flex; align-items:center; gap:5px; }
+
+  /* card lifts off the bed while dragging; the target column deepens its well */
+  .kanban-card.is-dragging { opacity:.55; box-shadow:var(--shadow-raised-lg); transform:rotate(-1.5deg) scale(1.02); }
+  .board-col.is-drop { box-shadow:var(--elevation-carved); }
+
+  /* keyboard move controls (built by JS) — visible on hover/focus, always tabbable */
+  .k-move { display:flex; gap:6px; margin-top:var(--space-1); opacity:0; transition:opacity .15s var(--ease-out); }
+  .kanban-card:hover .k-move, .kanban-card:focus-within .k-move { opacity:1; }
+  /* touch devices have no hover — keep the move controls visible (DnD needs a mouse) */
+  @media (hover: none) { .k-move { opacity:1; } }
+  .k-move-btn { display:inline-grid; place-items:center; width:1.9rem; height:1.9rem; border-radius:var(--radius-sm);
+    background:var(--color-surface); box-shadow:var(--shadow-raised-sm); color:var(--color-text-muted); cursor:pointer;
+    transition:box-shadow var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard); }
+  .k-move-btn:hover { color:var(--color-primary); }
+  .k-move-btn:active { box-shadow:var(--shadow-pressed-sm); }
+  .k-move-btn:focus-visible { outline:none; box-shadow:var(--shadow-raised-sm), var(--ring); }
+  .k-move-btn:disabled { opacity:.4; cursor:not-allowed; box-shadow:var(--shadow-flat); }
+  .k-move-btn svg { width:1rem; height:1rem; }
 
   @media (max-width:1100px){
     .board-col { flex:0 0 268px; max-width:268px; }
@@ -29,9 +65,6 @@
     .board-col { flex:0 0 82vw; max-width:82vw; }
     .page-head h1 { font-size: var(--text-2xl); }
   }
-
-  [data-reveal]{opacity:0;transform:translateY(24px);transition:.6s var(--ease-out)}
-  [data-reveal].is-in{opacity:1;transform:none}
 </style>
 </head>
 <body>
@@ -54,7 +87,7 @@
       <div class="sidebar-label">계정</div>
       <a class="nav-item" href="profile.html"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg></span><span class="ni-text">프로필</span></a>
       <a class="nav-item" href="settings.html"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9 2 2 0 1 1-2.8 2.8 1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2 2 2 0 1 1-2.8-2.8A1.7 1.7 0 0 0 2 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.2-2.9 2 2 0 1 1 2.8-2.8A1.7 1.7 0 0 0 9 4.6a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.2 2 2 0 1 1 2.8 2.8A1.7 1.7 0 0 0 22 11a2 2 0 1 1 0 4Z"/></svg></span><span class="ni-text">설정</span></a>
-    </nav>
+    </div>
     <div class="sidebar-footer">
       <a class="user-chip" href="profile.html">
         <span class="avatar avatar-sm">JS<span class="presence online"></span></span>
@@ -70,7 +103,7 @@
       <button class="btn btn-icon btn-ghost md:hidden" data-collapse-sidebar aria-label="사이드바 접기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M3 12h12M3 18h18"/></svg></button>
       <div class="searchbar flex-1" style="max-width:420px">
         <span class="search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
-        <input class="input" placeholder="작업 검색하거나 ⌘K 를 누르세요" aria-label="검색" onfocus="NM.cmdk.open();this.blur()" />
+        <button class="input searchbar-trigger" type="button" data-cmdk-open aria-label="검색 열기">작업 검색 <span class="kbd">⌘K</span></button>
       </div>
       <div class="flex items-center gap-2" style="margin-left:auto">
         <button class="theme-toggle" data-theme-toggle aria-label="테마 전환">
@@ -99,14 +132,16 @@
             <span class="avatar avatar-sm" title="최서연" style="color:var(--indigo-500)">서</span>
             <span class="avatar avatar-sm avatar-more">+2</span>
           </div>
-          <div class="segmented" role="group" aria-label="보기 전환">
-            <button data-segment="true" class="is-active" aria-selected="true" aria-label="보드 보기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg></button>
-            <button data-segment="true" aria-selected="false" aria-label="목록 보기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
-            <button data-segment="true" aria-selected="false" aria-label="달력 보기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></button>
+          <div class="segmented" role="radiogroup" aria-label="보기 전환">
+            <button data-segment="true" role="radio" class="is-active" aria-checked="true" tabindex="0" aria-label="보드 보기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg></button>
+            <button data-segment="true" role="radio" aria-checked="false" tabindex="-1" aria-label="목록 보기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
+            <button data-segment="true" role="radio" aria-checked="false" tabindex="-1" aria-label="달력 보기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></button>
           </div>
           <button class="btn btn-secondary btn-sm" data-drawer-open="board-filter" aria-label="필터"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4-2v-4Z"/></svg> 필터</button>
         </div>
       </div>
+
+      <div id="board-live" class="sr-only" role="status" aria-live="polite"></div>
 
       <!-- ===== BOARD ===== -->
       <div class="board" role="list" aria-label="칸반 보드">
@@ -126,7 +161,7 @@
             </div>
           </div>
           <div class="col-cards">
-            <article class="kanban-card card" draggable="true">
+            <article class="kanban-card card">
               <div class="k-top"><span class="badge badge-danger badge-soft badge-sm">긴급</span><button class="btn btn-icon btn-sm btn-ghost" aria-label="작업 옵션"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button></div>
               <div class="k-title">결제 모듈 리팩터링</div>
               <div class="k-tags"><span class="badge badge-soft badge-sm">결제</span><span class="badge badge-soft badge-sm">기술부채</span></div>
@@ -135,7 +170,7 @@
                 <span class="avatar avatar-sm" title="박도윤" style="color:var(--amber-600)">도</span>
               </div>
             </article>
-            <article class="kanban-card card" draggable="true">
+            <article class="kanban-card card">
               <div class="k-top"><span class="badge badge-warning badge-soft badge-sm">높음</span><button class="btn btn-icon btn-sm btn-ghost" aria-label="작업 옵션"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button></div>
               <div class="k-title">다국어(i18n) 번역 키 정리</div>
               <div class="k-tags"><span class="badge badge-soft badge-sm">국제화</span></div>
@@ -144,7 +179,7 @@
                 <span class="avatar avatar-sm" title="최서연" style="color:var(--indigo-500)">서</span>
               </div>
             </article>
-            <article class="kanban-card card" draggable="true">
+            <article class="kanban-card card">
               <div class="k-top"><span class="badge badge-info badge-soft badge-sm">보통</span><button class="btn btn-icon btn-sm btn-ghost" aria-label="작업 옵션"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button></div>
               <div class="k-title">다크 모드 토큰 대비 점검</div>
               <div class="k-tags"><span class="badge badge-soft badge-sm">디자인</span><span class="badge badge-soft badge-sm">접근성</span></div>
@@ -153,7 +188,7 @@
                 <span class="avatar avatar-sm" title="이민경" style="color:var(--mint-600)">민</span>
               </div>
             </article>
-            <article class="kanban-card card" draggable="true">
+            <article class="kanban-card card">
               <div class="k-top"><span class="badge badge-muted badge-soft badge-sm">낮음</span><button class="btn btn-icon btn-sm btn-ghost" aria-label="작업 옵션"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button></div>
               <div class="k-title">사용 가이드 동영상 스크립트 작성</div>
               <div class="k-tags"><span class="badge badge-soft badge-sm">콘텐츠</span></div>
@@ -181,7 +216,7 @@
             </div>
           </div>
           <div class="col-cards">
-            <article class="kanban-card card" draggable="true">
+            <article class="kanban-card card">
               <div class="k-top"><span class="badge badge-danger badge-soft badge-sm">긴급</span><button class="btn btn-icon btn-sm btn-ghost" aria-label="작업 옵션"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button></div>
               <div class="k-title">온보딩 플로우 신규 화면 구현</div>
               <div class="k-tags"><span class="badge badge-soft badge-sm">온보딩</span><span class="badge badge-soft badge-sm">프론트</span></div>
@@ -190,7 +225,7 @@
                 <span class="avatar avatar-sm" title="이민경" style="color:var(--mint-600)">민</span>
               </div>
             </article>
-            <article class="kanban-card card" draggable="true">
+            <article class="kanban-card card">
               <div class="k-top"><span class="badge badge-warning badge-soft badge-sm">높음</span><button class="btn btn-icon btn-sm btn-ghost" aria-label="작업 옵션"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button></div>
               <div class="k-title">검색 자동완성 API 성능 개선</div>
               <div class="k-tags"><span class="badge badge-soft badge-sm">백엔드</span><span class="badge badge-soft badge-sm">성능</span></div>
@@ -199,7 +234,7 @@
                 <span class="avatar avatar-sm" title="박도윤" style="color:var(--amber-600)">도</span>
               </div>
             </article>
-            <article class="kanban-card card" draggable="true">
+            <article class="kanban-card card">
               <div class="k-top"><span class="badge badge-info badge-soft badge-sm">보통</span><button class="btn btn-icon btn-sm btn-ghost" aria-label="작업 옵션"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button></div>
               <div class="k-title">온보딩 카피 검토</div>
               <div class="k-tags"><span class="badge badge-soft badge-sm">UX 라이팅</span></div>
@@ -227,7 +262,7 @@
             </div>
           </div>
           <div class="col-cards">
-            <article class="kanban-card card" draggable="true">
+            <article class="kanban-card card">
               <div class="k-top"><span class="badge badge-warning badge-soft badge-sm">높음</span><button class="btn btn-icon btn-sm btn-ghost" aria-label="작업 옵션"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button></div>
               <div class="k-title">알림 센터 드로어 코드 리뷰</div>
               <div class="k-tags"><span class="badge badge-soft badge-sm">프론트</span><span class="badge badge-soft badge-sm">리뷰</span></div>
@@ -236,7 +271,7 @@
                 <span class="avatar avatar-sm" title="진섭">JS</span>
               </div>
             </article>
-            <article class="kanban-card card" draggable="true">
+            <article class="kanban-card card">
               <div class="k-top"><span class="badge badge-info badge-soft badge-sm">보통</span><button class="btn btn-icon btn-sm btn-ghost" aria-label="작업 옵션"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button></div>
               <div class="k-title">가격표 페이지 QA 검수</div>
               <div class="k-tags"><span class="badge badge-soft badge-sm">QA</span></div>
@@ -245,7 +280,7 @@
                 <span class="avatar avatar-sm" title="이민경" style="color:var(--mint-600)">민</span>
               </div>
             </article>
-            <article class="kanban-card card" draggable="true">
+            <article class="kanban-card card">
               <div class="k-top"><span class="badge badge-muted badge-soft badge-sm">낮음</span><button class="btn btn-icon btn-sm btn-ghost" aria-label="작업 옵션"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button></div>
               <div class="k-title">이메일 템플릿 디자인 검토</div>
               <div class="k-tags"><span class="badge badge-soft badge-sm">디자인</span><span class="badge badge-soft badge-sm">마케팅</span></div>
@@ -273,7 +308,7 @@
             </div>
           </div>
           <div class="col-cards">
-            <article class="kanban-card card" draggable="true">
+            <article class="kanban-card card">
               <div class="k-top"><span class="badge badge-success"><span class="dot"></span>완료</span><button class="btn btn-icon btn-sm btn-ghost" aria-label="작업 옵션"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button></div>
               <div class="k-title">대시보드 차트 컴포넌트 개발</div>
               <div class="k-tags"><span class="badge badge-soft badge-sm">프론트</span><span class="badge badge-soft badge-sm">데이터</span></div>
@@ -282,7 +317,7 @@
                 <span class="avatar avatar-sm" title="이민경" style="color:var(--mint-600)">민</span>
               </div>
             </article>
-            <article class="kanban-card card" draggable="true">
+            <article class="kanban-card card">
               <div class="k-top"><span class="badge badge-success"><span class="dot"></span>완료</span><button class="btn btn-icon btn-sm btn-ghost" aria-label="작업 옵션"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button></div>
               <div class="k-title">소셜 로그인(OAuth) 연동</div>
               <div class="k-tags"><span class="badge badge-soft badge-sm">인증</span><span class="badge badge-soft badge-sm">백엔드</span></div>
@@ -291,7 +326,7 @@
                 <span class="avatar avatar-sm" title="박도윤" style="color:var(--amber-600)">도</span>
               </div>
             </article>
-            <article class="kanban-card card" draggable="true">
+            <article class="kanban-card card">
               <div class="k-top"><span class="badge badge-success"><span class="dot"></span>완료</span><button class="btn btn-icon btn-sm btn-ghost" aria-label="작업 옵션"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button></div>
               <div class="k-title">랜딩 페이지 히어로 리디자인</div>
               <div class="k-tags"><span class="badge badge-soft badge-sm">디자인</span></div>
@@ -300,7 +335,7 @@
                 <span class="avatar avatar-sm" title="최서연" style="color:var(--indigo-500)">서</span>
               </div>
             </article>
-            <article class="kanban-card card" draggable="true">
+            <article class="kanban-card card">
               <div class="k-top"><span class="badge badge-success"><span class="dot"></span>완료</span><button class="btn btn-icon btn-sm btn-ghost" aria-label="작업 옵션"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button></div>
               <div class="k-title">배포 파이프라인 캐시 최적화</div>
               <div class="k-tags"><span class="badge badge-soft badge-sm">데브옵스</span></div>
@@ -343,18 +378,18 @@
         </div>
       </div>
       <div class="field"><span class="label" id="t-prio-lbl">우선순위</span>
-        <div class="segmented" role="group" aria-labelledby="t-prio-lbl">
-          <button data-segment="true" aria-selected="false">낮음</button>
-          <button data-segment="true" class="is-active" aria-selected="true">보통</button>
-          <button data-segment="true" aria-selected="false">높음</button>
-          <button data-segment="true" aria-selected="false">긴급</button>
+        <div class="segmented" role="radiogroup" aria-labelledby="t-prio-lbl">
+          <button data-segment="true" role="radio" aria-checked="false" tabindex="-1">낮음</button>
+          <button data-segment="true" role="radio" class="is-active" aria-checked="true" tabindex="0">보통</button>
+          <button data-segment="true" role="radio" aria-checked="false" tabindex="-1">높음</button>
+          <button data-segment="true" role="radio" aria-checked="false" tabindex="-1">긴급</button>
         </div>
       </div>
       <div class="field"><label class="label" for="t-due">마감일</label><input class="input" id="t-due" type="date" value="2026-07-03" /></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" data-modal-close>취소</button>
-      <button class="btn btn-primary" data-modal-close onclick="NM.toast({title:'작업 추가됨',text:'새 작업이 백로그에 추가되었습니다.',variant:'success'})">작업 만들기</button>
+      <button class="btn btn-primary" data-modal-close data-toast-title="작업을 추가했어요" data-toast-text="새 작업을 백로그에 담았어요." data-toast-variant="success">작업 만들기</button>
     </div>
   </div>
 </div>
@@ -388,7 +423,7 @@
     <div class="divider"></div>
     <label class="switch"><input type="checkbox" /><span class="track"><span class="knob"></span></span> 내 작업만 보기</label>
   </div>
-  <div class="drawer-footer"><button class="btn btn-primary flex-1" data-drawer-close onclick="NM.toast({title:'필터 적용됨',text:'보드에 필터를 적용했습니다.',variant:'info'})">적용</button></div>
+  <div class="drawer-footer"><button class="btn btn-primary flex-1" data-drawer-close data-toast-title="필터를 적용했어요" data-toast-text="선택한 조건으로 보드를 걸렀어요." data-toast-variant="info">적용</button></div>
 </div>
 
 <!-- Command palette -->
@@ -414,5 +449,129 @@
 </div>
 
 <script src="../app.js"></script>
+<script>
+/* ==========================================================================
+   Kanban — real drag-and-drop with a keyboard-accessible equivalent.
+   Progressive enhancement: cards become draggable/focusable only here, so
+   without JS there is no false grab affordance. Every move is mirrored to a
+   polite live region for screen readers, and column counts stay in sync.
+   ========================================================================== */
+(function () {
+  var board = document.querySelector(".board");
+  if (!board) return;
+  var live = document.getElementById("board-live");
+
+  var ICON_PREV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>';
+  var ICON_NEXT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>';
+
+  function toArr(nl) { return Array.prototype.slice.call(nl); }
+  function columns() { return toArr(board.querySelectorAll(".board-col")); }
+  function cards() { return toArr(board.querySelectorAll(".kanban-card")); }
+  function colName(col) { return (col.getAttribute("aria-label") || "").replace(/\s*컬럼$/, ""); }
+  function cardTitle(card) { var t = card.querySelector(".k-title"); return t ? t.textContent.trim() : "작업"; }
+  function say(msg) { if (live) live.textContent = msg; }
+
+  function updateCounts() {
+    columns().forEach(function (col) {
+      var n = col.querySelectorAll(".col-cards > .kanban-card").length;
+      var badge = col.querySelector(".col-name .badge");
+      if (badge) badge.textContent = String(n);
+    });
+  }
+
+  function refresh(card) {
+    var list = columns();
+    var i = list.indexOf(card.closest(".board-col"));
+    var prev = card.querySelector(".k-move-prev");
+    var next = card.querySelector(".k-move-next");
+    if (prev) prev.disabled = i <= 0;
+    if (next) next.disabled = i >= list.length - 1;
+  }
+
+  function moveCard(card, dir) {
+    var list = columns();
+    var target = list[list.indexOf(card.closest(".board-col")) + dir];
+    if (!target) return;
+    target.querySelector(".col-cards").appendChild(card);
+    updateCounts();
+    cards().forEach(refresh);
+    var btn = card.querySelector(dir < 0 ? ".k-move-prev" : ".k-move-next");
+    if (btn && !btn.disabled) btn.focus(); else card.focus();
+    say(cardTitle(card) + " 카드를 " + colName(target) + " 단계로 옮겼어요.");
+  }
+
+  cards().forEach(function (card) {
+    card.setAttribute("draggable", "true");
+    card.tabIndex = 0;
+    var title = cardTitle(card);
+    var mv = document.createElement("div");
+    mv.className = "k-move";
+    var prev = document.createElement("button");
+    prev.type = "button"; prev.className = "k-move-btn k-move-prev";
+    prev.setAttribute("aria-label", title + " — 이전 단계로 이동");
+    prev.innerHTML = ICON_PREV;
+    var next = document.createElement("button");
+    next.type = "button"; next.className = "k-move-btn k-move-next";
+    next.setAttribute("aria-label", title + " — 다음 단계로 이동");
+    next.innerHTML = ICON_NEXT;
+    mv.appendChild(prev); mv.appendChild(next);
+    card.appendChild(mv);
+    prev.addEventListener("click", function () { moveCard(card, -1); });
+    next.addEventListener("click", function () { moveCard(card, 1); });
+  });
+
+  function afterElement(zone, y) {
+    var els = toArr(zone.querySelectorAll(".kanban-card:not(.is-dragging)"));
+    var closest = null, closestOffset = -Infinity;
+    els.forEach(function (el) {
+      var box = el.getBoundingClientRect();
+      var offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closestOffset) { closestOffset = offset; closest = el; }
+    });
+    return closest;
+  }
+
+  var dragged = null;
+  board.addEventListener("dragstart", function (e) {
+    var card = e.target.closest(".kanban-card");
+    if (!card) return;
+    dragged = card;
+    card.classList.add("is-dragging");
+    e.dataTransfer.effectAllowed = "move";
+    try { e.dataTransfer.setData("text/plain", cardTitle(card)); } catch (x) {}
+  });
+  board.addEventListener("dragend", function () {
+    if (dragged) dragged.classList.remove("is-dragging");
+    columns().forEach(function (c) { c.classList.remove("is-drop"); });
+    dragged = null;
+  });
+  columns().forEach(function (col) {
+    var zone = col.querySelector(".col-cards");
+    col.addEventListener("dragover", function (e) {
+      if (!dragged) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      col.classList.add("is-drop");
+      var after = afterElement(zone, e.clientY);
+      if (after == null) zone.appendChild(dragged);
+      else zone.insertBefore(dragged, after);
+    });
+    col.addEventListener("dragleave", function (e) {
+      if (!col.contains(e.relatedTarget)) col.classList.remove("is-drop");
+    });
+    col.addEventListener("drop", function (e) {
+      if (!dragged) return;
+      e.preventDefault();
+      col.classList.remove("is-drop");
+      updateCounts();
+      cards().forEach(refresh);
+      say(cardTitle(dragged) + " 카드를 " + colName(col) + " 단계로 옮겼어요.");
+    });
+  });
+
+  updateCounts();
+  cards().forEach(refresh);
+})();
+</script>
 </body>
 </html>

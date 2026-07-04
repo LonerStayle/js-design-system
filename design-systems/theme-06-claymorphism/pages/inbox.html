@@ -1,8 +1,18 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+/* 다크 사용자 라이트 플래시 방지 — 스타일 로드 전에 테마를 선적용. 키는 app.js 와 동일(clay-theme). */
+(function () {
+  try {
+    var t = localStorage.getItem("clay-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
 <title>이메일 인박스 · Claymorphism — theme-06</title>
 <meta name="description" content="말랑한 클레이모피즘 3패널 이메일 인박스 데모 — 폴더 사이드바, 메시지 리스트, 리딩 페인.">
 <link rel="stylesheet" href="../theme.css">
@@ -52,6 +62,19 @@
   .mail-meta-icons { display: inline-flex; gap: var(--space-1); align-items: center; }
   .mail-meta-icons .icon { width: .95rem; height: .95rem; }
   .icon-star-on { color: var(--yellow-500); fill: var(--yellow-400); }
+  .icon-pin { color: var(--color-primary); }
+
+  /* 고정된 메일 — 목록 맨 위, 살짝 다른 표면으로 구분 */
+  .mail-list__section { padding: var(--space-2) var(--space-2) var(--space-1); font-size: var(--text-2xs);
+    font-weight: var(--weight-extrabold); color: var(--color-text-subtle); letter-spacing: var(--tracking-caps-ko);
+    display: flex; align-items: center; gap: var(--space-1); }
+  .mail-list__section .icon { width: .85rem; height: .85rem; }
+  .mail-item.is-pinned { background: var(--color-primary-soft); border-radius: var(--radius-md); }
+
+  /* 빈 폴더 상태 — 리스트 안에서 말랑이가 안내 */
+  .mail-list-empty { flex: 1; display: grid; place-items: center; padding: var(--space-6); }
+  .reading__empty-wrap .mascot,
+  .mail-list-empty .mascot { --mascot-size: 6rem; }
 
   /* 리딩 페인 */
   .reading { gap: var(--space-4); }
@@ -98,7 +121,7 @@
 <div class="overlay" id="compose" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="compose-title">
   <div class="modal" role="document">
     <div class="modal__header">
-      <h2 class="modal__title" id="compose-title">✏️ 새 메일 작성</h2>
+      <h2 class="modal__title" id="compose-title">새 메일 작성</h2>
       <button class="modal__close" data-close aria-label="닫기"><svg class="icon" viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
     </div>
     <div class="modal__body stack">
@@ -117,7 +140,7 @@
     </div>
     <div class="modal__footer">
       <button class="btn btn-ghost" data-close>취소</button>
-      <button class="btn btn-primary" data-close data-toast data-toast-title="전송됨" data-toast-text="메일이 발송되었어요 ✉️" data-toast-variant="success">
+      <button class="btn btn-primary" data-close data-toast data-toast-title="전송됨" data-toast-text="메일이 발송되었어요." data-toast-variant="success">
         <svg class="icon" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         보내기
       </button>
@@ -133,7 +156,7 @@
       <span>Clay<span style="color:var(--color-primary)">UI</span></span>
     </a>
     <div class="navbar__nav hide-mobile">
-      <span class="nav-link is-active">📬 이메일 인박스</span>
+      <span class="nav-link is-active">이메일 인박스</span>
     </div>
     <div class="navbar__actions">
       <a class="btn btn-secondary btn-sm" href="../index.html">
@@ -160,7 +183,7 @@
 
         <button class="btn btn-primary btn-block" data-open="#compose" style="margin-block:var(--space-3)">
           <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-          ✏️ 새 메일
+          새 메일
         </button>
 
         <div class="sidebar__section">폴더</div>
@@ -215,8 +238,8 @@
           <div class="cluster" style="gap:var(--space-2)">
             <div class="avatar avatar--sm avatar--coral">나</div>
             <div class="truncate">
-              <div class="text-sm fw-bold truncate">정진수</div>
-              <div class="text-2xs text-subtle truncate">jinsu@clay.ui</div>
+              <div class="text-sm fw-bold truncate">김지수</div>
+              <div class="text-2xs text-subtle truncate">jisu@clay.ui</div>
             </div>
           </div>
         </div>
@@ -265,14 +288,16 @@
 
     <!-- ======= 3. 리딩 페인 ======= -->
     <section class="mail-panel mail-read reading clay" aria-label="메일 내용" aria-live="polite">
-      <!-- 빈 상태 -->
+      <!-- 빈 상태 — 말랑이가 쿨쿨 기다리는 중 -->
       <div class="reading__empty-wrap" data-reading-empty>
         <div class="empty">
-          <div class="empty__art">
-            <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><polyline points="4 7 12 13 20 7"/></svg>
-          </div>
+          <figure class="mascot mascot--sleep mascot--sky mascot--float" aria-hidden="true">
+            <span class="mascot__eye mascot__eye--l"></span><span class="mascot__eye mascot__eye--r"></span>
+            <span class="mascot__cheek mascot__cheek--l"></span><span class="mascot__cheek mascot__cheek--r"></span>
+            <span class="mascot__mouth"></span>
+          </figure>
           <div class="empty__title">메일을 선택하세요</div>
-          <div class="empty__text">왼쪽 목록에서 메일을 고르면 여기에 내용이 펼쳐져요 🫧</div>
+          <div class="empty__text">왼쪽 목록에서 메일을 고르면 여기에 내용이 펼쳐져요.</div>
         </div>
       </div>
 
@@ -340,9 +365,9 @@
         avatar: "서", tone: "coral",
         subject: "클레이 키트 v2.3 디자인 검토 요청",
         preview: "새 버전 클레이 그림자 토큰과 캔디 컬러 램프를 정리했어요. 첨부 시안 확인 부탁드려요.",
-        time: "오전 9:24", unread: true, starred: true, attach: true,
+        time: "오전 9:24", unread: true, starred: true, attach: true, pinned: true,
         body: [
-          "안녕하세요 진수님,",
+          "안녕하세요 지수님,",
           "클레이 키트 v2.3 시안이 준비되어 공유드립니다. 이번 버전에서는 부푼 점토 그림자 공식을 세 단계(외부 드롭 · 상단 라이트 · 하단 다크)로 분리해 토큰화했고, 캔디 컬러 램프도 코랄·민트·스카이·옐로·바이올렛 5종으로 확장했습니다.",
           "특히 모서리 반경 스케일과 pill 형태 버튼의 대비를 4.5:1 이상으로 맞췄으니, 접근성 관점에서도 한 번 봐주시면 감사하겠습니다.",
           "검토 의견은 이번 주 금요일까지 부탁드려요. 좋은 하루 되세요!"
@@ -378,11 +403,11 @@
         id: 4, sender: "청구 · Clay Cloud", email: "billing@claycloud.io",
         avatar: "₩", tone: "mint",
         subject: "6월 결제 영수증이 발행되었습니다",
-        preview: "Pro 플랜 ₩29,000 결제가 정상 처리되었습니다. 영수증 PDF 가 첨부되어 있어요.",
+        preview: "Pro 플랜 ₩29,900 결제가 정상 처리되었습니다. 영수증 PDF 가 첨부되어 있어요.",
         time: "어제", unread: true, starred: false, attach: true,
         body: [
           "안녕하세요,",
-          "Clay Cloud Pro 플랜 6월 이용료 ₩29,000 의 결제가 정상적으로 처리되었습니다. 결제 수단은 등록된 카드(****-4821)이며, 다음 결제 예정일은 7월 21일입니다.",
+          "Clay Cloud Pro 플랜 6월 이용료 ₩29,900 의 결제가 정상적으로 처리되었습니다. 결제 수단은 등록된 카드(****-4821)이며, 다음 결제 예정일은 7월 21일입니다.",
           "상세 영수증은 첨부된 PDF 또는 계정 설정 > 결제 내역에서 확인하실 수 있습니다.",
           "이용해 주셔서 감사합니다."
         ]
@@ -390,13 +415,13 @@
       {
         id: 5, sender: "한지원", email: "jiwon@clay.ui",
         avatar: "지", tone: "yellow",
-        subject: "점심 같이 하실래요? 🍜",
+        subject: "점심 같이 하실래요?",
         preview: "오늘 1시쯤 1층 새로 생긴 라멘집 가려는데 같이 가요!",
         time: "어제", unread: true, starred: true, attach: false,
         body: [
-          "진수님!",
+          "지수님!",
           "오늘 점심 1시쯤 1층에 새로 생긴 라멘집 가보려고 하는데 같이 가실래요? 웨이팅이 있을 수도 있어서 조금 일찍 내려가려고요.",
-          "괜찮으시면 답장 주세요 🍜"
+          "괜찮으시면 답장 주세요."
         ]
       },
       {
@@ -406,7 +431,7 @@
         preview: "지난번 미팅 내용을 정리한 제안서를 보냅니다. 검토 후 회신 부탁드립니다.",
         time: "6월 19일", unread: true, starred: false, attach: true,
         body: [
-          "안녕하세요 진수님,",
+          "안녕하세요 지수님,",
           "지난번 화상 미팅에서 논의했던 Q3 공동 마케팅 협업 건에 대한 제안서를 정리해 보내드립니다. 예산 배분과 채널별 일정, 기대 성과 지표를 포함했습니다.",
           "내부 검토 후 다음 주 중 한 번 더 조율 미팅을 잡으면 좋을 것 같습니다. 편하신 시간대를 알려주세요.",
           "좋은 협업 기대하겠습니다. 감사합니다."
@@ -414,12 +439,12 @@
       },
       {
         id: 7, sender: "Clay 뉴스레터", email: "hello@clay.ui",
-        avatar: "📰", tone: "violet",
+        avatar: "레", tone: "violet",
         subject: "이번 주 클레이모피즘 트렌드 5선",
         preview: "말랑한 UI 가 다시 뜨고 있습니다. 이번 주 주목할 디자인 사례를 모았어요.",
         time: "6월 18일", unread: false, starred: false, attach: false,
         body: [
-          "이번 주 뉴스레터에 오신 것을 환영합니다 👋",
+          "이번 주 뉴스레터에 오신 것을 환영합니다.",
           "클레이모피즘이 다시 주목받고 있습니다. 부드러운 그림자와 통통한 입체감, 비비드한 캔디 컬러의 조합이 친근함과 재미를 동시에 전달하기 때문인데요.",
           "이번 주에는 모바일 앱 온보딩, 핀테크 대시보드, 키즈 교육 서비스에서 클레이 스타일을 적용한 다섯 가지 사례를 소개합니다.",
           "전체 글은 웹에서 이어서 읽어보세요."
@@ -432,19 +457,19 @@
         preview: "말씀하신 --shadow-clay-* 접두사 방식에 동의합니다. 한 가지만 추가로…",
         time: "6월 17일", unread: false, starred: false, attach: false,
         body: [
-          "진수님 의견 잘 봤습니다.",
+          "지수님 의견 잘 봤습니다.",
           "제안하신 --shadow-clay-* 접두사 네이밍 방식에 전적으로 동의합니다. 색상별 변형(coral/mint/sky 등)도 같은 패턴으로 가면 일관성이 좋아질 것 같아요.",
           "한 가지만 추가하자면, lg 변형은 -lg 접미사로 통일하면 검색성이 더 좋아질 것 같습니다. 어떻게 생각하세요?"
         ]
       },
       {
         id: 9, sender: "여행 · TripClay", email: "trip@tripclay.com",
-        avatar: "✈️", tone: "mint",
+        avatar: "여", tone: "mint",
         subject: "예약하신 제주 항공권 발권 완료",
         preview: "7월 12일 김포 → 제주 항공권이 발권되었습니다. 좌석은 14A 입니다.",
         time: "6월 16일", unread: false, starred: false, attach: true,
         body: [
-          "예약이 확정되었습니다 ✈️",
+          "예약이 확정되었습니다.",
           "7월 12일 오전 9시 20분 김포발 제주행 항공권이 정상 발권되었습니다. 좌석은 14A(창가)이며, 탑승 수속은 출발 40분 전까지 완료해 주세요.",
           "전자 항공권은 첨부 파일과 앱에서 확인하실 수 있습니다. 즐거운 여행 되세요!"
         ]
@@ -453,12 +478,12 @@
         id: 10, sender: "최은비", email: "eunbi@clay.ui",
         avatar: "은", tone: "yellow",
         subject: "회식 장소 투표 결과 공유합니다",
-        preview: "총 12명 참여, 1위는 '통통 삼겹살'로 결정되었습니다 🥓",
+        preview: "총 12명 참여, 1위는 '통통 삼겹살'로 결정되었습니다.",
         time: "6월 15일", unread: false, starred: false, attach: false,
         body: [
           "안녕하세요!",
           "이번 분기 회식 장소 투표 결과를 공유드립니다. 총 12명이 참여해 주셨고, 1위는 '통통 삼겹살'(7표), 2위는 '말랑 파스타'(4표)로 결정되었습니다.",
-          "예약은 금요일 저녁 7시로 진행할 예정이며, 변동 사항이 있으면 다시 안내드리겠습니다. 많은 참여 감사합니다 🥓"
+          "예약은 금요일 저녁 7시로 진행할 예정이며, 변동 사항이 있으면 다시 안내드리겠습니다. 많은 참여 감사합니다."
         ]
       }
     ];
@@ -477,40 +502,102 @@
     function clipSvg() {
       return '<svg class="icon" viewBox="0 0 24 24"><path d="M21 11.5 12.5 20a5 5 0 0 1-7-7l8-8a3.3 3.3 0 0 1 4.7 4.7l-8 8a1.6 1.6 0 0 1-2.3-2.3l7.3-7.3"/></svg>';
     }
+    function pinSvg() {
+      return '<svg class="icon icon-pin" viewBox="0 0 24 24"><path d="M9 4h6l-1 6 3 3v2H7v-2l3-3-1-6Z"/><line x1="12" y1="15" x2="12" y2="21"/></svg>';
+    }
 
-    // ===== 리스트 렌더 =====
+    function makeItem(m) {
+      var li = document.createElement("li");
+      li.className = "list__item mail-item interactive" + (m.unread ? " is-unread" : "") + (m.pinned ? " is-pinned" : "");
+      li.setAttribute("role", "option");
+      li.setAttribute("aria-selected", "false");
+      li.setAttribute("tabindex", "0");
+      li.dataset.id = m.id;
+
+      var metaIcons = "";
+      if (m.pinned) metaIcons += pinSvg();
+      if (m.starred) metaIcons += starSvg(true);
+      if (m.attach) metaIcons += clipSvg();
+
+      li.innerHTML =
+        '<div class="avatar avatar--sm ' + (avatarMod[m.tone] || "") + '" aria-hidden="true">' + m.avatar + '</div>' +
+        '<div class="list__main">' +
+          '<div class="list__title">' +
+            '<span class="unread-dot" aria-hidden="true"></span>' +
+            '<span class="sender truncate flex-1">' + m.sender + '</span>' +
+            '<span class="mail-meta-icons">' + metaIcons + '</span>' +
+          '</div>' +
+          '<div class="list__sub"><span class="subject">' + m.subject + '</span> · <span class="text-subtle truncate">' + m.preview + '</span></div>' +
+        '</div>' +
+        '<div class="list__meta"><span class="text-2xs text-subtle">' + m.time + '</span></div>';
+
+      li.addEventListener("click", function () { selectEmail(m.id); });
+      li.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectEmail(m.id); }
+      });
+      return li;
+    }
+
+    // ===== 리스트 렌더 (고정 메일을 맨 위 별도 섹션으로) =====
     function renderList() {
       listEl.innerHTML = "";
-      emails.forEach(function (m) {
-        var li = document.createElement("li");
-        li.className = "list__item mail-item interactive" + (m.unread ? " is-unread" : "");
-        li.setAttribute("role", "option");
-        li.setAttribute("tabindex", "0");
-        li.dataset.id = m.id;
-
-        var metaIcons = "";
-        if (m.starred) metaIcons += starSvg(true);
-        if (m.attach) metaIcons += clipSvg();
-
-        li.innerHTML =
-          '<div class="avatar avatar--sm ' + (avatarMod[m.tone] || "") + '" aria-hidden="true">' + m.avatar + '</div>' +
-          '<div class="list__main">' +
-            '<div class="list__title">' +
-              '<span class="unread-dot" aria-hidden="true"></span>' +
-              '<span class="sender truncate flex-1">' + m.sender + '</span>' +
-              '<span class="mail-meta-icons">' + metaIcons + '</span>' +
-            '</div>' +
-            '<div class="list__sub"><span class="subject">' + m.subject + '</span> · <span class="text-subtle truncate">' + m.preview + '</span></div>' +
-          '</div>' +
-          '<div class="list__meta"><span class="text-2xs text-subtle">' + m.time + '</span></div>';
-
-        li.addEventListener("click", function () { selectEmail(m.id); });
-        li.addEventListener("keydown", function (e) {
-          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectEmail(m.id); }
-        });
-        listEl.appendChild(li);
-      });
+      var pinned = emails.filter(function (m) { return m.pinned; });
+      var rest = emails.filter(function (m) { return !m.pinned; });
+      if (pinned.length) {
+        var sec = document.createElement("li");
+        sec.className = "mail-list__section";
+        sec.setAttribute("role", "presentation");
+        sec.innerHTML = pinSvg() + "<span>고정됨</span>";
+        listEl.appendChild(sec);
+        pinned.forEach(function (m) { listEl.appendChild(makeItem(m)); });
+        var sec2 = document.createElement("li");
+        sec2.className = "mail-list__section";
+        sec2.setAttribute("role", "presentation");
+        sec2.textContent = "받은편지함";
+        listEl.appendChild(sec2);
+      }
+      rest.forEach(function (m) { listEl.appendChild(makeItem(m)); });
     }
+
+    // ===== 빈 폴더 상태 — 말랑이가 안내 =====
+    function renderEmptyFolder(title, text, expr, tone) {
+      listEl.innerHTML =
+        '<li class="mail-list-empty" role="presentation">' +
+          '<div class="empty">' +
+            '<figure class="mascot mascot--' + expr + ' mascot--' + tone + ' mascot--float" aria-hidden="true">' +
+              '<span class="mascot__eye mascot__eye--l"></span><span class="mascot__eye mascot__eye--r"></span>' +
+              '<span class="mascot__cheek mascot__cheek--l"></span><span class="mascot__cheek mascot__cheek--r"></span>' +
+              '<span class="mascot__mouth"></span>' +
+            '</figure>' +
+            '<div class="empty__title">' + title + '</div>' +
+            '<div class="empty__text">' + text + '</div>' +
+          '</div>' +
+        '</li>';
+      // 리딩 페인을 빈 상태로 되돌린다
+      emptyEl.style.display = "";
+      readEl.hidden = true;
+      document.body.removeAttribute("data-mail-view");
+    }
+
+    // ===== 폴더 전환 — 빈 폴더에서 empty state 시연 =====
+    var folderLinks = document.querySelectorAll("[data-folder]");
+    var emptyFolders = {
+      sent:  ["보낸 메일이 없어요", "보낸 메일이 여기에 모여요.", "happy", "coral"],
+      trash: ["휴지통이 비었어요", "삭제한 메일은 30일간 여기 머물러요.", "sleep", "yellow"]
+    };
+    Array.prototype.forEach.call(folderLinks, function (link) {
+      link.addEventListener("click", function (e) {
+        e.preventDefault();
+        Array.prototype.forEach.call(folderLinks, function (l) { l.classList.remove("is-active"); });
+        link.classList.add("is-active");
+        var f = link.dataset.folder;
+        if (emptyFolders[f]) {
+          renderEmptyFolder.apply(null, emptyFolders[f]);
+        } else {
+          renderList();
+        }
+      });
+    });
 
     function updateCount() {
       var n = emails.filter(function (m) { return m.unread; }).length;
@@ -527,7 +614,9 @@
 
       // 선택 표시
       Array.prototype.forEach.call(listEl.children, function (li) {
-        li.classList.toggle("is-selected", li.dataset.id == id);
+        var on = li.dataset.id == id;
+        li.classList.toggle("is-selected", on);
+        if (li.getAttribute("role") === "option") li.setAttribute("aria-selected", String(on));
       });
 
       // 읽음 처리 + 카운트 감소
@@ -570,7 +659,7 @@
       sendBtn.addEventListener("click", function () {
         var ta = document.getElementById("quick-reply");
         if (window.Clay && typeof window.Clay.toast === "function") {
-          window.Clay.toast({ title: "전송됨", text: "답장을 보냈어요 ✉️", variant: "success" });
+          window.Clay.toast({ title: "전송됨", text: "답장을 보냈어요.", variant: "success" });
         }
         if (ta) ta.value = "";
       });
@@ -581,7 +670,7 @@
     if (selectAll) {
       selectAll.addEventListener("change", function () {
         Array.prototype.forEach.call(listEl.children, function (li) {
-          li.classList.toggle("is-selected", selectAll.checked);
+          if (li.dataset.id) li.classList.toggle("is-selected", selectAll.checked);
         });
       });
     }

@@ -44,8 +44,22 @@
 | Danger 텍스트 | `#f0736a` / base | **4.77:1** | ✅ |
 | Warning 텍스트 | `#e0a93a` / base | **6.41:1** | ✅ |
 | Info 텍스트 | `#5b9bf0` / base | **4.79:1** | ✅ |
+| inline-note 성공(수리) | `#5fd39e` / `#14352a` | **7.19:1** | ✅ |
+| inline-note 경고(수리) | `#ecc061` / `#3a2f12` | **7.70:1** | ✅ |
+| inline-note 위험(수리) | `#f5938b` / `#3a1f1f` | **6.76:1** | ✅ |
+| inline-note 정보(수리) | `#86b6f5` / `#16263e` | **7.26:1** | ✅ |
+| 코드 tok-str(수리) | `#22c2a6` / `#262a32` | **6.40:1** | ✅ |
+| 코드 tok-key(수리) | `#8f96f7` / `#262a32` | **5.39:1** | ✅ |
 
 > `--color-text-faint`(라이트 `#8595af` 2.5:1)는 **장식·비텍스트 전용**(플레이스홀더 보조, 비활성 아이콘)으로만 사용하며 의미 전달 텍스트에는 쓰지 않는다.
+
+### 고도화 반영 (2026-07 시스템 재작업)
+- `signature.css` 점화 + theme.css 번들 배선: 조각 릴리프 씬(`.nm-scene`/`.nm-relief`), 촉각 오브(`.nm-orb`/`.nm-bowl`, 스프링백), pressed moat(`.nm-moat`), carved/embossed 타이포. 신규 깊이 토큰 `--shadow-carved`/`--shadow-hero`(+`--elevation-carved`/`--elevation-hero`).
+- 다크 대비 수리: inline-note 4종 텍스트(`-700` 다크 재정의)·코드 `tok-str`(mint-600)·`tok-key`(indigo-500) 전부 ≥4.5로 상향(위 표).
+- P0 수리: 닫힌 모달/⌘K 패널 `visibility:hidden`(투명 클릭 가로채기 제거) · 드로어 스크림 전역 폴백(배경차단 복구).
+- 폰트: @import 단일화(tokens.css), 죽은 Noto Serif KR 제거, 한글 스택 순서 교정(Gowun Dodum→system-ui 앞). 한글 정제 레이어(keep-all/행간/자간) + 그레인 배경 추가.
+- FOUC 조기적용 스니펫 + `.js` 게이트 리빌(base.css). 세그먼트 ARIA radiogroup/aria-checked 정규화(app.js).
+- 검증: 360/768/1440 가로 오버플로 0(CDP), 콘솔 에러 0, 라이트/다크 히어로 육안 확인.
 
 ### 보정 이력 (소프트 룩의 약점 보완)
 초기 측정에서 미달했던 항목을 토큰 값 조정으로 해결:

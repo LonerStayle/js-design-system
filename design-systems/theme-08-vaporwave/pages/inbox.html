@@ -1,378 +1,404 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="ko">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="dark light" />
-  <title>Inbox · Vaporwave</title>
+  <!-- theme + reveal boot (runs before first paint — no dawn/dusk flash) -->
+  <script>
+    (function () {
+      var d = document.documentElement;
+      d.classList.add("js");
+      try {
+        var t = localStorage.getItem("vw-theme");
+        if (!t) t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+        d.setAttribute("data-theme", t);
+      } catch (e) {}
+      setTimeout(function () { if (!d.classList.contains("vw-ready")) d.classList.add("reveal-fallback"); }, 2000);
+    })();
+  </script>
+  <title>받은편지함 · Vaporwave</title>
   <link rel="stylesheet" href="../styles.css" />
   <script src="../app.js" defer></script>
+
+  <style>
+    /* ===== 3-pane mail — 폴더(사이드바 드로어) + 목록 + 읽기창 ===== */
+    .mail-main { display: flex; flex-direction: column; min-width: 0; min-height: 100dvh; }
+    .mail-topbar {
+      position: sticky; top: 0; z-index: 40;
+      display: flex; align-items: center; gap: var(--space-3);
+      height: 64px; padding: 0 var(--space-5);
+      border-radius: 0; border-bottom: var(--border-1) solid var(--color-divider);
+    }
+    .mail-panes {
+      display: grid; grid-template-columns: 360px 1fr;
+      flex: 1; min-height: 0;
+    }
+    .mail-list {
+      border-right: var(--border-1) solid var(--color-divider);
+      display: flex; flex-direction: column; min-width: 0;
+    }
+    .mail-reading { display: flex; flex-direction: column; min-width: 0; }
+    .mail-back { display: none; }        /* 모바일 전용 ‘목록으로’ */
+    .mail-folders__compose { margin: var(--space-2) 0 var(--space-4); }
+
+    /* 목록 ↔ 읽기 전환 경로 (≤1000px 스택) */
+    @media (max-width: 1000px) {
+      .mail-panes { grid-template-columns: 1fr; }
+      .mail-reading { display: none; }
+      .mail-reading:target { display: flex; }
+      .mail-panes:has(.mail-reading:target) .mail-list { display: none; }
+      .mail-back { display: inline-flex; }
+    }
+  </style>
 </head>
-<body>
-  <a href="#main" class="skip-link">Skip to content</a>
+<body data-scene="midnight">
+  <a href="#main" class="skip-link">본문으로 건너뛰기</a>
 
-  <!-- ===================================================================== -->
-  <!-- STICKY TOPBAR                                                          -->
-  <!-- ===================================================================== -->
-  <header class="glass" style="position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:var(--space-4);padding:var(--space-3) var(--space-5);height:64px;border-radius:0;border-bottom:var(--border-1) solid var(--color-divider)">
-    <a href="../index.html" class="row items-center gap-2" style="text-decoration:none;flex:none" aria-label="Back to Vaporwave hub">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:var(--magenta-400)">
-        <path d="M15 18l-6-6 6-6" />
-      </svg>
-      <strong class="text-neon" style="font-family:var(--font-display);letter-spacing:var(--tracking-wide)">RETROMAIL</strong>
-    </a>
+  <div class="app-shell">
 
-    <div class="searchbar hide-mobile" role="search" style="max-width:520px;margin:0 var(--space-3)">
-      <span class="searchbar__icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" />
-        </svg>
-      </span>
-      <label for="mail-search" class="sr-only">Search mail</label>
-      <input id="mail-search" class="searchbar__input" type="search" placeholder="Search mail" />
-      <button class="searchbar__clear" type="button" aria-label="Clear search"></button>
-    </div>
+    <!-- ================= LEFT — FOLDERS (사이드바 · ≤900px 드로어) ================= -->
+    <nav class="sidebar" aria-label="메일 폴더" style="overflow-y:auto">
+      <a href="../index.html" class="sidebar__brand" style="text-decoration:none" aria-label="Vaporwave 허브로">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2" /><path d="M5.4 7.5 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.4-4.5A2 2 0 0 0 17 6.7H7a2 2 0 0 0-1.6.8z" /></svg>
+        <span class="text-neon" style="letter-spacing:var(--tracking-wide)">RETROMAIL</span>
+      </a>
 
-    <div class="row items-center gap-2 ml-auto" style="flex:none">
-      <button class="btn btn--icon btn--ghost hide-mobile" type="button" data-cmdk-open aria-label="Open command palette" data-tooltip="Command palette (⌘K)">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M9 4a3 3 0 0 0 0 6h6a3 3 0 0 0 0-6 3 3 0 0 0-3 3v10a3 3 0 0 1-3 3 3 3 0 0 1 0-6h6a3 3 0 0 1 3 3 3 3 0 0 1-3 3" />
-        </svg>
+      <button class="btn btn--primary mail-folders__compose" type="button" data-modal-open="compose">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></svg>
+        새 메일 쓰기
       </button>
-      <button class="btn btn--icon btn--ghost" type="button" data-theme-toggle aria-pressed="false" aria-label="Toggle theme">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
-        </svg>
-      </button>
-      <button class="btn btn--primary" type="button" data-modal-open="compose">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
-        </svg>
-        Compose
-      </button>
-    </div>
-  </header>
 
-  <!-- ===================================================================== -->
-  <!-- 3-PANE GRID                                                            -->
-  <!-- ===================================================================== -->
-  <main id="main" style="display:grid;grid-template-columns:220px 360px 1fr;min-height:calc(100vh - 64px)">
-
-    <!-- ----------------------------------------------------------------- -->
-    <!-- 1 · LEFT — FOLDERS                                                 -->
-    <!-- ----------------------------------------------------------------- -->
-    <nav class="glass hide-mobile" aria-label="Mail folders" style="border-radius:0;border-right:var(--border-1) solid var(--color-divider);padding:var(--space-4) var(--space-3);overflow-y:auto">
       <div class="list" role="list">
         <a href="#main" class="list__item is-active" aria-current="page" style="text-decoration:none;background:var(--color-primary-soft)">
           <span class="list__media" style="width:1.75rem;height:1.75rem;background:transparent;border:none">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M22 12h-6l-2 3h-4l-2-3H2" /><path d="M5.4 7.5 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.4-4.5A2 2 0 0 0 17 6.7H7a2 2 0 0 0-1.6.8z" />
-            </svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2" /><path d="M5.4 7.5 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.4-4.5A2 2 0 0 0 17 6.7H7a2 2 0 0 0-1.6.8z" /></svg>
           </span>
-          <span class="list__content"><span class="list__title">Inbox</span></span>
+          <span class="list__content"><span class="list__title">받은편지함</span></span>
           <span class="badge badge--primary badge--sm">12</span>
         </a>
 
         <a href="#main" class="list__item" style="text-decoration:none">
           <span class="list__media" style="width:1.75rem;height:1.75rem;background:transparent;border:none">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="m12 17.3-6.2 3.3 1.2-6.9-5-4.9 6.9-1L12 1l3.1 6.8 6.9 1-5 4.9 1.2 6.9z" />
-            </svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 17.3-6.2 3.3 1.2-6.9-5-4.9 6.9-1L12 1l3.1 6.8 6.9 1-5 4.9 1.2 6.9z" /></svg>
           </span>
-          <span class="list__content"><span class="list__title">Starred</span></span>
+          <span class="list__content"><span class="list__title">별표</span></span>
         </a>
 
         <a href="#main" class="list__item" style="text-decoration:none">
           <span class="list__media" style="width:1.75rem;height:1.75rem;background:transparent;border:none">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="m22 2-7 20-4-9-9-4z" /><path d="M22 2 11 13" />
-            </svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4z" /><path d="M22 2 11 13" /></svg>
           </span>
-          <span class="list__content"><span class="list__title">Sent</span></span>
+          <span class="list__content"><span class="list__title">보낸편지함</span></span>
         </a>
 
         <a href="#main" class="list__item" style="text-decoration:none">
           <span class="list__media" style="width:1.75rem;height:1.75rem;background:transparent;border:none">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
-            </svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></svg>
           </span>
-          <span class="list__content"><span class="list__title">Drafts</span></span>
+          <span class="list__content"><span class="list__title">임시보관함</span></span>
           <span class="badge badge--neutral badge--sm">3</span>
         </a>
 
         <a href="#main" class="list__item" style="text-decoration:none">
           <span class="list__media" style="width:1.75rem;height:1.75rem;background:transparent;border:none">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="3" y="4" width="18" height="4" rx="1" /><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8" /><path d="M10 12h4" />
-            </svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1" /><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8" /><path d="M10 12h4" /></svg>
           </span>
-          <span class="list__content"><span class="list__title">Archive</span></span>
+          <span class="list__content"><span class="list__title">아카이브</span></span>
         </a>
 
         <a href="#main" class="list__item" style="text-decoration:none">
           <span class="list__media" style="width:1.75rem;height:1.75rem;background:transparent;border:none">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M12 2 2 19h20z" /><path d="M12 9v4" /><path d="M12 17h.01" />
-            </svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 2 19h20z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
           </span>
-          <span class="list__content"><span class="list__title">Spam</span></span>
+          <span class="list__content"><span class="list__title">스팸</span></span>
         </a>
 
         <a href="#main" class="list__item" style="text-decoration:none">
           <span class="list__media" style="width:1.75rem;height:1.75rem;background:transparent;border:none">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M3 6h18" /><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" /><path d="M19 6v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6" />
-            </svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18" /><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" /><path d="M19 6v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6" /></svg>
           </span>
-          <span class="list__content"><span class="list__title">Trash</span></span>
+          <span class="list__content"><span class="list__title">휴지통</span></span>
         </a>
       </div>
 
-      <p class="sidebar__section-label" style="margin-top:var(--space-5)">Labels</p>
+      <p class="sidebar__section-label" style="margin-top:var(--space-5)">라벨</p>
       <div class="stack-2" style="padding:0 var(--space-2)">
-        <span class="badge badge--dot" style="color:var(--cyan-400)">Work</span>
-        <span class="badge badge--dot" style="color:var(--magenta-400)">Personal</span>
-        <span class="badge badge--dot" style="color:var(--color-warning)">Promo</span>
+        <span class="badge badge--dot" style="color:var(--cyan-400)">업무</span>
+        <span class="badge badge--dot" style="color:var(--magenta-400)">개인</span>
+        <span class="badge badge--dot" style="color:var(--color-warning)">프로모션</span>
       </div>
     </nav>
 
-    <!-- ----------------------------------------------------------------- -->
-    <!-- 2 · MIDDLE — MESSAGE LIST                                          -->
-    <!-- ----------------------------------------------------------------- -->
-    <section class="glass" aria-label="Message list" style="border-radius:0;border-right:var(--border-1) solid var(--color-divider);display:flex;flex-direction:column;min-width:0">
-      <!-- toolbar -->
-      <div class="row items-center gap-2" style="padding:var(--space-3) var(--space-4);border-bottom:var(--border-1) solid var(--color-divider);flex:none">
-        <label class="checkbox" style="margin:0">
-          <input class="checkbox__input" type="checkbox" data-select-all />
-          <span class="checkbox__box" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7" /></svg>
-          </span>
-          <span class="sr-only">Select all messages</span>
-        </label>
-        <button class="btn btn--icon btn--ghost btn--sm" type="button" aria-label="Archive selected" data-tooltip="Archive">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1" /><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8" /><path d="M10 12h4" /></svg>
+    <!-- ================= MAIN — TOPBAR + PANES ================= -->
+    <div class="app-shell__main mail-main">
+
+      <header class="glass mail-topbar">
+        <button class="sidebar-drawer-toggle" data-sidebar-drawer-toggle aria-label="폴더 열기" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
         </button>
-        <button class="btn btn--icon btn--ghost btn--sm" type="button" aria-label="Delete selected" data-tooltip="Delete">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18" /><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" /><path d="M19 6v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6" /></svg>
-        </button>
-        <button class="btn btn--icon btn--ghost btn--sm" type="button" aria-label="Mark selected as read" data-tooltip="Mark read">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 6l10 7L22 6" /><rect x="2" y="5" width="20" height="14" rx="2" /></svg>
-        </button>
-        <span class="pagination__info ml-auto">1–8 of 120</span>
-      </div>
 
-      <!-- emails -->
-      <div class="list list--divided list--hover" role="list" style="overflow-y:auto;flex:1;padding:var(--space-2)">
+        <div class="searchbar flex-1" role="search" style="max-width:520px">
+          <span class="searchbar__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+          </span>
+          <label for="mail-search" class="sr-only">메일 검색</label>
+          <input id="mail-search" class="searchbar__input" type="search" placeholder="메일 검색…" />
+          <button class="searchbar__clear" type="button" aria-label="검색어 지우기"></button>
+        </div>
 
-        <!-- selected + unread -->
-        <a href="#reading" class="list__item is-active" aria-current="true" style="text-decoration:none;background:var(--color-primary-soft)">
-          <span class="avatar avatar--sm" aria-hidden="true">AV</span>
-          <span class="list__content">
-            <span class="list__title" style="color:var(--color-text-strong)">Ava Sinclair</span>
-            <span class="list__subtitle" style="color:var(--color-text-strong)">Q3 launch — neon grid is live ✦</span>
-            <span class="list__subtitle">Pushed the final gradient pass to staging, ready for your sign-off…</span>
-          </span>
-          <span class="list__meta">
-            <span style="display:block">9:42 AM</span>
-            <span class="badge badge--dot" style="color:var(--magenta-400)" aria-label="Unread"></span>
-          </span>
-        </a>
+        <div class="row items-center gap-2 ml-auto" style="flex:none">
+          <button class="btn btn--icon btn--ghost hide-mobile" type="button" data-cmdk-open aria-label="명령 팔레트 열기" data-tooltip="명령 팔레트 (⌘K)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4a3 3 0 0 0 0 6h6a3 3 0 0 0 0-6 3 3 0 0 0-3 3v10a3 3 0 0 1-3 3 3 3 0 0 1 0-6h6a3 3 0 0 1 3 3 3 3 0 0 1-3 3" /></svg>
+          </button>
+          <button class="btn btn--icon btn--ghost" type="button" data-theme-toggle aria-pressed="false" aria-label="저녁·새벽 테마 전환">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" /></svg>
+          </button>
+        </div>
+      </header>
 
-        <!-- unread -->
-        <a href="#reading" class="list__item" style="text-decoration:none">
-          <span class="avatar avatar--sm" aria-hidden="true">KO</span>
-          <span class="list__content">
-            <span class="list__title" style="color:var(--color-text-strong)">Kenji Ozaki</span>
-            <span class="list__subtitle" style="color:var(--color-text-strong)">Invoice #VW-2048 attached</span>
-            <span class="list__subtitle">Thanks for the quick turnaround — net-30 terms, no rush on…</span>
-          </span>
-          <span class="list__meta">
-            <span style="display:block">8:15 AM</span>
-            <span class="badge badge--dot" style="color:var(--magenta-400)" aria-label="Unread"></span>
-          </span>
-        </a>
+      <main id="main" class="mail-panes">
 
-        <!-- unread -->
-        <a href="#reading" class="list__item" style="text-decoration:none">
-          <span class="avatar avatar--sm" aria-hidden="true">NR</span>
-          <span class="list__content">
-            <span class="list__title" style="color:var(--color-text-strong)">Nova Reyes</span>
-            <span class="list__subtitle" style="color:var(--color-text-strong)">Re: synthwave palette tokens</span>
-            <span class="list__subtitle">Agreed — let's lock magenta-400 as the primary and ship it…</span>
-          </span>
-          <span class="list__meta">
-            <span style="display:block">7:03 AM</span>
-            <span class="badge badge--dot" style="color:var(--magenta-400)" aria-label="Unread"></span>
-          </span>
-        </a>
-
-        <!-- read + starred -->
-        <a href="#reading" class="list__item" style="text-decoration:none">
-          <span class="avatar avatar--sm" aria-hidden="true">DT</span>
-          <span class="list__content">
-            <span class="list__title">Dune Theroux</span>
-            <span class="list__subtitle">Weekly retro — recording inside</span>
-            <span class="list__subtitle">Great session everyone. Notes and the Loom link are below…</span>
-          </span>
-          <span class="list__meta">
-            <span style="display:block">Yesterday</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-label="Starred" role="img" style="color:var(--color-warning);margin-top:var(--space-1)"><path d="m12 17.3-6.2 3.3 1.2-6.9-5-4.9 6.9-1L12 1l3.1 6.8 6.9 1-5 4.9 1.2 6.9z" /></svg>
-          </span>
-        </a>
-
-        <!-- read -->
-        <a href="#reading" class="list__item" style="text-decoration:none">
-          <span class="avatar avatar--sm" aria-hidden="true">LM</span>
-          <span class="list__content">
-            <span class="list__title">Liang Mei</span>
-            <span class="list__subtitle">Figma handoff is ready 🎛️</span>
-            <span class="list__subtitle">All frames are spec'd with the new chrome variables — dev mode…</span>
-          </span>
-          <span class="list__meta"><span style="display:block">Wed</span></span>
-        </a>
-
-        <!-- read -->
-        <a href="#reading" class="list__item" style="text-decoration:none">
-          <span class="avatar avatar--sm" aria-hidden="true">GH</span>
-          <span class="list__content">
-            <span class="list__title">GitHub</span>
-            <span class="list__subtitle">[vaporwave-ui] 3 new pull requests</span>
-            <span class="list__subtitle">@kenji opened #214 "feat: scanline overlay toggle" and 2 more…</span>
-          </span>
-          <span class="list__meta"><span style="display:block">Wed</span></span>
-        </a>
-
-        <!-- read -->
-        <a href="#reading" class="list__item" style="text-decoration:none">
-          <span class="avatar avatar--sm" aria-hidden="true">SP</span>
-          <span class="list__content">
-            <span class="list__title">Spotify</span>
-            <span class="list__subtitle">Your 1984 retrowave mix is back</span>
-            <span class="list__subtitle">Fresh synth picks for your Friday — press play and drift…</span>
-          </span>
-          <span class="list__meta"><span style="display:block">Tue</span></span>
-        </a>
-
-        <!-- read -->
-        <a href="#reading" class="list__item" style="text-decoration:none">
-          <span class="avatar avatar--sm" aria-hidden="true">TR</span>
-          <span class="list__content">
-            <span class="list__title">Theo Rivera</span>
-            <span class="list__subtitle">Lunch Friday? 🌴</span>
-            <span class="list__subtitle">There's a new vapor-themed diner on 5th, thought of the team…</span>
-          </span>
-          <span class="list__meta"><span style="display:block">Mon</span></span>
-        </a>
-      </div>
-    </section>
-
-    <!-- ----------------------------------------------------------------- -->
-    <!-- 3 · RIGHT — READING PANE                                           -->
-    <!-- ----------------------------------------------------------------- -->
-    <article class="glass" id="reading" aria-label="Reading pane" style="border-radius:0;display:flex;flex-direction:column;min-width:0">
-      <!-- header -->
-      <div style="padding:var(--space-5) var(--space-6);flex:none">
-        <div class="row items-start justify-between gap-4">
-          <h2 style="margin:0;font-size:var(--text-xl);line-height:var(--leading-snug)">Q3 launch — neon grid is live ✦</h2>
-          <div class="row items-center gap-1" style="flex:none">
-            <button class="btn btn--icon btn--ghost btn--sm" type="button" aria-label="Reply" data-tooltip="Reply">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 17 4 12l5-5" /><path d="M20 18v-2a4 4 0 0 0-4-4H4" /></svg>
-            </button>
-            <button class="btn btn--icon btn--ghost btn--sm" type="button" aria-label="Forward" data-tooltip="Forward">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 17 5-5-5-5" /><path d="M4 18v-2a4 4 0 0 1 4-4h12" /></svg>
-            </button>
-            <button class="btn btn--icon btn--ghost btn--sm" type="button" aria-label="Archive" data-tooltip="Archive">
+        <!-- --------------- MIDDLE — MESSAGE LIST --------------- -->
+        <section class="glass mail-list" aria-label="메일 목록" style="border-radius:0">
+          <!-- toolbar -->
+          <div class="row items-center gap-2" style="padding:var(--space-3) var(--space-4);border-bottom:var(--border-1) solid var(--color-divider);flex:none">
+            <label class="checkbox" style="margin:0">
+              <input class="checkbox__input" type="checkbox" data-select-all />
+              <span class="checkbox__box" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7" /></svg>
+              </span>
+              <span class="sr-only">모든 메일 선택</span>
+            </label>
+            <button class="btn btn--icon btn--ghost btn--sm" type="button" aria-label="선택 항목 아카이브" data-tooltip="아카이브">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1" /><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8" /><path d="M10 12h4" /></svg>
             </button>
-            <button class="btn btn--icon btn--danger btn--sm" type="button" aria-label="Delete" data-tooltip="Delete">
+            <button class="btn btn--icon btn--ghost btn--sm" type="button" aria-label="선택 항목 삭제" data-tooltip="삭제">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18" /><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" /><path d="M19 6v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6" /></svg>
             </button>
-            <button class="btn btn--icon btn--ghost btn--sm" type="button" aria-label="Star message" aria-pressed="false" data-tooltip="Star">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 17.3-6.2 3.3 1.2-6.9-5-4.9 6.9-1L12 1l3.1 6.8 6.9 1-5 4.9 1.2 6.9z" /></svg>
+            <button class="btn btn--icon btn--ghost btn--sm" type="button" aria-label="선택 항목 읽음 표시" data-tooltip="읽음 표시">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 6l10 7L22 6" /><rect x="2" y="5" width="20" height="14" rx="2" /></svg>
             </button>
+            <span class="pagination__info ml-auto">전체 120 · 1–8</span>
           </div>
-        </div>
 
-        <div class="row items-center gap-3" style="margin-top:var(--space-4)">
-          <span class="avatar avatar--md" aria-hidden="true">AV
-            <span class="avatar__status is-online" aria-hidden="true"></span>
-          </span>
-          <div class="stack-2" style="min-width:0">
-            <span class="row items-center gap-2">
-              <strong>Ava Sinclair</strong>
-              <span class="text-muted" style="font-size:var(--text-sm)">&lt;ava@neon-collective.io&gt;</span>
-            </span>
-            <span class="text-subtle" style="font-size:var(--text-sm)">to me, design-team · Today at 9:42 AM</span>
+          <!-- emails -->
+          <div class="list list--divided list--hover" role="list" style="overflow-y:auto;flex:1;padding:var(--space-2)">
+
+            <!-- selected + unread + pinned -->
+            <a href="#reading" class="list__item is-active" aria-current="true" style="text-decoration:none;background:var(--color-primary-soft)">
+              <span class="avatar avatar--sm" aria-hidden="true">한서</span>
+              <span class="list__content">
+                <span class="row items-center gap-2">
+                  <span class="list__title" style="color:var(--color-text-strong)">한서윤</span>
+                  <span class="badge badge--outline badge--sm" style="flex:none">고정</span>
+                </span>
+                <span class="list__subtitle" style="color:var(--color-text-strong)">6월 정산 리포트 검토 부탁드려요</span>
+                <span class="list__subtitle">네온 그리드 매출 마감 초안 올렸습니다. 승인만 주시면 바로…</span>
+              </span>
+              <span class="list__meta">
+                <span style="display:block">오전 9:42</span>
+                <span class="badge badge--dot" style="color:var(--magenta-400)" aria-label="안읽음"></span>
+              </span>
+            </a>
+
+            <!-- unread -->
+            <a href="#reading" class="list__item" style="text-decoration:none">
+              <span class="avatar avatar--sm" aria-hidden="true">김아</span>
+              <span class="list__content">
+                <span class="list__title" style="color:var(--color-text-strong)">김아라</span>
+                <span class="list__subtitle" style="color:var(--color-text-strong)">인보이스 VW-2048 첨부드립니다</span>
+                <span class="list__subtitle">빠른 처리 감사합니다 — 30일 내 결제 조건이라 급하진…</span>
+              </span>
+              <span class="list__meta">
+                <span style="display:block">오전 8:15</span>
+                <span class="badge badge--dot" style="color:var(--magenta-400)" aria-label="안읽음"></span>
+              </span>
+            </a>
+
+            <!-- unread -->
+            <a href="#reading" class="list__item" style="text-decoration:none">
+              <span class="avatar avatar--sm" aria-hidden="true">이도</span>
+              <span class="list__content">
+                <span class="list__title" style="color:var(--color-text-strong)">이도현</span>
+                <span class="list__subtitle" style="color:var(--color-text-strong)">Re: 신스웨이브 팔레트 토큰</span>
+                <span class="list__subtitle">동의합니다 — magenta-400을 프라이머리로 확정하고 배포…</span>
+              </span>
+              <span class="list__meta">
+                <span style="display:block">오전 7:03</span>
+                <span class="badge badge--dot" style="color:var(--magenta-400)" aria-label="안읽음"></span>
+              </span>
+            </a>
+
+            <!-- read + starred -->
+            <a href="#reading" class="list__item" style="text-decoration:none">
+              <span class="avatar avatar--sm" aria-hidden="true">정유</span>
+              <span class="list__content">
+                <span class="list__title">정유키</span>
+                <span class="list__subtitle">주간 회고 — 녹화본 공유해요</span>
+                <span class="list__subtitle">다들 수고 많으셨어요. 회의록과 녹화 링크는 아래에…</span>
+              </span>
+              <span class="list__meta">
+                <span style="display:block">어제</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-label="별표" role="img" style="color:var(--color-warning);margin-top:var(--space-1)"><path d="m12 17.3-6.2 3.3 1.2-6.9-5-4.9 6.9-1L12 1l3.1 6.8 6.9 1-5 4.9 1.2 6.9z" /></svg>
+              </span>
+            </a>
+
+            <!-- read -->
+            <a href="#reading" class="list__item" style="text-decoration:none">
+              <span class="avatar avatar--sm" aria-hidden="true">장미</span>
+              <span class="list__content">
+                <span class="list__title">장미노</span>
+                <span class="list__subtitle">Figma 핸드오프 준비됐어요</span>
+                <span class="list__subtitle">새 크롬 변수로 모든 프레임 정리했습니다 — 개발 모드…</span>
+              </span>
+              <span class="list__meta"><span style="display:block">수</span></span>
+            </a>
+
+            <!-- read -->
+            <a href="#reading" class="list__item" style="text-decoration:none">
+              <span class="avatar avatar--sm" aria-hidden="true">GH</span>
+              <span class="list__content">
+                <span class="list__title">GitHub</span>
+                <span class="list__subtitle">[vaporwave-ui] 새 풀 리퀘스트 3건</span>
+                <span class="list__subtitle">@kenji 님이 #214 ‘스캔라인 오버레이 토글’을 열었고 외 2건…</span>
+              </span>
+              <span class="list__meta"><span style="display:block">수</span></span>
+            </a>
+
+            <!-- read -->
+            <a href="#reading" class="list__item" style="text-decoration:none">
+              <span class="avatar avatar--sm" aria-hidden="true">SP</span>
+              <span class="list__content">
+                <span class="list__title">Spotify</span>
+                <span class="list__subtitle">1984 레트로웨이브 믹스가 돌아왔어요</span>
+                <span class="list__subtitle">금요일을 위한 새 신스 픽 — 재생 버튼을 누르고 흘러가 보세요…</span>
+              </span>
+              <span class="list__meta"><span style="display:block">화</span></span>
+            </a>
+
+            <!-- read -->
+            <a href="#reading" class="list__item" style="text-decoration:none">
+              <span class="avatar avatar--sm" aria-hidden="true">윤도</span>
+              <span class="list__content">
+                <span class="list__title">윤도진</span>
+                <span class="list__subtitle">금요일 점심 어때요? 🌴</span>
+                <span class="list__subtitle">5번가에 베이퍼 테마 다이너가 새로 생겼는데, 팀이랑…</span>
+              </span>
+              <span class="list__meta"><span style="display:block">월</span></span>
+            </a>
           </div>
-        </div>
-      </div>
+        </section>
 
-      <div class="divider" role="separator" style="margin:0"></div>
+        <!-- --------------- RIGHT — READING PANE --------------- -->
+        <article class="glass mail-reading" id="reading" aria-label="읽기 창" style="border-radius:0">
+          <!-- header -->
+          <div style="padding:var(--space-5) var(--space-6);flex:none">
+            <a href="#main" class="btn btn--secondary btn--sm mail-back" style="margin-bottom:var(--space-3)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+              목록으로
+            </a>
+            <div class="row items-start justify-between gap-4">
+              <h2 style="margin:0;font-size:var(--text-xl);line-height:var(--leading-snug)">6월 정산 리포트 검토 부탁드려요</h2>
+              <div class="row items-center gap-1" style="flex:none">
+                <button class="btn btn--icon btn--ghost btn--sm" type="button" aria-label="답장" data-tooltip="답장">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 17 4 12l5-5" /><path d="M20 18v-2a4 4 0 0 0-4-4H4" /></svg>
+                </button>
+                <button class="btn btn--icon btn--ghost btn--sm" type="button" aria-label="전달" data-tooltip="전달">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 17 5-5-5-5" /><path d="M4 18v-2a4 4 0 0 1 4-4h12" /></svg>
+                </button>
+                <button class="btn btn--icon btn--ghost btn--sm" type="button" aria-label="아카이브" data-tooltip="아카이브">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1" /><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8" /><path d="M10 12h4" /></svg>
+                </button>
+                <button class="btn btn--icon btn--danger btn--sm" type="button" aria-label="삭제" data-tooltip="삭제">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18" /><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" /><path d="M19 6v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6" /></svg>
+                </button>
+                <button class="btn btn--icon btn--ghost btn--sm" type="button" aria-label="별표" aria-pressed="false" data-tooltip="별표">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 17.3-6.2 3.3 1.2-6.9-5-4.9 6.9-1L12 1l3.1 6.8 6.9 1-5 4.9 1.2 6.9z" /></svg>
+                </button>
+              </div>
+            </div>
 
-      <!-- body -->
-      <div class="stack-4" style="padding:var(--space-5) var(--space-6);overflow-y:auto;flex:1;line-height:var(--leading-relaxed)">
-        <p>Hey team,</p>
-        <p>The neon grid is officially live on staging. I pushed the final gradient pass last night — every surface now pulls from <span class="font-mono">--grad-sunset</span> and the scanline overlay sits at a comfortable 6% opacity so it reads as texture, not noise. It feels exactly like the moodboard we locked back in March.</p>
-        <p>A few things I'd love your eyes on before we promote to production:</p>
-        <p>1. The reading pane glass on smaller laptops — at 1280px the blur gets a touch heavy. I think dropping saturate from 135% to 120% keeps the glow without taxing the GPU.<br />2. Sender avatars now use initials with a magenta-to-cyan ring. Kenji, can you confirm the contrast ratio passes AA on the lighter theme?<br />3. Compose modal copy is final, but the "Save draft" affordance could use a tooltip.</p>
-        <p>If everything checks out I'd like to ship Thursday morning, west-coast time, so support has the full day. Reply on this thread with a 👍 once you've reviewed your section.</p>
-        <p>Thanks for making this one feel genuinely premium — it's the cleanest launch we've had.</p>
-        <p style="margin-top:var(--space-3)">— Ava<br /><span class="text-subtle" style="font-size:var(--text-sm)">Lead Designer · Neon Collective</span></p>
-      </div>
+            <div class="row items-center gap-3" style="margin-top:var(--space-4)">
+              <span class="avatar avatar--md" aria-hidden="true">한서
+                <span class="avatar__status is-online" aria-hidden="true"></span>
+              </span>
+              <div class="stack-2" style="min-width:0">
+                <span class="row items-center gap-2">
+                  <strong>한서윤</strong>
+                  <span class="text-muted" style="font-size:var(--text-sm)">&lt;seoyoon.han@retromail.dev&gt;</span>
+                </span>
+                <span class="text-subtle" style="font-size:var(--text-sm)">받는사람: 나, 디자인팀 · 오늘 오전 9:42</span>
+              </div>
+            </div>
+          </div>
 
-      <!-- quick reply -->
-      <div style="padding:var(--space-4) var(--space-6);border-top:var(--border-1) solid var(--color-divider);flex:none">
-        <label for="quick-reply" class="sr-only">Quick reply to Ava Sinclair</label>
-        <textarea id="quick-reply" class="textarea" rows="2" placeholder="Reply to Ava…"></textarea>
-        <div class="row items-center gap-2" style="margin-top:var(--space-3)">
-          <button class="btn btn--primary" type="button">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4z" /><path d="M22 2 11 13" /></svg>
-            Send
-          </button>
-          <button class="btn btn--icon btn--ghost" type="button" aria-label="Attach file" data-tooltip="Attach file">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.4 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.2-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
-          </button>
-          <span class="text-subtle ml-auto" style="font-size:var(--text-xs)">Press ⌘↵ to send</span>
-        </div>
-      </div>
-    </article>
-  </main>
+          <div class="divider" role="separator" style="margin:0"></div>
 
-  <!-- ===================================================================== -->
-  <!-- COMPOSE MODAL                                                          -->
-  <!-- ===================================================================== -->
+          <!-- body -->
+          <div class="stack-4" style="padding:var(--space-5) var(--space-6);overflow-y:auto;flex:1;line-height:var(--leading-relaxed)">
+            <p>세훈 님, 안녕하세요.</p>
+            <p>6월 마감 정산 리포트 초안을 스테이징에 올렸어요. 월 반복매출은 <strong>₩8,420만</strong>으로 전월 대비 12.4% 올랐고, 여름 캠페인 시작 이후 최고치입니다. 대시보드 수치와도 그대로 맞춰 두었어요.</p>
+            <p>배포 전에 확인 부탁드리고 싶은 게 세 가지 있어요.</p>
+            <p>1. 읽기 창 유리 질감이 1280px 노트북에서 조금 무겁게 느껴져요. <span class="font-mono">saturate</span> 값을 135%에서 120%로 낮추면 글로우는 유지하면서 GPU 부담은 줄어듭니다.<br />2. 스캔라인 오버레이는 6% 불투명도로 두어 노이즈가 아니라 질감으로 읽히는데, 새벽(라이트) 테마에서 본문 AA 대비만 한 번 더 확인 부탁드려요.<br />3. ‘결제 실패’ 배지 문구는 확정인데, 재시도 버튼에 툴팁을 하나 붙이면 좋겠어요.</p>
+            <p>문제 없으면 목요일 오전에 배포하려고 해요. 지원팀이 하루 종일 대응할 수 있게요. 각자 담당한 부분 검토하고 이 스레드에 답장 주세요.</p>
+            <p style="margin-top:var(--space-3)">— 한서윤<br /><span class="text-subtle" style="font-size:var(--text-sm)">리드 디자이너 · 네온 콜렉티브</span></p>
+          </div>
+
+          <!-- quick reply -->
+          <div style="padding:var(--space-4) var(--space-6);border-top:var(--border-1) solid var(--color-divider);flex:none">
+            <label for="quick-reply" class="sr-only">한서윤 님에게 답장</label>
+            <textarea id="quick-reply" class="textarea" rows="2" placeholder="한서윤 님에게 답장…"></textarea>
+            <div class="row items-center gap-2" style="margin-top:var(--space-3)">
+              <button class="btn btn--primary" type="button" data-toast="success" data-toast-title="답장을 보냈어요" data-toast-msg="전송 신호를 그리드에 기록했어요.">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4z" /><path d="M22 2 11 13" /></svg>
+                보내기
+              </button>
+              <button class="btn btn--icon btn--ghost" type="button" aria-label="파일 첨부" data-tooltip="파일 첨부">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.4 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.2-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
+              </button>
+              <span class="text-subtle ml-auto" style="font-size:var(--text-xs)">⌘↵ 로 전송</span>
+            </div>
+          </div>
+        </article>
+      </main>
+    </div>
+
+    <div class="app-shell__scrim" data-sidebar-drawer-close></div>
+  </div>
+
+  <!-- ================= COMPOSE MODAL ================= -->
   <div class="modal-backdrop" id="compose">
     <div class="modal__dialog modal--window" role="dialog" aria-modal="true" aria-labelledby="compose-title">
       <div class="modal__header">
-        <h2 class="modal__title" id="compose-title">New message</h2>
-        <button class="modal__close" type="button" data-modal-close aria-label="Close compose"></button>
+        <h2 class="modal__title" id="compose-title">새 메일</h2>
+        <button class="modal__close" type="button" data-modal-close aria-label="작성 닫기"></button>
       </div>
       <div class="modal__body stack-4">
         <div class="field">
-          <span class="field__label" id="compose-to-label">To</span>
+          <span class="field__label" id="compose-to-label">받는사람</span>
           <div class="chip-input" data-chip-input role="group" aria-labelledby="compose-to-label">
-            <span class="chip"><span class="chip__label">ava@neon-collective.io</span><button class="chip__remove" type="button" aria-label="Remove ava@neon-collective.io">&times;</button></span>
-            <span class="chip"><span class="chip__label">kenji@retromail.dev</span><button class="chip__remove" type="button" aria-label="Remove kenji@retromail.dev">&times;</button></span>
-            <input class="chip-input__field" type="text" placeholder="Add recipient…" aria-label="Add recipient" />
+            <span class="chip"><span class="chip__label">seoyoon.han@retromail.dev</span><button class="chip__remove" type="button" aria-label="seoyoon.han@retromail.dev 제거">&times;</button></span>
+            <span class="chip"><span class="chip__label">ara.kim@retromail.dev</span><button class="chip__remove" type="button" aria-label="ara.kim@retromail.dev 제거">&times;</button></span>
+            <input class="chip-input__field" type="text" placeholder="받는사람 추가…" aria-label="받는사람 추가" />
           </div>
         </div>
 
         <div class="field">
-          <label class="field__label" for="compose-subject">Subject</label>
-          <input class="input" id="compose-subject" type="text" placeholder="Re: Q3 launch — neon grid is live" />
+          <label class="field__label" for="compose-subject">제목</label>
+          <input class="input" id="compose-subject" type="text" placeholder="Re: 6월 정산 리포트 검토 부탁드려요" />
         </div>
 
         <div class="field">
-          <label class="field__label" for="compose-body">Message</label>
-          <textarea class="textarea" id="compose-body" rows="7" placeholder="Write your message…"></textarea>
+          <label class="field__label" for="compose-body">내용</label>
+          <textarea class="textarea" id="compose-body" rows="7" placeholder="메시지를 입력하세요…"></textarea>
         </div>
       </div>
       <div class="modal__footer">
-        <button class="btn btn--ghost" type="button" data-modal-close>Save draft</button>
-        <button class="btn btn--primary" type="button" data-toast="success" data-toast-title="Message sent" data-toast-msg="Your transmission is on the grid." data-modal-close>
+        <button class="btn btn--ghost" type="button" data-modal-close>임시저장</button>
+        <button class="btn btn--primary" type="button" data-toast="success" data-toast-title="메일을 보냈어요" data-toast-msg="전송 신호를 그리드에 기록했어요." data-modal-close>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4z" /><path d="M22 2 11 13" /></svg>
-          Send
+          보내기
         </button>
       </div>
     </div>

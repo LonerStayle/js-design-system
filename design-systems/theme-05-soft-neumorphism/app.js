@@ -70,11 +70,28 @@
     const region = ensureToastRegion();
     const el = document.createElement("div");
     el.className = "toast " + (variant === "info" ? "" : variant);
-    el.setAttribute("role", "status");
-    el.innerHTML =
-      `<span class="toast-icon">${ICONS[variant] || ICONS.info}</span>` +
-      `<div class="toast-body"><div class="toast-title">${title}</div>${text ? `<div class="toast-text">${text}</div>` : ""}</div>` +
-      `<button class="toast-close btn-icon btn-sm btn-ghost" aria-label="닫기">${CLOSE_ICON}</button>`;
+    el.setAttribute("role", variant === "danger" ? "alert" : "status");
+    // structure via DOM; user-supplied strings go through textContent (never innerHTML).
+    const icon = document.createElement("span");
+    icon.className = "toast-icon";
+    icon.innerHTML = ICONS[variant] || ICONS.info;      // trusted constant markup
+    const body = document.createElement("div");
+    body.className = "toast-body";
+    const titleEl = document.createElement("div");
+    titleEl.className = "toast-title";
+    titleEl.textContent = title;
+    body.appendChild(titleEl);
+    if (text) {
+      const textEl = document.createElement("div");
+      textEl.className = "toast-text";
+      textEl.textContent = text;
+      body.appendChild(textEl);
+    }
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "toast-close btn-icon btn-sm btn-ghost";
+    closeBtn.setAttribute("aria-label", "닫기");
+    closeBtn.innerHTML = CLOSE_ICON;                    // trusted constant markup
+    el.append(icon, body, closeBtn);
     region.appendChild(el);
     const remove = () => {
       el.classList.add("is-leaving");
@@ -101,13 +118,22 @@
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   }
 
+  // The scrim is a single shared .overlay element, not necessarily a sibling of
+  // every panel — resolve it robustly (self → inside → prev sibling → global).
+  function findScrim(wrap) {
+    if (wrap.matches(".overlay")) return wrap;
+    const prev = wrap.previousElementSibling;
+    return $(".overlay", wrap)
+      || (prev && prev.classList.contains("overlay") ? prev : null)
+      || $(".overlay");
+  }
   function openOverlayPair(id, panelSel) {
     const wrap = document.getElementById(id);
     if (!wrap) return;
-    const scrim = wrap.matches(".overlay") ? wrap : $(".overlay", wrap) || wrap.previousElementSibling;
+    const scrim = findScrim(wrap);
     lastFocused = document.activeElement;
     wrap.classList.add("is-open");
-    if (scrim && scrim.classList.contains("overlay")) scrim.classList.add("is-open");
+    if (scrim) scrim.classList.add("is-open");
     lockScroll(true);
     const panel = $(panelSel, wrap) || wrap;
     setTimeout(() => { const t = $(FOCUSABLE, panel); if (t) t.focus(); }, 60);
@@ -117,10 +143,12 @@
     const wrap = document.getElementById(id);
     if (!wrap) return;
     wrap.classList.remove("is-open");
-    const scrim = $(".overlay", wrap) || (wrap.previousElementSibling && wrap.previousElementSibling.classList.contains("overlay") ? wrap.previousElementSibling : null);
-    if (scrim) scrim.classList.remove("is-open");
-    // only release scroll if nothing else open
-    if (!$(".modal.is-open, .drawer.is-open, .cmdk.is-open")) lockScroll(false);
+    const scrim = findScrim(wrap);
+    // only close the shared scrim + release scroll if nothing else is open
+    if (!$(".modal.is-open, .drawer.is-open, .cmdk.is-open")) {
+      if (scrim) scrim.classList.remove("is-open");
+      lockScroll(false);
+    }
     wrap.setAttribute("aria-hidden", "true");
     if (lastFocused) lastFocused.focus();
   }
@@ -131,10 +159,89 @@
   function closeDrawer(id){ closeOverlayPair(id); }
 
   /* ====================================================================== *
+   * SIDEBAR (mobile off-canvas) — below 1024px the sidebar is position:fixed
+   * OVER the content, so opening it must honor the same overlay contract as a
+   * drawer: scrim + scroll lock + focus move/trap + restore-focus + scrim /
+   * outside-click to close (§4-3 · §4-6-2). Above 1024px it is a static column
+   * and every method here is inert.
+   * ====================================================================== */
+  const Sidebar = (() => {
+    const mq = window.matchMedia("(max-width: 1024px)");
+    const offCanvas = () => mq.matches;
+    let scrim = null, trigger = null;
+    const el = () => $(".sidebar");
+    function ensureScrim() {
+      if (scrim) return scrim;
+      scrim = document.createElement("div");
+      scrim.className = "sidebar-overlay";
+      scrim.setAttribute("aria-hidden", "true");
+      scrim.addEventListener("click", () => close());   // outside/scrim click closes
+      document.body.appendChild(scrim);
+      return scrim;
+    }
+    function isOpen() { const s = el(); return !!(s && s.classList.contains("is-open")); }
+    function open(from) {
+      const s = el(); if (!s || !offCanvas() || isOpen()) return;
+      trigger = from || document.activeElement;
+      s.classList.add("is-open");
+      ensureScrim().classList.add("is-open");
+      lockScroll(true);
+      const first = $(FOCUSABLE, s);
+      setTimeout(() => { if (first) first.focus(); }, 60);
+    }
+    function close() {
+      const s = el(); if (!s || !isOpen()) return;
+      s.classList.remove("is-open");
+      if (scrim) scrim.classList.remove("is-open");
+      // release the shared scroll lock only if no other overlay still holds it
+      if (!$(".modal.is-open, .drawer.is-open, .cmdk.is-open")) lockScroll(false);
+      if (trigger && offCanvas()) trigger.focus();      // restore focus to the trigger
+      trigger = null;
+    }
+    function toggle(from) { isOpen() ? close() : open(from); }
+    // crossing up to desktop turns the drawer back into a static column —
+    // drop any overlay state so scroll-lock / scrim never linger.
+    mq.addEventListener("change", (e) => { if (!e.matches) close(); });
+    return { open, close, toggle, isOpen, offCanvas };
+  })();
+
+  /* ====================================================================== *
+   * SEGMENTED / TOGGLE-GROUP selection — writes the ARIA state that matches
+   * the button's role (radio→aria-checked, tab→aria-selected, else
+   * aria-pressed), keeps roving tabindex, and never emits an invalid combo.
+   * ====================================================================== */
+  function selectSegment(t) {
+    const wrap = t.parentElement;
+    const peers = $$("[data-segment]", wrap);
+    const role = t.getAttribute("role");
+    const stateAttr = role === "radio" ? "aria-checked" : role === "tab" ? "aria-selected" : "aria-pressed";
+    const roving = role === "radio" || role === "tab";
+    peers.forEach((b) => {
+      b.classList.remove("is-active");
+      ["aria-checked", "aria-selected", "aria-pressed"].forEach((a) => { if (b.hasAttribute(a)) b.setAttribute(a, "false"); });
+      if (roving) b.tabIndex = -1;
+    });
+    t.classList.add("is-active");
+    t.setAttribute(stateAttr, "true");
+    if (roving) t.tabIndex = 0;
+  }
+
+  /* ====================================================================== *
    * GLOBAL CLICK DELEGATION
    * ====================================================================== */
   document.addEventListener("click", (e) => {
-    const t = e.target.closest("[data-theme-toggle],[data-modal-open],[data-modal-close],[data-drawer-open],[data-drawer-close],[data-toast],[data-menu-toggle],[data-popover-toggle],[data-tab],[data-accordion],[data-sidebar-toggle],[data-collapse-sidebar],[data-cmdk-open],[data-copy],[data-segment],[data-stepper],[data-rating],[data-pricing-toggle],[data-page]");
+    const t = e.target.closest("[data-theme-toggle],[data-modal-open],[data-modal-close],[data-drawer-open],[data-drawer-close],[data-toast],[data-toast-title],[data-menu-toggle],[data-popover-toggle],[data-tab],[data-accordion],[data-sidebar-toggle],[data-collapse-sidebar],[data-cmdk-open],[data-copy],[data-segment],[data-stepper],[data-rating],[data-pricing-toggle],[data-page]");
+
+    /* declarative toast (replaces inline onclick) — fires as a side-effect so a
+       button can BOTH close an overlay and confirm with a toast */
+    if (t && t.hasAttribute("data-toast-title")) {
+      toast({
+        title: t.getAttribute("data-toast-title"),
+        text: t.getAttribute("data-toast-text") || "",
+        variant: t.getAttribute("data-toast-variant") || "info",
+      });
+      /* fall through — don't return */
+    }
 
     /* theme */
     if (t && t.hasAttribute("data-theme-toggle")) { Theme.toggle(); return; }
@@ -162,10 +269,8 @@
     /* command palette */
     if (t && t.hasAttribute("data-cmdk-open")) { CmdK.open(); return; }
 
-    /* sidebar (mobile drawer) */
-    if (t && t.hasAttribute("data-sidebar-toggle")) {
-      const sb = $(".sidebar"); if (sb) sb.classList.toggle("is-open"); return;
-    }
+    /* sidebar (mobile off-canvas drawer) — full overlay contract via Sidebar */
+    if (t && t.hasAttribute("data-sidebar-toggle")) { Sidebar.toggle(t); return; }
     /* sidebar collapse (desktop) */
     if (t && t.hasAttribute("data-collapse-sidebar")) {
       const shell = $(".app-shell"); if (shell) shell.classList.toggle("collapsed"); return;
@@ -206,9 +311,7 @@
 
     /* segmented / button-group active swap */
     if (t && t.hasAttribute("data-segment")) {
-      const wrap = t.parentElement;
-      $$("[data-segment]", wrap).forEach((b) => { b.classList.remove("is-active"); b.setAttribute("aria-selected", "false"); b.setAttribute("aria-pressed", "false"); });
-      t.classList.add("is-active"); t.setAttribute("aria-selected", "true"); t.setAttribute("aria-pressed", "true");
+      selectSegment(t);
       const tgt = t.getAttribute("data-segment");
       if (tgt && tgt !== "true") document.dispatchEvent(new CustomEvent("nm:segment", { detail: { value: tgt, el: t } }));
       // a segmented control may ALSO double as the pricing period toggle
@@ -301,6 +404,38 @@
       else if (e.key === "End") i = tabs.length - 1;
       e.preventDefault(); activateTab(tabs[i]);
     });
+  });
+
+  /* roving arrow-key nav for segmented radiogroups (일/주/월, 정렬 등) */
+  $$('[role="radiogroup"]').forEach((group) => {
+    const radios = $$('[role="radio"]', group);
+    if (!radios.length) return;
+    group.addEventListener("keydown", (e) => {
+      const i = radios.indexOf(document.activeElement);
+      if (i < 0) return;
+      let n = null;
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") n = (i + 1) % radios.length;
+      else if (e.key === "ArrowLeft" || e.key === "ArrowUp") n = (i - 1 + radios.length) % radios.length;
+      else if (e.key === "Home") n = 0;
+      else if (e.key === "End") n = radios.length - 1;
+      if (n === null) return;
+      e.preventDefault(); radios[n].focus(); selectSegment(radios[n]);
+    });
+  });
+
+  /* ====================================================================== *
+   * SIGNATURE tactile orb — sinks on press, springs back with overshoot
+   * ====================================================================== */
+  $$(".nm-orb").forEach((orb) => {
+    if (prefersReduced) return;
+    const spring = () => {
+      orb.classList.remove("is-springing");
+      void orb.offsetWidth;            // reflow so rapid presses retrigger
+      orb.classList.add("is-springing");
+    };
+    orb.addEventListener("pointerup", spring);
+    orb.addEventListener("keyup", (e) => { if (e.key === "Enter" || e.key === " ") spring(); });
+    orb.addEventListener("animationend", () => orb.classList.remove("is-springing"));
   });
 
   /* ====================================================================== *
@@ -495,14 +630,16 @@
       const d = $(".drawer.is-open"); if (d) { closeDrawer(d.id); return; }
       if ($(".cmdk.is-open")) { CmdK.close(); return; }
       closeAllFloaters();
-      const sb = $(".sidebar.is-open"); if (sb) sb.classList.remove("is-open");
+      if (Sidebar.isOpen()) { Sidebar.close(); return; }
     }
   });
-  // focus trap for open modal/drawer
+  // focus trap for open modal / drawer / off-canvas sidebar
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Tab") return;
     const open = $(".modal.is-open .modal-dialog, .drawer.is-open");
-    if (open) trapFocus(open, e);
+    if (open) { trapFocus(open, e); return; }
+    const sb = $(".sidebar.is-open");
+    if (sb && Sidebar.offCanvas()) trapFocus(sb, e);
   });
 
   /* ====================================================================== *

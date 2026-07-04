@@ -1,19 +1,37 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+/* apply saved theme before first paint (no light flash) + mark JS available */
+(function () {
+  try {
+    var t = localStorage.getItem("nm-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+  document.documentElement.classList.add("js");
+})();
+</script>
 <title>인박스 · Soft Neumorphism</title>
 <link rel="stylesheet" href="../theme.css" />
 <style>
-  /* ===== 3-panel inbox layout ===== */
+  /* navbar search is a button that opens the palette — no dead input */
+  .searchbar-trigger { display:flex; align-items:center; gap:var(--space-2); text-align:left; cursor:pointer; color:var(--color-text-muted); font-weight:var(--weight-medium); }
+  .searchbar-trigger .kbd { margin-left:auto; }
+
+  /* ===== 3-panel inbox layout (folder / list / reading) ===== */
   .inbox-grid {
     display: grid;
     grid-template-columns: 220px 360px 1fr;
+    grid-template-areas: "folder list reading";
     gap: var(--space-5);
     align-items: start;
-    height: 100%;
   }
+  .folder-panel  { grid-area: folder; }
+  .list-panel    { grid-area: list; }
+  .reading-panel { grid-area: reading; }
   .inbox-panel { min-width: 0; }
 
   /* 폴더 패널 */
@@ -62,14 +80,21 @@
   .file-chip svg { width:1.1rem; height:1.1rem; color: var(--color-primary); flex:0 0 auto; }
   .reply-box { margin-top: var(--space-5); }
 
-  /* ===== responsive ===== */
+  /* ===== responsive — panels re-stack, none ever disappears ===== */
   @media (max-width: 1100px) {
-    .inbox-grid { grid-template-columns: 200px 1fr; }
-    .reading-panel { display:none; }
+    .inbox-grid {
+      grid-template-columns: 240px 1fr;
+      grid-template-areas: "folder list" "reading reading";
+    }
   }
   @media (max-width: 760px) {
-    .inbox-grid { grid-template-columns: 1fr; }
-    .folder-panel { display:none; }
+    .inbox-grid {
+      grid-template-columns: 1fr;
+      grid-template-areas: "folder" "list" "reading";
+    }
+    /* folders collapse into a compact chip row so mail is reachable fast */
+    .folder-panel .folder-list { flex-direction: row; flex-wrap: wrap; }
+    .folder-panel .folder-list .nav-item { width: auto; gap: var(--space-2); }
   }
 </style>
 </head>
@@ -93,7 +118,7 @@
       <div class="sidebar-label">계정</div>
       <a class="nav-item" href="profile.html"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg></span><span class="ni-text">프로필</span></a>
       <a class="nav-item" href="settings.html"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9 2 2 0 1 1-2.8 2.8 1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2 2 2 0 1 1-2.8-2.8A1.7 1.7 0 0 0 2 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.2-2.9 2 2 0 1 1 2.8-2.8A1.7 1.7 0 0 0 9 4.6a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.2 2 2 0 1 1 2.8 2.8A1.7 1.7 0 0 0 22 11a2 2 0 1 1 0 4Z"/></svg></span><span class="ni-text">설정</span></a>
-    </nav>
+    </div>
     <div class="sidebar-footer">
       <a class="user-chip" href="profile.html">
         <span class="avatar avatar-sm">JS<span class="presence online"></span></span>
@@ -109,7 +134,7 @@
       <button class="btn btn-icon btn-ghost md:hidden" data-collapse-sidebar aria-label="사이드바 접기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M3 12h12M3 18h18"/></svg></button>
       <div class="searchbar flex-1" style="max-width:420px">
         <span class="search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
-        <input class="input" placeholder="메일 검색하거나 ⌘K 를 누르세요" aria-label="메일 검색" onfocus="NM.cmdk.open();this.blur()" />
+        <button class="input searchbar-trigger" type="button" data-cmdk-open aria-label="검색 열기">메일·사람 검색 <span class="kbd">⌘K</span></button>
       </div>
       <div class="flex items-center gap-2" style="margin-left:auto">
         <button class="theme-toggle" data-theme-toggle aria-label="테마 전환">
@@ -127,35 +152,35 @@
         <aside class="inbox-panel folder-panel" aria-label="폴더">
           <div class="card card-sm">
             <nav class="folder-list" aria-label="메일 폴더">
-              <a class="nav-item is-active" href="#" aria-current="page">
+              <button type="button" class="nav-item is-active" aria-current="true">
                 <span class="flex items-center gap-2"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="m3 7 9 6 9-6"/></svg></span><span class="ni-text">받은편지함</span></span>
                 <span class="badge-count">12</span>
-              </a>
-              <a class="nav-item" href="#">
+              </button>
+              <button type="button" class="nav-item">
                 <span class="flex items-center gap-2"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 18l-5.8 3 1.1-6.5L2.6 9.8l6.5-.9Z"/></svg></span><span class="ni-text">별표</span></span>
-              </a>
-              <a class="nav-item" href="#">
+              </button>
+              <button type="button" class="nav-item">
                 <span class="flex items-center gap-2"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-8-8 18-2-7-8-3Z"/></svg></span><span class="ni-text">보낸편지함</span></span>
-              </a>
-              <a class="nav-item" href="#">
+              </button>
+              <button type="button" class="nav-item">
                 <span class="flex items-center gap-2"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5M8 13h8M8 17h8M8 9h2"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/></svg></span><span class="ni-text">임시보관</span></span>
                 <span class="badge-count">3</span>
-              </a>
-              <a class="nav-item" href="#">
+              </button>
+              <button type="button" class="nav-item">
                 <span class="flex items-center gap-2"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></span><span class="ni-text">스팸</span></span>
-              </a>
-              <a class="nav-item" href="#">
+              </button>
+              <button type="button" class="nav-item">
                 <span class="flex items-center gap-2"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></span><span class="ni-text">휴지통</span></span>
-              </a>
+              </button>
             </nav>
           </div>
 
           <div class="card card-sm mt-4">
             <div class="sidebar-label" style="padding-left:var(--space-2)">라벨</div>
             <nav class="folder-list" aria-label="라벨">
-              <a class="nav-item" href="#"><span class="flex items-center gap-2"><span class="label-dot" style="background:var(--color-primary)"></span><span class="ni-text">업무</span></span></a>
-              <a class="nav-item" href="#"><span class="flex items-center gap-2"><span class="label-dot" style="background:var(--color-accent)"></span><span class="ni-text">개인</span></span></a>
-              <a class="nav-item" href="#"><span class="flex items-center gap-2"><span class="label-dot" style="background:var(--amber-500)"></span><span class="ni-text">뉴스레터</span></span></a>
+              <button type="button" class="nav-item"><span class="flex items-center gap-2"><span class="label-dot" style="background:var(--color-primary)"></span><span class="ni-text">업무</span></span></button>
+              <button type="button" class="nav-item"><span class="flex items-center gap-2"><span class="label-dot" style="background:var(--color-accent)"></span><span class="ni-text">개인</span></span></button>
+              <button type="button" class="nav-item"><span class="flex items-center gap-2"><span class="label-dot" style="background:var(--amber-500)"></span><span class="ni-text">뉴스레터</span></span></button>
             </nav>
           </div>
         </aside>
@@ -170,10 +195,10 @@
             <span class="search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
             <input class="input" placeholder="이 폴더에서 검색" aria-label="폴더 내 검색" />
           </div>
-          <div class="segmented mt-3 w-full" role="group" aria-label="정렬">
-            <button data-segment="true" class="is-active" aria-selected="true">최신순</button>
-            <button data-segment="true" aria-selected="false">안읽음</button>
-            <button data-segment="true" aria-selected="false">별표</button>
+          <div class="segmented mt-3 w-full" role="radiogroup" aria-label="정렬">
+            <button data-segment="true" role="radio" class="is-active" aria-checked="true" tabindex="0">최신순</button>
+            <button data-segment="true" role="radio" aria-checked="false" tabindex="-1">안읽음</button>
+            <button data-segment="true" role="radio" aria-checked="false" tabindex="-1">별표</button>
           </div>
 
           <div class="mail-list stagger">
@@ -294,10 +319,10 @@
                 </div>
               </div>
               <div class="reading-actions">
-                <button class="btn btn-icon btn-secondary" aria-label="별표" onclick="NM.toast({title:'별표 표시됨',variant:'success'})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 18l-5.8 3 1.1-6.5L2.6 9.8l6.5-.9Z"/></svg></button>
-                <button class="btn btn-icon btn-secondary" aria-label="답장" onclick="document.getElementById('reply-text').focus()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17 4 12l5-5M4 12h11a5 5 0 0 1 5 5v1"/></svg></button>
-                <button class="btn btn-icon btn-secondary" aria-label="전달" onclick="NM.toast({title:'전달 준비됨',variant:'info'})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 17 5-5-5-5M20 12H9a5 5 0 0 0-5 5v1"/></svg></button>
-                <button class="btn btn-icon btn-danger" aria-label="삭제" onclick="NM.toast({title:'휴지통으로 이동',variant:'warning'})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+                <button class="btn btn-icon btn-secondary" aria-label="별표" data-toast-title="별표에 담았어요" data-toast-text="'별표' 폴더에서 다시 볼 수 있어요." data-toast-variant="success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 18l-5.8 3 1.1-6.5L2.6 9.8l6.5-.9Z"/></svg></button>
+                <a class="btn btn-icon btn-secondary" href="#reply-text" aria-label="답장"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17 4 12l5-5M4 12h11a5 5 0 0 1 5 5v1"/></svg></a>
+                <button class="btn btn-icon btn-secondary" aria-label="전달" data-toast-title="전달할 준비가 됐어요" data-toast-text="받는 사람만 정하면 바로 보낼 수 있어요." data-toast-variant="info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 17 5-5-5-5M20 12H9a5 5 0 0 0-5 5v1"/></svg></button>
+                <button class="btn btn-icon btn-danger" aria-label="삭제" data-toast-title="휴지통으로 옮겼어요" data-toast-text="30일 동안 보관돼요 · 되돌리기" data-toast-variant="warning"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
               </div>
             </div>
 
@@ -336,7 +361,7 @@
               </div>
               <div class="flex items-center justify-between gap-2 mt-3">
                 <button class="btn btn-icon btn-ghost" aria-label="파일 첨부"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.4 11.1 12.3 20.2a5 5 0 0 1-7.1-7.1l9-9a3 3 0 1 1 4.3 4.3l-9.1 9a1 1 0 0 1-1.4-1.4l8.4-8.4"/></svg></button>
-                <button class="btn btn-primary" onclick="NM.toast({title:'전송됨',text:'답장을 보냈습니다.',variant:'success'})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-8-8 18-2-7-8-3Z"/></svg> 보내기</button>
+                <button class="btn btn-primary" data-toast-title="답장을 보냈어요" data-toast-text="유나래 님에게 전송했어요." data-toast-variant="success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-8-8 18-2-7-8-3Z"/></svg> 보내기</button>
               </div>
             </div>
           </div>
@@ -358,13 +383,13 @@
       <button class="btn btn-icon btn-sm btn-ghost" data-modal-close aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
     <div class="modal-body stack">
-      <div class="field"><label class="label" for="c-to">받는사람</label><input class="input" id="c-to" type="email" placeholder="name@example.com" /></div>
+      <div class="field"><label class="label" for="c-to">받는사람</label><input class="input" id="c-to" type="email" placeholder="이름@jinju-ict.com" /></div>
       <div class="field"><label class="label" for="c-subject">제목</label><input class="input" id="c-subject" placeholder="제목을 입력하세요" /></div>
       <div class="field"><label class="label" for="c-body">본문</label><textarea class="textarea" id="c-body" rows="6" placeholder="내용을 입력하세요…"></textarea></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" data-modal-close onclick="NM.toast({title:'임시저장됨',text:'임시보관함에 저장했습니다.',variant:'info'})">임시저장</button>
-      <button class="btn btn-primary" data-modal-close onclick="NM.toast({title:'전송됨',variant:'success'})">보내기</button>
+      <button class="btn btn-ghost" data-modal-close data-toast-title="임시보관함에 저장했어요" data-toast-text="이어서 쓰려면 임시보관함에서 열어보세요." data-toast-variant="info">임시저장</button>
+      <button class="btn btn-primary" data-modal-close data-toast-title="메일을 보냈어요" data-toast-variant="success">보내기</button>
     </div>
   </div>
 </div>

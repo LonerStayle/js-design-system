@@ -78,7 +78,9 @@ summary { cursor: pointer; }
 :focus-visible {
   outline: none;
   box-shadow: var(--ring-pink);
-  border-radius: var(--radius-sm);
+  /* ring follows the element's own shape — no forced 6px corners on
+     pill buttons, switch tracks or circular avatars (the box-shadow
+     halo already conforms to whatever border-radius the target has). */
   position: relative;
   z-index: var(--z-raised);
 }
@@ -117,7 +119,7 @@ a:not([class]) {
 a:not([class]):hover { color: var(--magenta-300); }
 
 /* serif accent — for statuesque / classical flavour pull-quotes & eyebrows */
-.font-serif { font-family: var(--font-serif); font-weight: var(--weight-500, 500); }
+.font-serif { font-family: var(--font-serif); font-weight: var(--weight-medium); }
 .font-display { font-family: var(--font-display); }
 .font-mono { font-family: var(--font-mono); }
 
@@ -417,6 +419,32 @@ a:not([class]):hover { color: var(--magenta-300); }
 .reveal-5 { animation-delay: 0.45s; } .reveal-6 { animation-delay: 0.55s; }
 @keyframes reveal-up { to { opacity: 1; transform: translateY(0); } }
 
+/* ---- scroll reveal — "signal lock-in" (vaporwave physics, not plain fade-up)
+   Content arrives slightly de-tuned (blurred + chromatically nudged) and snaps
+   into focus as it scrolls in. Gated on html.js so a JS failure never leaves
+   content hidden; app.js adds .is-visible per element via IntersectionObserver.
+   A no-JS failsafe (html.reveal-fallback, set by the head boot check) force-
+   reveals everything if app.js never ran. ------------------------------------ */
+html.js [data-reveal] {
+  opacity: 0;
+  transform: translateY(22px);
+  filter: blur(6px);
+  transition:
+    opacity var(--duration-slow) var(--ease-emphasized),
+    transform var(--duration-slow) var(--ease-emphasized),
+    filter var(--duration-base) var(--ease-standard);
+}
+html.js [data-reveal].is-visible {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+html.reveal-fallback [data-reveal] {
+  opacity: 1 !important;
+  transform: none !important;
+  filter: none !important;
+}
+
 /* ============================================================================
    RESPONSIVE
    ========================================================================== */
@@ -438,6 +466,101 @@ a:not([class]):hover { color: var(--magenta-300); }
 }
 
 /* ============================================================================
+   VHS BOOT SEQUENCE — the signature "한 방"
+   ----------------------------------------------------------------------------
+   On first paint app.js injects <div class="vhs-boot"> once. A tracking-error
+   glitch (horizontal slices tear + chromatic split) sweeps the screen while a
+   mono OSD tape counter reads out, then the whole thing fades. Reuses the
+   aberration/scanline DNA tokens. aria-hidden + pointer-events:none — never
+   traps focus, never intercepts clicks. Under reduced-motion it degrades to a
+   static OSD chip that fades (glitch removed).
+   ========================================================================== */
+.vhs-boot {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-max);
+  pointer-events: none;
+  overflow: hidden;
+  animation: vhs-boot-out var(--duration-slow) var(--ease-standard) 1.5s forwards;
+}
+/* the torn scanline field that sweeps down once */
+.vhs-boot__glitch {
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(180deg,
+      rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px,
+      rgba(0,0,0,0.55) 3px),
+    linear-gradient(180deg,
+      transparent 0%,
+      rgba(255,106,213,0.10) 48%,
+      rgba(45,226,230,0.10) 52%,
+      transparent 100%);
+  mix-blend-mode: screen;
+  animation: vhs-tear 0.45s steps(3) 3, vhs-sweep 1.5s var(--ease-standard) 1;
+}
+/* mono OSD tape read-out, top-left like a camcorder */
+.vhs-boot__osd {
+  position: absolute;
+  top: clamp(var(--space-4), 6vh, var(--space-10));
+  left: clamp(var(--space-4), 5vw, var(--space-10));
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-text-strong);
+  background: rgba(12, 8, 24, 0.55);
+  border: var(--border-1) solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  text-shadow: var(--shadow-rgb-split);
+  box-shadow: var(--glow-magenta);
+}
+.vhs-boot__osd::before {
+  content: "";
+  width: 0.7em; height: 0.7em;
+  background: var(--color-danger);
+  border-radius: var(--radius-full);
+  box-shadow: var(--glow-coral);
+  animation: vhs-rec 0.9s steps(2) infinite;
+}
+.vhs-boot__badge {
+  color: var(--color-accent);
+  font-weight: var(--weight-semibold);
+}
+@keyframes vhs-tear {
+  0%   { transform: translateX(0); }
+  33%  { transform: translateX(-4px); clip-path: inset(18% 0 62% 0); }
+  66%  { transform: translateX(5px);  clip-path: inset(54% 0 28% 0); }
+  100% { transform: translateX(0); clip-path: inset(0 0 0 0); }
+}
+@keyframes vhs-sweep {
+  from { opacity: 0.9; background-position: 0 -100%; }
+  to   { opacity: 0.15; background-position: 0 120%; }
+}
+@keyframes vhs-rec { 0% { opacity: 1; } 50% { opacity: 0.2; } 100% { opacity: 1; } }
+@keyframes vhs-boot-out { to { opacity: 0; visibility: hidden; } }
+
+/* ============================================================================
+   HANGUL REFINEMENT LAYER (§5-A) — base values, theme tokens only.
+   Premise: <html lang="ko"> + the corrected font-stack order in tokens.css.
+   ========================================================================== */
+:lang(ko) { word-break: keep-all; overflow-wrap: break-word; line-break: strict; }
+:lang(ko) h1 { line-height: var(--leading-display-ko); }
+:lang(ko) :is(h2, h3, h4, h5, h6) { line-height: var(--leading-heading-ko); }
+:lang(ko) :is(.text-neon, .text-chrome, .text-aberration, .display-serif) { line-height: var(--leading-display-ko); }
+/* Do Hyeon / Gothic A1 are single-weight — never let the browser fake bolds.
+   Latin runs (Orbitron etc.) keep their real 700/900; Hangul uses the real 400. */
+:lang(ko) :is(h1, h2, h3, h4, h5, h6, .btn, .stat-card__value, .display-serif) { font-synthesis-weight: none; }
+/* cap the 0.28em Latin eyebrow tracking for Hangul */
+:lang(ko) .eyebrow { letter-spacing: var(--tracking-caps-ko); }
+/* Hangul has no italics — express emphasis by weight instead */
+:lang(ko) :is(em, i, cite) { font-style: normal; font-weight: var(--weight-semibold); }
+:lang(ko) :is(.table td, .stat-card__value, .price, .pagination__info) { font-variant-numeric: tabular-nums lining-nums; }
+
+/* ============================================================================
    REDUCED MOTION — freeze ALL ambient drift, flicker, shimmer & aberration
    ========================================================================== */
 @media (prefers-reduced-motion: reduce) {
@@ -456,4 +579,7 @@ a:not([class]):hover { color: var(--magenta-300); }
   .text-aberration:hover::before,
   .text-aberration:hover::after { animation: none !important; }
   .reveal { opacity: 1 !important; transform: none !important; animation: none !important; }
+  html.js [data-reveal] { opacity: 1 !important; transform: none !important; filter: none !important; transition: none !important; }
+  .vhs-boot { animation: none !important; }
+  .vhs-boot__glitch { display: none !important; }
 }

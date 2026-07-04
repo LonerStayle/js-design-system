@@ -99,7 +99,8 @@ ContextMenu, Steps/Wizard.
 | profile.html | ✅ | banner + avatar, stats, activity timeline, badges, edit drawer |
 | 404.html | ✅ | chromatic-aberration "404" hero + EmptyState gallery |
 | All interactions real (modal/drawer/toast/tabs/toggle/⌘K/dark mode/grid scroll) | ✅ | wired in `app.js` |
-| All responsive, filled with realistic data | ✅ | breakpoints at 1024/768/480; no lorem ipsum |
+| Responsive layout (mobile-first) | ⚠️ | app-shell sidebar → off-canvas left drawer + scrim + `.sidebar-drawer-toggle` at ≤900px (nav.css:394–449); navbar collapses at 768px (nav.css:680); page grids collapse at 560 (404) · 640 (kanban) · 720/900 (product) · 768/900 (dashboard) · 900 (profile) · 768 (pricing) · 1000 (inbox 3-pane). Breakpoints verified in source; render eyeballed via headless Chrome on index/dashboard/pricing/404 (see §H) — a full 360/768/1024/1440 × light/dark sweep across all 10 pages is not yet re-attested. |
+| Data realism | ✅ | Korean names·₩·domestic-service context throughout; no lorem ipsum |
 
 ---
 

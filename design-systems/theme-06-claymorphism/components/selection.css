@@ -13,6 +13,9 @@
 .checkbox input, .radio input {
   position: absolute; opacity: 0; width: 1px; height: 1px;
 }
+/* 숨은 입력엔 전역 outline 을 끈다 — 링은 형제 박스(.checkbox__box 등)가 그린다 */
+.checkbox input:focus-visible, .radio input:focus-visible,
+.switch input:focus-visible, .segmented__option input:focus-visible { outline: none; }
 .checkbox__box, .radio__box {
   flex-shrink: 0;
   display: grid; place-items: center;
@@ -78,10 +81,14 @@
   border-radius: var(--radius-full);
   background: var(--toggle-thumb);
   box-shadow: var(--shadow-clay-sm);
-  transition: transform var(--duration-base) var(--ease-spring);
+  transition: transform var(--duration-base) var(--ease-spring),
+              width var(--duration-fast) var(--ease-emphasized);
 }
 .switch input:checked + .switch__track { background: var(--toggle-track-on); }
 .switch input:checked + .switch__track .switch__thumb { transform: translateX(1.5rem); }
+/* 젤리 드래그 — 누르는 동안 thumb 가 가로로 늘어났다가 떼면 붙는다 */
+.switch:active .switch__thumb { width: 2rem; }
+.switch:active input:checked + .switch__track .switch__thumb { transform: translateX(1.06rem); }
 .switch input:focus-visible + .switch__track { box-shadow: var(--shadow-clay-pressed), 0 0 0 var(--ring-width) var(--color-ring); }
 .switch input:disabled + .switch__track { opacity: 0.5; }
 /* 작은 사이즈 */
@@ -126,7 +133,7 @@
     linear-gradient(to right, var(--color-primary) 0 var(--val, 50%), transparent var(--val, 50%)),
     var(--color-surface-sunken);
   box-shadow: var(--shadow-clay-pressed);
-  cursor: pointer; outline: none;
+  cursor: pointer;
 }
 .slider::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
@@ -144,20 +151,34 @@
   border: 4px solid var(--color-primary); cursor: grab;
 }
 .slider::-moz-range-progress { background: var(--color-primary); height: 0.95rem; border-radius: var(--radius-full); }
-.slider:focus-visible { box-shadow: var(--shadow-clay-pressed), 0 0 0 var(--ring-width) var(--color-ring); }
+.slider:focus-visible { box-shadow: var(--shadow-clay-pressed); }   /* 링은 전역 outline */
 .slider__labels { display: flex; justify-content: space-between; font-size: var(--text-sm); color: var(--color-text-muted); font-weight: var(--weight-bold); }
 
-/* ---- Rating (별점) ---- */
-.rating { display: inline-flex; gap: var(--space-1); }
+/* ---- Rating (별점) ----
+   두 모드: 입력용(.rating--interactive, role=radiogroup + 방향키) /
+            표시용(.rating--display, role=img + 소수점 부분 채움 · 클릭 불가) */
+.rating { display: inline-flex; gap: var(--space-1); position: relative; }
 .rating__star {
-  color: var(--neutral-300); display: inline-flex;
+  color: var(--neutral-300); display: inline-flex; background: none; padding: 0;
   transition: transform var(--duration-fast) var(--ease-emphasized), color var(--duration-fast) var(--ease-out);
 }
 .rating__star .icon { width: 1.7em; height: 1.7em; }
-.rating__star:hover { transform: scale(1.2) rotate(-6deg); }
+.rating--interactive .rating__star { cursor: pointer; }
+.rating--interactive .rating__star:hover { transform: scale(1.2) rotate(-6deg); }
 .rating__star.is-filled { color: var(--yellow-400); }
 .rating__star.is-filled .icon { fill: var(--yellow-400); stroke: var(--yellow-500); }
 [data-theme="dark"] .rating__star { color: var(--neutral-700); }
+
+/* 표시용 부분 채움 — 회색 별 트랙 위에 노란 별 오버레이를 width% 로 클리핑 */
+.rating--display { display: inline-flex; }
+.rating__base, .rating__overlay { display: inline-flex; gap: var(--space-1); flex-wrap: nowrap; }
+.rating__base { color: var(--neutral-300); }
+[data-theme="dark"] .rating__base { color: var(--neutral-700); }
+.rating__overlay {
+  position: absolute; inset: 0; overflow: hidden; white-space: nowrap;
+  width: var(--fill, 0%); color: var(--yellow-400); pointer-events: none;
+}
+.rating__overlay .rating__star .icon { fill: var(--yellow-400); stroke: var(--yellow-500); }
 
 /* ---- ChipInput ---- */
 .chip-input {
@@ -168,6 +189,7 @@
   box-shadow: var(--input-shadow);
 }
 .chip-input:focus-within { box-shadow: var(--input-shadow), 0 0 0 var(--ring-width) var(--color-ring); }
+.chip-input input:focus-visible { outline: none; }   /* 링은 래퍼(.chip-input)가 그린다 */
 .chip-input input {
   flex: 1; min-width: 6rem; border: none; background: transparent; outline: none;
   font-weight: var(--weight-semibold); color: var(--color-text); font-family: var(--font-body);
@@ -181,7 +203,7 @@
   background: var(--color-surface-sunken); border-radius: var(--input-radius);
   box-shadow: var(--input-shadow); cursor: pointer;
 }
-.multiselect__control:focus-visible,
+/* 열림 인디케이터는 box-shadow 링, 키보드 포커스 링은 전역 outline 이 담당 */
 .multiselect.is-open .multiselect__control { box-shadow: var(--input-shadow), 0 0 0 var(--ring-width) var(--color-ring); }
 .multiselect__placeholder { color: var(--input-placeholder); font-weight: var(--weight-medium); }
 .multiselect__menu {
@@ -199,4 +221,6 @@
 @media (prefers-reduced-motion: reduce) {
   .checkbox:hover .checkbox__box, .radio:hover .radio__box,
   .rating__star:hover { transform: none; }
+  .switch:active .switch__thumb { width: 1.56rem; }
+  .switch--sm:active .switch__thumb { width: 1.15rem; }
 }

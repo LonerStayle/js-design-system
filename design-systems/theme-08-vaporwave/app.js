@@ -47,6 +47,31 @@
     }
   }
 
+  // VHS boot sequence — the signature "한 방". Plays once per page load, then
+  // removes itself. aria-hidden + pointer-events:none, so it never traps focus
+  // or blocks clicks. Under reduced-motion CSS strips the glitch to a still OSD.
+  function injectBootSequence() {
+    if ($(".vhs-boot")) return;
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, "0");
+    const boot = document.createElement("div");
+    boot.className = "vhs-boot";
+    boot.setAttribute("aria-hidden", "true");
+    boot.innerHTML =
+      '<div class="vhs-boot__glitch"></div>' +
+      '<div class="vhs-boot__osd">' +
+        '<span class="vhs-boot__badge">▶ PLAY</span>' +
+        '<span>SP</span>' +
+        '<span>0:00:' + hh + '</span>' +
+        '<span>1988 – 2049</span>' +
+      '</div>';
+    document.body.appendChild(boot);
+    // hard-remove after the fade so it can't linger in the a11y tree
+    const kill = () => boot.remove();
+    boot.addEventListener("animationend", (e) => { if (e.animationName === "vhs-boot-out") kill(); });
+    setTimeout(kill, REDUCE_MOTION ? 1400 : 2400);
+  }
+
   // gentle pointer parallax on the sun / grid (off under reduced-motion)
   function initParallax() {
     if (REDUCE_MOTION) return;
@@ -79,7 +104,7 @@
     $$("[data-theme-toggle]").forEach((b) => {
       b.setAttribute("aria-pressed", String(t === "light"));
       const lbl = b.querySelector("[data-theme-label]");
-      if (lbl) lbl.textContent = t === "light" ? "Dawn" : "Dusk";
+      if (lbl) lbl.textContent = t === "light" ? "새벽" : "저녁";
     });
     document.dispatchEvent(new CustomEvent("vw:themechange", { detail: { theme: t } }));
   }
@@ -195,7 +220,7 @@
       r = document.createElement("div");
       r.className = "toast-region";
       r.setAttribute("role", "region");
-      r.setAttribute("aria-label", "Notifications");
+      r.setAttribute("aria-label", "알림");
       r.setAttribute("aria-live", "polite");
       document.body.appendChild(r);
     }
@@ -215,7 +240,7 @@
         (opts.title ? '<div class="toast__title">' + esc(opts.title) + '</div>' : '') +
         (opts.message ? '<div class="toast__msg">' + esc(opts.message) + '</div>' : '') +
       '</div>' +
-      '<button class="toast__close" aria-label="Dismiss">&times;</button>' +
+      '<button class="toast__close" aria-label="닫기">&times;</button>' +
       (dur > 0 ? '<span class="toast__progress"></span>' : '');
     r.appendChild(t);
     const remove = () => {
@@ -242,8 +267,8 @@
       e.preventDefault();
       toast({
         variant: b.getAttribute("data-toast") || "info",
-        title: b.getAttribute("data-toast-title") || "Signal received",
-        message: b.getAttribute("data-toast-msg") || "Transmission logged to the grid.",
+        title: b.getAttribute("data-toast-title") || "신호 수신됨",
+        message: b.getAttribute("data-toast-msg") || "그리드에 기록했어요.",
       });
     });
   }
@@ -403,18 +428,18 @@
   /* 11 · COMMAND PALETTE (⌘K)                                               */
   /* ---------------------------------------------------------------------- */
   const DEFAULT_COMMANDS = [
-    { group: "Navigate", label: "Dashboard",        icon: grid(), href: "pages/dashboard.html" },
-    { group: "Navigate", label: "Kanban Board",     icon: grid(), href: "pages/kanban.html" },
-    { group: "Navigate", label: "Inbox",            icon: grid(), href: "pages/inbox.html" },
-    { group: "Navigate", label: "Product",          icon: grid(), href: "pages/product.html" },
-    { group: "Navigate", label: "Pricing",          icon: grid(), href: "pages/pricing.html" },
-    { group: "Navigate", label: "Settings",         icon: grid(), href: "pages/settings.html" },
-    { group: "Navigate", label: "Onboarding",       icon: grid(), href: "pages/onboarding.html" },
-    { group: "Navigate", label: "Profile",          icon: grid(), href: "pages/profile.html" },
-    { group: "Navigate", label: "Component Gallery", icon: grid(), href: "index.html" },
-    { group: "Actions",  label: "Toggle Dusk / Dawn theme", icon: spark(), action: toggleTheme, shortcut: "T" },
-    { group: "Actions",  label: "Scroll to top",     icon: spark(), action: () => window.scrollTo({ top: 0, behavior: REDUCE_MOTION ? "auto" : "smooth" }) },
-    { group: "Actions",  label: "Fire a test toast", icon: spark(), action: () => toast({ variant: "success", title: "Hello from the grid", message: "The command palette works." }) },
+    { group: "이동", label: "대시보드",        icon: grid(), href: "pages/dashboard.html" },
+    { group: "이동", label: "칸반 보드",       icon: grid(), href: "pages/kanban.html" },
+    { group: "이동", label: "받은 편지함",     icon: grid(), href: "pages/inbox.html" },
+    { group: "이동", label: "상품 상세",       icon: grid(), href: "pages/product.html" },
+    { group: "이동", label: "요금제",          icon: grid(), href: "pages/pricing.html" },
+    { group: "이동", label: "설정",            icon: grid(), href: "pages/settings.html" },
+    { group: "이동", label: "온보딩",          icon: grid(), href: "pages/onboarding.html" },
+    { group: "이동", label: "프로필",          icon: grid(), href: "pages/profile.html" },
+    { group: "이동", label: "컴포넌트 갤러리", icon: grid(), href: "index.html" },
+    { group: "실행", label: "저녁·새벽 테마 전환", icon: spark(), action: toggleTheme, shortcut: "T" },
+    { group: "실행", label: "맨 위로 이동",     icon: spark(), action: () => window.scrollTo({ top: 0, behavior: REDUCE_MOTION ? "auto" : "smooth" }) },
+    { group: "실행", label: "테스트 토스트 띄우기", icon: spark(), action: () => toast({ variant: "success", title: "그리드에서 인사", message: "명령 팔레트가 잘 작동해요." }) },
   ];
   function grid() { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>'; }
   function spark() { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/></svg>'; }
@@ -425,14 +450,14 @@
     const back = document.createElement("div");
     back.className = "cmdk-backdrop";
     back.innerHTML =
-      '<div class="cmdk" role="dialog" aria-modal="true" aria-label="Command palette">' +
+      '<div class="cmdk" role="dialog" aria-modal="true" aria-label="명령 팔레트">' +
         '<div class="cmdk__inputwrap">' +
           '<svg class="cmdk__searchicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>' +
-          '<input class="cmdk__input" type="text" placeholder="Type a command or search…" aria-label="Command" autocomplete="off" />' +
+          '<input class="cmdk__input" type="text" placeholder="명령을 입력하거나 검색하세요…" aria-label="명령 검색" autocomplete="off" />' +
           '<kbd class="cmdk__esc">ESC</kbd>' +
         '</div>' +
         '<div class="cmdk__list" role="listbox"></div>' +
-        '<div class="cmdk__empty" hidden>No matching commands</div>' +
+        '<div class="cmdk__empty" hidden>일치하는 명령이 없어요</div>' +
       '</div>';
     document.body.appendChild(back);
     cmdkEl = back;
@@ -631,7 +656,7 @@
   /* ---------------------------------------------------------------------- */
   function chip(label) {
     return '<span class="chip"><span class="chip__label">' + esc(label) + '</span>' +
-      '<button type="button" class="chip__remove" aria-label="Remove ' + esc(label) + '">&times;</button></span>';
+      '<button type="button" class="chip__remove" aria-label="' + esc(label) + ' 제거">&times;</button></span>';
   }
   function initChipInputs() {
     $$(".chip-input").forEach((ci) => {
@@ -672,7 +697,7 @@
             '<div class="upload__file-info"><div class="upload__file-name">' + esc(f.name) + '</div>' +
             '<div class="upload__file-size">' + fmtSize(f.size) + '</div>' +
             '<div class="upload__file-progress"><span></span></div></div>' +
-            '<button type="button" class="upload__file-remove" aria-label="Remove file">&times;</button>';
+            '<button type="button" class="upload__file-remove" aria-label="파일 제거">&times;</button>';
           list.appendChild(row);
           const bar = $(".upload__file-progress span", row);
           if (bar) { if (REDUCE_MOTION) bar.style.width = "100%"; else { bar.style.width = "0%"; setTimeout(() => { bar.style.transition = "width 1.2s var(--ease-emphasized)"; bar.style.width = "100%"; }, 40); } }
@@ -699,7 +724,7 @@
       if (dotsWrap && !dotsWrap.children.length) {
         slides.forEach((_, i) => {
           const d = document.createElement("button");
-          d.className = "carousel__dot"; d.type = "button"; d.setAttribute("aria-label", "Go to slide " + (i + 1));
+          d.className = "carousel__dot"; d.type = "button"; d.setAttribute("aria-label", (i + 1) + "번 슬라이드로 이동");
           on(d, "click", () => go(i)); dotsWrap.appendChild(d);
         });
       }
@@ -721,17 +746,56 @@
   /* 17 · SIDEBAR collapse · NAVBAR mobile                                   */
   /* ---------------------------------------------------------------------- */
   function initNav() {
+    let drawerTrigger = null;
+    function setDrawer(shell, open) {
+      shell.classList.toggle("is-sidebar-open", open);
+      $$("[data-sidebar-drawer-toggle]").forEach((t) => t.setAttribute("aria-expanded", String(open)));
+      if (open) {
+        drawerTrigger = document.activeElement;
+        const first = $(".sidebar__link, a, button", shell.querySelector(".sidebar"));
+        if (first) setTimeout(() => first.focus && first.focus(), 30);
+      } else if (drawerTrigger && drawerTrigger.focus) {
+        drawerTrigger.focus();
+      }
+    }
     document.addEventListener("click", (e) => {
+      // desktop icon-collapse
       const sTog = e.target.closest("[data-sidebar-toggle]");
       if (sTog) {
         const sb = $(".sidebar");
         if (sb) { sb.classList.toggle("sidebar--collapsed"); const ex = !sb.classList.contains("sidebar--collapsed"); sTog.setAttribute("aria-expanded", String(ex)); }
+      }
+      // mobile off-canvas drawer
+      const dTog = e.target.closest("[data-sidebar-drawer-toggle]");
+      if (dTog) {
+        const shell = $(".app-shell");
+        if (shell) { e.preventDefault(); setDrawer(shell, !shell.classList.contains("is-sidebar-open")); }
+        return;
+      }
+      if (e.target.closest("[data-sidebar-drawer-close]") || e.target.classList.contains("app-shell__scrim")) {
+        const shell = $(".app-shell.is-sidebar-open");
+        if (shell) setDrawer(shell, false);
+        return;
       }
       const nTog = e.target.closest("[data-navbar-toggle]");
       if (nTog) {
         const nav = $(".navbar__nav");
         if (nav) { const open = nav.classList.toggle("is-open"); nTog.setAttribute("aria-expanded", String(open)); }
       }
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      const shell = $(".app-shell.is-sidebar-open");
+      if (shell) setDrawer(shell, false);
+    });
+    // trap Tab inside the open drawer (reuses the modal trap helper) —
+    // only while it's actually an overlay (<=900px)
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Tab") return;
+      if (!window.matchMedia("(max-width: 900px)").matches) return;
+      const shell = $(".app-shell.is-sidebar-open");
+      const sb = shell && $(".sidebar", shell);
+      if (sb) trapFocus(sb, e);
     });
   }
 
@@ -744,7 +808,7 @@
       if (!btn) return;
       let text = btn.getAttribute("data-copy");
       if (!text) { const block = btn.closest(".codeblock"); const code = block && $("code", block); text = code ? code.textContent : ""; }
-      const done = () => { const old = btn.getAttribute("data-label") || btn.textContent; btn.classList.add("is-copied"); const lbl = btn.querySelector("[data-copy-label]"); if (lbl) { lbl.textContent = "Copied!"; setTimeout(() => { lbl.textContent = old; btn.classList.remove("is-copied"); }, 1500); } else { toast({ variant: "success", title: "Copied to clipboard", duration: 1600 }); } };
+      const done = () => { const old = btn.getAttribute("data-label") || btn.textContent; btn.classList.add("is-copied"); const lbl = btn.querySelector("[data-copy-label]"); if (lbl) { lbl.textContent = "복사됨!"; setTimeout(() => { lbl.textContent = old; btn.classList.remove("is-copied"); }, 1500); } else { toast({ variant: "success", title: "클립보드에 복사했어요", duration: 1600 }); } };
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done).catch(done);
       else done();
     });
@@ -753,8 +817,8 @@
   /* ---------------------------------------------------------------------- */
   /* 19 · CALENDAR / DATEPICKER                                              */
   /* ---------------------------------------------------------------------- */
-  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  const WD = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+  const MONTHS = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+  const WD = ["일","월","화","수","목","금","토"];
   function initCalendars() {
     $$("[data-calendar]").forEach((cal) => {
       let view = new Date();
@@ -765,9 +829,9 @@
         const days = new Date(y, m + 1, 0).getDate();
         const today = new Date();
         let html = '<div class="calendar__header">' +
-          '<button class="btn btn--icon btn--sm" data-cal="prev" aria-label="Previous month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></button>' +
-          '<span class="calendar__title">' + MONTHS[m] + " " + y + '</span>' +
-          '<button class="btn btn--icon btn--sm" data-cal="next" aria-label="Next month"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>' +
+          '<button class="btn btn--icon btn--sm" data-cal="prev" aria-label="이전 달"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></button>' +
+          '<span class="calendar__title">' + y + "년 " + MONTHS[m] + '</span>' +
+          '<button class="btn btn--icon btn--sm" data-cal="next" aria-label="다음 달"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>' +
           '</div><div class="calendar__weekdays">' + WD.map((d) => '<span class="calendar__weekday">' + d + "</span>").join("") + '</div>' +
           '<div class="calendar__grid">';
         for (let i = 0; i < first; i++) html += '<button class="calendar__day calendar__day--muted" tabindex="-1"></button>';
@@ -831,7 +895,12 @@
   /* BOOT                                                                    */
   /* ---------------------------------------------------------------------- */
   function boot() {
+    // signal to the head boot-check that JS is alive (cancels the reveal
+    // failsafe). Must run first so a later init error can't leave content hidden.
+    document.documentElement.classList.add("vw-ready");
+    initReveal();          // run first: a later init error can't leave content stuck hidden
     injectScene();
+    injectBootSequence();
     initTheme();
     initParallax();
     initModals();
@@ -852,7 +921,6 @@
     initNav();
     initCopy();
     initCalendars();
-    initReveal();
     initProgressRings();
     initKbd();
   }

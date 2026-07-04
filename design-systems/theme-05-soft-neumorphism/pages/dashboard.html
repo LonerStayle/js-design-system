@@ -1,24 +1,68 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+/* apply saved theme before first paint (no light flash) + mark JS available */
+(function () {
+  try {
+    var t = localStorage.getItem("nm-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+  document.documentElement.classList.add("js");
+})();
+</script>
 <title>분석 대시보드 · Soft Neumorphism</title>
 <link rel="stylesheet" href="../theme.css" />
 <style>
   .page-head { display:flex; align-items:flex-end; justify-content:space-between; gap:var(--space-4); flex-wrap:wrap; margin-bottom:var(--space-7); }
   .page-head h1 { font-size: var(--text-3xl); }
-  .stat-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-5); }
-  @media (max-width:1100px){ .stat-grid{ grid-template-columns: repeat(2,1fr);} }
-  @media (max-width:560px){ .stat-grid{ grid-template-columns: 1fr;} }
+
+  /* navbar search is a button that opens the palette — no dead input */
+  .searchbar-trigger { display:flex; align-items:center; gap:var(--space-2); text-align:left; cursor:pointer; color:var(--color-text-muted); font-weight:var(--weight-medium); }
+  .searchbar-trigger .kbd { margin-left:auto; }
+
+  /* ===== asymmetric KPI bento — one hero carved INTO a well, three raised satellites ===== */
+  .kpi-bento { display:grid; grid-template-columns: 1.5fr 1fr 1fr;
+    grid-template-areas: "hero s1 s2" "hero s3 s3"; gap: var(--space-5); }
+  .kpi-hero { grid-area:hero; } .kpi-s1 { grid-area:s1; } .kpi-s2 { grid-area:s2; } .kpi-s3 { grid-area:s3; }
+  @media (max-width:1100px){ .kpi-bento{ grid-template-columns:1fr 1fr; grid-template-areas:"hero hero" "s1 s2" "s3 s3"; } }
+  @media (max-width:560px){ .kpi-bento{ grid-template-columns:1fr; grid-template-areas:"hero" "s1" "s2" "s3"; } }
+
+  /* the flagship KPI is pressed into the material — depth carries the hierarchy */
+  .kpi-hero { background: var(--color-well); box-shadow: var(--shadow-pressed);
+    border-radius: var(--radius-xl); padding: var(--space-7);
+    display:flex; flex-direction:column; justify-content:space-between; gap: var(--space-5); min-height: 15rem; }
+  .kh-head { display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); }
+  .kh-label { font-size: var(--text-sm); color: var(--color-text-muted); font-weight: var(--weight-semibold); }
+  .kh-value { font-family: var(--font-display); font-weight: var(--weight-bold); color: var(--color-text-strong);
+    font-size: clamp(2.75rem, 6vw, 4.5rem); line-height: 1.02; font-variant-numeric: tabular-nums lining-nums; }
+  .kh-value .won  { font-size: .5em; margin-right: .06em; color: var(--color-text-muted); }
+  .kh-value .unit { font-size: .5em; margin-left: .04em; color: var(--color-text-muted); }
+  .kh-foot { display:flex; align-items:center; gap: var(--space-4); flex-wrap:wrap; }
+  .kh-goal { font-size: var(--text-xs); color: var(--color-text-muted); line-height: var(--leading-snug); }
+  /* six-month spark — raised bars standing in a carved track */
+  .kh-spark { display:flex; align-items:flex-end; gap:5px; height:3.2rem; flex:1; min-width:8rem;
+    padding: var(--space-2) var(--space-3); background: var(--color-bg);
+    box-shadow: var(--shadow-pressed-sm); border-radius: var(--radius-md); }
+  .kh-spark .sb { flex:1; background: var(--color-primary); box-shadow: var(--shadow-raised-sm);
+    border-radius: var(--radius-xs); min-width:5px; }
+  .kh-spark .sb.is-peak { background: var(--color-accent); }
+
   .dash-grid { display:grid; grid-template-columns: 2fr 1fr; gap: var(--space-6); margin-top: var(--space-6); align-items:start; }
   @media (max-width:1100px){ .dash-grid{ grid-template-columns: 1fr; } }
 
-  /* pure-CSS bar chart */
-  .chart { display:flex; align-items:flex-end; gap: var(--space-3); height: 240px; padding-top: var(--space-4); }
+  /* pure-CSS bar chart — solid raised bars standing in a pressed track (no gradient ink) */
+  .chart { display:flex; align-items:flex-end; gap: var(--space-3); height: 240px;
+    padding: var(--space-5) var(--space-4) var(--space-4);
+    background: var(--color-well); box-shadow: var(--shadow-pressed-sm); border-radius: var(--radius-lg); }
   .chart .bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:var(--space-2); height:100%; justify-content:flex-end; }
-  .chart .bar { width:100%; max-width:38px; border-radius: var(--radius-sm); background: linear-gradient(180deg, var(--color-primary), var(--indigo-500)); box-shadow: var(--shadow-raised-sm); transition: height .8s var(--ease-out); position:relative; }
-  .chart .bar.alt { background: linear-gradient(180deg, var(--color-accent), var(--mint-400)); }
+  .chart .bar { width:100%; max-width:36px; border-radius: var(--radius-xs) var(--radius-xs) 4px 4px;
+    background: var(--color-primary); box-shadow: var(--shadow-raised-sm);
+    transition: height .8s var(--ease-out); position:relative; }
+  .chart .bar.alt { background: var(--color-accent); }
   .chart .bar-lbl { font-size: var(--text-xs); color: var(--color-text-muted); font-weight: var(--weight-semibold); }
   /* sparkline donut legend */
   .legend { display:flex; gap: var(--space-5); flex-wrap:wrap; margin-top: var(--space-4); }
@@ -52,7 +96,7 @@
       <div class="sidebar-label">계정</div>
       <a class="nav-item" href="profile.html"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg></span><span class="ni-text">프로필</span></a>
       <a class="nav-item" href="settings.html"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9 2 2 0 1 1-2.8 2.8 1.7 1.7 0 0 0-2.9 1.2 2 2 0 1 1-4 0 1.7 1.7 0 0 0-2.9-1.2 2 2 0 1 1-2.8-2.8A1.7 1.7 0 0 0 2 15a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.2-2.9 2 2 0 1 1 2.8-2.8A1.7 1.7 0 0 0 9 4.6a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.2 2 2 0 1 1 2.8 2.8A1.7 1.7 0 0 0 22 11a2 2 0 1 1 0 4Z"/></svg></span><span class="ni-text">설정</span></a>
-    </nav>
+    </div>
     <div class="sidebar-footer">
       <a class="user-chip" href="profile.html">
         <span class="avatar avatar-sm">JS<span class="presence online"></span></span>
@@ -68,7 +112,7 @@
       <button class="btn btn-icon btn-ghost md:hidden" data-collapse-sidebar aria-label="사이드바 접기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M3 12h12M3 18h18"/></svg></button>
       <div class="searchbar flex-1" style="max-width:420px">
         <span class="search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
-        <input class="input" placeholder="검색하거나 ⌘K 를 누르세요" aria-label="검색" onfocus="NM.cmdk.open();this.blur()" />
+        <button class="input searchbar-trigger" type="button" data-cmdk-open aria-label="검색 열기">지표·캠페인 검색 <span class="kbd">⌘K</span></button>
       </div>
       <div class="flex items-center gap-2" style="margin-left:auto">
         <button class="theme-toggle" data-theme-toggle aria-label="테마 전환">
@@ -90,24 +134,34 @@
           <h1>분석 대시보드</h1>
           <p class="text-muted">2026년 6월 · 지난 30일 대비</p>
         </div>
-        <div class="segmented" role="group" aria-label="기간">
-          <button data-segment="true" aria-selected="false">일</button>
-          <button data-segment="true" class="is-active" aria-selected="true">주</button>
-          <button data-segment="true" aria-selected="false">월</button>
+        <div class="segmented" role="radiogroup" aria-label="기간">
+          <button data-segment="true" role="radio" aria-checked="false" tabindex="-1">일</button>
+          <button data-segment="true" role="radio" class="is-active" aria-checked="true" tabindex="0">주</button>
+          <button data-segment="true" role="radio" aria-checked="false" tabindex="-1">월</button>
         </div>
       </div>
 
-      <!-- KPI cards -->
-      <div class="stat-grid stagger">
-        <div class="stat-card">
-          <div class="stat-top">
-            <span class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+      <!-- KPI bento — 총 매출을 파인 우물 속 거대 숫자로, 나머지는 솟은 위성 카드로 비대칭 배치 -->
+      <div class="kpi-bento">
+        <div class="kpi-hero">
+          <div class="kh-head">
+            <span class="kh-label">6월 총 매출</span>
             <span class="stat-delta up">▲ 12.4%</span>
           </div>
-          <div class="stat-label">총 매출</div>
-          <div class="stat-value">₩162.5M</div>
+          <div class="kh-value text-embossed"><span class="won">₩</span>16.2<span class="unit">억</span></div>
+          <div class="kh-foot">
+            <span class="kh-spark" role="img" aria-label="최근 6개월 매출 추이 — 1월 대비 꾸준히 오르며 6월에 최고치">
+              <span class="sb" style="height:38%"></span>
+              <span class="sb" style="height:52%"></span>
+              <span class="sb" style="height:47%"></span>
+              <span class="sb" style="height:64%"></span>
+              <span class="sb" style="height:79%"></span>
+              <span class="sb is-peak" style="height:100%"></span>
+            </span>
+            <span class="kh-goal">이번 달 목표<br/>대비 <strong class="text-primary">108%</strong></span>
+          </div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card kpi-s1">
           <div class="stat-top">
             <span class="stat-icon accent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M3 21v-1a6 6 0 0 1 6-6M16 3.1a4 4 0 0 1 0 7.8M21 21v-1a6 6 0 0 0-4-5.6"/></svg></span>
             <span class="stat-delta up">▲ 8.1%</span>
@@ -115,7 +169,7 @@
           <div class="stat-label">신규 사용자</div>
           <div class="stat-value">2,841</div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card kpi-s2">
           <div class="stat-top">
             <span class="stat-icon warning"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 3-3 3 3 5-6"/></svg></span>
             <span class="stat-delta down">▼ 2.3%</span>
@@ -123,13 +177,13 @@
           <div class="stat-label">전환율</div>
           <div class="stat-value">5.7%</div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card kpi-s3">
           <div class="stat-top">
             <span class="stat-icon success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7 9 18l-5-5"/></svg></span>
             <span class="stat-delta up">▲ 19.0%</span>
           </div>
           <div class="stat-label">완료 주문</div>
-          <div class="stat-value">1,204</div>
+          <div class="stat-value">1,204<span class="text-muted" style="font-size:.5em;margin-left:2px">건</span></div>
         </div>
       </div>
 
@@ -142,11 +196,11 @@
               <button class="btn btn-icon btn-sm btn-ghost" data-menu-toggle aria-label="옵션"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
               <div class="menu-panel right" role="menu">
                 <button class="menu-item" role="menuitem" data-copy="매출 데이터">데이터 복사</button>
-                <button class="menu-item" role="menuitem" onclick="NM.toast({title:'내보내기',text:'CSV로 내보냈습니다.',variant:'success'})">CSV 내보내기</button>
+                <button class="menu-item" role="menuitem" data-toast-title="CSV 내보내기" data-toast-text="매출 데이터를 CSV로 내보냈어요." data-toast-variant="success">CSV 내보내기</button>
               </div>
             </div>
           </div>
-          <div class="chart" aria-hidden="true">
+          <div class="chart" role="img" aria-label="이번 주 일별 매출 추이 — 금요일이 최고 기록으로 가장 높고, 일요일이 가장 낮아요.">
             <div class="bar-col"><div class="bar" style="height:52%"></div><span class="bar-lbl">월</span></div>
             <div class="bar-col"><div class="bar" style="height:68%"></div><span class="bar-lbl">화</span></div>
             <div class="bar-col"><div class="bar" style="height:45%"></div><span class="bar-lbl">수</span></div>
@@ -192,11 +246,10 @@
               </tr>
             </thead>
             <tbody>
-              <tr><td class="cell-strong">Aurora 6월 프로모션</td><td><span class="badge badge-success"><span class="dot"></span>활성</span></td><td class="num" data-sort="48200">₩48.2M</td><td class="num" data-sort="4.8">4.8x</td></tr>
-              <tr><td class="cell-strong">Nimbus 리타게팅</td><td><span class="badge badge-primary"><span class="dot"></span>진행</span></td><td class="num" data-sort="31750">₩31.7M</td><td class="num" data-sort="3.2">3.2x</td></tr>
-              <tr><td class="cell-strong">Pebble 신규 유입</td><td><span class="badge badge-warning"><span class="dot"></span>검토</span></td><td class="num" data-sort="22400">₩22.4M</td><td class="num" data-sort="2.9">2.9x</td></tr>
-              <tr><td class="cell-strong">Lumen 브랜드</td><td><span class="badge badge-success"><span class="dot"></span>활성</span></td><td class="num" data-sort="59100">₩59.1M</td><td class="num" data-sort="5.6">5.6x</td></tr>
-              <tr><td class="cell-strong">Drift 이메일</td><td><span class="badge badge-danger"><span class="dot"></span>중지</span></td><td class="num" data-sort="8900">₩8.9M</td><td class="num" data-sort="1.4">1.4x</td></tr>
+              <tr><td class="cell-strong">여름 신규가입 캠페인</td><td><span class="badge badge-success"><span class="dot"></span>활성</span></td><td class="num" data-sort="62900">₩6.29억</td><td class="num" data-sort="5.4">5.4x</td></tr>
+              <tr><td class="cell-strong">달빛서점 리브랜딩</td><td><span class="badge badge-primary"><span class="dot"></span>진행</span></td><td class="num" data-sort="48200">₩4.82억</td><td class="num" data-sort="4.8">4.8x</td></tr>
+              <tr><td class="cell-strong">가을 멤버십 리텐션</td><td><span class="badge badge-warning"><span class="dot"></span>검토중</span></td><td class="num" data-sort="31750">₩3.18억</td><td class="num" data-sort="3.6">3.6x</td></tr>
+              <tr><td class="cell-strong">추석 선물세트 사전예약</td><td><span class="badge badge-danger"><span class="dot"></span>지연</span></td><td class="num" data-sort="18400">₩1.84억</td><td class="num" data-sort="2.1">2.1x</td></tr>
             </tbody>
           </table>
         </div>
@@ -204,10 +257,10 @@
         <div class="card">
           <div class="card-header"><div class="card-title">활동</div></div>
           <div class="timeline">
-            <div class="timeline-item success"><span class="tl-dot"></span><div class="tl-time">방금 전</div><div class="tl-title">Aurora 캠페인 목표 달성</div><div class="tl-body">주간 매출 목표를 18% 초과했습니다.</div></div>
-            <div class="timeline-item"><span class="tl-dot"></span><div class="tl-time">2시간 전</div><div class="tl-title">새 멤버 합류</div><div class="tl-body">민경 님이 워크스페이스에 참여했습니다.</div></div>
-            <div class="timeline-item warning"><span class="tl-dot"></span><div class="tl-time">어제</div><div class="tl-title">예산 80% 소진</div><div class="tl-body">Nimbus 캠페인의 예산이 곧 소진됩니다.</div></div>
-            <div class="timeline-item"><span class="tl-dot"></span><div class="tl-time">2일 전</div><div class="tl-title">월간 리포트 발행</div><div class="tl-body">5월 성과 리포트가 공유되었습니다.</div></div>
+            <div class="timeline-item success"><span class="tl-dot"></span><div class="tl-time">방금 전</div><div class="tl-title">여름 신규가입 캠페인 목표 달성</div><div class="tl-body">주간 매출 목표를 18% 넘겼어요.</div></div>
+            <div class="timeline-item"><span class="tl-dot"></span><div class="tl-time">2시간 전</div><div class="tl-title">새 멤버 합류</div><div class="tl-body">이민경 님이 워크스페이스에 참여했어요.</div></div>
+            <div class="timeline-item warning"><span class="tl-dot"></span><div class="tl-time">어제</div><div class="tl-title">가을 멤버십 리텐션 예산 80% 소진</div><div class="tl-body">남은 예산이 곧 소진돼요. 한도를 확인해 주세요.</div></div>
+            <div class="timeline-item"><span class="tl-dot"></span><div class="tl-time">2일 전</div><div class="tl-title">월간 리포트 발행</div><div class="tl-body">5월 성과 리포트를 팀에 공유했어요.</div></div>
           </div>
         </div>
       </div>
@@ -232,7 +285,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" data-modal-close>취소</button>
-      <button class="btn btn-primary" data-modal-close onclick="NM.toast({title:'생성됨',text:'리포트가 생성되었습니다.',variant:'success'})">생성</button>
+      <button class="btn btn-primary" data-modal-close data-toast-title="리포트를 만들었어요" data-toast-text="6월 성과 분석 리포트가 준비됐어요." data-toast-variant="success">만들기</button>
     </div>
   </div>
 </div>
@@ -242,11 +295,11 @@
     <button class="btn btn-icon btn-sm btn-ghost" data-drawer-close aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
   </div>
   <div class="drawer-body stack">
-    <div class="alert alert-info"><span class="alert-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span><div class="alert-body"><div class="alert-title">시스템 점검</div><div class="alert-text">오늘 23시 정기 점검이 예정되어 있습니다.</div></div></div>
+    <div class="alert alert-info"><span class="alert-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span><div class="alert-body"><div class="alert-title">시스템 점검</div><div class="alert-text">오늘 23시에 정기 점검이 있어요. 잠깐 지표가 멈출 수 있어요.</div></div></div>
     <div class="list">
-      <div class="list-item"><span class="avatar avatar-sm">A</span><div class="li-main"><div class="li-title">목표 달성</div><div class="li-sub">Aurora 캠페인</div></div><span class="li-meta">방금</span></div>
-      <div class="list-item"><span class="avatar avatar-sm" style="color:var(--mint-600)">M</span><div class="li-main"><div class="li-title">새 댓글</div><div class="li-sub">민경 님</div></div><span class="li-meta">1시간</span></div>
-      <div class="list-item"><span class="avatar avatar-sm" style="color:var(--amber-600)">!</span><div class="li-main"><div class="li-title">예산 경고</div><div class="li-sub">Nimbus</div></div><span class="li-meta">어제</span></div>
+      <div class="list-item"><span class="avatar avatar-sm">여</span><div class="li-main"><div class="li-title">목표 달성</div><div class="li-sub">여름 신규가입 캠페인</div></div><span class="li-meta">방금</span></div>
+      <div class="list-item"><span class="avatar avatar-sm" style="color:var(--mint-600)">민</span><div class="li-main"><div class="li-title">새 댓글</div><div class="li-sub">이민경 님</div></div><span class="li-meta">1시간</span></div>
+      <div class="list-item"><span class="avatar avatar-sm" style="color:var(--amber-600)">!</span><div class="li-main"><div class="li-title">예산 경고</div><div class="li-sub">가을 멤버십 리텐션</div></div><span class="li-meta">어제</span></div>
     </div>
   </div>
 </div>

@@ -1,10 +1,23 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="ko">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="dark light" />
-  <title>Pricing · Vaporwave</title>
+  <!-- theme + reveal boot (runs before first paint — no dawn/dusk flash) -->
+  <script>
+    (function () {
+      var d = document.documentElement;
+      d.classList.add("js");
+      try {
+        var t = localStorage.getItem("vw-theme");
+        if (!t) t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+        d.setAttribute("data-theme", t);
+      } catch (e) {}
+      setTimeout(function () { if (!d.classList.contains("vw-ready")) d.classList.add("reveal-fallback"); }, 2000);
+    })();
+  </script>
+  <title>요금제 · NeonRide · Vaporwave</title>
   <link rel="stylesheet" href="../styles.css" />
   <script src="../app.js" defer></script>
   <style>
@@ -28,7 +41,7 @@
        so reproduce the ON state from #billing:checked) */
     #billing:checked ~ .row .switch__track {
       background: var(--toggle-track-on);
-      border-color: rgba(255, 255, 255, 0.3);
+      border-color: rgba(255, 255, 255, 0.3); /* intentional: glossy top highlight, matches .switch component */
       box-shadow: var(--shadow-inset-gloss), var(--glow-magenta);
     }
     #billing:checked ~ .row .switch__thumb {
@@ -43,32 +56,59 @@
 
     .billing-toggle__row { display: inline-flex; align-items: center; gap: var(--space-3); }
     .pricing-card__price { display: flex; align-items: baseline; gap: var(--space-1); }
+
+    /* feature-check icons — currentColor so the mint stroke survives (SVG attr var() is invalid) */
+    .ico-mint { color: var(--mint-400); }
+
+    /* ---- featured plan "한 방": lifted, chrome ribbon spilling above the top edge ---- */
+    /* .card clips content (overflow:hidden); allow the ribbon to escape on this card only.
+       .card::before sheen is inset:0 so it stays put — no corner artefacts. */
+    .plan-featured { position: relative; overflow: visible; }
+    .plan-ribbon {
+      position: absolute; top: 0; left: 50%;
+      transform: translate(-50%, -55%);
+      z-index: 4;
+      display: inline-flex; align-items: center; gap: 0.5ch;
+      padding: var(--space-1) var(--space-4);
+      border-radius: var(--radius-pill);
+      background: var(--color-surface-2);
+      border: var(--border-1) solid var(--color-primary);
+      box-shadow: var(--glow-magenta);
+      font-family: var(--font-display);
+      font-size: var(--text-xs);
+      letter-spacing: var(--tracking-caps-ko, 0.08em);
+      white-space: nowrap;
+    }
+    @media (max-width: 768px) {
+      /* grid-3 stacks to 1 column here — drop the desktop lift so cards don't overlap */
+      .plan-featured { transform: none !important; }
+    }
   </style>
 </head>
-<body>
-  <a href="#main" class="skip-link">Skip to content</a>
+<body data-scene="spotlight">
+  <a href="#main" class="skip-link">본문으로 건너뛰기</a>
 
   <!-- ============================ NAVBAR ============================ -->
   <header class="navbar" role="banner">
     <div class="container container-wide row justify-between" style="height:64px;">
-      <a class="navbar__brand" href="../index.html" aria-label="Vaporwave home">
+      <a class="navbar__brand" href="../index.html" aria-label="NeonRide 홈">
         <span aria-hidden="true" style="display:inline-grid;place-items:center;width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--magenta-400),var(--cyan-400));box-shadow:var(--glow-magenta)">
-          <svg viewBox="0 0 24 24" width="17" fill="none" stroke="#180028" stroke-width="2.4"><path d="M3 18 L12 5 L21 18"/><circle cx="12" cy="18" r="1.6" fill="#180028" stroke="none"/></svg>
+          <svg viewBox="0 0 24 24" width="17" fill="none" stroke="currentColor" stroke-width="2.4" style="color:var(--color-on-bright)"><path d="M3 18 L12 5 L21 18"/><circle cx="12" cy="18" r="1.6" fill="currentColor" stroke="none"/></svg>
         </span>
-        <span class="text-neon">NEONWAVE</span>
+        <span class="text-neon">NeonRide</span>
       </a>
-      <nav class="navbar__nav" aria-label="Primary">
-        <a class="navbar__link" href="product.html">Product</a>
-        <a class="navbar__link is-active" href="pricing.html" aria-current="page">Pricing</a>
-        <a class="navbar__link" href="../index.html">Docs</a>
-        <a class="navbar__link" href="../index.html">Blog</a>
+      <nav class="navbar__nav" aria-label="주요 메뉴">
+        <a class="navbar__link" href="product.html">제품</a>
+        <a class="navbar__link is-active" href="pricing.html" aria-current="page">요금제</a>
+        <a class="navbar__link" href="../index.html">문서</a>
+        <a class="navbar__link" href="../index.html">블로그</a>
       </nav>
       <div class="navbar__actions row gap-2">
-        <a class="btn btn--primary btn--sm hide-mobile" href="#plans">Start free</a>
-        <button class="btn btn--icon btn--sm focus-cyan" data-theme-toggle aria-label="Toggle dusk and dawn theme" aria-pressed="false" title="Toggle theme">
+        <a class="btn btn--primary btn--sm hide-mobile" href="#plans">무료로 시작</a>
+        <button class="btn btn--icon btn--sm focus-cyan" data-theme-toggle aria-label="저녁·새벽 테마 전환" aria-pressed="false" title="테마 전환">
           <svg viewBox="0 0 24 24" width="17" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>
         </button>
-        <button class="btn btn--icon btn--sm navbar__toggle" data-navbar-toggle aria-label="Toggle menu" aria-expanded="false">
+        <button class="btn btn--icon btn--sm navbar__toggle" data-navbar-toggle aria-label="메뉴 전환" aria-expanded="false">
           <svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
         </button>
       </div>
@@ -79,32 +119,31 @@
 
     <!-- ============================ HERO ============================ -->
     <section class="text-center stack-4" style="max-width:760px;margin-inline:auto" data-reveal>
-      <p class="eyebrow">Plans</p>
-      <h1 style="font-size:clamp(2.4rem,6vw,var(--text-5xl));line-height:var(--leading-tight)">
-        Ride the grid at <span class="text-neon">any speed</span>
+      <p class="eyebrow">요금제</p>
+      <h1 style="font-size:clamp(2.4rem,6vw,var(--text-5xl));line-height:var(--leading-heading-ko,1.28)">
+        당신의 속도로 <span class="text-neon">그리드를 달려요</span>
       </h1>
       <p class="text-muted" style="font-size:var(--text-lg)">
-        Simple, transparent pricing that scales from your first synth-pop side project to a
-        full neon empire. No hidden fees, cancel any time, and every plan ships with the same
-        glossy SDK.
+        첫 신스팝 사이드 프로젝트부터 거대한 네온 제국까지, 투명하게 확장되는 요금제예요.
+        숨은 비용 없이 언제든 해지할 수 있고, 모든 요금제에 같은 글로시 SDK가 들어 있어요.
       </p>
     </section>
 
     <!-- ============================ BILLING TOGGLE (CSS-only) ============================ -->
     <!-- The checkbox lives just BEFORE .pricing-scope so the ~ sibling combinator can reach
          every price span inside it. Real <label for="billing"> keeps it accessible. -->
-    <input type="checkbox" id="billing" class="switch__input" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none" />
+    <input type="checkbox" id="billing" class="switch__input" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none" aria-label="연간 결제로 전환 (20% 할인)" />
 
     <div class="row justify-center" style="margin-block:var(--space-9)">
       <div class="billing-toggle__row glass" style="padding:var(--space-2) var(--space-5);border-radius:var(--radius-pill)">
         <label for="billing" class="switch" style="cursor:pointer">
-          <span class="switch__label" id="bill-monthly" style="color:var(--color-text)">Monthly</span>
+          <span class="switch__label" id="bill-monthly" style="color:var(--color-text)">월간</span>
           <span class="switch__track" aria-hidden="true">
             <span class="switch__thumb"></span>
           </span>
-          <span class="switch__label" id="bill-yearly">Yearly</span>
+          <span class="switch__label" id="bill-yearly">연간</span>
         </label>
-        <span class="badge badge--success badge--sm">Save 20%</span>
+        <span class="badge badge--success badge--sm">20% 할인</span>
       </div>
     </div>
 
@@ -112,91 +151,91 @@
     <div class="pricing-scope">
 
       <!-- ---------- PLAN CARDS ---------- -->
-      <section id="plans" aria-label="Pricing plans">
+      <section id="plans" aria-label="요금제">
         <div class="grid-3" style="align-items:stretch">
 
           <!-- ===== CRUISER ===== -->
           <article class="card" data-reveal>
             <div class="card__header">
               <h2 class="card__title">Cruiser</h2>
-              <p class="card__subtitle">For solo riders shipping their first grid.</p>
+              <p class="card__subtitle">첫 그리드를 출시하는 1인 라이더를 위해.</p>
             </div>
             <div class="card__body stack-5">
               <div class="pricing-card__price">
                 <span class="font-mono" style="font-size:var(--text-4xl);font-weight:var(--weight-bold);color:var(--color-text-strong)">
-                  <span class="price-monthly">$19</span><span class="price-yearly">$15</span>
+                  <span class="price-monthly">₩19,000</span><span class="price-yearly">₩15,200</span>
                 </span>
-                <span class="text-muted">/mo</span>
+                <span class="text-muted">/월</span>
               </div>
               <p class="text-subtle" style="font-size:var(--text-sm);margin-top:calc(var(--space-3) * -1)">
-                <span class="billing-note--monthly">Billed monthly · $228/yr</span>
-                <span class="billing-note--yearly">Billed annually · $180/yr</span>
+                <span class="billing-note--monthly">월 결제 · 연 ₩228,000</span>
+                <span class="billing-note--yearly">연 결제 · ₩182,400 / 년</span>
               </p>
-              <a class="btn btn--secondary btn--block" href="#plans">Start free trial</a>
+              <a class="btn btn--secondary btn--block" href="#plans">무료로 시작하기</a>
               <ul class="list" style="margin-top:var(--space-2)">
                 <li class="list__item" style="padding-inline:0;gap:var(--space-3)">
-                  <svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
-                  <span class="list__content"><span class="list__title" style="white-space:normal">Up to 3 projects</span></span>
+                  <svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
+                  <span class="list__content"><span class="list__title" style="white-space:normal">프로젝트 3개까지</span></span>
                 </li>
                 <li class="list__item" style="padding-inline:0;gap:var(--space-3)">
-                  <svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
-                  <span class="list__content"><span class="list__title" style="white-space:normal">10,000 grid renders / mo</span></span>
+                  <svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
+                  <span class="list__content"><span class="list__title" style="white-space:normal">월 1만 회 그리드 렌더</span></span>
                 </li>
                 <li class="list__item" style="padding-inline:0;gap:var(--space-3)">
-                  <svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
-                  <span class="list__content"><span class="list__title" style="white-space:normal">Community Discord support</span></span>
+                  <svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
+                  <span class="list__content"><span class="list__title" style="white-space:normal">커뮤니티 디스코드 지원</span></span>
                 </li>
                 <li class="list__item text-subtle" style="padding-inline:0;gap:var(--space-3)">
                   <svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="opacity:.5"><path d="M5 12h14"/></svg>
-                  <span class="list__content"><span class="list__title" style="white-space:normal;color:inherit;font-weight:var(--weight-regular)">No custom domains</span></span>
+                  <span class="list__content"><span class="list__title" style="white-space:normal;color:inherit;font-weight:var(--weight-regular)">커스텀 도메인 미지원</span></span>
                 </li>
                 <li class="list__item text-subtle" style="padding-inline:0;gap:var(--space-3)">
                   <svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="opacity:.5"><path d="M5 12h14"/></svg>
-                  <span class="list__content"><span class="list__title" style="white-space:normal;color:inherit;font-weight:var(--weight-regular)">No team seats</span></span>
+                  <span class="list__content"><span class="list__title" style="white-space:normal;color:inherit;font-weight:var(--weight-regular)">팀 좌석 없음</span></span>
                 </li>
               </ul>
             </div>
           </article>
 
           <!-- ===== OUTRUN — FEATURED / POPULAR ===== -->
-          <article class="card card--gradient" data-reveal style="transform:translateY(-12px);box-shadow:var(--shadow-glow-lg)">
-            <span class="badge badge--primary" style="position:absolute;top:var(--space-4);right:var(--space-4);z-index:3">Most popular</span>
+          <article class="card card--gradient plan-featured" data-reveal style="transform:translateY(-12px);box-shadow:var(--shadow-glow-lg)">
+            <span class="plan-ribbon"><span aria-hidden="true">◆</span> 가장 인기</span>
             <div class="card__header">
               <h2 class="card__title text-neon">Outrun</h2>
-              <p class="card__subtitle">For growing studios that need horsepower.</p>
+              <p class="card__subtitle">속도가 필요한 성장 중인 팀을 위해.</p>
             </div>
             <div class="card__body stack-5">
               <div class="pricing-card__price">
                 <span class="font-mono" style="font-size:var(--text-4xl);font-weight:var(--weight-bold);color:var(--color-text-strong)">
-                  <span class="price-monthly">$49</span><span class="price-yearly">$39</span>
+                  <span class="price-monthly">₩39,000</span><span class="price-yearly">₩31,200</span>
                 </span>
-                <span class="text-muted">/mo</span>
+                <span class="text-muted">/월</span>
               </div>
               <p class="text-subtle" style="font-size:var(--text-sm);margin-top:calc(var(--space-3) * -1)">
-                <span class="billing-note--monthly">Billed monthly · $588/yr</span>
-                <span class="billing-note--yearly">Billed annually · $468/yr</span>
+                <span class="billing-note--monthly">월 결제 · 연 ₩468,000</span>
+                <span class="billing-note--yearly">연 결제 · ₩374,400 / 년</span>
               </p>
-              <a class="btn btn--primary btn--block" href="#plans">Start free trial</a>
+              <a class="btn btn--primary btn--block" href="#plans">무료로 시작하기</a>
               <ul class="list" style="margin-top:var(--space-2)">
                 <li class="list__item" style="padding-inline:0;gap:var(--space-3)">
-                  <svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
-                  <span class="list__content"><span class="list__title" style="white-space:normal">Unlimited projects</span></span>
+                  <svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
+                  <span class="list__content"><span class="list__title" style="white-space:normal">프로젝트 무제한</span></span>
                 </li>
                 <li class="list__item" style="padding-inline:0;gap:var(--space-3)">
-                  <svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
-                  <span class="list__content"><span class="list__title" style="white-space:normal">250,000 grid renders / mo</span></span>
+                  <svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
+                  <span class="list__content"><span class="list__title" style="white-space:normal">월 25만 회 그리드 렌더</span></span>
                 </li>
                 <li class="list__item" style="padding-inline:0;gap:var(--space-3)">
-                  <svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
-                  <span class="list__content"><span class="list__title" style="white-space:normal">5 team seats included</span></span>
+                  <svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
+                  <span class="list__content"><span class="list__title" style="white-space:normal">팀 좌석 5석 포함</span></span>
                 </li>
                 <li class="list__item" style="padding-inline:0;gap:var(--space-3)">
-                  <svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
-                  <span class="list__content"><span class="list__title" style="white-space:normal">Custom domains + SSL</span></span>
+                  <svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
+                  <span class="list__content"><span class="list__title" style="white-space:normal">커스텀 도메인 + SSL</span></span>
                 </li>
                 <li class="list__item" style="padding-inline:0;gap:var(--space-3)">
-                  <svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
-                  <span class="list__content"><span class="list__title" style="white-space:normal">Priority email support</span></span>
+                  <svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
+                  <span class="list__content"><span class="list__title" style="white-space:normal">우선 이메일 지원</span></span>
                 </li>
               </ul>
             </div>
@@ -206,40 +245,40 @@
           <article class="card" data-reveal>
             <div class="card__header">
               <h2 class="card__title">Neon Pro</h2>
-              <p class="card__subtitle">For scale-ups that never hit the brakes.</p>
+              <p class="card__subtitle">멈추지 않는 스케일업을 위해.</p>
             </div>
             <div class="card__body stack-5">
               <div class="pricing-card__price">
                 <span class="font-mono" style="font-size:var(--text-4xl);font-weight:var(--weight-bold);color:var(--color-text-strong)">
-                  <span class="price-monthly">$99</span><span class="price-yearly">$79</span>
+                  <span class="price-monthly">₩89,000</span><span class="price-yearly">₩71,200</span>
                 </span>
-                <span class="text-muted">/mo</span>
+                <span class="text-muted">/월</span>
               </div>
               <p class="text-subtle" style="font-size:var(--text-sm);margin-top:calc(var(--space-3) * -1)">
-                <span class="billing-note--monthly">Billed monthly · $1,188/yr</span>
-                <span class="billing-note--yearly">Billed annually · $948/yr</span>
+                <span class="billing-note--monthly">월 결제 · 연 ₩1,068,000</span>
+                <span class="billing-note--yearly">연 결제 · ₩854,400 / 년</span>
               </p>
-              <a class="btn btn--secondary btn--block" href="#plans">Contact sales</a>
+              <a class="btn btn--secondary btn--block" href="#plans">영업팀 문의</a>
               <ul class="list" style="margin-top:var(--space-2)">
                 <li class="list__item" style="padding-inline:0;gap:var(--space-3)">
-                  <svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
-                  <span class="list__content"><span class="list__title" style="white-space:normal">Everything in Outrun, plus:</span></span>
+                  <svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
+                  <span class="list__content"><span class="list__title" style="white-space:normal">Outrun의 모든 기능, 그리고:</span></span>
                 </li>
                 <li class="list__item" style="padding-inline:0;gap:var(--space-3)">
-                  <svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
-                  <span class="list__content"><span class="list__title" style="white-space:normal">Unlimited grid renders</span></span>
+                  <svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
+                  <span class="list__content"><span class="list__title" style="white-space:normal">렌더 무제한</span></span>
                 </li>
                 <li class="list__item" style="padding-inline:0;gap:var(--space-3)">
-                  <svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
-                  <span class="list__content"><span class="list__title" style="white-space:normal">Unlimited team seats + SSO</span></span>
+                  <svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
+                  <span class="list__content"><span class="list__title" style="white-space:normal">팀 좌석 무제한 + SSO</span></span>
                 </li>
                 <li class="list__item" style="padding-inline:0;gap:var(--space-3)">
-                  <svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
-                  <span class="list__content"><span class="list__title" style="white-space:normal">99.99% uptime SLA</span></span>
+                  <svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
+                  <span class="list__content"><span class="list__title" style="white-space:normal">99.99% 가동률 SLA</span></span>
                 </li>
                 <li class="list__item" style="padding-inline:0;gap:var(--space-3)">
-                  <svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
-                  <span class="list__content"><span class="list__title" style="white-space:normal">Dedicated solutions engineer</span></span>
+                  <svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m20 6-11 11L4 12"/></svg>
+                  <span class="list__content"><span class="list__title" style="white-space:normal">전담 솔루션 엔지니어</span></span>
                 </li>
               </ul>
             </div>
@@ -250,13 +289,13 @@
 
       <!-- ============================ FEATURE COMPARISON TABLE ============================ -->
       <section class="section-sm" aria-labelledby="compare-title" data-reveal>
-        <h2 id="compare-title" class="text-center" style="margin-bottom:var(--space-8)">Compare every <span class="text-neon">feature</span></h2>
+        <h2 id="compare-title" class="text-center" style="margin-bottom:var(--space-8)">모든 <span class="text-neon">기능</span> 비교</h2>
         <div class="table-wrap">
           <table class="table table--striped">
-            <caption class="sr-only">Feature comparison across Cruiser, Outrun and Neon Pro plans</caption>
+            <caption class="sr-only">Cruiser, Outrun, Neon Pro 요금제 기능 비교</caption>
             <thead>
               <tr>
-                <th scope="col">Feature</th>
+                <th scope="col">기능</th>
                 <th scope="col" class="text-center">Cruiser</th>
                 <th scope="col" class="text-center">Outrun</th>
                 <th scope="col" class="text-center">Neon Pro</th>
@@ -264,76 +303,76 @@
             </thead>
             <tbody>
               <tr>
-                <th scope="row" style="font-weight:var(--weight-regular)">Active projects</th>
+                <th scope="row" style="font-weight:var(--weight-regular)">활성 프로젝트</th>
                 <td class="table__cell--num">3</td>
-                <td class="table__cell--num">Unlimited</td>
-                <td class="table__cell--num">Unlimited</td>
+                <td class="table__cell--num">무제한</td>
+                <td class="table__cell--num">무제한</td>
               </tr>
               <tr>
-                <th scope="row" style="font-weight:var(--weight-regular)">Monthly grid renders</th>
-                <td class="table__cell--num">10K</td>
-                <td class="table__cell--num">250K</td>
-                <td class="table__cell--num">Unlimited</td>
+                <th scope="row" style="font-weight:var(--weight-regular)">월 그리드 렌더</th>
+                <td class="table__cell--num">1만</td>
+                <td class="table__cell--num">25만</td>
+                <td class="table__cell--num">무제한</td>
               </tr>
               <tr>
-                <th scope="row" style="font-weight:var(--weight-regular)">Team seats</th>
+                <th scope="row" style="font-weight:var(--weight-regular)">팀 좌석</th>
                 <td class="table__cell--num">1</td>
                 <td class="table__cell--num">5</td>
-                <td class="table__cell--num">Unlimited</td>
+                <td class="table__cell--num">무제한</td>
               </tr>
               <tr>
-                <th scope="row" style="font-weight:var(--weight-regular)">Custom domains &amp; SSL</th>
-                <td class="text-center"><span class="text-subtle" aria-label="Not included">—</span></td>
-                <td class="text-center"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.6" aria-label="Included" role="img"><path d="m20 6-11 11L4 12"/></svg></td>
-                <td class="text-center"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.6" aria-label="Included" role="img"><path d="m20 6-11 11L4 12"/></svg></td>
+                <th scope="row" style="font-weight:var(--weight-regular)">커스텀 도메인 &amp; SSL</th>
+                <td class="text-center"><span class="text-subtle" aria-label="미포함">—</span></td>
+                <td class="text-center"><svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.6" aria-label="포함" role="img"><path d="m20 6-11 11L4 12"/></svg></td>
+                <td class="text-center"><svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.6" aria-label="포함" role="img"><path d="m20 6-11 11L4 12"/></svg></td>
               </tr>
               <tr>
-                <th scope="row" style="font-weight:var(--weight-regular)">VHS export presets</th>
-                <td class="text-center"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.6" aria-label="Included" role="img"><path d="m20 6-11 11L4 12"/></svg></td>
-                <td class="text-center"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.6" aria-label="Included" role="img"><path d="m20 6-11 11L4 12"/></svg></td>
-                <td class="text-center"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.6" aria-label="Included" role="img"><path d="m20 6-11 11L4 12"/></svg></td>
+                <th scope="row" style="font-weight:var(--weight-regular)">VHS 익스포트 프리셋</th>
+                <td class="text-center"><svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.6" aria-label="포함" role="img"><path d="m20 6-11 11L4 12"/></svg></td>
+                <td class="text-center"><svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.6" aria-label="포함" role="img"><path d="m20 6-11 11L4 12"/></svg></td>
+                <td class="text-center"><svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.6" aria-label="포함" role="img"><path d="m20 6-11 11L4 12"/></svg></td>
               </tr>
               <tr>
-                <th scope="row" style="font-weight:var(--weight-regular)">API access &amp; webhooks</th>
-                <td class="text-center"><span class="text-subtle" aria-label="Not included">—</span></td>
-                <td class="text-center"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.6" aria-label="Included" role="img"><path d="m20 6-11 11L4 12"/></svg></td>
-                <td class="text-center"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.6" aria-label="Included" role="img"><path d="m20 6-11 11L4 12"/></svg></td>
+                <th scope="row" style="font-weight:var(--weight-regular)">API &amp; 웹훅</th>
+                <td class="text-center"><span class="text-subtle" aria-label="미포함">—</span></td>
+                <td class="text-center"><svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.6" aria-label="포함" role="img"><path d="m20 6-11 11L4 12"/></svg></td>
+                <td class="text-center"><svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.6" aria-label="포함" role="img"><path d="m20 6-11 11L4 12"/></svg></td>
               </tr>
               <tr>
-                <th scope="row" style="font-weight:var(--weight-regular)">SAML / SSO sign-in</th>
-                <td class="text-center"><span class="text-subtle" aria-label="Not included">—</span></td>
-                <td class="text-center"><span class="text-subtle" aria-label="Not included">—</span></td>
-                <td class="text-center"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.6" aria-label="Included" role="img"><path d="m20 6-11 11L4 12"/></svg></td>
+                <th scope="row" style="font-weight:var(--weight-regular)">SAML · SSO 로그인</th>
+                <td class="text-center"><span class="text-subtle" aria-label="미포함">—</span></td>
+                <td class="text-center"><span class="text-subtle" aria-label="미포함">—</span></td>
+                <td class="text-center"><svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.6" aria-label="포함" role="img"><path d="m20 6-11 11L4 12"/></svg></td>
               </tr>
               <tr>
-                <th scope="row" style="font-weight:var(--weight-regular)">Audit logs &amp; roles</th>
-                <td class="text-center"><span class="text-subtle" aria-label="Not included">—</span></td>
-                <td class="text-center"><span class="text-subtle" aria-label="Not included">—</span></td>
-                <td class="text-center"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.6" aria-label="Included" role="img"><path d="m20 6-11 11L4 12"/></svg></td>
+                <th scope="row" style="font-weight:var(--weight-regular)">감사 로그 &amp; 역할</th>
+                <td class="text-center"><span class="text-subtle" aria-label="미포함">—</span></td>
+                <td class="text-center"><span class="text-subtle" aria-label="미포함">—</span></td>
+                <td class="text-center"><svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.6" aria-label="포함" role="img"><path d="m20 6-11 11L4 12"/></svg></td>
               </tr>
               <tr>
-                <th scope="row" style="font-weight:var(--weight-regular)">Uptime SLA</th>
-                <td class="text-center"><span class="text-subtle" aria-label="Not included">—</span></td>
+                <th scope="row" style="font-weight:var(--weight-regular)">가동률 SLA</th>
+                <td class="text-center"><span class="text-subtle" aria-label="미포함">—</span></td>
                 <td class="text-center text-muted">99.9%</td>
                 <td class="text-center text-muted">99.99%</td>
               </tr>
               <tr>
-                <th scope="row" style="font-weight:var(--weight-regular)">Support channel</th>
-                <td class="text-center text-muted">Community</td>
-                <td class="text-center text-muted">Priority email</td>
-                <td class="text-center text-muted">24/7 + Slack</td>
+                <th scope="row" style="font-weight:var(--weight-regular)">지원 채널</th>
+                <td class="text-center text-muted">커뮤니티</td>
+                <td class="text-center text-muted">우선 이메일</td>
+                <td class="text-center text-muted">24시간 · Slack</td>
               </tr>
               <tr>
-                <th scope="row" style="font-weight:var(--weight-regular)">Dedicated success manager</th>
-                <td class="text-center"><span class="text-subtle" aria-label="Not included">—</span></td>
-                <td class="text-center"><span class="text-subtle" aria-label="Not included">—</span></td>
-                <td class="text-center"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.6" aria-label="Included" role="img"><path d="m20 6-11 11L4 12"/></svg></td>
+                <th scope="row" style="font-weight:var(--weight-regular)">전담 성공 매니저</th>
+                <td class="text-center"><span class="text-subtle" aria-label="미포함">—</span></td>
+                <td class="text-center"><span class="text-subtle" aria-label="미포함">—</span></td>
+                <td class="text-center"><svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.6" aria-label="포함" role="img"><path d="m20 6-11 11L4 12"/></svg></td>
               </tr>
               <tr>
-                <th scope="row" style="font-weight:var(--weight-regular)">Data residency choice</th>
-                <td class="text-center"><span class="text-subtle" aria-label="Not included">—</span></td>
-                <td class="text-center"><span class="text-subtle" aria-label="Not included">—</span></td>
-                <td class="text-center"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--mint-400)" stroke-width="2.6" aria-label="Included" role="img"><path d="m20 6-11 11L4 12"/></svg></td>
+                <th scope="row" style="font-weight:var(--weight-regular)">데이터 리전 선택</th>
+                <td class="text-center"><span class="text-subtle" aria-label="미포함">—</span></td>
+                <td class="text-center"><span class="text-subtle" aria-label="미포함">—</span></td>
+                <td class="text-center"><svg viewBox="0 0 24 24" width="18" fill="none" class="ico-mint" stroke="currentColor" stroke-width="2.6" aria-label="포함" role="img"><path d="m20 6-11 11L4 12"/></svg></td>
               </tr>
             </tbody>
           </table>
@@ -344,46 +383,46 @@
 
     <!-- ============================ FAQ ============================ -->
     <section class="section-sm container-narrow" aria-labelledby="faq-title" data-reveal>
-      <h2 id="faq-title" class="text-center" style="margin-bottom:var(--space-8)">Pricing <span class="text-neon">questions</span></h2>
+      <h2 id="faq-title" class="text-center" style="margin-bottom:var(--space-8)">요금제 <span class="text-neon">궁금증</span></h2>
       <div class="accordion" data-single>
         <div class="accordion__item">
-          <button class="accordion__trigger" aria-expanded="true">Can I switch between monthly and yearly billing?
+          <button class="accordion__trigger" aria-expanded="true">월간과 연간 결제를 자유롭게 바꿀 수 있나요?
             <span class="accordion__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span>
           </button>
           <div class="accordion__panel">
-            <p class="text-muted" style="padding-bottom:var(--space-3)">Yes — switch any time from your billing settings. Moving to yearly applies the 20% discount immediately and we prorate the credit from your current monthly cycle.</p>
+            <p class="text-muted" style="padding-bottom:var(--space-3)">네, 결제 설정에서 언제든 바꿀 수 있어요. 연간으로 바꾸면 20% 할인이 즉시 적용되고, 현재 월간 주기의 남은 금액은 일할 계산해 크레딧으로 돌려드려요.</p>
           </div>
         </div>
         <div class="accordion__item">
-          <button class="accordion__trigger" aria-expanded="false">Is there a free trial?
+          <button class="accordion__trigger" aria-expanded="false">무료 체험이 있나요?
             <span class="accordion__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span>
           </button>
           <div class="accordion__panel" hidden>
-            <p class="text-muted" style="padding-bottom:var(--space-3)">Every paid plan starts with a 14-day free trial — no credit card required. You keep full access to Outrun-tier features during the trial so you can stress-test the grid before committing.</p>
+            <p class="text-muted" style="padding-bottom:var(--space-3)">모든 유료 요금제는 14일 무료 체험으로 시작해요 — 카드 등록도 필요 없어요. 체험 기간에는 Outrun 등급 기능을 전부 써볼 수 있어서, 결제 전에 그리드를 충분히 시험해볼 수 있어요.</p>
           </div>
         </div>
         <div class="accordion__item">
-          <button class="accordion__trigger" aria-expanded="false">What happens if I exceed my render quota?
+          <button class="accordion__trigger" aria-expanded="false">렌더 한도를 넘으면 어떻게 되나요?
             <span class="accordion__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span>
           </button>
           <div class="accordion__panel" hidden>
-            <p class="text-muted" style="padding-bottom:var(--space-3)">We never hard-stop your renders. Overages on Cruiser and Outrun are billed at $0.40 per 1,000 extra renders, and we email you at 80% and 100% so there are no surprises. Neon Pro has no render cap.</p>
+            <p class="text-muted" style="padding-bottom:var(--space-3)">렌더를 갑자기 막지 않아요. Cruiser와 Outrun의 초과분은 1,000회당 ₩520로 청구되고, 80%와 100% 지점에서 메일로 미리 알려드려요. Neon Pro는 렌더 한도가 없어요.</p>
           </div>
         </div>
         <div class="accordion__item">
-          <button class="accordion__trigger" aria-expanded="false">Do you offer discounts for startups or non-profits?
+          <button class="accordion__trigger" aria-expanded="false">스타트업이나 비영리 단체 할인이 있나요?
             <span class="accordion__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span>
           </button>
           <div class="accordion__panel" hidden>
-            <p class="text-muted" style="padding-bottom:var(--space-3)">We do. Eligible early-stage startups get 50% off Outrun for the first year, and registered non-profits and students get Neon Pro at the Outrun price. Just reach out to sales with proof of eligibility.</p>
+            <p class="text-muted" style="padding-bottom:var(--space-3)">있어요. 초기 스타트업은 첫 해 Outrun을 50% 할인해 드리고, 등록된 비영리 단체와 학생은 Neon Pro를 Outrun 가격으로 이용할 수 있어요. 자격 증빙과 함께 영업팀에 문의해 주세요.</p>
           </div>
         </div>
         <div class="accordion__item">
-          <button class="accordion__trigger" aria-expanded="false">Can I cancel any time?
+          <button class="accordion__trigger" aria-expanded="false">언제든 해지할 수 있나요?
             <span class="accordion__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span>
           </button>
           <div class="accordion__panel" hidden>
-            <p class="text-muted" style="padding-bottom:var(--space-3)">Always. Cancel in one click and keep access until the end of your current billing period. We'll export all of your projects and grid presets so nothing gets left behind on the highway.</p>
+            <p class="text-muted" style="padding-bottom:var(--space-3)">언제든요. 한 번의 클릭으로 해지되고, 현재 결제 주기가 끝날 때까지 계속 이용할 수 있어요. 모든 프로젝트와 그리드 프리셋을 내보내 드리니, 고속도로 위에 아무것도 남지 않아요.</p>
           </div>
         </div>
       </div>
@@ -391,24 +430,24 @@
 
     <!-- ============================ FINAL CTA BAND ============================ -->
     <section class="section-sm" data-reveal>
-      <div class="glass text-center stack-5" style="padding:var(--space-12) var(--space-6);border-radius:var(--radius-xl);background:var(--grad-sunset)">
-        <p class="eyebrow" style="justify-content:center">14-day free trial · no card</p>
-        <h2 style="font-size:clamp(2rem,5vw,var(--text-4xl));color:var(--color-text-strong);max-width:680px;margin-inline:auto">
-          Ready to outrun the competition?
+      <div class="glass text-center stack-5" style="padding:var(--space-12) var(--space-6);border-radius:var(--radius-xl)">
+        <p class="eyebrow" style="justify-content:center">14일 무료 체험 · 카드 없이</p>
+        <h2 style="font-size:clamp(2rem,5vw,var(--text-4xl));color:var(--color-text-strong);max-width:680px;margin-inline:auto;line-height:var(--leading-heading-ko,1.28)">
+          이제 지평선까지 달려볼까요?
         </h2>
         <p class="text-muted" style="max-width:540px;margin-inline:auto">
-          Join 12,400+ teams shipping faster on the neon grid. Pick a plan, plug in, and hit the horizon today.
+          요금제를 고르고, 플러그를 꽂고, 오늘 바로 그리드에 올라타세요. 첫 14일은 무료예요.
         </p>
         <div class="row justify-center gap-3 row-wrap">
-          <a class="btn btn--primary btn--lg" href="#plans">Start free trial</a>
-          <a class="btn btn--secondary btn--lg" href="../index.html">Talk to sales</a>
+          <a class="btn btn--primary btn--lg" href="#plans">무료로 시작하기</a>
+          <a class="btn btn--secondary btn--lg" href="../index.html">영업팀과 상담하기</a>
         </div>
       </div>
     </section>
 
     <!-- back to hub -->
     <p class="text-center" style="margin-top:var(--space-9)">
-      <a class="text-muted" href="../index.html">← Back to the Vaporwave hub</a>
+      <a class="text-muted" href="../index.html">← Vaporwave 허브로 돌아가기</a>
     </p>
 
   </main>

@@ -5,8 +5,7 @@
    Load order:  tokens.css → semantic.css → base.css → components/*.css
    ========================================================================== */
 
-/* ---- Fonts (Quicksand display + Nunito body, rounded & tactile) ----------- */
-@import url("https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Quicksand:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+/* Fonts are loaded once, in tokens.css (single consolidated @import). */
 
 /* ---- Modern reset --------------------------------------------------------- */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -37,6 +36,19 @@ body {
   background-image:
     radial-gradient(1200px 800px at 18% -10%, rgba(255, 255, 255, 0.04), transparent 55%),
     radial-gradient(1000px 700px at 110% 120%, rgba(0, 0, 0, 0.35), transparent 55%);
+}
+
+/* Film-grain atmosphere — the single cast material is never dead-flat.
+   Fixed, decorative, non-interactive; sits above the vignette, below content.
+   Static (no animation) so it costs nothing to keep pinned. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: var(--grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 img, svg, video, canvas { display: block; max-width: 100%; }
@@ -73,11 +85,13 @@ hr { border: none; height: 1px; background: var(--color-border); margin: var(--s
 ::selection { background: rgba(79, 70, 229, 0.22); color: var(--color-text-strong); }
 
 /* ---- Accessible focus ring (loud, deliberate exception to the soft look) --- */
+/* The ring is a spread box-shadow, so it conforms to each element's OWN
+   border-radius automatically — we must NOT force a radius here (that would
+   snap pills/circles to a rounded rect on focus). */
 :focus { outline: none; }
 :focus-visible {
   outline: none;
   box-shadow: var(--ring);
-  border-radius: var(--radius-sm);
 }
 /* keep the ring visible even on already-shadowed surfaces */
 .nm-raised:focus-visible,
@@ -223,6 +237,19 @@ hr { border: none; height: 1px; background: var(--color-border); margin: var(--s
 .stagger > *:nth-child(9){animation-delay:.52s} .stagger > *:nth-child(10){animation-delay:.58s}
 .stagger > *:nth-child(11){animation-delay:.64s} .stagger > *:nth-child(12){animation-delay:.70s}
 
+/* ---- Scroll reveal (signature "surfacing" motion) --------------------------
+   Elements don't just fade up — they rise AND settle out of the material with
+   the theme's springy ease, as if a raised form is emerging from the surface.
+   Only hidden when JS is present (html.js), so a failed/absent script never
+   leaves content at opacity:0. app.js adds .is-in on intersection. */
+.js [data-reveal] {
+  opacity: 0;
+  transform: translateY(18px) scale(0.985);
+  transition: opacity var(--duration-slow) var(--ease-out),
+              transform var(--duration-slow) var(--ease-soft);
+}
+.js [data-reveal].is-in { opacity: 1; transform: none; }
+
 /* ---- Reduced motion ------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
@@ -232,6 +259,8 @@ hr { border: none; height: 1px; background: var(--color-border); margin: var(--s
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+  /* never leave revealed content hidden when motion is suppressed */
+  .js [data-reveal] { opacity: 1 !important; transform: none !important; }
 }
 
 /* ---- Responsive layout helpers -------------------------------------------- */
@@ -250,4 +279,28 @@ hr { border: none; height: 1px; background: var(--color-border); margin: var(--s
 }
 @media (max-width: 480px) {
   .sm\:hidden { display: none !important; }
+}
+
+/* ============================================================================
+   HANGUL REFINEMENT LAYER (§5-A) — presupposes <html lang="ko"> + the stack
+   order fix in tokens.css. Latin metrics must not carry over to Korean.
+   ========================================================================== */
+:lang(ko) {
+  word-break: keep-all;          /* break on word (어절) boundaries        */
+  overflow-wrap: break-word;     /* safety net for long URLs/latin tokens  */
+  line-break: strict;
+}
+:lang(ko) :is(h1, h2, h3, h4, h5) { line-height: var(--leading-heading-ko); letter-spacing: normal; }
+:lang(ko) .display                { line-height: var(--leading-display-ko); }
+:is(h1, h2, h3, .card-title, .hero-title, .display) { text-wrap: balance; }
+p { text-wrap: pretty; }
+:lang(ko) :is(.uppercase, h6, .gx-label, .sidebar-label, .menu-label, .cmdk-group-label, .kicker) {
+  letter-spacing: var(--tracking-caps-ko);
+  text-transform: none;          /* uppercase is a no-op on Hangul         */
+  font-variant: normal;
+}
+:lang(ko) :is(em, i, cite) { font-style: normal; font-weight: var(--weight-semibold); }
+/* data digits render through the Latin faces (stack order) — keep them tabular */
+:lang(ko) :is(.table td, .stat-value, .stat-card .stat-value, .price-amount, .slider-value, .hs-num) {
+  font-variant-numeric: tabular-nums lining-nums;
 }

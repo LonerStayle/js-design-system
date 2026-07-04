@@ -377,6 +377,87 @@
 }
 
 /* ============================================================================
+   2b · APP-SHELL — sidebar + content layout that survives 360px
+   ----------------------------------------------------------------------------
+   Replaces per-page inline `grid-template-columns: var(--sidebar-width) 1fr`
+   (which no media query can override). At <=900px the sidebar becomes an
+   off-canvas drawer: pair it with a [data-sidebar-drawer-toggle] button in the
+   page top bar and a <div class="app-shell__scrim" data-sidebar-drawer-close>.
+   app.js wires open/close, ESC, scrim-click and focus return.
+   ========================================================================== */
+.app-shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  min-height: 100dvh;
+}
+.app-shell > .app-shell__main { min-width: 0; }   /* prevent blowout from wide children */
+.app-shell__scrim { display: none; }
+
+@media (max-width: 900px) {
+  .app-shell { grid-template-columns: 1fr; }
+  /* sidebar lifts out of flow into a left drawer */
+  .app-shell > .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: var(--z-drawer);
+    width: min(84vw, var(--sidebar-width));
+    min-height: 100dvh;
+    transform: translateX(-100%);
+    transition: transform var(--duration-base) var(--ease-emphasized);
+    box-shadow: var(--shadow-glow-lg);
+  }
+  .app-shell.is-sidebar-open > .sidebar { transform: translateX(0); }
+  /* scrim behind the open drawer */
+  .app-shell__scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--z-drawer) - 1);
+    background: var(--color-overlay);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity var(--duration-fast) var(--ease-standard),
+      visibility var(--duration-base) var(--ease-emphasized);
+  }
+  .app-shell.is-sidebar-open .app-shell__scrim {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+}
+@media (max-width: 900px) and (prefers-reduced-motion: reduce) {
+  .app-shell > .sidebar { transition: none; }
+}
+
+/* the mobile drawer trigger — hidden on desktop, shown when the shell collapses */
+.sidebar-drawer-toggle { display: none; }
+@media (max-width: 900px) {
+  .sidebar-drawer-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--btn-height-md);
+    height: var(--btn-height-md);
+    flex: none;
+    color: var(--color-text);
+    border: var(--border-1) solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-2);
+    transition:
+      color var(--duration-fast) var(--ease-standard),
+      border-color var(--duration-fast) var(--ease-standard),
+      box-shadow var(--duration-base) var(--ease-emphasized);
+  }
+  .sidebar-drawer-toggle:hover { color: var(--color-accent); border-color: var(--color-accent); box-shadow: var(--glow-cyan); }
+  .sidebar-drawer-toggle:focus-visible { box-shadow: var(--ring-pink); }
+  .sidebar-drawer-toggle > svg { width: 1.35em; height: 1.35em; }
+}
+
+/* ============================================================================
    3 · CODEBLOCK — glassy dark code panel
    ========================================================================== */
 .codeblock {

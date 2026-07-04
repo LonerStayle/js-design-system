@@ -61,7 +61,7 @@
     el.classList.add("is-open");
     el.setAttribute("aria-hidden", "false");
     document.body.classList.add("is-locked");
-    const focusTarget = el.querySelector("[autofocus], input, button, [tabindex]") || el;
+    const focusTarget = el.querySelector("[data-autofocus], input, button, [tabindex]") || el;
     setTimeout(() => focusTarget.focus(), 60);
     el.dispatchEvent(new CustomEvent("clay:open"));
   }
@@ -280,13 +280,21 @@
     const items = $$(".cmdk__item", overlay);
     const list = $(".cmdk__list", overlay);
     let active = -1;
+    // 접근성: 각 옵션에 id 부여(aria-activedescendant 대상)
+    items.forEach((it, i) => { if (!it.id) it.id = "cmdk-opt-" + i; });
 
     function visible() { return items.filter((i) => !i.hidden); }
     function setActive(idx) {
       const vis = visible();
       vis.forEach((i) => i.setAttribute("aria-selected", "false"));
       active = idx;
-      if (vis[idx]) { vis[idx].setAttribute("aria-selected", "true"); vis[idx].scrollIntoView({ block: "nearest" }); }
+      if (vis[idx]) {
+        vis[idx].setAttribute("aria-selected", "true");
+        vis[idx].scrollIntoView({ block: "nearest" });
+        input.setAttribute("aria-activedescendant", vis[idx].id);
+      } else {
+        input.removeAttribute("aria-activedescendant");
+      }
     }
     function filter(q) {
       q = q.trim().toLowerCase();
@@ -321,7 +329,7 @@
         const action = i.getAttribute("data-action");
         closeOverlay(overlay);
         if (action === "theme") $("[data-theme-toggle]") && $("[data-theme-toggle]").click();
-        else if (i.getAttribute("href")) location.href = i.getAttribute("href");
+        else if (i.getAttribute("data-href")) location.href = i.getAttribute("data-href");
         else toast({ title: "실행", text: (i.querySelector("span:not(.icon)") || i).textContent.trim(), variant: "success" });
       });
       on(i, "mousemove", () => { const vi = visible().indexOf(i); if (vi >= 0) setActive(vi); });
@@ -366,23 +374,68 @@
      ======================================================================= */
   function initRatings() {
     $$("[data-rating]").forEach((r) => {
-      let value = +r.getAttribute("data-rating") || 0;
+      const value = parseFloat(r.getAttribute("data-rating")) || 0;
       const max = +r.getAttribute("data-max") || 5;
-      r.setAttribute("role", "radiogroup");
-      r.innerHTML = "";
-      const stars = [];
-      for (let i = 1; i <= max; i++) {
-        const b = document.createElement("button");
-        b.className = "rating__star"; b.type = "button";
-        b.setAttribute("aria-label", i + "점"); b.innerHTML = ICON.star;
-        stars.push(b); r.appendChild(b);
-        on(b, "click", () => { value = i; render(value); r.dispatchEvent(new CustomEvent("clay:rate", { detail: i })); });
-        on(b, "mouseenter", () => render(i));
-      }
-      on(r, "mouseleave", () => render(value));
-      function render(n) { stars.forEach((s, idx) => s.classList.toggle("is-filled", idx < n)); }
-      render(value);
+      if (r.hasAttribute("data-readonly")) renderDisplayRating(r, value, max);
+      else renderInteractiveRating(r, value, max);
     });
+  }
+  /* 표시용: 클릭 불가, 소수점 부분 채움. aria-label=시각=data 3자 일치 */
+  function renderDisplayRating(r, value, max) {
+    r.classList.add("rating", "rating--display");
+    r.setAttribute("role", "img");
+    r.setAttribute("aria-label", max + "점 만점에 " + value + "점");
+    const pct = Math.max(0, Math.min(100, (value / max) * 100));
+    let base = "", over = "";
+    for (let i = 0; i < max; i++) {
+      base += '<span class="rating__star">' + ICON.star + "</span>";
+      over += '<span class="rating__star">' + ICON.star + "</span>";
+    }
+    r.innerHTML =
+      '<span class="rating__base" aria-hidden="true">' + base + "</span>" +
+      '<span class="rating__overlay" aria-hidden="true" style="--fill:' + pct + '%">' + over + "</span>";
+  }
+  /* 입력용: role=radiogroup + radio, 방향키/Home/End, aria-checked 동기화 */
+  function renderInteractiveRating(r, value, max) {
+    r.classList.add("rating", "rating--interactive");
+    r.setAttribute("role", "radiogroup");
+    if (!r.getAttribute("aria-label")) r.setAttribute("aria-label", "별점 (" + max + "점 만점)");
+    let current = Math.round(value);
+    r.innerHTML = "";
+    const stars = [];
+    for (let i = 1; i <= max; i++) {
+      const b = document.createElement("button");
+      b.className = "rating__star"; b.type = "button";
+      b.setAttribute("role", "radio");
+      b.setAttribute("aria-label", i + "점");
+      b.setAttribute("aria-checked", String(i === current));
+      b.tabIndex = (i === current || (current === 0 && i === 1)) ? 0 : -1;
+      b.innerHTML = ICON.star;
+      stars.push(b); r.appendChild(b);
+      on(b, "click", () => setValue(i));
+      on(b, "mouseenter", () => paint(i));
+      on(b, "keydown", (e) => {
+        let ni = null;
+        if (e.key === "ArrowRight" || e.key === "ArrowUp") ni = Math.min((current || 0) + 1, max);
+        else if (e.key === "ArrowLeft" || e.key === "ArrowDown") ni = Math.max((current || 1) - 1, 1);
+        else if (e.key === "Home") ni = 1;
+        else if (e.key === "End") ni = max;
+        else if (e.key === " " || e.key === "Enter") { e.preventDefault(); setValue(i); return; }
+        if (ni !== null) { e.preventDefault(); setValue(ni); stars[ni - 1].focus(); }
+      });
+    }
+    on(r, "mouseleave", () => paint(current));
+    function setValue(n) {
+      current = n;
+      stars.forEach((s, idx) => {
+        s.setAttribute("aria-checked", String(idx + 1 === n));
+        s.tabIndex = (idx + 1 === n) ? 0 : -1;
+      });
+      paint(n);
+      r.dispatchEvent(new CustomEvent("clay:rate", { detail: n }));
+    }
+    function paint(n) { stars.forEach((s, idx) => s.classList.toggle("is-filled", idx < n)); }
+    paint(current);
   }
 
   /* =======================================================================
@@ -664,6 +717,21 @@
   }
 
   /* =======================================================================
+     21b. Mascot — 클릭하면 점토처럼 스쿼시(1회 재생 후 원상 복귀)
+     ======================================================================= */
+  function initMascots() {
+    $$(".mascot").forEach((m) => {
+      on(m, "click", () => {
+        if (prefersReduced) return;
+        m.classList.remove("is-squished");
+        void m.offsetWidth;              // 리플로우로 애니메이션 재시작
+        m.classList.add("is-squished");
+      });
+      on(m, "animationend", (e) => { if (e.animationName === "clay-squish") m.classList.remove("is-squished"); });
+    });
+  }
+
+  /* =======================================================================
      21. 스크롤 등장 애니메이션 (IntersectionObserver)
      ======================================================================= */
   function initReveal() {
@@ -706,6 +774,7 @@
     initFileUpload();
     initTables();
     initCalendars();
+    initMascots();
     initReveal();
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);

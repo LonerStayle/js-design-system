@@ -1,8 +1,18 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+/* 다크 사용자 라이트 플래시 방지 — 스타일 로드 전에 테마 선적용(키: clay-theme). */
+(function () {
+  try {
+    var t = localStorage.getItem("clay-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
 <title>말랑 무선 키보드 · Mallang K1 — Claymorphism Shop</title>
 <meta name="description" content="통통하게 부풀어 오른 키캡, 탱탱한 타건감의 말랑 무선 키보드 Mallang K1. 캔디 컬러 4종, 무료배송·정품보증.">
 <link rel="stylesheet" href="../theme.css">
@@ -29,42 +39,93 @@
     position:relative;
     aspect-ratio: 4 / 3.4;
     border-radius: var(--radius-xl);
-    display:grid; place-items:center;
     overflow:hidden;
     box-shadow: var(--shadow-clay-lg);
-    transition: background var(--duration-base) var(--ease-out);
+    --kb-accent: var(--violet-500);   /* 색상 선택 시 JS 가 갈아끼움 → 키캡이 실시간 변색 */
+    background: radial-gradient(120% 100% at 50% 0%,
+      color-mix(in srgb, var(--kb-accent) 15%, var(--color-surface)),
+      var(--color-surface-2));
+    transition: background var(--duration-slow) var(--ease-out);
   }
-  .gallery__emoji {
-    font-size: clamp(5rem, 18vw, 9rem);
-    line-height:1;
-    filter: drop-shadow(0 14px 18px rgba(80,60,120,.28));
-    transition: transform var(--duration-base) var(--ease-spring);
-  }
-  .gallery__main:hover .gallery__emoji { transform: rotate(-6deg) scale(1.06); }
-  .gallery__discount {
-    position:absolute; top:var(--space-5); left:var(--space-5);
-    z-index:2;
-  }
+  /* ── 점토 상품 일러스트 무대 — 이모지 대체(감사 ③-1) ── */
+  .kbstage { position:absolute; inset:0; display:grid; }
+  .pv { grid-area:1 / 1; display:none; place-items:center; padding:var(--space-6); }
+  .pv.is-active { display:grid; }
+
+  /* 통통한 키캡(공통 알약) */
+  .keycap { border-radius:34% 34% 40% 40% / 40%; background:var(--color-surface); box-shadow:var(--shadow-clay-sm); }
+  .keycap--accent { background:var(--kb-accent); }
+
+  /* (1) 정면 — 키캡 그리드 키보드 */
+  .kb { width:min(100%, 25rem); padding:var(--space-4); rotate:-3deg;
+    display:flex; flex-direction:column; gap:.5rem; border-radius:var(--radius-lg);
+    background: color-mix(in srgb, var(--color-surface) 78%, var(--kb-accent));
+    box-shadow: var(--shadow-clay-lg); }
+  .kb__row { display:flex; gap:.5rem; }
+  .kb__row .keycap { height:2rem; flex:1 1 0; }
+  .kb__row .keycap--w15 { flex:1.6; }
+  .kb__row .keycap--w2  { flex:2.4; }
+  .kb__row .keycap--space { flex:6; }
+
+  /* (2) 측면 — 통통 키캡 프로파일 */
+  .side { display:flex; align-items:flex-end; gap:var(--space-4); }
+  .side-key { width:3.3rem; border-radius:var(--radius-md) var(--radius-md) var(--radius-sm) var(--radius-sm);
+    background:var(--color-surface); box-shadow:var(--shadow-clay); }
+  .side-key--1 { height:5rem; }
+  .side-key--2 { height:6.6rem; background:var(--kb-accent); box-shadow:var(--shadow-clay-lg); }
+  .side-key--3 { height:5.6rem; }
+  .side-key--4 { height:4.4rem; }
+
+  /* (3) 배터리 & 무선 동글 */
+  .batt-wrap { display:flex; flex-direction:column; align-items:center; gap:var(--space-5); }
+  .batt { position:relative; width:12rem; height:5rem; padding:.7rem; border-radius:var(--radius-md);
+    background:var(--color-surface); box-shadow:var(--shadow-clay); display:flex; align-items:center; }
+  .batt::after { content:""; position:absolute; right:-.55rem; top:50%; transform:translateY(-50%);
+    width:.6rem; height:1.9rem; border-radius:0 5px 5px 0; background:var(--color-border-strong); }
+  .batt__fill { height:100%; width:82%; border-radius:calc(var(--radius-md) - .55rem);
+    background:var(--mint-400); box-shadow:var(--shadow-clay-mint); }   /* 배터리=민트(콘텐츠 색) */
+  .dongle { width:3.4rem; height:1.6rem; border-radius:var(--radius-full);
+    background:var(--kb-accent); box-shadow:var(--shadow-clay-sm); }
+
+  /* (4) 백라이트 — RGB 언더글로우 */
+  .light-wrap { position:relative; display:grid; place-items:center; padding-bottom:1rem; }
+  .light-glow { position:absolute; left:6%; right:6%; bottom:.2rem; height:3.2rem; filter:blur(16px); opacity:.85;
+    background:linear-gradient(90deg,var(--coral-400),var(--yellow-400),var(--mint-400),var(--sky-400),var(--violet-400)); }
+  .light-kb { position:relative; width:min(100%, 21rem); padding:var(--space-3);
+    display:flex; flex-direction:column; gap:.4rem; border-radius:var(--radius-md);
+    background:var(--neutral-900); box-shadow:var(--shadow-clay-lg); }   /* intentional: 제품 섀시(양 테마 짙은 색) */
+  .light-kb .kb__row .keycap { height:1.4rem; box-shadow:none;
+    background:color-mix(in srgb, var(--neutral-800) 55%, var(--kb-accent)); }
+
+  /* (5) 패키지 박스 */
+  .box { position:relative; width:9.5rem; height:9.5rem; border-radius:var(--radius-md);
+    background:color-mix(in srgb, var(--color-surface) 80%, var(--kb-accent)); box-shadow:var(--shadow-clay-lg); }
+  .box__lid { position:absolute; inset:0 0 auto 0; height:2.4rem; border-radius:var(--radius-md) var(--radius-md) 0 0;
+    background:color-mix(in srgb, var(--color-surface) 60%, var(--kb-accent)); }
+  .box__ribbon-v, .box__ribbon-h { position:absolute; background:var(--kb-accent); box-shadow:var(--shadow-clay-sm); }
+  .box__ribbon-v { top:0; bottom:0; left:50%; width:1.5rem; transform:translateX(-50%); }
+  .box__ribbon-h { left:0; right:0; top:1.65rem; height:1.5rem; }
+
+  .gallery__discount { position:absolute; top:var(--space-5); left:var(--space-5); z-index:2; }
   .gallery__caption {
-    position:absolute; bottom:var(--space-5); left:50%; transform:translateX(-50%);
+    position:absolute; bottom:var(--space-5); left:50%; transform:translateX(-50%); z-index:2;
     font-family:var(--font-display); font-weight:var(--weight-bold);
-    font-size:var(--text-sm); color:var(--neutral-900);
-    background: rgba(255,255,255,.72);
-    backdrop-filter: blur(4px);
-    padding: var(--space-1) var(--space-4);
-    border-radius: var(--radius-full);
-    white-space:nowrap;
+    font-size:var(--text-sm); color:var(--color-text);
+    background:var(--color-surface); box-shadow:var(--shadow-clay-sm);
+    padding: var(--space-1) var(--space-4); border-radius: var(--radius-full); white-space:nowrap;
   }
   .thumbs { display:grid; grid-template-columns:repeat(5, 1fr); gap:var(--space-3); }
   .thumb {
     appearance:none; border:none; cursor:pointer; padding:0;
     aspect-ratio:1; border-radius:var(--radius-md);
-    display:grid; place-items:center; font-size:1.7rem;
+    display:grid; place-items:center;
+    background:var(--color-surface); color:var(--color-primary);
     box-shadow: var(--shadow-clay-sm);
     transition: transform var(--duration-fast) var(--ease-spring), box-shadow var(--duration-fast) var(--ease-out);
   }
+  .thumb .icon { width:1.5rem; height:1.5rem; }
   .thumb:hover { transform:translateY(-3px) scale(1.04); }
-  .thumb:focus-visible { outline:none; box-shadow: var(--shadow-clay-sm), 0 0 0 var(--ring-width) var(--color-ring); }
+  .thumb:active { transform:var(--press-squash-sm); }   /* 클레이 스쿼시 */
   .thumb[aria-pressed="true"] { box-shadow: var(--shadow-clay-pressed), 0 0 0 3px var(--color-primary); }
 
   /* 구매 박스 */
@@ -83,8 +144,8 @@
   .swatch-dot { width:1.05rem; height:1.05rem; border-radius:var(--radius-full); display:inline-block; box-shadow: var(--shadow-clay-sm); }
   .buy-actions { display:flex; gap:var(--space-3); align-items:stretch; }
   .buy-actions .btn-block { flex:1; }
-  .wish-btn.is-wished { color: var(--coral-500); }
-  .wish-btn.is-wished svg { fill: var(--coral-500); }
+  .wish-btn.is-wished { color: var(--color-accent); }
+  .wish-btn.is-wished svg { fill: var(--color-accent); }
   .trust-row { display:grid; grid-template-columns:repeat(3, 1fr); gap:var(--space-3); }
   .trust {
     display:flex; flex-direction:column; align-items:center; text-align:center; gap:var(--space-2);
@@ -106,7 +167,8 @@
   .review-card__name { font-family:var(--font-display); font-weight:var(--weight-bold); }
 
   /* 관련 상품 카드 */
-  .rel-thumb { aspect-ratio: 4/3; border-radius:var(--radius-md); display:grid; place-items:center; font-size:2.6rem; margin-bottom:var(--space-4); }
+  .rel-thumb { aspect-ratio: 4/3; border-radius:var(--radius-md); display:grid; place-items:center; margin-bottom:var(--space-4); }
+  .rel-thumb .icon { width:2.4rem; height:2.4rem; }
 
   @media (max-width: 900px) {
     .product-hero { grid-template-columns:1fr; gap:var(--space-7); }
@@ -155,24 +217,74 @@
   <!-- ========================= 히어로 split ========================= -->
   <div class="product-hero">
 
-    <!-- 좌: 갤러리 -->
+    <!-- 좌: 갤러리 — 점토로 빚은 상품 일러스트(색상 선택 시 키캡이 실시간 변색) -->
     <section class="gallery" aria-label="상품 이미지">
-      <div class="gallery__main clay-violet" id="mainView" aria-live="polite">
+      <div class="gallery__main" id="mainView">
         <span class="gallery__discount badge badge--solid-danger badge--lg">−28%</span>
-        <span class="gallery__emoji" id="mainEmoji" role="img" aria-label="말랑 키보드 정면">⌨️</span>
-        <span class="gallery__caption" id="mainCaption">바이올렛 — 정면</span>
+        <div class="kbstage" id="kbstage" role="img" aria-label="말랑 K1 키보드 · 바이올렛 · 정면">
+          <!-- (1) 정면 키보드 -->
+          <div class="pv pv--front is-active" data-view-panel="front">
+            <div class="kb" aria-hidden="true">
+              <div class="kb__row"><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap keycap--accent"></span></div>
+              <div class="kb__row"><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap keycap--w15"></span></div>
+              <div class="kb__row"><span class="keycap keycap--w15"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap keycap--accent keycap--w2"></span></div>
+              <div class="kb__row"><span class="keycap keycap--w15"></span><span class="keycap"></span><span class="keycap keycap--space"></span><span class="keycap"></span><span class="keycap keycap--accent"></span><span class="keycap"></span></div>
+            </div>
+          </div>
+          <!-- (2) 측면 통통 키캡 -->
+          <div class="pv pv--side" data-view-panel="side" hidden>
+            <div class="side" aria-hidden="true">
+              <span class="side-key side-key--1"></span>
+              <span class="side-key side-key--2"></span>
+              <span class="side-key side-key--3"></span>
+              <span class="side-key side-key--4"></span>
+            </div>
+          </div>
+          <!-- (3) 배터리 & 무선 동글 -->
+          <div class="pv pv--batt" data-view-panel="batt" hidden>
+            <div class="batt-wrap" aria-hidden="true">
+              <div class="batt"><div class="batt__fill"></div></div>
+              <div class="dongle"></div>
+            </div>
+          </div>
+          <!-- (4) 백라이트 -->
+          <div class="pv pv--light" data-view-panel="light" hidden>
+            <div class="light-wrap" aria-hidden="true">
+              <span class="light-glow"></span>
+              <div class="light-kb">
+                <div class="kb__row"><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span></div>
+                <div class="kb__row"><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span></div>
+                <div class="kb__row"><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span><span class="keycap"></span></div>
+              </div>
+            </div>
+          </div>
+          <!-- (5) 패키지 구성 -->
+          <div class="pv pv--pack" data-view-panel="pack" hidden>
+            <div class="box" aria-hidden="true">
+              <span class="box__lid"></span>
+              <span class="box__ribbon-h"></span>
+              <span class="box__ribbon-v"></span>
+            </div>
+          </div>
+        </div>
+        <span class="gallery__caption" id="mainCaption">정면 · 풀배열</span>
       </div>
-      <div class="thumbs" role="group" aria-label="이미지 썸네일">
-        <button class="thumb clay-violet" type="button" aria-pressed="true"
-          data-view data-bg="clay-violet" data-emoji="⌨️" data-caption="바이올렛 — 정면" aria-label="바이올렛 정면 보기">⌨️</button>
-        <button class="thumb clay-coral" type="button" aria-pressed="false"
-          data-view data-bg="clay-coral" data-emoji="🎹" data-caption="코랄 — 측면 키캡" aria-label="코랄 측면 보기">🎹</button>
-        <button class="thumb clay-mint" type="button" aria-pressed="false"
-          data-view data-bg="clay-mint" data-emoji="🔋" data-caption="민트 — 무선 동글 & 배터리" aria-label="배터리 보기">🔋</button>
-        <button class="thumb clay-yellow" type="button" aria-pressed="false"
-          data-view data-bg="clay-yellow" data-emoji="✨" data-caption="옐로 — 백라이트 ON" aria-label="백라이트 보기">✨</button>
-        <button class="thumb clay-sky" type="button" aria-pressed="false"
-          data-view data-bg="clay-sky" data-emoji="📦" data-caption="스카이 — 패키지 구성" aria-label="패키지 보기">📦</button>
+      <div class="thumbs" role="group" aria-label="상품 뷰 선택">
+        <button class="thumb" type="button" aria-pressed="true" data-view="front" data-caption="정면 · 풀배열" aria-label="정면 보기">
+          <svg class="icon" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="3"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>
+        </button>
+        <button class="thumb" type="button" aria-pressed="false" data-view="side" data-caption="측면 · 통통 키캡" aria-label="측면 키캡 보기">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M6 18 8 8h8l2 10Z"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+        </button>
+        <button class="thumb" type="button" aria-pressed="false" data-view="batt" data-caption="배터리 · 6주 지속" aria-label="배터리 보기">
+          <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="8" width="15" height="8" rx="2"/><path d="M20 11v2"/></svg>
+        </button>
+        <button class="thumb" type="button" aria-pressed="false" data-view="light" data-caption="백라이트 · 16색" aria-label="백라이트 보기">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 4l1.7 3.8L17.5 9l-3.8 1.2L12 14l-1.7-3.8L6.5 9l3.8-1.2Z"/><line x1="5" y1="19" x2="19" y2="19"/></svg>
+        </button>
+        <button class="thumb" type="button" aria-pressed="false" data-view="pack" data-caption="패키지 · 구성품 3종" aria-label="패키지 구성 보기">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 3 3 7v10l9 4 9-4V7Z"/><path d="M3 7l9 4 9-4M12 11v10"/></svg>
+        </button>
       </div>
     </section>
 
@@ -185,7 +297,7 @@
       </div>
 
       <div class="rating-row">
-        <div data-rating="5" data-max="5" aria-label="평점 5점 만점에 4.7점"></div>
+        <div data-rating="4.7" data-max="5" data-readonly></div>
         <span class="fw-bold">4.7</span>
         <a href="#reviews" class="text-muted text-sm">(128개 리뷰)</a>
         <span class="inline-note inline-note--success text-sm" style="margin-left:auto">
@@ -231,7 +343,7 @@
           </div>
         </div>
         <p class="text-sm text-muted" style="margin:0; flex:1; min-width:14ch">
-          <span class="fw-bold" style="color:var(--color-primary)">오늘 밤 12시</span> 전 주문 시 내일 도착 🚀
+          <span class="fw-bold" style="color:var(--color-primary)">오늘 밤 12시</span> 전에 주문하면 내일 아침 도착해요
         </p>
       </div>
 
@@ -328,7 +440,7 @@
           <div class="card card--2 review-summary">
             <div class="review-score">
               <div class="review-score__num text-candy">4.7</div>
-              <div data-rating="5" data-max="5" aria-label="평균 4.7점" style="justify-content:center"></div>
+              <div data-rating="4.7" data-max="5" data-readonly style="justify-content:center"></div>
               <p class="text-sm text-muted mt-2" style="margin:0">128개의 리뷰</p>
             </div>
             <div class="bar-rows">
@@ -344,10 +456,10 @@
           <div class="grid-2 gap-6 items-start">
             <article class="card card--2 stack-sm">
               <div class="review-card__head">
-                <div class="avatar avatar--coral">지수</div>
+                <div class="avatar avatar--coral">소민</div>
                 <div class="review-card__meta">
-                  <span class="review-card__name">김지수 <span class="badge badge--success">구매 확인</span></span>
-                  <div data-rating="5" data-max="5" aria-label="5점"></div>
+                  <span class="review-card__name">한소민 <span class="badge badge--success">구매 확인</span></span>
+                  <div data-rating="5" data-max="5" data-readonly></div>
                 </div>
                 <span class="text-sm text-subtle" style="margin-left:auto">2026.06.14</span>
               </div>
@@ -359,7 +471,7 @@
                 <div class="avatar avatar--mint">민준</div>
                 <div class="review-card__meta">
                   <span class="review-card__name">이민준 <span class="badge badge--success">구매 확인</span></span>
-                  <div data-rating="4" data-max="5" aria-label="4점"></div>
+                  <div data-rating="4" data-max="5" data-readonly></div>
                 </div>
                 <span class="text-sm text-subtle" style="margin-left:auto">2026.06.09</span>
               </div>
@@ -371,7 +483,7 @@
                 <div class="avatar avatar--yellow">서연</div>
                 <div class="review-card__meta">
                   <span class="review-card__name">박서연 <span class="badge badge--success">구매 확인</span></span>
-                  <div data-rating="5" data-max="5" aria-label="5점"></div>
+                  <div data-rating="5" data-max="5" data-readonly></div>
                 </div>
                 <span class="text-sm text-subtle" style="margin-left:auto">2026.05.28</span>
               </div>
@@ -383,7 +495,7 @@
                 <div class="avatar avatar--sky">현우</div>
                 <div class="review-card__meta">
                   <span class="review-card__name">정현우 <span class="badge badge--info">체험단</span></span>
-                  <div data-rating="4" data-max="5" aria-label="4점"></div>
+                  <div data-rating="4" data-max="5" data-readonly></div>
                 </div>
                 <span class="text-sm text-subtle" style="margin-left:auto">2026.05.21</span>
               </div>
@@ -398,7 +510,7 @@
   <!-- ========================= 관련 상품 ========================= -->
   <section class="section" style="padding-top:var(--space-9)" aria-label="함께 보면 좋은 상품">
     <div class="flex justify-between items-center mb-7" style="flex-wrap:wrap; gap:var(--space-4)">
-      <h2 style="margin:0">함께 보면 좋아요 🫧</h2>
+      <h2 style="margin:0">함께 쓰면 좋아요</h2>
       <a class="btn btn-ghost btn-sm" href="#main">전체 보기 <svg class="icon" viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></a>
     </div>
 
@@ -407,9 +519,11 @@
 
         <div class="carousel__slide">
           <article class="card card--2 card--interactive stack-sm">
-            <div class="rel-thumb clay-coral" role="img" aria-label="말랑 무선 마우스">🖱️</div>
+            <div class="rel-thumb clay-coral" role="img" aria-label="말랑 무선 마우스">
+              <svg class="icon" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="5"/><line x1="12" y1="7" x2="12" y2="11"/></svg>
+            </div>
             <div class="fw-bold">말랑 M2 무선 마우스</div>
-            <div class="flex items-center gap-2"><div class="rel-stars" data-rating="5" data-max="5" aria-label="4.8점"></div><span class="text-sm text-muted">4.8</span></div>
+            <div class="flex items-center gap-2"><div class="rel-stars" data-rating="4.8" data-max="5" data-readonly></div><span class="text-sm text-muted">4.8</span></div>
             <div class="flex justify-between items-center" style="margin-top:auto">
               <span class="fw-extrabold text-lg">₩42,000</span>
               <button class="btn-icon btn btn-primary btn-sm" aria-label="말랑 M2 마우스 담기" data-toast data-toast-title="담았어요" data-toast-text="말랑 M2 마우스를 장바구니에 추가했어요." data-toast-variant="success"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
@@ -419,9 +533,11 @@
 
         <div class="carousel__slide">
           <article class="card card--2 card--interactive stack-sm">
-            <div class="rel-thumb clay-mint" role="img" aria-label="키캡 세트">🎨</div>
+            <div class="rel-thumb clay-mint" role="img" aria-label="캔디 키캡 세트">
+              <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>
+            </div>
             <div class="fw-bold">캔디 키캡 세트 (PBT)</div>
-            <div class="flex items-center gap-2"><div class="rel-stars" data-rating="5" data-max="5" aria-label="4.6점"></div><span class="text-sm text-muted">4.6</span></div>
+            <div class="flex items-center gap-2"><div class="rel-stars" data-rating="4.6" data-max="5" data-readonly></div><span class="text-sm text-muted">4.6</span></div>
             <div class="flex justify-between items-center" style="margin-top:auto">
               <span class="fw-extrabold text-lg">₩28,000</span>
               <button class="btn-icon btn btn-primary btn-sm" aria-label="캔디 키캡 세트 담기" data-toast data-toast-title="담았어요" data-toast-text="캔디 키캡 세트를 장바구니에 추가했어요." data-toast-variant="success"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
@@ -431,9 +547,11 @@
 
         <div class="carousel__slide">
           <article class="card card--2 card--interactive stack-sm">
-            <div class="rel-thumb clay-yellow" role="img" aria-label="손목 받침">🧈</div>
+            <div class="rel-thumb clay-yellow" role="img" aria-label="손목 받침대">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M3 14a4 4 0 0 1 4-4h10a4 4 0 0 1 0 8H7a4 4 0 0 1-4-4Z"/></svg>
+            </div>
             <div class="fw-bold">말랑 손목 받침대</div>
-            <div class="flex items-center gap-2"><div class="rel-stars" data-rating="5" data-max="5" aria-label="4.9점"></div><span class="text-sm text-muted">4.9</span></div>
+            <div class="flex items-center gap-2"><div class="rel-stars" data-rating="4.9" data-max="5" data-readonly></div><span class="text-sm text-muted">4.9</span></div>
             <div class="flex justify-between items-center" style="margin-top:auto">
               <span class="fw-extrabold text-lg">₩19,000</span>
               <button class="btn-icon btn btn-primary btn-sm" aria-label="말랑 손목 받침대 담기" data-toast data-toast-title="담았어요" data-toast-text="말랑 손목 받침대를 장바구니에 추가했어요." data-toast-variant="success"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
@@ -443,9 +561,11 @@
 
         <div class="carousel__slide">
           <article class="card card--2 card--interactive stack-sm">
-            <div class="rel-thumb clay-sky" role="img" aria-label="USB-C 케이블">🔌</div>
+            <div class="rel-thumb clay-sky" role="img" aria-label="코일 USB-C 케이블">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M6 4v5a3 3 0 0 0 3 3 3 3 0 0 1 3 3v5"/><path d="M9 15a3 3 0 0 0 3-3 3 3 0 0 1 3-3 3 3 0 0 0 3-3V4"/></svg>
+            </div>
             <div class="fw-bold">코일 USB-C 케이블</div>
-            <div class="flex items-center gap-2"><div class="rel-stars" data-rating="4" data-max="5" aria-label="4.4점"></div><span class="text-sm text-muted">4.4</span></div>
+            <div class="flex items-center gap-2"><div class="rel-stars" data-rating="4.4" data-max="5" data-readonly></div><span class="text-sm text-muted">4.4</span></div>
             <div class="flex justify-between items-center" style="margin-top:auto">
               <span class="fw-extrabold text-lg">₩15,000</span>
               <button class="btn-icon btn btn-primary btn-sm" aria-label="코일 USB-C 케이블 담기" data-toast data-toast-title="담았어요" data-toast-text="코일 USB-C 케이블을 장바구니에 추가했어요." data-toast-variant="success"><svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
@@ -466,37 +586,47 @@
 <script>
   /* ── product.html 전용 인터랙션 (디자인 시스템 외부 데모 스크립트) ── */
   (function () {
-    var clayColors = ["clay-violet", "clay-coral", "clay-mint", "clay-yellow", "clay-sky"];
-
-    /* 1) 갤러리 썸네일 → 메인 이미지 스왑 */
     var mainView = document.getElementById("mainView");
-    var mainEmoji = document.getElementById("mainEmoji");
+    var kbstage = document.getElementById("kbstage");
     var mainCaption = document.getElementById("mainCaption");
+    var panels = document.querySelectorAll("[data-view-panel]");
     var thumbs = document.querySelectorAll("[data-view]");
+    var colorLabel = document.querySelector("[data-color-label]");
+    var colorName = "바이올렛";
+    var viewLabel = "정면";
+
+    function updateStageLabel() {
+      kbstage.setAttribute("aria-label", "말랑 K1 키보드 · " + colorName + " · " + viewLabel);
+    }
+
+    /* 1) 썸네일 → 상품 뷰 전환 (정면 / 측면 / 배터리 / 백라이트 / 패키지) */
     thumbs.forEach(function (btn) {
       btn.addEventListener("click", function () {
+        var v = btn.getAttribute("data-view");
         thumbs.forEach(function (b) { b.setAttribute("aria-pressed", "false"); });
         btn.setAttribute("aria-pressed", "true");
-        clayColors.forEach(function (c) { mainView.classList.remove(c); });
-        mainView.classList.add(btn.getAttribute("data-bg"));
-        mainEmoji.textContent = btn.getAttribute("data-emoji");
-        mainEmoji.setAttribute("aria-label", btn.getAttribute("data-caption"));
-        mainCaption.textContent = btn.getAttribute("data-caption");
+        panels.forEach(function (p) {
+          var on = p.getAttribute("data-view-panel") === v;
+          p.classList.toggle("is-active", on);
+          if (on) { p.removeAttribute("hidden"); } else { p.setAttribute("hidden", ""); }
+        });
+        var cap = btn.getAttribute("data-caption");
+        mainCaption.textContent = cap;
+        viewLabel = cap.split(" · ")[0];
+        updateStageLabel();
       });
     });
 
-    /* 2) 색상 선택 → 라벨 + 메인 이미지 배경 동기화 */
-    var colorMap = { "바이올렛": "clay-violet", "코랄": "clay-coral", "민트": "clay-mint", "옐로": "clay-yellow" };
-    var colorLabel = document.querySelector("[data-color-label]");
+    /* 2) 색상 선택 → 라벨 + 키캡 색(--kb-accent) 실시간 동기화 (⑤-4 시그니처) */
+    var accentMap = { "바이올렛": "var(--violet-500)", "코랄": "var(--coral-500)", "민트": "var(--mint-500)", "옐로": "var(--yellow-400)" };
     document.querySelectorAll("[data-color-picker] input").forEach(function (input) {
       input.addEventListener("change", function () {
         if (!input.checked) return;
+        colorName = input.value;
         colorLabel.textContent = input.value;
-        var cls = colorMap[input.value];
-        if (cls) {
-          clayColors.forEach(function (c) { mainView.classList.remove(c); });
-          mainView.classList.add(cls);
-        }
+        var accent = accentMap[input.value];
+        if (accent) mainView.style.setProperty("--kb-accent", accent);
+        updateStageLabel();
       });
     });
 
@@ -516,7 +646,7 @@
       var color = colorLabel.textContent;
       cartCount.textContent = (parseInt(cartCount.textContent, 10) || 0) + qty;
       if (window.Clay && window.Clay.toast) {
-        window.Clay.toast({ title: "담았어요 🎉", text: color + " 색상 " + qty + "개를 장바구니에 넣었어요.", variant: "success" });
+        window.Clay.toast({ title: "장바구니에 담았어요", text: color + " 색상 " + qty + "개를 담았어요. 배송비는 무료예요.", variant: "success" });
       }
     });
 
@@ -528,8 +658,8 @@
       wishBtn.setAttribute("aria-label", wished ? "찜 해제" : "찜하기");
       if (window.Clay && window.Clay.toast) {
         window.Clay.toast({
-          title: wished ? "찜 목록에 담았어요 💜" : "찜을 해제했어요",
-          text: wished ? "말랑 K1 키보드를 찜했어요." : "",
+          title: wished ? "찜 목록에 담았어요" : "찜을 해제했어요",
+          text: wished ? "말랑 K1 키보드를 찜했어요. 재입고·할인 시 알려드릴게요." : "",
           variant: wished ? "success" : "info"
         });
       }

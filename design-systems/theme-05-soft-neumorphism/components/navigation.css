@@ -81,10 +81,35 @@
   .sidebar {
     position: fixed; left: 0; top: 0; bottom: 0; z-index: var(--z-drawer);
     width: var(--sidebar-w); box-shadow: var(--shadow-float);
-    transform: translateX(-100%); transition: transform var(--duration-base) var(--ease-out);
+    transform: translateX(-100%);
+    /* closed: parked off-screen AND removed from the a11y/tab tree (§4-3 —
+       Tab must not land in the closed drawer). visibility flips to hidden only
+       after the slide-out finishes, so the animation is still seen. */
+    visibility: hidden;
+    transition: transform var(--duration-base) var(--ease-out),
+                visibility 0s linear var(--duration-base);
   }
-  .sidebar.is-open { transform: translateX(0); }
+  .sidebar.is-open {
+    transform: translateX(0);
+    visibility: visible;
+    transition: transform var(--duration-base) var(--ease-out),
+                visibility 0s linear 0s;
+  }
 }
+
+/* Off-canvas scrim for the mobile sidebar. Sits just BELOW the sidebar
+   (z-drawer) so the open drawer dims + blocks the page behind it while the
+   panel itself stays interactive — the §4-3 overlay contract for off-canvas. */
+.sidebar-overlay {
+  position: fixed; inset: 0; z-index: calc(var(--z-drawer) - 1);
+  background: var(--overlay-bg);
+  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  opacity: 0; visibility: hidden;
+  transition: opacity var(--duration-base) var(--ease-standard), visibility var(--duration-base);
+}
+.sidebar-overlay.is-open { opacity: 1; visibility: visible; }
+/* desktop: the sidebar is a static column, never an overlay — kill any stray scrim */
+@media (min-width: 1025px) { .sidebar-overlay { display: none; } }
 
 /* App-shell nav controls — correct, utility-class-independent responsive
    visibility. Hamburger (opens the mobile drawer) shows only on small screens;
@@ -138,7 +163,7 @@
 }
 .step.is-active .step-num { background: var(--color-primary); color: var(--color-primary-fg); box-shadow: var(--shadow-raised), inset 1px 1px 1px rgba(255,255,255,0.3); }
 .step.is-active .step-label { color: var(--color-text-strong); }
-.step.is-done .step-num { background: var(--color-success); color: #fff; box-shadow: var(--shadow-raised-sm); }
+.step.is-done .step-num { background: var(--color-success); color: var(--color-success-fg); box-shadow: var(--shadow-raised-sm); }
 .step.is-done:not(:last-child)::after { background: var(--color-success); box-shadow: none; }
 .step.is-done .step-label { color: var(--color-text); }
 

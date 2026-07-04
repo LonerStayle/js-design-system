@@ -1,33 +1,45 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+/* apply saved theme before first paint (no light flash) + mark JS available */
+(function () {
+  try {
+    var t = localStorage.getItem("nm-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+  document.documentElement.classList.add("js");
+})();
+</script>
 <title>Soft Neumorphism · 디자인 시스템</title>
 <meta name="description" content="Soft Neumorphism — 배경과 표면이 하나의 재질에서 부드럽게 솟아오르고 눌려 들어가는 촉각적 디자인 시스템." />
 <link rel="stylesheet" href="./theme.css" />
 <style>
   /* page-local layout for the hub showcase */
-  .hero { padding: var(--space-12) 0 var(--space-10); position: relative; }
+  .hero { padding-block: var(--space-12) var(--space-11); }   /* keep .container inline padding */
+  .hero-inner { display:grid; grid-template-columns: 1.12fr 0.88fr; gap: var(--space-9); align-items:center; }
+  .hero-copy { max-width: 42rem; }
   .hero-eyebrow { display:inline-flex; align-items:center; gap:8px; }
-  .hero h1 { font-size: clamp(2.6rem, 6vw, var(--text-6xl)); line-height: 1.02; margin-top: var(--space-4); }
-  .hero h1 .grad { background: linear-gradient(120deg, var(--color-primary), var(--color-accent)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-  .hero p.lede { font-size: var(--text-lg); color: var(--color-text-muted); max-width: 56ch; margin-top: var(--space-5); }
+  .hero-title { font-size: clamp(2.5rem, 6.4vw, 4.75rem); line-height: 1.1; margin-top: var(--space-5); }
+  .hero-title span { display:block; }
+  .hero .lede { font-size: var(--text-lg); color: var(--color-text-muted); max-width: 44ch; margin-top: var(--space-5); line-height: var(--leading-relaxed); }
   .hero-cta { display:flex; gap: var(--space-3); margin-top: var(--space-7); flex-wrap: wrap; }
-  .hero-stats { display:flex; gap: var(--space-8); margin-top: var(--space-9); flex-wrap: wrap; }
-  .hero-stats .hs-num { font-family: var(--font-display); font-size: var(--text-3xl); font-weight: var(--weight-bold); color: var(--color-text-strong); }
-  .hero-stats .hs-lbl { font-size: var(--text-sm); color: var(--color-text-muted); }
 
-  .hero-orb {
-    position: absolute; right: 2%; top: 14%; width: 340px; height: 340px; border-radius: var(--radius-full);
-    background: var(--color-surface); box-shadow: var(--shadow-raised-lg);
-    display: grid; place-items: center; pointer-events: none;
+  /* signature stage — a real, pressable orb resting in a carved bowl */
+  .hero-stage { display:flex; flex-direction:column; align-items:center; gap: var(--space-5); justify-self:center; }
+  .hero-stage .nm-bowl { width: clamp(15rem, 30vw, 21rem); aspect-ratio: 1; padding: clamp(1.6rem, 3.5vw, 2.8rem); }
+  .hero-stage .nm-orb { --orb-size: clamp(9rem, 20vw, 14.5rem); }
+  .hero-hint { display:inline-flex; align-items:center; gap:7px; font-size: var(--text-sm); color: var(--color-text-muted); font-weight: var(--weight-semibold); }
+  .hero-hint svg { width: 1.05rem; height: 1.05rem; }
+  @media (max-width: 900px) {
+    .hero-inner { grid-template-columns: 1fr; gap: var(--space-8); }
+    .hero-stage { justify-self: start; }
   }
-  .hero-orb .inner { width: 64%; height: 64%; border-radius: var(--radius-full); box-shadow: var(--shadow-pressed); display:grid; place-items:center; }
-  .hero-orb .core { width: 46%; height: 46%; border-radius: var(--radius-full); background: linear-gradient(135deg, var(--color-primary), var(--color-accent)); box-shadow: var(--shadow-raised); }
-  @media (max-width: 1024px) { .hero-orb { display:none; } }
 
-  .section { padding: var(--space-10) 0; }
+  .section { padding-block: var(--space-10); }   /* keep .container inline padding */
   .section-head { margin-bottom: var(--space-8); }
   .section-head .kicker { color: var(--color-primary); font-weight: var(--weight-bold); font-size: var(--text-sm); letter-spacing: var(--tracking-wide); text-transform: uppercase; }
   .section-head h2 { margin-top: var(--space-2); }
@@ -59,9 +71,7 @@
   .page-card .pc-desc { font-size: var(--text-sm); color: var(--color-text-muted); }
   .page-card .pc-go { margin-top:auto; color: var(--color-primary); font-weight: var(--weight-bold); font-size: var(--text-sm); display:inline-flex; align-items:center; gap:6px; }
 
-  [data-reveal] { opacity: 0; transform: translateY(24px); transition: opacity .6s var(--ease-out), transform .6s var(--ease-out); }
-  [data-reveal].is-in { opacity: 1; transform: none; }
-
+  /* [data-reveal] grammar now lives in base.css (.js-scoped surfacing motion) */
   footer.site { padding: var(--space-9) 0; margin-top: var(--space-8); border-top: 1px solid var(--color-border); color: var(--color-text-muted); }
 </style>
 </head>
@@ -100,27 +110,33 @@
 <a id="top"></a>
 
 <!-- ===================== HERO ===================== -->
-<section class="hero container">
-  <div class="stagger" style="max-width: 720px; position: relative; z-index:1;">
-    <span class="badge badge-primary hero-eyebrow"><span class="dot"></span>Theme 05 · 촉각적 인터페이스</span>
-    <h1>표면이 곧 배경.<br><span class="grad">깊이는 그림자로만.</span></h1>
-    <p class="lede">Soft Neumorphism은 단 하나의 부드러운 블루그레이 재질에서 요소가 솟아오르고(raised) 눌려 들어가는(pressed) 촉각적 디자인 시스템입니다. 하드 보더도, 요란한 색도 없이 — 좌상단 고정 광원의 이중 그림자만으로 형태를 빚습니다.</p>
-    <div class="hero-cta">
-      <a class="btn btn-primary btn-lg" href="#components">
-        컴포넌트 둘러보기
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-      </a>
-      <button class="btn btn-secondary btn-lg" data-cmdk-open>명령 팔레트 <span class="kbd">⌘K</span></button>
+<section class="hero container nm-scene">
+  <span class="nm-relief nm-relief--tl" aria-hidden="true"></span>
+  <span class="nm-relief nm-relief--br" aria-hidden="true"></span>
+  <div class="hero-inner">
+    <div class="hero-copy stagger">
+      <span class="badge badge-primary hero-eyebrow"><span class="dot"></span>Theme 05 · 촉각적 인터페이스</span>
+      <h1 class="hero-title display text-embossed"><span>누르면 들어가고,</span><span>떼면 솟아올라요.</span></h1>
+      <p class="lede">배경과 표면이 똑같은 하나의 재질이에요. 색도 선도 없이, 좌상단에서 비치는 빛의 이중 그림자만으로 솟은 것과 눌린 것을 조각합니다. 오른쪽 구슬을 한 번 눌러보세요 — 쑥 들어갔다 통통 튀어 올라와요.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary btn-lg" href="#components">
+          컴포넌트 둘러보기
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+        <button class="btn btn-secondary btn-lg" data-cmdk-open>명령 팔레트 <span class="kbd">⌘K</span></button>
+      </div>
     </div>
-    <div class="hero-stats">
-      <div><div class="hs-num">60+</div><div class="hs-lbl">컴포넌트 &amp; 변형</div></div>
-      <div><div class="hs-num">9</div><div class="hs-lbl">실데모 화면</div></div>
-      <div><div class="hs-num">2</div><div class="hs-lbl">라이트 · 다크</div></div>
-      <div><div class="hs-num">0</div><div class="hs-lbl">외부 프레임워크</div></div>
+    <div class="hero-stage">
+      <div class="nm-bowl">
+        <button class="nm-orb" type="button" aria-label="촉각 데모 — 눌러보면 안으로 쑥 들어갔다 스프링처럼 튀어 올라옵니다">
+          <span class="nm-orb-inner"><span class="nm-orb-core"></span></span>
+        </button>
+      </div>
+      <span class="hero-hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11.5a3 3 0 0 1 6 0v1M7 13v-2a5 5 0 0 1 10 0v3.5a5.5 5.5 0 0 1-5.5 5.5H11a5 5 0 0 1-5-5v-.5a1.5 1.5 0 0 1 3 0"/></svg>
+        직접 눌러보세요
+      </span>
     </div>
-  </div>
-  <div class="hero-orb" aria-hidden="true">
-    <div class="inner"><div class="core"></div></div>
   </div>
 </section>
 
@@ -241,10 +257,10 @@
         <button class="btn btn-primary btn-lg">LG</button>
         <button class="btn btn-icon" aria-label="좋아요"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg></button>
       </div>
-      <div class="btn-group" role="group" aria-label="보기 선택">
-        <button class="btn btn-sm is-active" data-segment="true" aria-pressed="true">일</button>
-        <button class="btn btn-sm" data-segment="true" aria-pressed="false">주</button>
-        <button class="btn btn-sm" data-segment="true" aria-pressed="false">월</button>
+      <div class="btn-group" role="radiogroup" aria-label="기간 보기 선택">
+        <button class="btn btn-sm is-active" type="button" data-segment="true" role="radio" aria-checked="true" tabindex="0">일</button>
+        <button class="btn btn-sm" type="button" data-segment="true" role="radio" aria-checked="false" tabindex="-1">주</button>
+        <button class="btn btn-sm" type="button" data-segment="true" role="radio" aria-checked="false" tabindex="-1">월</button>
       </div>
     </div>
 
@@ -260,9 +276,9 @@
         <input class="input" placeholder="검색…" aria-label="검색" />
       </div>
       <div class="input-group">
-        <span class="ig-text">$</span>
-        <input class="input" placeholder="0.00" inputmode="decimal" aria-label="금액" />
-        <span class="ig-text">USD</span>
+        <span class="ig-text">₩</span>
+        <input class="input" placeholder="0" inputmode="numeric" aria-label="금액" />
+        <span class="ig-text">KRW</span>
       </div>
       <div class="select-wrap">
         <select class="select" aria-label="국가">
@@ -283,10 +299,10 @@
       <label class="checkbox"><input type="checkbox" checked /><span class="box"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" stroke="currentColor" fill="none"/></svg></span> 이용약관 동의</label>
       <label class="radio"><input type="radio" name="plan" checked /><span class="dot"></span> 월간 결제</label>
       <label class="radio"><input type="radio" name="plan" /><span class="dot"></span> 연간 결제</label>
-      <div class="segmented" role="tablist" aria-label="정렬">
-        <button data-segment="true" class="is-active" aria-selected="true">최신</button>
-        <button data-segment="true" aria-selected="false">인기</button>
-        <button data-segment="true" aria-selected="false">가격</button>
+      <div class="segmented" role="radiogroup" aria-label="정렬 기준">
+        <button type="button" data-segment="true" class="is-active" role="radio" aria-checked="true" tabindex="0">최신</button>
+        <button type="button" data-segment="true" role="radio" aria-checked="false" tabindex="-1">인기</button>
+        <button type="button" data-segment="true" role="radio" aria-checked="false" tabindex="-1">가격</button>
       </div>
     </div>
 
@@ -457,10 +473,10 @@
         </tr>
       </thead>
       <tbody>
-        <tr><td><label class="checkbox"><input type="checkbox" aria-label="선택" /><span class="box"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" stroke="currentColor" fill="none"/></svg></span></label></td><td class="cell-strong">Aurora 캠페인</td><td><span class="badge badge-success"><span class="dot"></span>활성</span></td><td class="num" data-sort="48200">₩48,200K</td><td class="num" data-sort="6.4">6.4%</td></tr>
-        <tr><td><label class="checkbox"><input type="checkbox" aria-label="선택" /><span class="box"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" stroke="currentColor" fill="none"/></svg></span></label></td><td class="cell-strong">Nimbus 런칭</td><td><span class="badge badge-warning"><span class="dot"></span>검토중</span></td><td class="num" data-sort="31750">₩31,750K</td><td class="num" data-sort="4.1">4.1%</td></tr>
-        <tr><td><label class="checkbox"><input type="checkbox" aria-label="선택" /><span class="box"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" stroke="currentColor" fill="none"/></svg></span></label></td><td class="cell-strong">Pebble 리브랜딩</td><td><span class="badge badge-primary"><span class="dot"></span>진행</span></td><td class="num" data-sort="62900">₩62,900K</td><td class="num" data-sort="8.9">8.9%</td></tr>
-        <tr><td><label class="checkbox"><input type="checkbox" aria-label="선택" /><span class="box"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" stroke="currentColor" fill="none"/></svg></span></label></td><td class="cell-strong">Lumen 뉴스레터</td><td><span class="badge badge-danger"><span class="dot"></span>지연</span></td><td class="num" data-sort="18400">₩18,400K</td><td class="num" data-sort="2.7">2.7%</td></tr>
+        <tr><td><label class="checkbox"><input type="checkbox" aria-label="선택" /><span class="box"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" stroke="currentColor" fill="none"/></svg></span></label></td><td class="cell-strong">여름 신규가입 캠페인</td><td><span class="badge badge-success"><span class="dot"></span>활성</span></td><td class="num" data-sort="62900">₩6.29억</td><td class="num" data-sort="8.9">8.9%</td></tr>
+        <tr><td><label class="checkbox"><input type="checkbox" aria-label="선택" /><span class="box"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" stroke="currentColor" fill="none"/></svg></span></label></td><td class="cell-strong">가을 멤버십 리텐션</td><td><span class="badge badge-warning"><span class="dot"></span>검토중</span></td><td class="num" data-sort="31750">₩3.18억</td><td class="num" data-sort="4.1">4.1%</td></tr>
+        <tr><td><label class="checkbox"><input type="checkbox" aria-label="선택" /><span class="box"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" stroke="currentColor" fill="none"/></svg></span></label></td><td class="cell-strong">달빛서점 리브랜딩</td><td><span class="badge badge-primary"><span class="dot"></span>진행</span></td><td class="num" data-sort="48200">₩4.82억</td><td class="num" data-sort="6.4">6.4%</td></tr>
+        <tr><td><label class="checkbox"><input type="checkbox" aria-label="선택" /><span class="box"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" stroke="currentColor" fill="none"/></svg></span></label></td><td class="cell-strong">추석 선물세트 사전예약</td><td><span class="badge badge-danger"><span class="dot"></span>지연</span></td><td class="num" data-sort="18400">₩1.84억</td><td class="num" data-sort="2.7">2.7%</td></tr>
       </tbody>
     </table>
     <div class="table-toolbar" style="justify-content:flex-end">
@@ -494,7 +510,7 @@
     <a class="card card-hover page-card" href="pages/kanban.html">
       <span class="pc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg></span>
       <div class="pc-title">칸반 보드</div>
-      <div class="pc-desc">드래그 가능한 카드로 작업 흐름 관리.</div>
+      <div class="pc-desc">눌린 트랙 위에 솟은 작업 카드로 흐름 관리.</div>
       <span class="pc-go">열기 →</span>
     </a>
     <a class="card card-hover page-card" href="pages/inbox.html">
@@ -550,7 +566,7 @@
       </span>
       <span class="text-sm">SoftUI — Theme 05 · Soft Neumorphism</span>
     </div>
-    <span class="text-sm">순수 CSS + 바닐라 JS · 외부 프레임워크 0 · file:// 더블클릭 동작</span>
+    <span class="text-sm">하나의 재질에서 빛과 그림자로 조각한 인터페이스.</span>
   </div>
 </footer>
 
@@ -578,7 +594,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" data-modal-close>취소</button>
-      <button class="btn btn-primary" data-modal-close onclick="NM.toast({title:'생성됨',text:'워크스페이스가 만들어졌습니다.',variant:'success'})">만들기</button>
+      <button class="btn btn-primary" data-modal-close data-toast-title="워크스페이스를 만들었어요" data-toast-text="이제 팀원을 초대해 함께 시작할 수 있어요." data-toast-variant="success">만들기</button>
     </div>
   </div>
 </div>
@@ -601,7 +617,7 @@
   </div>
   <div class="drawer-footer">
     <button class="btn btn-ghost flex-1" data-drawer-close>초기화</button>
-    <button class="btn btn-primary flex-1" data-drawer-close onclick="NM.toast({title:'적용됨',text:'필터가 적용되었습니다.',variant:'info'})">적용</button>
+    <button class="btn btn-primary flex-1" data-drawer-close data-toast-title="필터를 적용했어요" data-toast-text="조건에 맞는 항목만 추려서 보여드릴게요." data-toast-variant="info">적용</button>
   </div>
 </div>
 
@@ -621,7 +637,7 @@
       <button class="cmdk-item" data-href="pages/pricing.html"><span class="ci-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 12V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7"/><circle cx="9" cy="12" r="2"/></svg></span><span class="ci-label">가격표</span></button>
       <div class="cmdk-group-label">동작</div>
       <button class="cmdk-item" data-theme-toggle><span class="ci-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span><span class="ci-label">테마 전환</span><span class="ci-shortcut">⌘⇧L</span></button>
-      <button class="cmdk-item" onclick="NM.toast({title:'동기화 시작',variant:'info'})"><span class="ci-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7M21 3v6h-6"/></svg></span><span class="ci-label">데이터 동기화</span></button>
+      <button class="cmdk-item"><span class="ci-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7M21 3v6h-6"/></svg></span><span class="ci-label">데이터 동기화</span></button>
       <div class="cmdk-empty" style="display:none">결과가 없습니다.</div>
     </div>
     <div class="cmdk-footer">

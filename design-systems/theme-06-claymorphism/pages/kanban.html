@@ -1,8 +1,12 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>
+  /* 다크 사용자 라이트 플래시 방지 — 스타일 로드 전에 테마 선적용(키는 app.js 와 동일: clay-theme). */
+  (function(){try{var t=localStorage.getItem("clay-theme");if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.setAttribute("data-theme",t);}catch(e){}})();
+  </script>
   <title>스프린트 보드 · ClayUI</title>
   <link rel="stylesheet" href="../theme.css">
   <style>
@@ -102,13 +106,16 @@
       min-height: 4rem;
       padding: var(--space-1) 0;
     }
+    /* 빈 컬럼 = 말랑이가 낮잠 자는 자리 (이모지 대체) */
     .column__empty {
-      display: grid; place-items: center; text-align: center;
+      display: flex; flex-direction: column; align-items: center; gap: var(--space-3);
+      text-align: center;
       padding: var(--space-6) var(--space-3);
       border-radius: var(--radius-md);
       color: var(--color-text-subtle);
       font-size: var(--text-sm); font-weight: var(--weight-bold);
     }
+    .column__empty .mascot { --mascot-size: 3.4rem; }
     /* 카드가 들어있으면 빈 안내 숨김 */
     .column__cards:not(:empty) + .column__empty { display: none; }
 
@@ -121,6 +128,53 @@
     }
     .meta-chip .icon { width: 0.95rem; height: 0.95rem; }
     .meta-chip--due-soon { color: var(--color-danger); }
+
+    /* ---- 키보드 대안: 열 이동 버튼 (마우스 드래그 없이도 카드 이동) ---- */
+    .kanban-card { position: relative; }
+    .kanban-card__move {
+      position: absolute; top: var(--space-2); right: var(--space-2);
+      display: inline-flex; gap: 4px;
+      opacity: 0; transform: translateY(-3px);
+      transition: opacity var(--duration-fast) var(--ease-out),
+                  transform var(--duration-fast) var(--ease-emphasized);
+    }
+    /* 호버·키보드 포커스 시 드러남 (항상 DOM·탭 순서엔 존재) */
+    .kanban-card:hover .kanban-card__move,
+    .kanban-card:focus-within .kanban-card__move { opacity: 1; transform: none; }
+    .kanban-card__move-btn {
+      width: 1.7rem; height: 1.7rem; padding: 0;
+      display: grid; place-items: center;
+      border: 0; cursor: pointer;
+      border-radius: var(--radius-full);
+      background: var(--color-surface); color: var(--color-text-muted);
+      box-shadow: var(--shadow-clay-sm);
+      transition: transform var(--duration-fast) var(--ease-emphasized), color var(--duration-fast);
+    }
+    .kanban-card__move-btn:hover { color: var(--color-primary); transform: translateY(-1px); }
+    .kanban-card__move-btn:active { transform: var(--press-squash-sm); }
+    .kanban-card__move-btn:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }
+    .kanban-card__move-btn[hidden] { display: none; }
+    .kanban-card__move-btn .icon { width: 1rem; height: 1rem; stroke-width: 3; }
+
+    /* ---- 클레이 물리: 드롭 시 카드가 "털썩" 눌렸다 복귀 + 컬럼이 젤리처럼 출렁 ---- */
+    @keyframes card-plop {
+      0%   { transform: scale(1); }
+      30%  { transform: scale(1.05, 0.9); }
+      60%  { transform: scale(0.98, 1.03); }
+      100% { transform: scale(1); }
+    }
+    .kanban-card.is-plop { animation: card-plop var(--duration-slow) var(--ease-spring); }
+    @keyframes column-jelly {
+      0%   { transform: translateY(0); }
+      35%  { transform: translateY(-4px); }
+      70%  { transform: translateY(2px); }
+      100% { transform: translateY(0); }
+    }
+    .column.is-reacting { animation: column-jelly var(--duration-slower) var(--ease-spring); }
+    @media (prefers-reduced-motion: reduce) {
+      .kanban-card.is-plop, .column.is-reacting { animation: none; }
+      .kanban-card__move { transition: none; }
+    }
 
     /* 모달 폼 간격 */
     .modal .field + .field { margin-top: var(--space-5); }
@@ -194,6 +248,9 @@
     <!-- ====================== 메인 ====================== -->
     <main id="main">
 
+      <!-- 카드 이동 안내(스크린리더용 라이브 리전) -->
+      <p class="sr-only" role="status" aria-live="polite" id="board-live"></p>
+
       <!-- 페이지 헤더 -->
       <header class="board-head mb-5">
         <div class="stack-sm">
@@ -243,7 +300,7 @@
         <div class="filter-row__stats">
           <span class="badge badge--info"><span class="badge__dot"></span>스프린트 진행 중</span>
           <span class="badge badge--warning">D-1 마감</span>
-          <span class="badge">전체 16 작업</span>
+          <span class="badge">전체 13 작업</span>
         </div>
       </section>
 
@@ -320,7 +377,14 @@
             </article>
 
           </div>
-          <div class="column__empty" aria-hidden="true">🫧 여기로 카드를 끌어다 놓으세요</div>
+          <div class="column__empty">
+            <span class="mascot mascot--sm mascot--sleep" aria-hidden="true">
+              <span class="mascot__eye mascot__eye--l"></span><span class="mascot__eye mascot__eye--r"></span>
+              <span class="mascot__cheek mascot__cheek--l"></span><span class="mascot__cheek mascot__cheek--r"></span>
+              <span class="mascot__mouth"></span>
+            </span>
+            <span>여기로 카드를 끌어다 놓아요</span>
+          </div>
         </div>
 
         <!-- 진행 중 -->
@@ -379,7 +443,14 @@
             </article>
 
           </div>
-          <div class="column__empty" aria-hidden="true">🫧 여기로 카드를 끌어다 놓으세요</div>
+          <div class="column__empty">
+            <span class="mascot mascot--sm mascot--sleep" aria-hidden="true">
+              <span class="mascot__eye mascot__eye--l"></span><span class="mascot__eye mascot__eye--r"></span>
+              <span class="mascot__cheek mascot__cheek--l"></span><span class="mascot__cheek mascot__cheek--r"></span>
+              <span class="mascot__mouth"></span>
+            </span>
+            <span>여기로 카드를 끌어다 놓아요</span>
+          </div>
         </div>
 
         <!-- 리뷰 -->
@@ -424,7 +495,14 @@
             </article>
 
           </div>
-          <div class="column__empty" aria-hidden="true">🫧 여기로 카드를 끌어다 놓으세요</div>
+          <div class="column__empty">
+            <span class="mascot mascot--sm mascot--sleep" aria-hidden="true">
+              <span class="mascot__eye mascot__eye--l"></span><span class="mascot__eye mascot__eye--r"></span>
+              <span class="mascot__cheek mascot__cheek--l"></span><span class="mascot__cheek mascot__cheek--r"></span>
+              <span class="mascot__mouth"></span>
+            </span>
+            <span>여기로 카드를 끌어다 놓아요</span>
+          </div>
         </div>
 
         <!-- 완료 -->
@@ -498,13 +576,20 @@
             </article>
 
           </div>
-          <div class="column__empty" aria-hidden="true">🫧 여기로 카드를 끌어다 놓으세요</div>
+          <div class="column__empty">
+            <span class="mascot mascot--sm mascot--sleep" aria-hidden="true">
+              <span class="mascot__eye mascot__eye--l"></span><span class="mascot__eye mascot__eye--r"></span>
+              <span class="mascot__cheek mascot__cheek--l"></span><span class="mascot__cheek mascot__cheek--r"></span>
+              <span class="mascot__mouth"></span>
+            </span>
+            <span>여기로 카드를 끌어다 놓아요</span>
+          </div>
         </div>
 
       </section>
 
       <footer class="text-center text-muted text-sm mt-6 mb-4">
-        ClayUI 스프린트 보드 · 데모 데이터 · 카드를 드래그해 옮겨 보세요 · <a href="../index.html" style="color:var(--color-primary);font-weight:var(--weight-bold)">컴포넌트 허브로 돌아가기</a>
+        ClayUI 스프린트 보드 · 카드를 드래그하거나, 카드 위 화살표 버튼으로 열을 옮겨 보세요 · <a href="../index.html" style="color:var(--color-primary);font-weight:var(--weight-bold)">컴포넌트 허브로 돌아가기</a>
       </footer>
     </main>
   </div>
@@ -514,13 +599,13 @@
     <div class="modal" role="document">
       <div class="modal__icon"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><line x1="17.5" y1="14" x2="17.5" y2="21"/><line x1="14" y1="17.5" x2="21" y2="17.5"/></svg></div>
       <div class="modal__header">
-        <h2 class="modal__title" id="add-card-title">새 작업 만들기 ✨</h2>
+        <h2 class="modal__title" id="add-card-title">새 작업 만들기</h2>
         <button class="modal__close" data-close aria-label="닫기"><svg class="icon" viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
       </div>
       <form class="modal__body" id="add-card-form">
         <div class="field">
           <label class="field__label" for="card-title">제목</label>
-          <input class="input" id="card-title" name="title" placeholder="예: 결제 화면 클레이 리디자인" required autofocus>
+          <input class="input" id="card-title" name="title" placeholder="예: 결제 화면 클레이 리디자인" required data-autofocus>
         </div>
         <div class="field">
           <label class="field__label" for="card-desc">설명</label>
@@ -550,10 +635,69 @@
   (function () {
     "use strict";
 
+    var REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var COLUMNS = Array.prototype.slice.call(document.querySelectorAll(".column"));
+    var live = document.getElementById("board-live");
+
     function notify(opts) {
       if (window.Clay && typeof window.Clay.toast === "function") {
         window.Clay.toast(opts);
       }
+    }
+    function announce(msg) { if (live) live.textContent = msg; }
+    function cardTitle(card) {
+      var t = card.querySelector(".kanban-card__title");
+      return t ? t.textContent.trim() : "카드";
+    }
+
+    /* 클레이 물리 — 드롭/이동 시 카드가 털썩 눌렸다 복귀 + 컬럼 젤리 출렁 */
+    function plop(card) {
+      if (REDUCED || !card) return;
+      card.classList.remove("is-plop");
+      void card.offsetWidth;               // 리플로우로 애니 재시작
+      card.classList.add("is-plop");
+    }
+    function reactColumn(column) {
+      if (REDUCED || !column) return;
+      column.classList.remove("is-reacting");
+      void column.offsetWidth;
+      column.classList.add("is-reacting");
+    }
+    document.addEventListener("animationend", function (e) {
+      if (e.animationName === "card-plop") e.target.classList.remove("is-plop");
+      if (e.animationName === "column-jelly") e.target.classList.remove("is-reacting");
+    });
+
+    /* 카드의 열 이동 버튼 활성/비활성 (첫 열엔 이전 없음, 끝 열엔 다음 없음) */
+    function refreshMoveButtons(card) {
+      var col = card.closest(".column");
+      var idx = COLUMNS.indexOf(col);
+      var prevBtn = card.querySelector('[data-move="prev"]');
+      var nextBtn = card.querySelector('[data-move="next"]');
+      if (prevBtn) {
+        prevBtn.hidden = idx <= 0;
+        prevBtn.setAttribute("aria-label", "‘" + cardTitle(card) + "’ 이전 열로 이동");
+      }
+      if (nextBtn) {
+        nextBtn.hidden = idx >= COLUMNS.length - 1;
+        nextBtn.setAttribute("aria-label", "‘" + cardTitle(card) + "’ 다음 열로 이동");
+      }
+    }
+
+    /* 키보드/버튼으로 카드를 이웃 열로 이동 */
+    function moveCard(card, dir) {
+      var col = card.closest(".column");
+      var idx = COLUMNS.indexOf(col);
+      var target = COLUMNS[idx + (dir === "next" ? 1 : -1)];
+      if (!target) return;
+      var zone = target.querySelector("[data-dropzone]");
+      zone.appendChild(card);
+      updateAllCounts();
+      refreshMoveButtons(card);
+      plop(card);
+      reactColumn(target);
+      announce("‘" + cardTitle(card) + "’ 카드를 " + target.getAttribute("data-column") + " 열로 옮겼어요.");
+      try { card.focus({ preventScroll: true }); } catch (err) { card.focus(); }
     }
 
     /* 컬럼 카운트 뱃지 동기화 */
@@ -568,8 +712,27 @@
 
     var dragged = null;
 
+    /* 카드에 열 이동 버튼(키보드 대안)을 주입 — 마우스 없이도 카드 이동 가능 */
+    var ARROW_L = '<svg class="icon" viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg>';
+    var ARROW_R = '<svg class="icon" viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg>';
+    function addMoveControls(card) {
+      if (card.querySelector(".kanban-card__move")) return;   // 중복 주입 방지
+      var group = document.createElement("div");
+      group.className = "kanban-card__move";
+      group.setAttribute("role", "group");
+      group.setAttribute("aria-label", "열 이동");
+      group.innerHTML =
+        '<button type="button" class="kanban-card__move-btn" data-move="prev">' + ARROW_L + '</button>' +
+        '<button type="button" class="kanban-card__move-btn" data-move="next">' + ARROW_R + '</button>';
+      card.appendChild(group);
+      group.querySelector('[data-move="prev"]').addEventListener("click", function () { moveCard(card, "prev"); });
+      group.querySelector('[data-move="next"]').addEventListener("click", function () { moveCard(card, "next"); });
+      refreshMoveButtons(card);
+    }
+
     /* 카드 한 장에 드래그 동작 연결 */
     function wireCard(card) {
+      addMoveControls(card);
       card.addEventListener("dragstart", function (e) {
         dragged = card;
         card.classList.add("is-dragging");
@@ -616,9 +779,15 @@
       zone.addEventListener("drop", function (e) {
         if (!dragged) return;
         e.preventDefault();
+        var card = dragged;
         column.classList.remove("is-drop-target");
         updateAllCounts();
-        notify({ title: "이동됨", text: "카드를 옮겼어요", variant: "success" });
+        refreshMoveButtons(card);
+        plop(card);                                  // 카드가 털썩 내려앉고
+        reactColumn(column);                         // 컬럼이 젤리처럼 출렁
+        var where = column.getAttribute("data-column");
+        announce("‘" + cardTitle(card) + "’ 카드를 " + where + " 열로 옮겼어요.");
+        notify({ title: "옮겼어요", text: "‘" + cardTitle(card) + "’ · " + where, variant: "success" });
       });
     });
 
@@ -689,6 +858,7 @@
           backlog.insertBefore(card, backlog.firstChild);
           wireCard(card);
           updateAllCounts();
+          plop(card);                                // 새 카드도 말랑하게 털썩
         }
 
         form.reset();

@@ -1,14 +1,23 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+/* apply saved theme before first paint (no light flash) + mark JS available */
+(function () {
+  try {
+    var t = localStorage.getItem("nm-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+  document.documentElement.classList.add("js");
+})();
+</script>
 <title>Pebble 무선 이어버드 Pro · Soft Neumorphism</title>
 <link rel="stylesheet" href="../theme.css" />
 <style>
-  /* reveal on scroll */
-  [data-reveal]{opacity:0;transform:translateY(24px);transition:.6s var(--ease-out)}
-  [data-reveal].is-in{opacity:1;transform:none}
+  /* [data-reveal] surfacing motion now lives in base.css (.js-scoped) */
 
   .store-wrap { padding-top: var(--space-5); padding-bottom: var(--space-9); }
   .navbar-links a { color: var(--color-text-muted); font-weight: var(--weight-semibold); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); transition: color .2s; }
@@ -18,48 +27,70 @@
   .pdp-grid { display:grid; grid-template-columns: 1.05fr 1fr; gap: var(--space-8); align-items:start; margin-top: var(--space-6); }
   @media (max-width: 960px){ .pdp-grid{ grid-template-columns: 1fr; gap: var(--space-7); } }
 
-  /* gallery */
-  .gallery-main { aspect-ratio: 1 / 1; border-radius: var(--radius-xl); box-shadow: var(--shadow-pressed); display:grid; place-items:center;
+  /* gallery — the earbud rests inside a carved well (DNA: depth from shadow) */
+  .gallery-main { aspect-ratio: 1 / 1; border-radius: var(--radius-xl); box-shadow: var(--shadow-carved); display:grid; place-items:center;
     background: radial-gradient(120% 120% at 30% 22%, var(--color-surface) 0%, var(--color-well) 100%); position:relative; overflow:hidden; }
-  .gallery-main::after { content:""; position:absolute; inset:0; background: radial-gradient(70% 60% at 32% 28%, rgba(99,102,241,.12), transparent 60%); pointer-events:none; }
-  .gallery-main .silhouette { width:58%; height:58%; color: var(--color-primary); opacity:.9; filter: drop-shadow(0 12px 22px rgba(99,102,241,.28)); }
+  .gallery-main::after { content:""; position:absolute; inset:0; pointer-events:none;
+    background: radial-gradient(70% 60% at 32% 28%, color-mix(in srgb, var(--color-primary) 14%, transparent), transparent 60%); }
+  .gallery-main .silhouette { width:56%; height:56%; color: var(--color-primary); opacity:.9;
+    filter: drop-shadow(0 12px 22px color-mix(in srgb, var(--color-primary) 30%, transparent)); }
   .gallery-badge { position:absolute; top: var(--space-4); left: var(--space-4); z-index:2; }
   .thumbs { display:grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-3); margin-top: var(--space-4); }
   .thumb { aspect-ratio: 1 / 1; border-radius: var(--radius-lg); box-shadow: var(--shadow-raised-sm); display:grid; place-items:center; cursor:pointer;
-    background: linear-gradient(150deg, var(--color-surface), var(--color-well)); transition: box-shadow .2s, transform .2s; border: 2px solid transparent; }
+    background: linear-gradient(150deg, var(--color-surface), var(--color-well)); transition: box-shadow .2s, transform .2s; }
   .thumb:hover { transform: translateY(-2px); }
-  .thumb.is-active { border-color: var(--color-primary); box-shadow: var(--shadow-pressed); }
+  .thumb:focus-visible { outline:none; box-shadow: var(--shadow-raised-sm), var(--ring); }
+  .thumb.is-active { box-shadow: var(--shadow-pressed); }          /* selected = pressed in */
   .thumb svg { width:46%; height:46%; color: var(--color-text-muted); }
   .thumb.is-active svg { color: var(--color-primary); }
 
   /* product info */
   .price-row { display:flex; align-items:baseline; gap: var(--space-3); flex-wrap:wrap; }
-  .price-now { font-size: var(--text-4xl); font-weight: var(--weight-bold); color: var(--color-text-strong); font-family: var(--font-display); }
+  .price-now { font-size: var(--text-4xl); font-weight: var(--weight-bold); color: var(--color-text-strong); font-family: var(--font-display); font-variant-numeric: tabular-nums; }
   .price-old { font-size: var(--text-lg); color: var(--color-text-faint); text-decoration: line-through; }
   .rating-row { display:flex; align-items:center; gap: var(--space-3); flex-wrap:wrap; }
 
-  /* color swatches */
+  /* display-only star rating (non-interactive) with a real half star */
+  .stars { display:inline-flex; align-items:center; gap:2px; }
+  .stars .st { width:1.15rem; height:1.15rem; color: var(--color-border-strong); }
+  .stars .st svg { width:100%; height:100%; }
+  .stars .st.is-on { color: var(--color-warning); }
+  .stars .st.half { position:relative; display:inline-grid; }
+  .stars .st.half .s-fill { position:absolute; inset:0; color: var(--color-warning); clip-path: inset(0 50% 0 0); }
+  .stars--lg .st { width:1.5rem; height:1.5rem; }
+  .stars--sm .st { width:.9rem; height:.9rem; }
+
+  /* color swatches — real product finishes (content colours, fixed in both themes) */
   .swatches { display:flex; gap: var(--space-3); flex-wrap:wrap; }
   .swatch { position:relative; cursor:pointer; }
   .swatch input { position:absolute; opacity:0; inset:0; cursor:pointer; }
-  .swatch .dot-color { display:block; width:2.6rem; height:2.6rem; border-radius: var(--radius-full); box-shadow: var(--shadow-raised-sm); border:3px solid transparent; transition: box-shadow .2s, border-color .2s; }
-  .swatch input:checked + .dot-color { border-color: var(--color-surface); box-shadow: var(--shadow-raised), 0 0 0 2px var(--color-primary); }
-  .swatch input:focus-visible + .dot-color { box-shadow: var(--shadow-raised), 0 0 0 3px var(--color-primary); }
+  .swatch .dot-color { display:block; width:2.6rem; height:2.6rem; border-radius: var(--radius-full); box-shadow: var(--shadow-raised-sm); transition: box-shadow .2s; }
+  .swatch input:checked + .dot-color { box-shadow: var(--shadow-pressed); }   /* chosen = pressed in */
+  .swatch input:focus-visible + .dot-color { box-shadow: var(--shadow-raised-sm), var(--ring); }
+  /* intentional: physical product finishes — must read identically in light & dark */
+  .dot-color--indigo   { background: linear-gradient(150deg, #4a4f8f, #2b2e63); }
+  .dot-color--mint     { background: linear-gradient(150deg, #7fc9b8, #4fa793); }
+  .dot-color--snow     { background: linear-gradient(150deg, #f4f6fb, #d9dfea); }
+  .dot-color--graphite { background: linear-gradient(150deg, #3a3f4a, #20242c); }
 
   .feature-list { display:grid; gap: var(--space-3); }
   .feature-list .fl-item { display:flex; align-items:center; gap: var(--space-3); color: var(--color-text-muted); font-size: var(--text-sm); }
   .feature-list .fl-ic { display:grid; place-items:center; width:2.2rem; height:2.2rem; border-radius: var(--radius-md); box-shadow: var(--shadow-raised-sm); color: var(--color-accent); flex:none; }
   .feature-list .fl-ic svg { width:1.1rem; height:1.1rem; }
 
-  /* reviews */
+  /* wishlist heart toggle */
+  .btn[data-wishlist].is-liked { color: var(--color-danger); }
+  .btn[data-wishlist].is-liked svg { fill: currentColor; }
+
+  /* reviews — the average score is embossed into a recessed panel */
   .review-summary { display:grid; grid-template-columns: auto 1fr; gap: var(--space-7); align-items:center; }
   @media (max-width: 640px){ .review-summary{ grid-template-columns: 1fr; gap: var(--space-5); text-align:center; } }
-  .rs-score { text-align:center; }
-  .rs-score .big { font-size: var(--text-6xl); font-weight: var(--weight-bold); font-family: var(--font-display); line-height:1; color: var(--color-text-strong); }
+  .rs-well { padding: var(--space-6) var(--space-8); border-radius: var(--radius-xl); box-shadow: var(--shadow-carved); display:grid; place-items:center; gap: var(--space-2); }
+  .rs-well .big { font-size: clamp(3.5rem, 9vw, 5rem); font-weight: var(--weight-bold); font-family: var(--font-display); line-height:1; color: var(--color-text-strong); font-variant-numeric: tabular-nums; }
   .dist-row { display:flex; align-items:center; gap: var(--space-3); }
   .dist-row .dist-lbl { width:2.6rem; font-size: var(--text-sm); color: var(--color-text-muted); display:flex; align-items:center; gap:4px; justify-content:flex-end; }
   .dist-row .progress { flex:1; }
-  .dist-row .dist-pct { width:2.6rem; text-align:right; font-size: var(--text-sm); color: var(--color-text-muted); }
+  .dist-row .dist-pct { width:2.6rem; text-align:right; font-size: var(--text-sm); color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
 
   .review-card { padding: var(--space-5); }
   .review-grid { display:grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); }
@@ -69,6 +100,11 @@
   .rel-track .carousel-slide { flex: 0 0 clamp(220px, 30%, 280px); }
   .rel-card .media { aspect-ratio: 4 / 3; display:grid; place-items:center; background: linear-gradient(150deg, var(--color-surface), var(--color-well)); }
   .rel-card .media svg { width:42%; height:42%; color: var(--color-primary); opacity:.85; }
+  .rel-card.is-sold .media { opacity:.45; }
+  .rel-card.is-sold .media svg { color: var(--color-text-faint); }
+
+  /* sculpted relief tuning — unique to this page (varies from index/profile) */
+  .rev-scene .nm-relief--capsule { top: 6%; right: -24rem; opacity: .9; }
 
   .section-head { display:flex; align-items:flex-end; justify-content:space-between; gap: var(--space-4); flex-wrap:wrap; margin-bottom: var(--space-5); }
   .section-head h2 { font-size: var(--text-2xl); }
@@ -134,13 +170,13 @@
       <h1 class="text-3xl font-display fw-bold">Pebble 무선 이어버드 Pro</h1>
 
       <div class="rating-row">
-        <div class="rating" aria-label="별점 4.5점">
-          <button data-rating="1" class="is-on" aria-label="1점"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1Z"/></svg></button>
-          <button data-rating="2" class="is-on" aria-label="2점"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1Z"/></svg></button>
-          <button data-rating="3" class="is-on" aria-label="3점"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1Z"/></svg></button>
-          <button data-rating="4" class="is-on" aria-label="4점"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1Z"/></svg></button>
-          <button data-rating="5" aria-label="5점"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1Z"/></svg></button>
-        </div>
+        <span class="stars" role="img" aria-label="별점 4.5점 (5점 만점)">
+          <span class="st is-on"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1Z"/></svg></span>
+          <span class="st is-on"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1Z"/></svg></span>
+          <span class="st is-on"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1Z"/></svg></span>
+          <span class="st is-on"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1Z"/></svg></span>
+          <span class="st half"><svg class="s-empty" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1Z"/></svg><svg class="s-fill" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1Z"/></svg></span>
+        </span>
         <strong class="text-strong">4.5</strong>
         <span class="text-muted text-sm">· 리뷰 1,284개</span>
         <span class="badge badge-success badge-soft badge-sm"><span class="dot"></span>재고 있음</span>
@@ -149,10 +185,10 @@
       <div class="price-row">
         <span class="price-now">₩118,000</span>
         <span class="price-old">₩151,000</span>
-        <span class="badge badge-danger badge-solid">22% OFF</span>
+        <span class="badge badge-danger badge-solid">₩33,000 할인</span>
       </div>
 
-      <p class="text-muted">하이브리드 능동형 소음 제거(ANC)와 적응형 투명 모드를 탑재한 프리미엄 무선 이어버드. 한 번 충전으로 최대 8시간, 케이스 포함 32시간 재생하며 IPX5 생활 방수를 지원합니다.</p>
+      <p class="text-muted">하이브리드 능동형 소음 제거(ANC)와 적응형 투명 모드를 담은 프리미엄 무선 이어버드예요. 한 번 충전으로 최대 8시간, 케이스까지 더하면 32시간 재생되고 IPX5 생활 방수도 지원해요.</p>
 
       <div class="divider"></div>
 
@@ -160,20 +196,20 @@
       <div class="field">
         <span class="label">색상 · <span class="text-strong" id="color-name">미드나이트 인디고</span></span>
         <div class="swatches" role="radiogroup" aria-label="색상 선택">
-          <label class="swatch"><input type="radio" name="color" value="미드나이트 인디고" checked onchange="document.getElementById('color-name').textContent=this.value"><span class="dot-color" style="background:linear-gradient(150deg,#6366f1,#4338ca)" title="미드나이트 인디고"></span></label>
-          <label class="swatch"><input type="radio" name="color" value="민트 세이지" onchange="document.getElementById('color-name').textContent=this.value"><span class="dot-color" style="background:linear-gradient(150deg,#5eead4,#2dd4bf)" title="민트 세이지"></span></label>
-          <label class="swatch"><input type="radio" name="color" value="스노우 화이트" onchange="document.getElementById('color-name').textContent=this.value"><span class="dot-color" style="background:linear-gradient(150deg,#f8fafc,#e2e8f0)" title="스노우 화이트"></span></label>
-          <label class="swatch"><input type="radio" name="color" value="그래파이트 블랙" onchange="document.getElementById('color-name').textContent=this.value"><span class="dot-color" style="background:linear-gradient(150deg,#475569,#1e293b)" title="그래파이트 블랙"></span></label>
+          <label class="swatch"><input type="radio" name="color" value="미드나이트 인디고" aria-label="미드나이트 인디고" checked><span class="dot-color dot-color--indigo" title="미드나이트 인디고"></span></label>
+          <label class="swatch"><input type="radio" name="color" value="민트 세이지" aria-label="민트 세이지"><span class="dot-color dot-color--mint" title="민트 세이지"></span></label>
+          <label class="swatch"><input type="radio" name="color" value="스노우 화이트" aria-label="스노우 화이트"><span class="dot-color dot-color--snow" title="스노우 화이트"></span></label>
+          <label class="swatch"><input type="radio" name="color" value="그래파이트 블랙" aria-label="그래파이트 블랙"><span class="dot-color dot-color--graphite" title="그래파이트 블랙"></span></label>
         </div>
       </div>
 
       <!-- type -->
       <div class="field">
         <span class="label">구성</span>
-        <div class="segmented" role="group" aria-label="구성 선택">
-          <button data-segment="true" class="is-active" aria-selected="true">기본형</button>
-          <button data-segment="true" aria-selected="false">+ 무선 충전 패드</button>
-          <button data-segment="true" aria-selected="false">+ 보호 케이스</button>
+        <div class="segmented" role="radiogroup" aria-label="구성 선택">
+          <button data-segment="true" class="is-active" role="radio" aria-checked="true" tabindex="0">기본형</button>
+          <button data-segment="true" role="radio" aria-checked="false" tabindex="-1">+ 무선 충전 패드</button>
+          <button data-segment="true" role="radio" aria-checked="false" tabindex="-1">+ 보호 케이스</button>
         </div>
       </div>
 
@@ -189,11 +225,13 @@
 
       <!-- CTA -->
       <div class="flex gap-3 items-stretch">
-        <button class="btn btn-primary btn-lg flex-1" data-drawer-open="cart" onclick="NM.toast({title:'장바구니 담김',text:'Pebble 무선 이어버드 Pro 가 담겼습니다.',variant:'success'})">
+        <button class="btn btn-primary btn-lg flex-1" data-drawer-open="cart"
+          data-toast-title="장바구니에 담았어요" data-toast-text="Pebble 무선 이어버드 Pro · 미드나이트 인디고 1개" data-toast-variant="success">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3h2.2l2 12.3a2 2 0 0 0 2 1.7h8.6a2 2 0 0 0 2-1.6L21 7H6"/></svg>
           장바구니 담기
         </button>
-        <button class="btn btn-secondary btn-icon btn-lg" aria-label="위시리스트에 추가" onclick="this.classList.toggle('text-danger');NM.toast({title:'위시리스트',text:'관심 상품에 저장했습니다.',variant:'info'})">
+        <button class="btn btn-secondary btn-icon btn-lg" data-wishlist aria-label="위시리스트에 추가" aria-pressed="false"
+          data-toast-title="위시리스트에 저장했어요" data-toast-text="재입고·가격 변동이 있으면 알려드릴게요." data-toast-variant="info">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.6a5.5 5.5 0 0 0-7.8 0L12 6.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-6.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/></svg>
         </button>
       </div>
@@ -214,7 +252,7 @@
       <div class="accordion-item is-open">
         <button class="accordion-trigger" data-accordion aria-expanded="true">상세 설명<span class="acc-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></span></button>
         <div class="accordion-panel"><div class="accordion-panel-inner">
-          <p class="text-muted">Pebble Pro 는 11mm 다이내믹 드라이버와 6개의 마이크 어레이를 결합해 깊은 저음과 선명한 보컬을 동시에 잡았습니다. 환경 소음을 초당 200회 분석하는 적응형 ANC 가 지하철·카페·사무실에서 자동으로 최적 모드를 선택합니다. 귀 모양을 학습하는 인이어 핏 테스트로 장시간 착용에도 편안합니다.</p>
+          <p class="text-muted">Pebble Pro 는 11mm 다이내믹 드라이버와 6개의 마이크 어레이를 더해 깊은 저음과 선명한 보컬을 동시에 잡았어요. 환경 소음을 초당 200회 분석하는 적응형 ANC 가 지하철·카페·사무실에서 알아서 최적 모드를 골라줘요. 귀 모양을 학습하는 인이어 핏 테스트 덕분에 오래 껴도 편안하고요.</p>
         </div></div>
       </div>
       <div class="accordion-item">
@@ -233,29 +271,30 @@
       <div class="accordion-item">
         <button class="accordion-trigger" data-accordion aria-expanded="false">배송 · 교환<span class="acc-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></span></button>
         <div class="accordion-panel"><div class="accordion-panel-inner">
-          <p class="text-muted">평일 14시 이전 결제 건은 당일 출고되어 익일 도착합니다(도서·산간 제외). 단순 변심 교환·반품은 수령 후 14일 이내 가능하며, 제품 불량의 경우 왕복 배송비를 전액 부담합니다.</p>
-          <div class="inline-note info mt-3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>위생용 이어팁은 개봉 후 교환이 제한될 수 있습니다.</div>
+          <p class="text-muted">평일 오후 2시 이전에 결제하면 당일 출고돼서 다음 날 도착해요(도서·산간 지역은 하루 더 걸려요). 단순 변심 교환·반품은 받은 날부터 14일 안에 가능하고, 제품 불량이면 왕복 배송비를 저희가 전액 부담해요.</p>
+          <div class="inline-note info mt-3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>위생용 이어팁은 개봉하면 교환이 제한될 수 있어요.</div>
         </div></div>
       </div>
     </div>
   </section>
 
   <!-- ===== REVIEWS ===== -->
-  <section class="mt-9" data-reveal>
-    <div class="section-head"><h2>리뷰</h2><button class="btn btn-secondary btn-sm" onclick="NM.toast({title:'리뷰 작성',text:'구매 확정 후 작성할 수 있어요.',variant:'info'})">리뷰 쓰기</button></div>
+  <section class="mt-9 nm-scene rev-scene" data-reveal>
+    <span class="nm-relief nm-relief--capsule" aria-hidden="true"></span>
+    <div class="section-head"><h2>리뷰</h2><button class="btn btn-secondary btn-sm" data-toast-title="리뷰 작성" data-toast-text="구매를 확정한 뒤에 작성할 수 있어요." data-toast-variant="info">리뷰 쓰기</button></div>
 
     <div class="card card-lg mb-6">
       <div class="review-summary">
-        <div class="rs-score">
-          <div class="big">4.5</div>
-          <div class="rating mt-2" aria-label="평균 별점 4.5점" style="justify-content:center">
-            <span class="is-on"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="18" height="18"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1Z"/></svg></span>
-            <span class="is-on"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="18" height="18"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1Z"/></svg></span>
-            <span class="is-on"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="18" height="18"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1Z"/></svg></span>
-            <span class="is-on"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="18" height="18"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1Z"/></svg></span>
-            <span><svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="18" height="18"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1Z"/></svg></span>
-          </div>
-          <div class="text-muted text-sm mt-2">리뷰 1,284개</div>
+        <div class="rs-well">
+          <div class="big text-embossed">4.5</div>
+          <span class="stars stars--lg" role="img" aria-label="평균 별점 4.5점 (5점 만점)">
+            <span class="st is-on"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1Z"/></svg></span>
+            <span class="st is-on"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1Z"/></svg></span>
+            <span class="st is-on"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1Z"/></svg></span>
+            <span class="st is-on"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1Z"/></svg></span>
+            <span class="st half"><svg class="s-empty" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1Z"/></svg><svg class="s-fill" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1Z"/></svg></span>
+          </span>
+          <div class="text-muted text-sm">리뷰 1,284개</div>
         </div>
         <div class="stack-sm">
           <div class="dist-row"><span class="dist-lbl">5점</span><div class="progress"><div class="progress-bar" style="width:68%"></div></div><span class="dist-pct">68%</span></div>
@@ -301,7 +340,7 @@
             <span><svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="14" height="14"><path d="m12 2 3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1Z"/></svg></span>
           </div>
         </div>
-        <p class="text-muted text-sm">민트 색상 실물이 더 예뻐요. 케이스가 작아서 주머니에 쏙 들어가고, 무선 충전도 잘 됩니다. 다만 투명 모드 전환이 살짝 늦을 때가 있어 별 하나 뺐어요.</p>
+        <p class="text-muted text-sm">민트 색상 실물이 더 예뻐요. 케이스가 작아서 주머니에 쏙 들어가고, 무선 충전도 잘 돼요. 다만 투명 모드 전환이 살짝 늦을 때가 있어 별 하나 뺐어요.</p>
       </div>
 
       <div class="card review-card">
@@ -339,8 +378,8 @@
           <div class="card-media rel-card card-hover">
             <div class="media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2M4 14a2 2 0 0 0 2 2h1v-5H6a2 2 0 0 0-2 2M20 14a2 2 0 0 1-2 2h-1v-5h1a2 2 0 0 1 2 2"/></svg></div>
             <div class="card-content">
-              <div class="text-faint text-xs mb-1">Lumen</div>
-              <div class="card-title text-base">노이즈 캔슬링 헤드폰</div>
+              <div class="text-faint text-xs mb-1">헤드폰</div>
+              <div class="card-title text-base">Pebble 오버이어 헤드폰</div>
               <div class="flex items-center justify-between mt-2"><strong class="text-strong">₩229,000</strong><span class="badge badge-warning badge-soft badge-sm">★ 4.7</span></div>
             </div>
           </div>
@@ -349,8 +388,8 @@
           <div class="card-media rel-card card-hover">
             <div class="media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="11" rx="3"/><path d="M9 8V6a3 3 0 0 1 6 0v2M12 13v3"/></svg></div>
             <div class="card-content">
-              <div class="text-faint text-xs mb-1">Pebble</div>
-              <div class="card-title text-base">무선 충전 패드</div>
+              <div class="text-faint text-xs mb-1">충전 액세서리</div>
+              <div class="card-title text-base">Pebble 무선 충전 패드</div>
               <div class="flex items-center justify-between mt-2"><strong class="text-strong">₩39,000</strong><span class="badge badge-warning badge-soft badge-sm">★ 4.4</span></div>
             </div>
           </div>
@@ -359,28 +398,28 @@
           <div class="card-media rel-card card-hover">
             <div class="media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></svg></div>
             <div class="card-content">
-              <div class="text-faint text-xs mb-1">Pebble</div>
-              <div class="card-title text-base">실리콘 보호 케이스</div>
+              <div class="text-faint text-xs mb-1">케이스</div>
+              <div class="card-title text-base">Pebble 실리콘 보호 케이스</div>
               <div class="flex items-center justify-between mt-2"><strong class="text-strong">₩18,000</strong><span class="badge badge-warning badge-soft badge-sm">★ 4.6</span></div>
             </div>
           </div>
         </div>
         <div class="carousel-slide">
-          <div class="card-media rel-card card-hover">
+          <div class="card-media rel-card is-sold">
             <div class="media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="9" r="3.2"/><circle cx="16" cy="9" r="3.2"/><path d="M8 12v6M16 12v6"/></svg></div>
             <div class="card-content">
-              <div class="text-faint text-xs mb-1">Pebble</div>
-              <div class="card-title text-base">메모리폼 이어팁 세트</div>
-              <div class="flex items-center justify-between mt-2"><strong class="text-strong">₩12,000</strong><span class="badge badge-warning badge-soft badge-sm">★ 4.8</span></div>
+              <div class="text-faint text-xs mb-1">이어팁</div>
+              <div class="card-title text-base">Pebble 메모리폼 이어팁 세트</div>
+              <div class="flex items-center justify-between mt-2"><strong class="text-strong">₩12,000</strong><span class="badge badge-danger badge-soft badge-sm"><span class="dot"></span>품절</span></div>
             </div>
           </div>
         </div>
         <div class="carousel-slide">
           <div class="card-media rel-card card-hover">
-            <div class="media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/><circle cx="8" cy="6" r="2" fill="var(--color-surface)"/><circle cx="16" cy="12" r="2" fill="var(--color-surface)"/><circle cx="10" cy="18" r="2" fill="var(--color-surface)"/></svg></div>
+            <div class="media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/><circle cx="8" cy="6" r="2" style="fill:var(--color-surface)"/><circle cx="16" cy="12" r="2" style="fill:var(--color-surface)"/><circle cx="10" cy="18" r="2" style="fill:var(--color-surface)"/></svg></div>
             <div class="card-content">
-              <div class="text-faint text-xs mb-1">Nimbus</div>
-              <div class="card-title text-base">USB-C 고속 충전기</div>
+              <div class="text-faint text-xs mb-1">충전 액세서리</div>
+              <div class="card-title text-base">Pebble USB-C 고속 충전기</div>
               <div class="flex items-center justify-between mt-2"><strong class="text-strong">₩24,000</strong><span class="badge badge-warning badge-soft badge-sm">★ 4.5</span></div>
             </div>
           </div>
@@ -389,8 +428,8 @@
           <div class="card-media rel-card card-hover">
             <div class="media"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9v6M11 7v8M15 10v5M19 8v7"/></svg></div>
             <div class="card-content">
-              <div class="text-faint text-xs mb-1">Aurora</div>
-              <div class="card-title text-base">포터블 블루투스 스피커</div>
+              <div class="text-faint text-xs mb-1">스피커</div>
+              <div class="card-title text-base">Pebble 포터블 스피커</div>
               <div class="flex items-center justify-between mt-2"><strong class="text-strong">₩89,000</strong><span class="badge badge-warning badge-soft badge-sm">★ 4.6</span></div>
             </div>
           </div>
@@ -436,7 +475,7 @@
     <div class="inline-note success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>5만원 이상 구매로 무료배송이 적용됐어요.</div>
   </div>
   <div class="drawer-footer">
-    <button class="btn btn-primary flex-1 btn-lg" onclick="NM.toast({title:'결제 진행',text:'결제 페이지로 이동합니다.',variant:'success'})">결제하기 · ₩150,000</button>
+    <button class="btn btn-primary flex-1 btn-lg" data-toast-title="결제를 진행할게요" data-toast-text="안전 결제 페이지로 이동합니다." data-toast-variant="success">결제하기 · ₩150,000</button>
   </div>
 </div>
 
@@ -455,12 +494,35 @@
       <div class="cmdk-group-label">동작</div>
       <button class="cmdk-item" data-drawer-open="cart"><span class="ci-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3h2.2l2 12.3a2 2 0 0 0 2 1.7h8.6a2 2 0 0 0 2-1.6L21 7H6"/></svg></span><span class="ci-label">장바구니 열기</span></button>
       <button class="cmdk-item" data-theme-toggle><span class="ci-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span><span class="ci-label">테마 전환</span></button>
-      <div class="cmdk-empty" style="display:none">결과가 없습니다.</div>
+      <div class="cmdk-empty" style="display:none">결과가 없어요.</div>
     </div>
     <div class="cmdk-footer"><span><span class="kbd">↑</span><span class="kbd">↓</span> 이동</span><span><span class="kbd">↵</span> 선택</span><span><span class="kbd">esc</span> 닫기</span></div>
   </div>
 </div>
 
 <script src="../app.js"></script>
+<script>
+/* page-local wiring — color name, thumbnail gallery selection, wishlist heart.
+   (No inline handlers; delegated listeners keep app.js untouched.) */
+(function () {
+  var colorName = document.getElementById("color-name");
+  document.querySelectorAll('input[name="color"]').forEach(function (r) {
+    r.addEventListener("change", function () { if (colorName) colorName.textContent = r.value; });
+  });
+  var thumbs = Array.prototype.slice.call(document.querySelectorAll(".thumb"));
+  thumbs.forEach(function (t) {
+    t.addEventListener("click", function () {
+      thumbs.forEach(function (o) { o.classList.remove("is-active"); o.setAttribute("aria-pressed", "false"); });
+      t.classList.add("is-active"); t.setAttribute("aria-pressed", "true");
+    });
+  });
+  var wish = document.querySelector("[data-wishlist]");
+  if (wish) wish.addEventListener("click", function () {
+    var liked = wish.classList.toggle("is-liked");
+    wish.setAttribute("aria-pressed", liked ? "true" : "false");
+    wish.setAttribute("aria-label", liked ? "위시리스트에서 제거" : "위시리스트에 추가");
+  });
+})();
+</script>
 </body>
 </html>
