@@ -27,6 +27,22 @@
   }
   var prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  /* Shared screen-reader announcer (polite live region). */
+  function announce(msg) {
+    var live = $('#sr-live');
+    if (!live) {
+      live = doc.createElement('div');
+      live.id = 'sr-live';
+      live.className = 'visually-hidden';
+      live.setAttribute('role', 'status');
+      live.setAttribute('aria-live', 'polite');
+      doc.body.appendChild(live);
+    }
+    live.textContent = '';
+    setTimeout(function () { live.textContent = msg; }, 30);
+  }
+  Swiss.announce = announce;
+
   /* =======================================================================
      THEME · light / dark, persisted
      Hook: [data-action="toggle-theme"]
@@ -38,7 +54,7 @@
     $$('[data-action="toggle-theme"]').forEach(function (b) {
       b.setAttribute('aria-pressed', String(name === 'dark'));
       var lbl = b.querySelector('[data-theme-label]');
-      if (lbl) lbl.textContent = name === 'dark' ? 'Dark' : 'Light';
+      if (lbl) lbl.textContent = name === 'dark' ? '다크' : '라이트';
     });
   }
   Swiss.setTheme = setTheme;
@@ -170,7 +186,7 @@
      ======================================================================= */
   function toastRegion() {
     var r = $('.toast-region');
-    if (!r) { r = doc.createElement('div'); r.className = 'toast-region'; r.setAttribute('role', 'region'); r.setAttribute('aria-label', 'Notifications'); doc.body.appendChild(r); }
+    if (!r) { r = doc.createElement('div'); r.className = 'toast-region'; r.setAttribute('role', 'status'); r.setAttribute('aria-live', 'polite'); r.setAttribute('aria-label', '알림'); doc.body.appendChild(r); }
     return r;
   }
   var ICONS = {
@@ -192,7 +208,7 @@
         (opts.title ? '<div class="toast__title">' + opts.title + '</div>' : '') +
         (opts.text ? '<div class="toast__text">' + opts.text + '</div>' : '') +
       '</div>' +
-      '<button class="toast__close" aria-label="Dismiss"><svg viewBox="0 0 16 16" width="14" height="14" stroke="currentColor" stroke-width="1.5"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>';
+      '<button class="toast__close" aria-label="닫기"><svg viewBox="0 0 16 16" width="14" height="14" stroke="currentColor" stroke-width="1.5"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>';
     region.appendChild(el);
     requestAnimationFrame(function () { el.classList.add('is-visible'); });
     function dismiss() {
@@ -269,8 +285,15 @@
     if (!item) return;
     var group = item.closest('.segmented, [data-segmented], [data-toggle-group]');
     if (!group) return;
-    $$('.segmented__item, [data-seg-item]', group).forEach(function (n) { n.setAttribute('aria-selected', 'false'); n.classList.remove('is-active'); });
-    item.setAttribute('aria-selected', 'true'); item.classList.add('is-active');
+    // role-aware state: radio → aria-checked, tab → aria-selected, else aria-pressed
+    var stateAttr = item.getAttribute('role') === 'radio' ? 'aria-checked'
+      : item.getAttribute('role') === 'tab' ? 'aria-selected' : 'aria-pressed';
+    $$('.segmented__item, [data-seg-item]', group).forEach(function (n) {
+      n.setAttribute(stateAttr, 'false'); n.classList.remove('is-active');
+      if (stateAttr === 'aria-checked') n.tabIndex = -1;
+    });
+    item.setAttribute(stateAttr, 'true'); item.classList.add('is-active');
+    if (stateAttr === 'aria-checked') item.tabIndex = 0;
     // panel switching
     var panelSel = item.getAttribute('data-panel');
     if (panelSel) {
@@ -288,6 +311,23 @@
       });
       group.dispatchEvent(new CustomEvent('seg:change', { detail: { value: val }, bubbles: true }));
     }
+  });
+  // Arrow-key navigation for segmented rendered as a radiogroup
+  on(doc, 'keydown', function (e) {
+    var item = e.target.closest('.segmented__item[role="radio"], [data-seg-item][role="radio"]');
+    if (!item) return;
+    var group = item.closest('.segmented, [data-segmented], [data-toggle-group]');
+    if (!group) return;
+    var items = $$('[role="radio"]', group);
+    var i = items.indexOf(item), n = items.length, next;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = items[(i + 1) % n];
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = items[(i - 1 + n) % n];
+    else if (e.key === 'Home') next = items[0];
+    else if (e.key === 'End') next = items[n - 1];
+    else return;
+    e.preventDefault();
+    next.click();
+    next.focus();
   });
 
   /* =======================================================================
@@ -374,7 +414,9 @@
   function makeChip(text) {
     var c = doc.createElement('span');
     c.className = 'chip';
-    c.innerHTML = '<span>' + text + '</span><button class="chip__remove" aria-label="Remove ' + text + '"><svg viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.4"><path d="M3 3l6 6M9 3l-6 6"/></svg></button>';
+    c.innerHTML = '<span></span><button class="chip__remove" aria-label="태그 삭제"><svg viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.4"><path d="M3 3l6 6M9 3l-6 6"/></svg></button>';
+    c.firstChild.textContent = text;
+    c.querySelector('.chip__remove').setAttribute('aria-label', text + ' 태그 삭제');
     return c;
   }
   on(doc, 'keydown', function (e) {
@@ -416,19 +458,46 @@
       input.dispatchEvent(new Event('change', { bubbles: true }));
     }
     var star = e.target.closest('[data-rating-value]');
-    if (star) {
-      var rate = star.closest('[data-rating]');
-      var val = +star.getAttribute('data-rating-value');
-      $$('[data-rating-value]', rate).forEach(function (st) { st.classList.toggle('is-on', +st.getAttribute('data-rating-value') <= val); });
-      var hidden = rate.querySelector('input[type="hidden"]'); if (hidden) hidden.value = val;
-      var lbl = rate.querySelector('.rating__value'); if (lbl) lbl.textContent = val.toFixed(1);
-    }
+    if (star) { setRating(star.closest('[data-rating]'), +star.getAttribute('data-rating-value')); star.focus(); }
+  });
+
+  /* RATING · radiogroup pattern — click + arrow keys, aria-checked in sync */
+  function setRating(rate, val) {
+    if (!rate) return;
+    $$('[data-rating-value]', rate).forEach(function (st) {
+      var v = +st.getAttribute('data-rating-value');
+      st.classList.toggle('is-on', v <= val);
+      if (st.getAttribute('role') === 'radio') {
+        st.setAttribute('aria-checked', String(v === val));
+        st.tabIndex = v === val ? 0 : -1;
+      }
+    });
+    var hidden = rate.querySelector('input[type="hidden"]'); if (hidden) hidden.value = val;
+    var lbl = rate.querySelector('.rating__value'); if (lbl) lbl.textContent = val.toFixed(1);
+    if (rate.getAttribute('role') === 'radiogroup') rate.setAttribute('aria-label', '별점 ' + val + '점 / 5점');
+  }
+  on(doc, 'keydown', function (e) {
+    var star = e.target.closest('[data-rating] [data-rating-value]');
+    if (!star) return;
+    var rate = star.closest('[data-rating]');
+    var stars = $$('[data-rating-value]', rate);
+    var cur = +star.getAttribute('data-rating-value');
+    var next = cur;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') next = Math.min(stars.length, cur + 1);
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') next = Math.max(1, cur - 1);
+    else if (e.key === 'Home') next = 1;
+    else if (e.key === 'End') next = stars.length;
+    else return;
+    e.preventDefault();
+    setRating(rate, next);
+    var target = rate.querySelector('[data-rating-value="' + next + '"]');
+    if (target) target.focus();
   });
   on(doc, 'change', function (e) {
     var tog = e.target.closest('input[data-toggle]');
     if (tog) {
       var st = tog.closest('.toggle').querySelector('[data-toggle-state]');
-      if (st) st.textContent = tog.checked ? (tog.getAttribute('data-on') || 'On') : (tog.getAttribute('data-off') || 'Off');
+      if (st) st.textContent = tog.checked ? (tog.getAttribute('data-on') || '켜짐') : (tog.getAttribute('data-off') || '꺼짐');
     }
   });
 
@@ -544,7 +613,7 @@
     closeTop();
     if (act === 'toggle-theme') setTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
     else if (act === 'toggle-grid') toggleGrid();
-    else if (act === 'toast') Swiss.toast({ title: it.getAttribute('data-title') || 'Command run', variant: 'success' });
+    else if (act === 'toast') Swiss.toast({ title: it.getAttribute('data-title') || '실행됨', variant: 'success' });
     else if (href && href !== '#') window.location.href = href;
   }
 
@@ -563,7 +632,7 @@
     else if (btn.hasAttribute('data-wizard-prev')) next = Math.max(0, cur - 1);
     else if (btn.hasAttribute('data-wizard-go')) next = +btn.getAttribute('data-wizard-go');
     if (next === cur && !btn.hasAttribute('data-wizard-go')) {
-      if (btn.hasAttribute('data-wizard-next')) Swiss.toast({ title: 'Setup complete', variant: 'success' });
+      if (btn.hasAttribute('data-wizard-next')) Swiss.toast({ title: '설정 완료', text: '워크스페이스 준비가 끝났어요.', variant: 'success' });
     }
     panels.forEach(function (p, i) { p.hidden = i !== next; });
     updateWizardSteps(wiz, next);
@@ -621,6 +690,30 @@
     }
   })();
 
+  /* Kanban KEYBOARD move — accessible alternative to drag & drop.
+     Hook: <button data-kanban-move="prev|next"> inside a .kanban-card.
+     Column name resolves from [data-kanban-name] / .kanban-col__title / aria-label. */
+  on(doc, 'click', function (e) {
+    var mv = e.target.closest('[data-kanban-move]');
+    if (!mv) return;
+    var card = mv.closest('.kanban-card');
+    var col = card && card.closest('[data-kanban-col]');
+    if (!col) return;
+    var cols = $$('[data-kanban-col]');
+    var dir = mv.getAttribute('data-kanban-move') === 'next' ? 1 : -1;
+    var target = cols[cols.indexOf(col) + dir];
+    if (!target) return;
+    (target.querySelector('[data-kanban-list]') || target).appendChild(card);
+    cols.forEach(function (c) { var n = $$('.kanban-card', c).length; var cc = c.querySelector('[data-kanban-count]'); if (cc) cc.textContent = n; });
+    var title = card.querySelector('.kanban-card__title');
+    var name = target.getAttribute('data-kanban-name')
+      || (target.querySelector('.kanban-col__title') || {}).textContent
+      || target.getAttribute('aria-label') || '';
+    announce((title ? title.textContent.trim() + ' · ' : '') + String(name).trim() + ' 열로 이동');
+    var again = card.querySelector('[data-kanban-move="' + mv.getAttribute('data-kanban-move') + '"]');
+    (again || card).focus();
+  });
+
   /* =======================================================================
      CAROUSEL  ·  prev/next + dots (scroll-snap)
      ======================================================================= */
@@ -676,8 +769,8 @@
      DATEPICKER + standalone CALENDAR renderer
      Hook: [data-calendar] (renders into) · [data-datepicker] (input + popover)
      ======================================================================= */
-  var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  var DOW = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+  var MONTHS = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+  var DOW = ['월', '화', '수', '목', '금', '토', '일'];
   function renderCalendar(host, state) {
     var y = state.year, m = state.month;
     var first = new Date(y, m, 1);
@@ -686,10 +779,10 @@
     var daysPrev = new Date(y, m, 0).getDate();
     var todayStr = state.todayStr;
     var html = '';
-    html += '<div class="calendar__head"><div class="calendar__title">' + MONTHS[m] + ' <span class="month">' + y + '</span></div>' +
+    html += '<div class="calendar__head"><div class="calendar__title"><span class="month">' + y + '년</span> ' + MONTHS[m] + '</div>' +
       '<div class="calendar__nav">' +
-      '<button class="calendar__nav-btn" data-cal-prev aria-label="Previous month"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.4"><path d="M10 3L5 8l5 5"/></svg></button>' +
-      '<button class="calendar__nav-btn" data-cal-next aria-label="Next month"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.4"><path d="M6 3l5 5-5 5"/></svg></button>' +
+      '<button class="calendar__nav-btn" data-cal-prev aria-label="이전 달"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.4"><path d="M10 3L5 8l5 5"/></svg></button>' +
+      '<button class="calendar__nav-btn" data-cal-next aria-label="다음 달"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.4"><path d="M6 3l5 5-5 5"/></svg></button>' +
       '</div></div>';
     html += '<div class="calendar__grid" role="grid">';
     DOW.forEach(function (d) { html += '<div class="calendar__dow" role="columnheader">' + d + '</div>'; });
@@ -755,7 +848,7 @@
     var text = val && val[0] === '#' ? ($(val) ? $(val).textContent : '') : (val || (btn.closest('.code') ? btn.closest('.code').querySelector('pre').textContent : ''));
     var done = function () {
       var lbl = btn.querySelector('[data-copy-label]') || btn;
-      var prev = lbl.textContent; lbl.textContent = 'Copied'; setTimeout(function () { lbl.textContent = prev; }, 1400);
+      var prev = lbl.textContent; lbl.textContent = '복사됨'; setTimeout(function () { lbl.textContent = prev; }, 1400);
     };
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, done);
     else done();
@@ -779,6 +872,26 @@
       });
     }, { rootMargin: '-30% 0px -65% 0px' });
     Object.keys(map).forEach(function (id) { io.observe(doc.getElementById(id)); });
+  })();
+
+  /* =======================================================================
+     SIGNATURE REVEAL · rule-draw + fade (one IntersectionObserver engine)
+     Hook: [data-reveal] (opacity fade) · [data-rule-draw] (hairline draws L→R)
+     No translate — DNA. Hidden state lives in CSS gated on html.js.
+     ======================================================================= */
+  (function reveal() {
+    var els = $$('[data-reveal],[data-rule-draw]');
+    if (!els.length) return;
+    if (prefersReduced || !('IntersectionObserver' in window)) {
+      els.forEach(function (el) { el.classList.add('is-in'); });
+      return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) { en.target.classList.add('is-in'); io.unobserve(en.target); }
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -8% 0px' });
+    els.forEach(function (el) { io.observe(el); });
   })();
 
   /* =======================================================================

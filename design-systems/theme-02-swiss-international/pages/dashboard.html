@@ -1,63 +1,108 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<title>Analytics — Swiss International · Theme 02</title>
-<meta name="description" content="Analytics dashboard demo screen — grid-aligned stats, hairline charts, sortable table. Swiss International, International Typographic Style.">
-<!-- No-flash theme boot -->
-<script>(function(){try{var t=localStorage.getItem('swiss-theme');if(t)document.documentElement.setAttribute('data-theme',t);else if(matchMedia('(prefers-color-scheme: dark)').matches)document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+<title>분석 대시보드 · Swiss International — Theme 02</title>
+<meta name="description" content="여름 캠페인 성과를 확인하는 마케팅 대시보드 — 그리드 정렬 통계, 헤어라인 차트, 정렬 가능한 테이블. International Typographic Style.">
+<!-- No-flash theme boot + JS-gate for reveal motion -->
+<script>(function(){var r=document.documentElement;r.classList.add('js');try{var t=localStorage.getItem('swiss-theme');if(t)r.setAttribute('data-theme',t);else if(matchMedia('(prefers-color-scheme: dark)').matches)r.setAttribute('data-theme','dark');}catch(e){}})();</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="../theme.css">
 <style>
-  /* ---- Page layout helpers (token-based, DNA-compliant) ---- */
+  /* ---- Dashboard layout (page-scoped, token-based, DNA-compliant) ---- */
   .dash-body { display: flex; align-items: stretch; }
-  .dash-main { min-width: 0; padding-inline: var(--space-4); }
-  @media (min-width: 768px) { .dash-main { padding-inline: var(--space-8); } }
+  .dash-main { min-width: 0; flex: 1 1 auto; }
+  .dash-main .page-plate__inner { padding-inline: var(--space-4); }
+  .dash-content { padding: 0 var(--space-4) var(--space-9); }
+  @media (min-width: 768px) {
+    .dash-main .page-plate__inner { padding-inline: var(--space-8); }
+    .dash-content { padding-inline: var(--space-8); }
+  }
 
-  .page-head--row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-4); }
-  .page-head__controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+  /* Sidebar: off-canvas drawer on small screens, docked ≥960px.
+     Uses app.js overlay contract via [data-open-drawer]/[data-close-drawer]. */
+  .dash-side {
+    position: fixed; top: 0; bottom: 0; left: 0;
+    width: min(17rem, 84vw);
+    z-index: var(--z-drawer);
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform var(--duration-slow) var(--ease-standard), visibility var(--duration-slow);
+  }
+  .dash-side.is-open { transform: translateX(0); visibility: visible; }
+  @media (prefers-reduced-motion: reduce) {
+    .dash-side { transition: visibility var(--duration-slow); transform: none !important; }
+  }
+  @media (min-width: 960px) {
+    .dash-side { position: static; transform: none; visibility: visible; width: var(--sidebar-width); z-index: auto; }
+    .dash-side__close { display: none; }
+    .dash-navtoggle { display: none; }
+  }
 
+  /* Toolbar row above the metrics */
+  .dash-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding-block: var(--space-6); }
+  .dash-toolbar__spacer { flex: 1 1 auto; }
+
+  /* ---- Signature: the number IS the layout (asymmetric KPI bento) ---- */
+  .kpi { display: grid; grid-template-columns: 1fr; gap: var(--space-6); margin-top: var(--space-2); align-items: stretch; }
+  @media (min-width: 900px) { .kpi { grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 0; } }
+  .kpi__hero {
+    border: var(--border-1) solid var(--color-border-strong);
+    padding: var(--space-6);
+    display: flex; flex-direction: column; justify-content: space-between; gap: var(--space-5);
+    min-height: 12rem;
+  }
+  @media (min-width: 900px) { .kpi__strip { border-left: 0; } }
+  .kpi__value {
+    font-family: var(--font-mono);
+    font-size: clamp(3.25rem, 7vw, var(--text-7xl));
+    font-weight: var(--weight-black);
+    letter-spacing: var(--tracking-tighter);
+    line-height: var(--leading-none);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .dl--kv { grid-template-columns: 1fr auto; }
   .card-pad { padding: var(--space-5); }
   .card-head-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-5); }
-
-  /* Make table-toolbar play nice with bulk bar */
   .bulk-bar { display: inline-flex; align-items: center; gap: var(--space-3); }
   .bulk-bar[hidden] { display: none; }
 
-  /* Right-rail stack equalises to the chart row on large screens */
   @media (min-width: 992px) {
     .equal-row { align-items: stretch; }
     .equal-row > [class*="col-"] > .card { height: 100%; }
   }
 </style>
 </head>
-<body>
-<a class="skip-link" href="#main">Skip to content</a>
+<body data-scene="focus">
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
 
 <div class="app-shell">
 
 <!-- ===================== NAVBAR ===================== -->
 <header class="navbar">
+  <button class="btn--icon btn btn--ghost btn--sm dash-navtoggle" data-open-drawer="#dash-nav" aria-controls="dash-nav" aria-label="대시보드 메뉴 열기">
+    <svg viewBox="0 0 16 16" width="15" height="15" stroke="currentColor" stroke-width="1.3" fill="none"><path d="M2 4h12M2 8h12M2 12h12"/></svg>
+  </button>
   <a class="navbar__brand" href="../index.html"><span class="navbar__mark" aria-hidden="true"></span> SWISS&nbsp;INT'L</a>
-  <nav class="navbar__nav" aria-label="Primary">
-    <a class="navbar__link" href="../index.html#foundations">Foundations</a>
-    <a class="navbar__link" href="../index.html#components">Components</a>
-    <a class="navbar__link" href="../index.html#screens">Screens</a>
-    <a class="navbar__link" href="../README.md">Docs</a>
+  <nav class="navbar__nav" aria-label="기본 메뉴">
+    <a class="navbar__link" href="../index.html#foundations">기초</a>
+    <a class="navbar__link" href="../index.html#components">컴포넌트</a>
+    <a class="navbar__link" href="../index.html#screens" aria-current="page">화면</a>
   </nav>
   <span class="navbar__spacer"></span>
   <div class="navbar__actions">
-    <button class="btn btn--ghost btn--sm" data-action="open-cmdk" aria-label="Open command palette">
+    <button class="btn btn--ghost btn--sm" data-action="open-cmdk" aria-label="명령 팔레트 열기">
       <svg viewBox="0 0 16 16" width="14" height="14" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg>
-      <span class="hide-md">Search</span><kbd class="kbd hide-md">⌘K</kbd>
+      <span class="hide-md">검색</span><kbd class="kbd hide-md">⌘K</kbd>
     </button>
-    <button class="btn--icon btn btn--secondary btn--sm" data-action="toggle-grid" aria-pressed="false" aria-label="Toggle 12-column grid overlay" title="Toggle grid (g)">
+    <button class="btn--icon btn btn--secondary btn--sm" data-action="toggle-grid" aria-pressed="false" aria-label="12컬럼 그리드 오버레이 전환" title="그리드 전환 (g)">
       <svg viewBox="0 0 16 16" width="15" height="15" stroke="currentColor" stroke-width="1.2"><path d="M1 1h14v14H1zM5.66 1v14M10.33 1v14M1 5.66h14M1 10.33h14"/></svg>
     </button>
-    <button class="btn--icon btn btn--secondary btn--sm" data-action="toggle-theme" aria-pressed="false" aria-label="Toggle dark mode">
+    <button class="btn--icon btn btn--secondary btn--sm" data-action="toggle-theme" aria-pressed="false" aria-label="다크 모드 전환">
       <svg viewBox="0 0 16 16" width="15" height="15" stroke="currentColor" stroke-width="1.3" fill="none"><path d="M13.5 9.5A5.5 5.5 0 016.5 2.5a5.5 5.5 0 100 11 5.5 5.5 0 007-4z"/></svg>
     </button>
   </div>
@@ -65,476 +110,491 @@
 
 <div class="dash-body">
 
-  <!-- ===================== SIDEBAR ===================== -->
-  <aside class="sidebar hide-md" id="side" aria-label="Dashboard sections">
+  <!-- ===================== SIDEBAR (docked ≥960px, drawer below) ===================== -->
+  <aside class="sidebar dash-side" id="dash-nav" aria-label="대시보드 메뉴">
     <div class="sidebar__head">
-      <button class="btn--icon btn btn--ghost btn--sm" data-action="toggle-sidebar" data-target="#side" aria-label="Collapse sidebar">
-        <svg viewBox="0 0 16 16" width="15" height="15" stroke="currentColor" stroke-width="1.3" fill="none"><path d="M2 3h12M2 8h12M2 13h12"/></svg>
+      <span class="overline">워크스페이스</span>
+      <span class="grow"></span>
+      <button class="btn--icon btn btn--ghost btn--sm dash-side__close" data-close-drawer aria-label="메뉴 닫기">
+        <svg viewBox="0 0 16 16" width="15" height="15" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M4 4l8 8M12 4l-8 8"/></svg>
       </button>
-      <span class="overline">Workspace</span>
     </div>
     <div class="sidebar__section">
-      <span class="sidebar__section-label">Analytics</span>
+      <span class="sidebar__section-label">분석</span>
     </div>
-    <nav class="sidebar__nav" aria-label="Analytics navigation">
-      <a class="sidebar__item" href="#" aria-current="page">
+    <nav class="sidebar__nav" aria-label="분석 메뉴">
+      <button type="button" class="sidebar__item" aria-current="page">
         <svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none"><rect x="2" y="2" width="5" height="5"/><rect x="9" y="2" width="5" height="5"/><rect x="2" y="9" width="5" height="5"/><rect x="9" y="9" width="5" height="5"/></svg>
-        <span class="sidebar__label">Overview</span><span class="sidebar__trail">—</span>
-      </a>
-      <a class="sidebar__item" href="#">
+        <span class="sidebar__label">개요</span><span class="sidebar__trail">—</span>
+      </button>
+      <button type="button" class="sidebar__item">
         <svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none"><path d="M3 2h7l3 3v9H3z"/><path d="M10 2v3h3M5 8h6M5 11h6"/></svg>
-        <span class="sidebar__label">Reports</span><span class="sidebar__trail">14</span>
-      </a>
-      <a class="sidebar__item" href="#">
+        <span class="sidebar__label">리포트</span><span class="sidebar__trail num">14</span>
+      </button>
+      <button type="button" class="sidebar__item">
         <svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none"><circle cx="6" cy="5.5" r="2.5"/><path d="M2 14c0-2.2 1.8-4 4-4s4 1.8 4 4"/><path d="M11 4.5a2.2 2.2 0 010 4M14 14c0-1.7-1-3.2-2.5-3.8"/></svg>
-        <span class="sidebar__label">Audience</span><span class="sidebar__trail">8</span>
-      </a>
-      <a class="sidebar__item" href="#">
+        <span class="sidebar__label">방문자</span><span class="sidebar__trail num">8</span>
+      </button>
+      <button type="button" class="sidebar__item">
         <svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none"><path d="M8 1v14M11 4H6.5a2 2 0 000 4h3a2 2 0 010 4H4.5"/></svg>
-        <span class="sidebar__label">Revenue</span><span class="sidebar__trail">3</span>
-      </a>
-      <a class="sidebar__item" href="#">
+        <span class="sidebar__label">매출</span><span class="sidebar__trail num">3</span>
+      </button>
+      <button type="button" class="sidebar__item">
         <svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none"><path d="M2 6l12-4v12L2 10z"/><path d="M2 6v4"/></svg>
-        <span class="sidebar__label">Campaigns</span><span class="sidebar__trail">12</span>
-      </a>
-      <a class="sidebar__item" href="../pages/settings.html">
+        <span class="sidebar__label">캠페인</span><span class="sidebar__trail num">12</span>
+      </button>
+      <a class="sidebar__item" href="settings.html">
         <svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none"><circle cx="8" cy="8" r="2.2"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M13 3l-1.4 1.4M4.4 11.6L3 13"/></svg>
-        <span class="sidebar__label">Settings</span><span class="sidebar__trail">—</span>
+        <span class="sidebar__label">설정</span><span class="sidebar__trail">—</span>
       </a>
     </nav>
     <div class="sidebar__foot">
       <div class="cluster gap-3 items-center">
-        <span class="avatar avatar--sm">EK</span>
+        <span class="avatar avatar--sm">김서</span>
         <span class="sidebar__label">
-          <span class="small weight-medium truncate" style="display:block">Elena Kessler</span>
-          <span class="caption text-muted truncate" style="display:block">Owner · Acme</span>
+          <span class="small weight-medium truncate" style="display:block">김서연</span>
+          <span class="caption text-muted truncate" style="display:block">마케팅 리드</span>
         </span>
       </div>
     </div>
   </aside>
 
   <!-- ===================== MAIN ===================== -->
-  <main id="main" class="app-main dash-main" style="min-width:0">
+  <main id="main" class="app-main dash-main">
 
-    <!-- ---- PAGE HEAD ---- -->
-    <div class="page-head page-head--row">
-      <div>
-        <nav class="breadcrumb mb-3" aria-label="Breadcrumb">
-          <a class="breadcrumb__item" href="../index.html">Home</a>
-          <span class="breadcrumb__sep">/</span>
-          <span class="breadcrumb__item" aria-current="page">Analytics</span>
-        </nav>
-        <h1 class="page-head__title">Analytics</h1>
-      </div>
-      <div class="page-head__controls">
-        <div class="segmented segmented--sm" role="tablist" aria-label="Date range">
-          <button class="segmented__item" role="tab" aria-selected="false">7D</button>
-          <button class="segmented__item is-active" role="tab" aria-selected="true">30D</button>
-          <button class="segmented__item" role="tab" aria-selected="false">90D</button>
-          <button class="segmented__item" role="tab" aria-selected="false">12M</button>
+    <!-- ---- INK PLATE PAGE HEAD ---- -->
+    <header class="page-plate">
+      <div class="page-plate__inner">
+        <div class="page-plate__index" aria-hidden="true">01</div>
+        <div>
+          <p class="page-plate__kicker">Analytics</p>
+          <h1 class="page-plate__title">여름 캠페인 대시보드</h1>
         </div>
-        <button class="btn btn--secondary" data-toast data-variant="info" data-title="Export queued" data-text="CSV will be emailed to you.">
+        <div class="page-plate__meta">
+          <span>2026.06 마감주간</span><span>담당 · 마케팅팀 김서연</span><span>12컬럼 · 8px</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="dash-content">
+
+      <!-- ---- TOOLBAR ---- -->
+      <div class="dash-toolbar">
+        <nav class="breadcrumb" aria-label="위치">
+          <a class="breadcrumb__item" href="../index.html">홈</a>
+          <span class="breadcrumb__sep">/</span>
+          <span class="breadcrumb__item" aria-current="page">분석</span>
+        </nav>
+        <span class="dash-toolbar__spacer"></span>
+        <div class="segmented segmented--sm" role="radiogroup" aria-label="기간 선택">
+          <button class="segmented__item" role="radio" aria-checked="false" tabindex="-1">7일</button>
+          <button class="segmented__item is-active" role="radio" aria-checked="true" tabindex="0">30일</button>
+          <button class="segmented__item" role="radio" aria-checked="false" tabindex="-1">90일</button>
+          <button class="segmented__item" role="radio" aria-checked="false" tabindex="-1">12개월</button>
+        </div>
+        <button class="btn btn--secondary" data-toast data-variant="info" data-title="내보내기 대기열 추가" data-text="CSV를 메일로 보내드립니다.">
           <svg viewBox="0 0 16 16" width="14" height="14" stroke="currentColor" stroke-width="1.3" fill="none"><path d="M8 1v9M5 7l3 3 3-3M2 13h12"/></svg>
-          Export
+          내보내기
         </button>
         <button class="btn btn--primary" data-open-modal="#report-modal">
           <svg viewBox="0 0 16 16" width="14" height="14" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M8 2v12M2 8h12"/></svg>
-          New report
+          새 리포트
         </button>
       </div>
-    </div>
 
-    <!-- ---- STAT STRIP ---- -->
-    <div class="stat-strip" style="margin-top:var(--space-7)">
-      <div class="stat">
-        <span class="stat__label">Revenue</span>
-        <span class="stat__value">€248.5K</span>
-        <span class="stat__meta"><span class="stat__delta stat__delta--up"><svg viewBox="0 0 12 12" width="11" height="11" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M6 10V2M3 5l3-3 3 3"/></svg>12.4%</span> vs last period</span>
-      </div>
-      <div class="stat">
-        <span class="stat__label">Sessions</span>
-        <span class="stat__value">84,920</span>
-        <span class="stat__meta"><span class="stat__delta stat__delta--up"><svg viewBox="0 0 12 12" width="11" height="11" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M6 10V2M3 5l3-3 3 3"/></svg>6.1%</span> vs last period</span>
-      </div>
-      <div class="stat">
-        <span class="stat__label">Conversion</span>
-        <span class="stat__value">3.42%</span>
-        <span class="stat__meta"><span class="stat__delta stat__delta--down"><svg viewBox="0 0 12 12" width="11" height="11" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M6 2v8M3 7l3 3 3-3"/></svg>0.4%</span> vs last period</span>
-      </div>
-      <div class="stat">
-        <span class="stat__label">Avg. order</span>
-        <span class="stat__value">€58.40</span>
-        <span class="stat__meta"><span class="stat__delta stat__delta--up"><svg viewBox="0 0 12 12" width="11" height="11" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M6 10V2M3 5l3-3 3 3"/></svg>2.2%</span> vs last period</span>
-      </div>
-    </div>
+      <!-- ---- KPI BENTO (signature) ---- -->
+      <section class="kpi" aria-label="6월 핵심 지표" data-reveal>
+        <div class="kpi__hero crop-frame">
+          <div>
+            <p class="overline">6월 매출 · 마감 D-3</p>
+            <p class="kpi__value num" style="margin-top:var(--space-3)">₩4.82억</p>
+          </div>
+          <p class="stat__meta">
+            <span class="stat__delta stat__delta--up"><svg viewBox="0 0 12 12" width="11" height="11" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M6 10V2M3 5l3-3 3 3"/></svg>18.2%</span>
+            전월 대비 · 목표 대비 <span class="num">+6.4%</span>
+          </p>
+        </div>
+        <div class="stat-strip kpi__strip">
+          <div class="stat">
+            <span class="stat__label">세션</span>
+            <span class="stat__value">84,920</span>
+            <span class="stat__meta"><span class="stat__delta stat__delta--up"><svg viewBox="0 0 12 12" width="11" height="11" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M6 10V2M3 5l3-3 3 3"/></svg>6.1%</span> 전월 대비</span>
+          </div>
+          <div class="stat">
+            <span class="stat__label">전환율</span>
+            <span class="stat__value">3.42%</span>
+            <span class="stat__meta"><span class="stat__delta stat__delta--down"><svg viewBox="0 0 12 12" width="11" height="11" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M6 2v8M3 7l3 3 3-3"/></svg>0.4%p</span> 전주 대비</span>
+          </div>
+          <div class="stat">
+            <span class="stat__label">객단가</span>
+            <span class="stat__value">₩58,400</span>
+            <span class="stat__meta"><span class="stat__delta stat__delta--up"><svg viewBox="0 0 12 12" width="11" height="11" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M6 10V2M3 5l3-3 3 3"/></svg>2.2%</span> 전월 대비</span>
+          </div>
+        </div>
+      </section>
 
-    <!-- ---- CHARTS GRID ---- -->
-    <div class="grid equal-row" style="margin-top:var(--space-6)">
+      <!-- ---- ANOMALY ALERT (the story: one outlier) ---- -->
+      <div class="alert alert--warning" role="note" style="margin-top:var(--space-6)">
+        <span class="alert__icon"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M8 2L1.5 14h13L8 2zM8 6.5v3.5M8 12v.2"/></svg></span>
+        <div class="alert__body">
+          <p class="alert__title">이상 감지 · 전환율</p>
+          <p class="alert__text">3.42% — 전주 대비 0.4%p 하락. 체크아웃 지연 원인 추적 중.</p>
+        </div>
+        <button class="alert__close" aria-label="알림 닫기"><svg viewBox="0 0 16 16" width="14" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+      </div>
 
-      <!-- Revenue by month -->
-      <div class="col-12 lg-col-8">
-        <section class="card">
-          <div class="card-pad">
-            <div class="card-head-row">
-              <div>
-                <p class="card__eyebrow">01 — Performance</p>
-                <h2 class="card__title">Revenue by month</h2>
+      <!-- ---- CHARTS GRID ---- -->
+      <div class="grid equal-row" style="margin-top:var(--space-7)" data-reveal>
+
+        <!-- 월별 매출 -->
+        <div class="col-12 lg-col-8">
+          <section class="card">
+            <div class="card-pad">
+              <div class="card-head-row">
+                <div>
+                  <p class="card__eyebrow">01 — 성과</p>
+                  <h2 class="card__title">월별 매출 · 상반기</h2>
+                </div>
+                <span class="badge badge--muted num">2026년</span>
               </div>
-              <span class="badge badge--muted num">FY 2026</span>
+
+              <div class="chart">
+                <div class="chart-bars" role="img" aria-label="1월부터 6월까지 월별 매출, 6월이 최고">
+                  <div class="chart-bars__col"><span class="chart-bars__bar" style="--h:52%"></span></div>
+                  <div class="chart-bars__col"><span class="chart-bars__bar" style="--h:48%"></span></div>
+                  <div class="chart-bars__col"><span class="chart-bars__bar" style="--h:61%"></span></div>
+                  <div class="chart-bars__col"><span class="chart-bars__bar" style="--h:67%"></span></div>
+                  <div class="chart-bars__col"><span class="chart-bars__bar" style="--h:74%"></span></div>
+                  <div class="chart-bars__col"><span class="chart-bars__bar chart-bars__bar--accent" style="--h:96%"></span></div>
+                </div>
+                <div class="chart-axis" aria-hidden="true">
+                  <span class="chart-axis__tick">1</span>
+                  <span class="chart-axis__tick">2</span>
+                  <span class="chart-axis__tick">3</span>
+                  <span class="chart-axis__tick">4</span>
+                  <span class="chart-axis__tick">5</span>
+                  <span class="chart-axis__tick">6</span>
+                </div>
+                <div class="legend" style="margin-top:var(--space-4)">
+                  <span class="legend__item"><span class="legend__swatch"></span> 월별 매출</span>
+                  <span class="legend__item"><span class="legend__swatch legend__swatch--accent"></span> 이번 달 — 6월</span>
+                </div>
+              </div>
             </div>
+          </section>
+        </div>
 
-            <div class="chart">
-              <div class="chart-bars" role="img" aria-label="Monthly revenue from January to December 2026">
-                <div class="chart-bars__col"><span class="chart-bars__bar" style="--h:42%"></span></div>
-                <div class="chart-bars__col"><span class="chart-bars__bar" style="--h:38%"></span></div>
-                <div class="chart-bars__col"><span class="chart-bars__bar" style="--h:55%"></span></div>
-                <div class="chart-bars__col"><span class="chart-bars__bar" style="--h:61%"></span></div>
-                <div class="chart-bars__col"><span class="chart-bars__bar" style="--h:58%"></span></div>
-                <div class="chart-bars__col"><span class="chart-bars__bar" style="--h:67%"></span></div>
-                <div class="chart-bars__col"><span class="chart-bars__bar" style="--h:72%"></span></div>
-                <div class="chart-bars__col"><span class="chart-bars__bar" style="--h:78%"></span></div>
-                <div class="chart-bars__col"><span class="chart-bars__bar" style="--h:96%"></span></div>
-                <div class="chart-bars__col"><span class="chart-bars__bar" style="--h:91%"></span></div>
-                <div class="chart-bars__col"><span class="chart-bars__bar" style="--h:74%"></span></div>
-                <div class="chart-bars__col"><span class="chart-bars__bar chart-bars__bar--accent" style="--h:83%"></span></div>
+        <!-- 세션 추이 -->
+        <div class="col-12 lg-col-4">
+          <section class="card">
+            <div class="card-pad">
+              <div class="card-head-row">
+                <div>
+                  <p class="card__eyebrow">02 — 트래픽</p>
+                  <h2 class="card__title">세션 추이</h2>
+                </div>
               </div>
-              <div class="chart-axis" aria-hidden="true">
-                <span class="chart-axis__tick">J</span>
-                <span class="chart-axis__tick">F</span>
-                <span class="chart-axis__tick">M</span>
-                <span class="chart-axis__tick">A</span>
-                <span class="chart-axis__tick">M</span>
-                <span class="chart-axis__tick">J</span>
-                <span class="chart-axis__tick">J</span>
-                <span class="chart-axis__tick">A</span>
-                <span class="chart-axis__tick">S</span>
-                <span class="chart-axis__tick">O</span>
-                <span class="chart-axis__tick">N</span>
-                <span class="chart-axis__tick">D</span>
-              </div>
+
+              <svg class="chart-line" viewBox="0 0 300 160" role="img" aria-label="상반기 세션 추이 — 올해가 작년을 상회">
+                <line class="grid-line" x1="0" y1="40" x2="300" y2="40"/>
+                <line class="grid-line" x1="0" y1="93" x2="300" y2="93"/>
+                <line class="axis-line" x1="0" y1="146" x2="300" y2="146"/>
+                <!-- 작년 -->
+                <polyline class="series" points="0,120 60,116 120,118 180,104 240,100 300,92"/>
+                <!-- 올해 (accent) -->
+                <polyline class="series series--accent" points="0,110 60,98 120,96 180,78 240,58 300,34"/>
+                <rect class="dot" x="176" y="74" width="8" height="8"/>
+                <rect class="dot" x="236" y="54" width="8" height="8"/>
+                <rect class="dot" x="296" y="30" width="8" height="8"/>
+                <text class="label" x="0" y="158">1월</text>
+                <text class="label" x="140" y="158">3월</text>
+                <text class="label" x="280" y="158">6월</text>
+              </svg>
+
               <div class="legend" style="margin-top:var(--space-4)">
-                <span class="legend__item"><span class="legend__swatch"></span> Monthly revenue</span>
-                <span class="legend__item"><span class="legend__swatch legend__swatch--accent"></span> Current month — Dec</span>
+                <span class="legend__item"><span class="legend__swatch legend__swatch--accent legend__swatch--line"></span> 올해</span>
+                <span class="legend__item"><span class="legend__swatch legend__swatch--line"></span> 작년</span>
               </div>
+              <dl class="dl dl--kv mt-6">
+                <dt>최고 방문일</dt><dd class="num">6월 2일 · 4,180</dd>
+                <dt>일 평균</dt><dd class="num">2,830</dd>
+                <dt>이탈률</dt><dd class="num">38.6%</dd>
+              </dl>
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
 
-      <!-- Sessions trend -->
-      <div class="col-12 lg-col-4">
-        <section class="card">
-          <div class="card-pad">
-            <div class="card-head-row">
-              <div>
-                <p class="card__eyebrow">02 — Traffic</p>
-                <h2 class="card__title">Sessions trend</h2>
-              </div>
-            </div>
-
-            <svg class="chart-line" viewBox="0 0 300 160" role="img" aria-label="Sessions this year compared to last year">
-              <!-- grid lines -->
-              <line class="grid-line" x1="0" y1="40" x2="300" y2="40"/>
-              <line class="grid-line" x1="0" y1="93" x2="300" y2="93"/>
-              <!-- axis line -->
-              <line class="axis-line" x1="0" y1="146" x2="300" y2="146"/>
-              <!-- last year -->
-              <polyline class="series" points="0,118 38,112 75,120 113,104 150,108 188,96 225,100 263,88 300,92"/>
-              <!-- this year (accent) -->
-              <polyline class="series series--accent" points="0,108 38,96 75,100 113,80 150,72 188,60 225,52 263,44 300,30"/>
-              <!-- dots on accent series -->
-              <rect class="dot" x="146" y="68" width="8" height="8"/>
-              <rect class="dot" x="221" y="48" width="8" height="8"/>
-              <rect class="dot" x="296" y="26" width="8" height="8"/>
-              <!-- axis labels -->
-              <text class="label" x="0" y="158">JAN</text>
-              <text class="label" x="138" y="158">JUN</text>
-              <text class="label" x="278" y="158">DEC</text>
-            </svg>
-
-            <div class="legend" style="margin-top:var(--space-4)">
-              <span class="legend__item"><span class="legend__swatch legend__swatch--accent legend__swatch--line"></span> This year</span>
-              <span class="legend__item"><span class="legend__swatch legend__swatch--line"></span> Last year</span>
-            </div>
-            <dl class="dl mt-6" style="grid-template-columns: 1fr auto;">
-              <dt>Peak day</dt><dd class="num">Dec 02 · 4,180</dd>
-              <dt>Avg / day</dt><dd class="num">2,830</dd>
-              <dt>Bounce</dt><dd class="num">38.6%</dd>
-            </dl>
-          </div>
-        </section>
-      </div>
-    </div>
-
-    <!-- ---- TOP CAMPAIGNS TABLE ---- -->
-    <section style="margin-top:var(--space-8)">
-      <div class="section-label" style="margin-bottom:var(--space-4)">
-        <span class="section-label__num">03</span><span class="section-label__dash">—</span><span>Top campaigns</span>
-      </div>
-      <div class="table-wrap" data-table-scope>
-        <div class="table-toolbar">
-          <span class="table-toolbar__title">All channels</span>
-          <span class="table-toolbar__spacer"></span>
-          <span class="bulk-bar" data-bulk-bar hidden>
-            <span class="caption"><span class="num" data-bulk-count>0</span> selected</span>
-            <button class="btn btn--danger btn--sm" data-toast data-variant="danger" data-title="Removed" data-text="Selected campaigns archived.">
-              <svg viewBox="0 0 16 16" width="13" height="13" stroke="currentColor" stroke-width="1.3" fill="none"><path d="M3 4h10M6 4V2h4v2M5 4l1 10h4l1-10"/></svg>
-              Delete
+      <!-- ---- 상위 캠페인 테이블 ---- -->
+      <section style="margin-top:var(--space-8)" data-reveal>
+        <div class="section-label" style="margin-bottom:var(--space-4)">
+          <span class="section-label__num">03</span><span class="section-label__dash">—</span><span>상위 캠페인</span>
+        </div>
+        <div class="table-wrap" data-table-scope>
+          <div class="table-toolbar">
+            <span class="table-toolbar__title">전체 채널</span>
+            <span class="table-toolbar__spacer"></span>
+            <span class="bulk-bar" data-bulk-bar hidden>
+              <span class="caption"><span class="num" data-bulk-count>0</span>건 선택</span>
+              <button class="btn btn--danger btn--sm" data-toast data-variant="danger" data-title="보관 처리" data-text="선택한 캠페인을 보관함으로 옮겼습니다.">
+                <svg viewBox="0 0 16 16" width="13" height="13" stroke="currentColor" stroke-width="1.3" fill="none"><path d="M3 4h10M6 4V2h4v2M5 4l1 10h4l1-10"/></svg>
+                삭제
+              </button>
+            </span>
+            <button class="btn btn--secondary btn--sm" data-open-drawer="#filter-drawer">
+              <svg viewBox="0 0 16 16" width="13" height="13" stroke="currentColor" stroke-width="1.3" fill="none"><path d="M2 3h12L9.5 9v4l-3 1.5V9z"/></svg>
+              필터
             </button>
-          </span>
-          <button class="btn btn--secondary btn--sm" data-open-drawer="#filter-drawer">
-            <svg viewBox="0 0 16 16" width="13" height="13" stroke="currentColor" stroke-width="1.3" fill="none"><path d="M2 3h12L9.5 9v4l-3 1.5V9z"/></svg>
-            Filter
-          </button>
-        </div>
-        <table class="table table--hover">
-          <thead><tr>
-            <th class="table__select"><input type="checkbox" data-select-all aria-label="Select all campaigns"></th>
-            <th data-sortable><button class="table__sort">Campaign <span class="arrow"><svg viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M6 2v8M3 5l3-3 3 3"/></svg></span></button></th>
-            <th data-sortable><button class="table__sort">Channel <span class="arrow"><svg viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M6 2v8M3 5l3-3 3 3"/></svg></span></button></th>
-            <th class="col-num" data-sortable><button class="table__sort">Spend <span class="arrow"><svg viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M6 2v8M3 5l3-3 3 3"/></svg></span></button></th>
-            <th class="col-num" data-sortable><button class="table__sort">CTR <span class="arrow"><svg viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M6 2v8M3 5l3-3 3 3"/></svg></span></button></th>
-            <th class="col-num" data-sortable><button class="table__sort">ROAS <span class="arrow"><svg viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M6 2v8M3 5l3-3 3 3"/></svg></span></button></th>
-            <th>Status</th>
-          </tr></thead>
-          <tbody>
-            <tr>
-              <td><input type="checkbox" data-row-select aria-label="Select Winter Grid Launch"></td>
-              <td>Winter Grid Launch</td><td>Search</td>
-              <td class="col-num" data-sort-value="24800">€24,800</td>
-              <td class="col-num">4.8%</td>
-              <td class="col-num">5.2×</td>
-              <td><span class="badge badge--success"><span class="badge__dot"></span>Active</span></td>
-            </tr>
-            <tr>
-              <td><input type="checkbox" data-row-select aria-label="Select Helvetica Retargeting"></td>
-              <td>Helvetica Retargeting</td><td>Display</td>
-              <td class="col-num" data-sort-value="18420">€18,420</td>
-              <td class="col-num">2.1%</td>
-              <td class="col-num">3.9×</td>
-              <td><span class="badge badge--success"><span class="badge__dot"></span>Active</span></td>
-            </tr>
-            <tr>
-              <td><input type="checkbox" data-row-select aria-label="Select Poster Series — Social"></td>
-              <td>Poster Series — Social</td><td>Social</td>
-              <td class="col-num" data-sort-value="31200">€31,200</td>
-              <td class="col-num">3.4%</td>
-              <td class="col-num">2.7×</td>
-              <td><span class="badge badge--warning">Review</span></td>
-            </tr>
-            <tr>
-              <td><input type="checkbox" data-row-select aria-label="Select Type Specimen Email"></td>
-              <td>Type Specimen Email</td><td>Email</td>
-              <td class="col-num" data-sort-value="6850">€6,850</td>
-              <td class="col-num">9.6%</td>
-              <td class="col-num">8.4×</td>
-              <td><span class="badge badge--success"><span class="badge__dot"></span>Active</span></td>
-            </tr>
-            <tr>
-              <td><input type="checkbox" data-row-select aria-label="Select Baseline Brand Awareness"></td>
-              <td>Baseline Brand Awareness</td><td>Video</td>
-              <td class="col-num" data-sort-value="42600">€42,600</td>
-              <td class="col-num">1.2%</td>
-              <td class="col-num">1.8×</td>
-              <td><span class="badge badge--muted">Paused</span></td>
-            </tr>
-            <tr>
-              <td><input type="checkbox" data-row-select aria-label="Select Univers Affiliate Push"></td>
-              <td>Univers Affiliate Push</td><td>Affiliate</td>
-              <td class="col-num" data-sort-value="9340">€9,340</td>
-              <td class="col-num">5.7%</td>
-              <td class="col-num">6.1×</td>
-              <td><span class="badge badge--success"><span class="badge__dot"></span>Active</span></td>
-            </tr>
-            <tr>
-              <td><input type="checkbox" data-row-select aria-label="Select Gridlines Podcast Spots"></td>
-              <td>Gridlines Podcast Spots</td><td>Audio</td>
-              <td class="col-num" data-sort-value="14100">€14,100</td>
-              <td class="col-num">2.9%</td>
-              <td class="col-num">3.3×</td>
-              <td><span class="badge badge--warning">Review</span></td>
-            </tr>
-            <tr>
-              <td><input type="checkbox" data-row-select aria-label="Select Akzidenz Search Brand"></td>
-              <td>Akzidenz Search Brand</td><td>Search</td>
-              <td class="col-num" data-sort-value="27950">€27,950</td>
-              <td class="col-num">6.3%</td>
-              <td class="col-num">7.0×</td>
-              <td><span class="badge badge--success"><span class="badge__dot"></span>Active</span></td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="table-foot">
-          <span>Showing <span class="num">8</span> of <span class="num">124</span></span>
-          <div class="pagination">
-            <button class="pagination__item" aria-label="Previous page" disabled>‹</button>
-            <button class="pagination__item" aria-current="page">1</button>
-            <button class="pagination__item">2</button>
-            <button class="pagination__item">3</button>
-            <span class="pagination__item pagination__ellipsis">…</span>
-            <button class="pagination__item">16</button>
-            <button class="pagination__item" aria-label="Next page">›</button>
+          </div>
+          <table class="table table--hover">
+            <thead><tr>
+              <th class="table__select"><input type="checkbox" data-select-all aria-label="캠페인 전체 선택"></th>
+              <th data-sortable><button class="table__sort">캠페인 <span class="arrow"><svg viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M6 2v8M3 5l3-3 3 3"/></svg></span></button></th>
+              <th data-sortable><button class="table__sort">채널 <span class="arrow"><svg viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M6 2v8M3 5l3-3 3 3"/></svg></span></button></th>
+              <th class="col-num" data-sortable><button class="table__sort">집행액 <span class="arrow"><svg viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M6 2v8M3 5l3-3 3 3"/></svg></span></button></th>
+              <th class="col-num" data-sortable><button class="table__sort">CTR <span class="arrow"><svg viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M6 2v8M3 5l3-3 3 3"/></svg></span></button></th>
+              <th class="col-num" data-sortable><button class="table__sort">ROAS <span class="arrow"><svg viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M6 2v8M3 5l3-3 3 3"/></svg></span></button></th>
+              <th>상태</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td><input type="checkbox" data-row-select aria-label="여름 신규가입 프로모션 선택"></td>
+                <td>여름 신규가입 프로모션</td><td>검색</td>
+                <td class="col-num" data-sort-value="24800000">₩2,480만</td>
+                <td class="col-num">4.8%</td>
+                <td class="col-num">5.2×</td>
+                <td><span class="badge badge--success"><span class="badge__dot"></span>진행 중</span></td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" data-row-select aria-label="장마철 리타겟팅 선택"></td>
+                <td>장마철 리타겟팅</td><td>디스플레이</td>
+                <td class="col-num" data-sort-value="18420000">₩1,842만</td>
+                <td class="col-num">2.1%</td>
+                <td class="col-num">3.9×</td>
+                <td><span class="badge badge--success"><span class="badge__dot"></span>진행 중</span></td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" data-row-select aria-label="무접점 키보드 K3 런칭 선택"></td>
+                <td>무접점 키보드 K3 런칭</td><td>소셜</td>
+                <td class="col-num" data-sort-value="31200000">₩3,120만</td>
+                <td class="col-num">3.4%</td>
+                <td class="col-num">2.7×</td>
+                <td><span class="badge badge--warning">검토</span></td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" data-row-select aria-label="여름 뉴스레터 선택"></td>
+                <td>여름 뉴스레터</td><td>이메일</td>
+                <td class="col-num" data-sort-value="6850000">₩685만</td>
+                <td class="col-num">9.6%</td>
+                <td class="col-num">8.4×</td>
+                <td><span class="badge badge--success"><span class="badge__dot"></span>진행 중</span></td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" data-row-select aria-label="브랜드 인지 영상 선택"></td>
+                <td>브랜드 인지 영상</td><td>영상</td>
+                <td class="col-num" data-sort-value="42600000">₩4,260만</td>
+                <td class="col-num">1.2%</td>
+                <td class="col-num">1.8×</td>
+                <td><span class="badge badge--muted">일시중지</span></td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" data-row-select aria-label="제휴 리워드 푸시 선택"></td>
+                <td>제휴 리워드 푸시</td><td>제휴</td>
+                <td class="col-num" data-sort-value="9340000">₩934만</td>
+                <td class="col-num">5.7%</td>
+                <td class="col-num">6.1×</td>
+                <td><span class="badge badge--success"><span class="badge__dot"></span>진행 중</span></td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" data-row-select aria-label="그리드 팟캐스트 스폰서 선택"></td>
+                <td>그리드 팟캐스트 스폰서</td><td>오디오</td>
+                <td class="col-num" data-sort-value="14100000">₩1,410만</td>
+                <td class="col-num">2.9%</td>
+                <td class="col-num">3.3×</td>
+                <td><span class="badge badge--warning">검토</span></td>
+              </tr>
+              <tr>
+                <td><input type="checkbox" data-row-select aria-label="통합검색 브랜드 선택"></td>
+                <td>통합검색 브랜드</td><td>검색</td>
+                <td class="col-num" data-sort-value="27950000">₩2,795만</td>
+                <td class="col-num">6.3%</td>
+                <td class="col-num">7.0×</td>
+                <td><span class="badge badge--success"><span class="badge__dot"></span>진행 중</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="table-foot">
+            <span>총 <span class="num">124</span>건 중 <span class="num">8</span>건 표시</span>
+            <div class="pagination">
+              <button class="pagination__item" aria-label="이전 페이지" disabled>‹</button>
+              <button class="pagination__item" aria-current="page">1</button>
+              <button class="pagination__item">2</button>
+              <button class="pagination__item">3</button>
+              <span class="pagination__item pagination__ellipsis">…</span>
+              <button class="pagination__item">16</button>
+              <button class="pagination__item" aria-label="다음 페이지">›</button>
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- ---- BOTTOM GRID: activity + traffic sources ---- -->
-    <div class="grid" style="margin-top:var(--space-8); margin-bottom:var(--space-9)">
+      <!-- ---- BOTTOM GRID: 활동 로그 + 유입 경로 ---- -->
+      <div class="grid" style="margin-top:var(--space-8); margin-bottom:var(--space-9)" data-reveal>
 
-      <!-- Recent activity -->
-      <div class="col-12 lg-col-7">
-        <section class="card">
-          <div class="card-pad">
-            <div class="card-head-row">
-              <div>
-                <p class="card__eyebrow">04 — Log</p>
-                <h2 class="card__title">Recent activity</h2>
+        <!-- 최근 활동 -->
+        <div class="col-12 lg-col-7">
+          <section class="card">
+            <div class="card-pad">
+              <div class="card-head-row">
+                <div>
+                  <p class="card__eyebrow">04 — 로그</p>
+                  <h2 class="card__title">최근 활동</h2>
+                </div>
+                <button type="button" class="link link--underline small">전체 보기</button>
               </div>
-              <a class="link link--underline small" href="#">View all</a>
+              <ul class="timeline">
+                <li class="timeline__item timeline__item--accent">
+                  <span class="timeline__dot"></span>
+                  <p class="timeline__time">오전 9:24 · 오늘</p>
+                  <p class="timeline__title">여름 신규가입 프로모션, 집행액 2,480만원 도달</p>
+                  <p class="timeline__body">ROAS 5.2× — 진행 캠페인 중 최고.</p>
+                </li>
+                <li class="timeline__item">
+                  <span class="timeline__dot"></span>
+                  <p class="timeline__time">오전 8:02 · 오늘</p>
+                  <p class="timeline__title">일일 리포트 내보내기 · 윤서준</p>
+                  <p class="timeline__body">30일 구간 · CSV · 124행.</p>
+                </li>
+                <li class="timeline__item">
+                  <span class="timeline__dot"></span>
+                  <p class="timeline__time">오후 5:40 · 어제</p>
+                  <p class="timeline__title">브랜드 인지 영상 일시중지</p>
+                  <p class="timeline__body">ROAS 2.0× 미만 7일 지속.</p>
+                </li>
+                <li class="timeline__item">
+                  <span class="timeline__dot"></span>
+                  <p class="timeline__time">오후 2:11 · 어제</p>
+                  <p class="timeline__title">전환율 3.42%로 하락</p>
+                  <p class="timeline__body">0.4%p 하락 — 체크아웃 지연 감지.</p>
+                </li>
+                <li class="timeline__item">
+                  <span class="timeline__dot"></span>
+                  <p class="timeline__time">6월 18일</p>
+                  <p class="timeline__title">신규 세그먼트 '여름 고관여' 생성</p>
+                  <p class="timeline__body">최근 30일 8,420 세션 일치.</p>
+                </li>
+              </ul>
             </div>
-            <ul class="timeline">
-              <li class="timeline__item timeline__item--accent">
-                <span class="timeline__dot"></span>
-                <p class="timeline__time">09:24 · Today</p>
-                <p class="timeline__title">Winter Grid Launch hit €24.8K spend</p>
-                <p class="timeline__body">ROAS climbed to 5.2× — best of the active set.</p>
-              </li>
-              <li class="timeline__item">
-                <span class="timeline__dot"></span>
-                <p class="timeline__time">08:02 · Today</p>
-                <p class="timeline__title">Daily report exported by J. Müller</p>
-                <p class="timeline__body">30-day window · CSV · 124 rows.</p>
-              </li>
-              <li class="timeline__item">
-                <span class="timeline__dot"></span>
-                <p class="timeline__time">17:40 · Yesterday</p>
-                <p class="timeline__title">Baseline Brand Awareness paused</p>
-                <p class="timeline__body">Below 2.0× ROAS threshold for 7 days.</p>
-              </li>
-              <li class="timeline__item">
-                <span class="timeline__dot"></span>
-                <p class="timeline__time">14:11 · Yesterday</p>
-                <p class="timeline__title">Conversion dipped to 3.42%</p>
-                <p class="timeline__body">Down 0.4 pts — checkout latency flagged.</p>
-              </li>
-              <li class="timeline__item">
-                <span class="timeline__dot"></span>
-                <p class="timeline__time">Jun 18</p>
-                <p class="timeline__title">New segment “High-intent EU” created</p>
-                <p class="timeline__body">8,420 sessions matched in last 30 days.</p>
-              </li>
-            </ul>
-          </div>
-        </section>
-      </div>
+          </section>
+        </div>
 
-      <!-- Traffic sources -->
-      <div class="col-12 lg-col-5">
-        <section class="card">
-          <div class="card-pad">
-            <div class="card-head-row">
-              <div>
-                <p class="card__eyebrow">05 — Acquisition</p>
-                <h2 class="card__title">Traffic sources</h2>
+        <!-- 유입 경로 -->
+        <div class="col-12 lg-col-5">
+          <section class="card">
+            <div class="card-pad">
+              <div class="card-head-row">
+                <div>
+                  <p class="card__eyebrow">05 — 유입</p>
+                  <h2 class="card__title">유입 경로</h2>
+                </div>
+                <span class="badge badge--muted num">84.9K</span>
               </div>
-              <span class="badge badge--muted num">84.9K</span>
-            </div>
 
-            <div class="prop-bar" role="img" aria-label="Traffic split: Direct 42%, Organic 31%, Referral 16%, Social 11%">
-              <span class="prop-bar__seg prop-bar__seg--ink" style="width:42%"></span>
-              <span class="prop-bar__seg prop-bar__seg--mid" style="width:31%"></span>
-              <span class="prop-bar__seg prop-bar__seg--accent" style="width:16%"></span>
-              <span class="prop-bar__seg prop-bar__seg--light" style="width:11%"></span>
-            </div>
+              <div class="prop-bar" role="img" aria-label="유입 비율: 직접 유입 42%, 자연 검색 31%, 추천 16%, 소셜 11%">
+                <span class="prop-bar__seg prop-bar__seg--ink" style="width:42%"></span>
+                <span class="prop-bar__seg prop-bar__seg--mid" style="width:31%"></span>
+                <span class="prop-bar__seg prop-bar__seg--accent" style="width:16%"></span>
+                <span class="prop-bar__seg prop-bar__seg--light" style="width:11%"></span>
+              </div>
 
-            <div class="legend" style="margin-top:var(--space-5); flex-direction:column; gap:var(--space-3)">
-              <span class="legend__item justify-between" style="display:flex; width:100%"><span><span class="legend__swatch"></span> Direct</span><span class="num text-muted">42%</span></span>
-              <span class="legend__item justify-between" style="display:flex; width:100%"><span><span class="legend__swatch legend__swatch--muted"></span> Organic</span><span class="num text-muted">31%</span></span>
-              <span class="legend__item justify-between" style="display:flex; width:100%"><span><span class="legend__swatch legend__swatch--accent"></span> Referral</span><span class="num text-muted">16%</span></span>
-              <span class="legend__item justify-between" style="display:flex; width:100%"><span><span class="legend__swatch" style="background:var(--color-surface-2);border:var(--border-1) solid var(--color-border-strong)"></span> Social</span><span class="num text-muted">11%</span></span>
+              <div class="legend" style="margin-top:var(--space-5); flex-direction:column; gap:var(--space-3)">
+                <span class="legend__item justify-between" style="display:flex; width:100%"><span><span class="legend__swatch"></span> 직접 유입</span><span class="num text-muted">42%</span></span>
+                <span class="legend__item justify-between" style="display:flex; width:100%"><span><span class="legend__swatch legend__swatch--muted"></span> 자연 검색</span><span class="num text-muted">31%</span></span>
+                <span class="legend__item justify-between" style="display:flex; width:100%"><span><span class="legend__swatch legend__swatch--accent"></span> 추천</span><span class="num text-muted">16%</span></span>
+                <span class="legend__item justify-between" style="display:flex; width:100%"><span><span class="legend__swatch" style="background:var(--color-surface-2);border:var(--border-1) solid var(--color-border-strong)"></span> 소셜</span><span class="num text-muted">11%</span></span>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
+
     </div>
-
   </main>
 </div>
 </div>
 
 <!-- ===================== OVERLAYS ===================== -->
 
-<!-- New report modal -->
+<!-- 새 리포트 모달 -->
 <div class="modal" id="report-modal" role="dialog" aria-modal="true" aria-labelledby="report-modal-title">
   <div class="modal__panel">
     <div class="modal__header">
-      <div><p class="modal__eyebrow">Create</p><h2 class="modal__title" id="report-modal-title">New report</h2></div>
-      <button class="modal__close" data-close-modal aria-label="Close"><svg viewBox="0 0 16 16" width="16" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+      <div><p class="modal__eyebrow">생성</p><h2 class="modal__title" id="report-modal-title">새 리포트</h2></div>
+      <button class="modal__close" data-close-modal aria-label="닫기"><svg viewBox="0 0 16 16" width="16" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
     </div>
     <div class="modal__body flow">
       <div class="field">
-        <label class="field__label" for="rep-name">Report name <span class="field__req">*</span></label>
-        <input class="input" id="rep-name" placeholder="Q3 channel performance">
+        <label class="field__label" for="rep-name">리포트 이름 <span class="field__req">*</span></label>
+        <input class="input" id="rep-name" placeholder="예: 3분기 채널 성과">
       </div>
       <div class="field">
-        <label class="field__label" for="rep-range">Date range</label>
+        <label class="field__label" for="rep-range">날짜 범위</label>
         <select class="select" id="rep-range">
-          <option>Last 7 days</option>
-          <option selected>Last 30 days</option>
-          <option>Last 90 days</option>
-          <option>Last 12 months</option>
+          <option>최근 7일</option>
+          <option selected>최근 30일</option>
+          <option>최근 90일</option>
+          <option>최근 12개월</option>
         </select>
       </div>
       <div class="field">
-        <label class="field__label" for="rep-metric">Primary metric</label>
+        <label class="field__label" for="rep-metric">주요 지표</label>
         <select class="select" id="rep-metric">
-          <option>Revenue</option>
-          <option>Sessions</option>
-          <option>Conversion rate</option>
+          <option>매출</option>
+          <option>세션</option>
+          <option>전환율</option>
           <option>ROAS</option>
         </select>
       </div>
-      <label class="choice choice--check"><input type="checkbox" checked><span class="choice__box"><svg viewBox="0 0 16 16" stroke="currentColor" fill="none"><path d="M3 8.5l3 3 7-7"/></svg></span><span><span class="choice__title">Email me a copy when ready</span></span></label>
+      <label class="choice choice--check"><input type="checkbox" checked><span class="choice__box"><svg viewBox="0 0 16 16" stroke="currentColor" fill="none"><path d="M3 8.5l3 3 7-7"/></svg></span><span><span class="choice__title">완료되면 메일로 사본 보내기</span></span></label>
     </div>
     <div class="modal__footer">
-      <button class="btn btn--ghost" data-close-modal>Cancel</button>
-      <button class="btn btn--primary" data-close-modal data-toast data-variant="success" data-title="Report created" data-text="Generating — we'll notify you shortly.">Create report</button>
+      <button class="btn btn--ghost" data-close-modal>취소</button>
+      <button class="btn btn--primary" data-close-modal data-toast data-variant="success" data-title="리포트 생성 시작" data-text="생성 중 — 완료되면 알려드립니다.">리포트 생성</button>
     </div>
   </div>
 </div>
 
-<!-- Filter drawer -->
+<!-- 필터 드로어 -->
 <aside class="drawer drawer--left" id="filter-drawer" role="dialog" aria-modal="true" aria-labelledby="filter-drawer-title">
-  <div class="drawer__header"><h2 class="drawer__title" id="filter-drawer-title">Filter campaigns</h2><button class="modal__close" data-close-drawer aria-label="Close"><svg viewBox="0 0 16 16" width="16" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M4 4l8 8M12 4l-8 8"/></svg></button></div>
+  <div class="drawer__header"><h2 class="drawer__title" id="filter-drawer-title">캠페인 필터</h2><button class="modal__close" data-close-drawer aria-label="닫기"><svg viewBox="0 0 16 16" width="16" stroke="currentColor" stroke-width="1.4" fill="none"><path d="M4 4l8 8M12 4l-8 8"/></svg></button></div>
   <div class="drawer__body flow">
-    <div class="field"><label class="field__label" for="f-q">Keyword</label><input class="input" id="f-q" placeholder="Search campaigns"></div>
-    <fieldset style="border:0"><legend class="field__label" style="margin-bottom:var(--space-3)">Status</legend><div class="flow-sm">
-      <label class="choice choice--check"><input type="checkbox" checked><span class="choice__box"><svg viewBox="0 0 16 16" stroke="currentColor" fill="none"><path d="M3 8.5l3 3 7-7"/></svg></span><span class="choice__title">Active</span></label>
-      <label class="choice choice--check"><input type="checkbox"><span class="choice__box"><svg viewBox="0 0 16 16" stroke="currentColor" fill="none"><path d="M3 8.5l3 3 7-7"/></svg></span><span class="choice__title">Review</span></label>
-      <label class="choice choice--check"><input type="checkbox"><span class="choice__box"><svg viewBox="0 0 16 16" stroke="currentColor" fill="none"><path d="M3 8.5l3 3 7-7"/></svg></span><span class="choice__title">Paused</span></label>
+    <div class="field"><label class="field__label" for="f-q">키워드</label><input class="input" id="f-q" placeholder="캠페인 검색"></div>
+    <fieldset style="border:0"><legend class="field__label" style="margin-bottom:var(--space-3)">상태</legend><div class="flow-sm">
+      <label class="choice choice--check"><input type="checkbox" checked><span class="choice__box"><svg viewBox="0 0 16 16" stroke="currentColor" fill="none"><path d="M3 8.5l3 3 7-7"/></svg></span><span class="choice__title">진행 중</span></label>
+      <label class="choice choice--check"><input type="checkbox"><span class="choice__box"><svg viewBox="0 0 16 16" stroke="currentColor" fill="none"><path d="M3 8.5l3 3 7-7"/></svg></span><span class="choice__title">검토</span></label>
+      <label class="choice choice--check"><input type="checkbox"><span class="choice__box"><svg viewBox="0 0 16 16" stroke="currentColor" fill="none"><path d="M3 8.5l3 3 7-7"/></svg></span><span class="choice__title">일시중지</span></label>
     </div></fieldset>
   </div>
-  <div class="drawer__footer"><button class="btn btn--ghost grow" data-close-drawer>Reset</button><button class="btn btn--primary grow" data-close-drawer>Apply</button></div>
+  <div class="drawer__footer"><button class="btn btn--ghost grow" data-close-drawer>초기화</button><button class="btn btn--primary grow" data-close-drawer>적용</button></div>
 </aside>
 
-<!-- Command palette -->
-<div class="cmdk" id="command-palette" role="dialog" aria-modal="true" aria-label="Command palette">
+<!-- 명령 팔레트 -->
+<div class="cmdk" id="command-palette" role="dialog" aria-modal="true" aria-label="명령 팔레트">
   <div class="cmdk__panel">
-    <div class="cmdk__search"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.4" fill="none"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg><input class="cmdk__input" data-autofocus placeholder="Type a command or search…" aria-label="Command"></div>
+    <div class="cmdk__search"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.4" fill="none"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg><input class="cmdk__input" data-autofocus placeholder="명령을 입력하거나 검색하세요…" aria-label="명령"></div>
     <div class="cmdk__list">
-      <p class="cmdk__group-label">Navigate</p>
-      <a class="cmdk__item" data-href="../index.html"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none"><path d="M2 8l6-6 6 6M4 7v7h8V7"/></svg>Go to Home<span class="trail">↵</span></a>
-      <a class="cmdk__item" data-href="dashboard.html"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none"><rect x="2" y="2" width="5" height="5"/><rect x="9" y="2" width="5" height="5"/><rect x="2" y="9" width="5" height="5"/></svg>Go to Dashboard</a>
-      <a class="cmdk__item" data-href="kanban.html"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none"><rect x="2" y="2" width="3" height="12"/><rect x="6.5" y="2" width="3" height="8"/><rect x="11" y="2" width="3" height="10"/></svg>Go to Kanban</a>
-      <a class="cmdk__item" data-href="pricing.html"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none"><rect x="2" y="2" width="12" height="12"/><path d="M2 6h12"/></svg>Go to Pricing</a>
-      <p class="cmdk__group-label">Actions</p>
-      <button class="cmdk__item" data-action="toggle-theme"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none"><path d="M13.5 9.5A5.5 5.5 0 116.5 2.5a5.5 5.5 0 007 7z"/></svg>Toggle dark mode<span class="trail">⇧D</span></button>
-      <button class="cmdk__item" data-action="toggle-grid"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.2" fill="none"><path d="M1 1h14v14H1zM5.66 1v14M10.33 1v14M1 5.66h14M1 10.33h14"/></svg>Toggle grid overlay<span class="trail">G</span></button>
-      <button class="cmdk__item" data-action="toast" data-title="Copied link"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none"><path d="M6 10a3 3 0 004 0l2-2a3 3 0 00-4-4M10 6a3 3 0 00-4 0L4 8a3 3 0 004 4"/></svg>Copy current URL</button>
+      <p class="cmdk__group-label">이동</p>
+      <a class="cmdk__item" data-href="../index.html"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none"><path d="M2 8l6-6 6 6M4 7v7h8V7"/></svg>홈으로 이동<span class="trail">↵</span></a>
+      <a class="cmdk__item" data-href="dashboard.html"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none"><rect x="2" y="2" width="5" height="5"/><rect x="9" y="2" width="5" height="5"/><rect x="2" y="9" width="5" height="5"/></svg>대시보드로 이동</a>
+      <a class="cmdk__item" data-href="inbox.html"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none"><path d="M2 4h12v8H2zM2 4l6 5 6-5"/></svg>받은편지함으로 이동</a>
+      <a class="cmdk__item" data-href="pricing.html"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none"><rect x="2" y="2" width="12" height="12"/><path d="M2 6h12"/></svg>요금제로 이동</a>
+      <p class="cmdk__group-label">작업</p>
+      <button class="cmdk__item" data-action="toggle-theme"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none"><path d="M13.5 9.5A5.5 5.5 0 116.5 2.5a5.5 5.5 0 007 7z"/></svg>다크 모드 전환<span class="trail">⇧D</span></button>
+      <button class="cmdk__item" data-action="toggle-grid"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.2" fill="none"><path d="M1 1h14v14H1zM5.66 1v14M10.33 1v14M1 5.66h14M1 10.33h14"/></svg>그리드 오버레이 전환<span class="trail">G</span></button>
+      <button class="cmdk__item" data-action="toast" data-title="링크가 복사됨"><svg viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.3" fill="none"><path d="M6 10a3 3 0 004 0l2-2a3 3 0 00-4-4M10 6a3 3 0 00-4 0L4 8a3 3 0 004 4"/></svg>현재 URL 복사</button>
     </div>
-    <div class="cmdk__empty" hidden>No commands found.</div>
-    <div class="cmdk__foot"><span><kbd class="kbd">↑↓</kbd> Navigate</span><span><kbd class="kbd">↵</kbd> Select</span><span><kbd class="kbd">Esc</kbd> Close</span></div>
+    <div class="cmdk__empty" hidden>명령을 찾을 수 없습니다.</div>
+    <div class="cmdk__foot"><span><kbd class="kbd">↑↓</kbd> 이동</span><span><kbd class="kbd">↵</kbd> 선택</span><span><kbd class="kbd">Esc</kbd> 닫기</span></div>
   </div>
 </div>
 

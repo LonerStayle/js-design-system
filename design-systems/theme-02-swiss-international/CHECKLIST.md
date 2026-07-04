@@ -87,7 +87,7 @@ cells generated on index) · copy-to-clipboard. No inline `onclick` anywhere.
 |------|--------|
 | Semantic landmarks (header/nav/main#main/aside/footer) | ✅ all pages |
 | Skip-link to `#main` | ✅ all 9 pages + hub |
-| `lang="en"` + responsive `viewport` (user-scalable, no max-scale) | ✅ all pages |
+| `lang="ko"` + responsive `viewport` (user-scalable, no max-scale) | ✅ all pages |
 | Icon buttons have `aria-label` | ✅ |
 | Widget roles/states (tab/tablist/tabpanel, dialog/aria-modal, listbox/option, menu/menuitem, aria-expanded/selected/sort/current) | ✅ per index.html patterns, reused on pages |
 | Keyboard: Tab/Shift-Tab, arrows (tabs/menus/cmdk), Esc dismiss, focus trap in overlays | ✅ in app.js |

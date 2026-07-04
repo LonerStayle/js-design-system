@@ -324,7 +324,10 @@
   }
 
   /* --------------------------------------------------- SEGMENTED CTRL --- */
+  // Role-aware: a role="radiogroup" set gets aria-checked + roving tabindex +
+  // arrow-key navigation; anything else keeps aria-selected. Click + keyboard.
   $$(".segmented").forEach((seg) => {
+    const isRadio = seg.getAttribute("role") === "radiogroup";
     const btns = $$("button", seg);
     let thumb = $(".seg-thumb", seg);
     if (!thumb) { thumb = document.createElement("span"); thumb.className = "seg-thumb"; seg.prepend(thumb); }
@@ -332,15 +335,31 @@
       thumb.style.left = btn.offsetLeft + "px";
       thumb.style.width = btn.offsetWidth + "px";
     }
-    function select(btn) {
-      btns.forEach((b) => { b.setAttribute("aria-selected", String(b === btn)); b.classList.toggle("is-active", b === btn); });
+    function select(btn, focus) {
+      btns.forEach((b) => {
+        const active = b === btn;
+        b.classList.toggle("is-active", active);
+        if (isRadio) { b.setAttribute("aria-checked", String(active)); b.tabIndex = active ? 0 : -1; }
+        else { b.setAttribute("aria-selected", String(active)); }
+      });
       move(btn);
+      if (focus) btn.focus();
       seg.dispatchEvent(new CustomEvent("segchange", { detail: { value: btn.getAttribute("data-value") || btn.textContent } }));
     }
-    btns.forEach((b) => on(b, "click", () => select(b)));
-    const init = seg.querySelector('[aria-selected="true"], .is-active') || btns[0];
-    if (init) requestAnimationFrame(() => move(init));
-    on(window, "resize", () => { const cur = seg.querySelector('[aria-selected="true"], .is-active') || btns[0]; cur && move(cur); });
+    btns.forEach((b, i) => {
+      on(b, "click", () => select(b));
+      on(b, "keydown", (e) => {
+        let idx = null;
+        if (e.key === "ArrowRight" || e.key === "ArrowDown") idx = (i + 1) % btns.length;
+        if (e.key === "ArrowLeft" || e.key === "ArrowUp") idx = (i - 1 + btns.length) % btns.length;
+        if (e.key === "Home") idx = 0;
+        if (e.key === "End") idx = btns.length - 1;
+        if (idx !== null) { e.preventDefault(); select(btns[idx], true); }
+      });
+    });
+    const init = seg.querySelector('[aria-selected="true"], [aria-checked="true"], .is-active') || btns[0];
+    if (init) { if (isRadio) btns.forEach((b) => { b.tabIndex = b === init ? 0 : -1; }); requestAnimationFrame(() => move(init)); }
+    on(window, "resize", () => { const cur = seg.querySelector('[aria-selected="true"], [aria-checked="true"], .is-active') || btns[0]; cur && move(cur); });
   });
 
   /* ---------------------------------------------------------- SLIDER ---- */
@@ -372,12 +391,30 @@
   $$(".rating").forEach((rt) => {
     if (rt.classList.contains("is-readonly")) return;
     const btns = $$("button", rt);
+    if (!rt.getAttribute("role")) rt.setAttribute("role", "radiogroup");
     let value = +rt.getAttribute("data-value") || 0;
     const paint = (n) => btns.forEach((b, i) => b.classList.toggle("is-on", i < n));
-    paint(value);
+    function setVal(n, focus) {
+      value = n; rt.setAttribute("data-value", value); paint(value);
+      btns.forEach((b, i) => {
+        b.setAttribute("role", "radio");
+        b.setAttribute("aria-checked", String(i + 1 === value));
+        b.tabIndex = (i + 1 === value || (value === 0 && i === 0)) ? 0 : -1;
+      });
+      if (focus && btns[n - 1]) btns[n - 1].focus();
+    }
+    setVal(value);
     btns.forEach((b, i) => {
       on(b, "mouseenter", () => paint(i + 1));
-      on(b, "click", () => { value = i + 1; rt.setAttribute("data-value", value); paint(value); });
+      on(b, "click", () => setVal(i + 1));
+      on(b, "keydown", (e) => {
+        let n = null;
+        if (e.key === "ArrowRight" || e.key === "ArrowUp") n = Math.min(btns.length, value + 1);
+        if (e.key === "ArrowLeft" || e.key === "ArrowDown") n = Math.max(1, value - 1);
+        if (e.key === "Home") n = 1;
+        if (e.key === "End") n = btns.length;
+        if (n !== null) { e.preventDefault(); setVal(n, true); }
+      });
     });
     on(rt, "mouseleave", () => paint(value));
   });
@@ -443,12 +480,15 @@
   /* ----------------------------------------------------------- TABLE ---- */
   $$("table[data-sortable]").forEach((table) => {
     const tbody = $("tbody", table);
-    $$("th.sortable", table).forEach((th, colIndex) => {
-      on(th, "click", () => {
+    $$("th.sortable", table).forEach((th) => {
+      // Keyboard-operable sort headers: focusable + Enter/Space + aria-sort state.
+      if (!th.hasAttribute("tabindex")) th.tabIndex = 0;
+      if (!th.hasAttribute("aria-sort")) th.setAttribute("aria-sort", "none");
+      function doSort() {
         const idx = Array.from(th.parentNode.children).indexOf(th);
         const cur = th.getAttribute("aria-sort");
         const dir = cur === "ascending" ? "descending" : "ascending";
-        $$("th", table).forEach((h) => h.removeAttribute("aria-sort"));
+        $$("th", table).forEach((h) => h.classList.contains("sortable") ? h.setAttribute("aria-sort", "none") : h.removeAttribute("aria-sort"));
         th.setAttribute("aria-sort", dir);
         const rows = $$("tr", tbody);
         const type = th.getAttribute("data-type") || "text";
@@ -460,7 +500,9 @@
           return dir === "ascending" ? cmp : -cmp;
         });
         rows.forEach((r) => tbody.appendChild(r));
-      });
+      }
+      on(th, "click", doSort);
+      on(th, "keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doSort(); } });
     });
     // row selection
     const selectAll = $('thead [data-select-all]', table);
@@ -536,6 +578,67 @@
     if (e.target.closest("[data-mobile-nav]")) { const d = $("#mobile-nav"); openOverlay(d); }
   });
 
+  /* Marketing navbar burger — reveals .navbar-links as a glass sheet ≤900px. */
+  function closeNavbars() {
+    $$(".navbar.nav-open").forEach((nav) => {
+      nav.classList.remove("nav-open");
+      const btn = $("[data-navbar-toggle]", nav);
+      btn && btn.setAttribute("aria-expanded", "false");
+    });
+  }
+  on(document, "click", (e) => {
+    const t = e.target.closest("[data-navbar-toggle]");
+    if (t) {
+      const nav = t.closest(".navbar");
+      const open = nav.classList.toggle("nav-open");
+      t.setAttribute("aria-expanded", String(open));
+      return;
+    }
+    if (e.target.closest(".navbar.nav-open .navbar-link")) { closeNavbars(); return; }
+    if (!e.target.closest(".navbar.nav-open")) closeNavbars();
+  });
+
+  /* Off-canvas app sidebar — pages toggle `.open` on `.sidebar` via the burger;
+     we upgrade that to a real overlay: scrim, ESC, focus trap, focus restore.
+     Driven by a class observer so it works without touching any page markup. */
+  const MobileNav = {
+    sidebar: null, scrim: null, lastFocus: null, trap: null, open: false,
+    init() {
+      this.sidebar = $(".app-shell .sidebar");
+      if (!this.sidebar) return;
+      new MutationObserver(() => this.sync()).observe(this.sidebar, { attributes: true, attributeFilter: ["class"] });
+      on(document, "keydown", (e) => { if (e.key === "Escape" && this.open) this.close(); });
+    },
+    isOpen() { return this.sidebar.classList.contains("open"); },
+    sync() {
+      if (this.isOpen() && !this.open) this.onOpen();
+      else if (!this.isOpen() && this.open) this.onClose();
+    },
+    onOpen() {
+      this.open = true;
+      if (!this.scrim) {
+        this.scrim = document.createElement("div");
+        this.scrim.className = "sidebar-scrim";
+        this.sidebar.parentNode.insertBefore(this.scrim, this.sidebar);
+        on(this.scrim, "click", () => this.close());
+      }
+      requestAnimationFrame(() => this.scrim.classList.add("open"));
+      this.lastFocus = document.activeElement;
+      const first = $('a[href],button:not([disabled]),input,[tabindex]:not([tabindex="-1"])', this.sidebar);
+      setTimeout(() => first && first.focus(), 60);
+      this.trap = (e) => { if (e.key === "Tab") trapFocus(this.sidebar, e); };
+      on(document, "keydown", this.trap);
+    },
+    onClose() {
+      this.open = false;
+      if (this.scrim) this.scrim.classList.remove("open");
+      if (this.trap) { document.removeEventListener("keydown", this.trap); this.trap = null; }
+      if (this.lastFocus && this.lastFocus.focus) { this.lastFocus.focus(); this.lastFocus = null; }
+    },
+    close() { this.sidebar.classList.remove("open"); },
+  };
+  MobileNav.init();
+
   /* ----------------------------------------------- PRICING MONTH/YEAR --- */
   $$("[data-pricing-toggle]").forEach((seg) => {
     on(seg, "segchange", (e) => {
@@ -557,7 +660,7 @@
       if (back) back.disabled = current === 0;
       if (nextb) nextb.textContent = current === panels.length - 1 ? "완료" : "다음";
     }
-    on($("[data-wizard-next]", wz), "click", () => { if (current < panels.length - 1) { current++; render(); } else Toast.show({ title: "온보딩 완료! 🎉", type: "success" }); });
+    on($("[data-wizard-next]", wz), "click", () => { if (current < panels.length - 1) { current++; render(); } else Toast.show({ title: "설정을 모두 마쳤어요", text: "이제 대시보드로 이동할 수 있어요.", type: "success" }); });
     on($("[data-wizard-back]", wz), "click", () => { if (current > 0) { current--; render(); } });
     render();
   });
@@ -570,6 +673,41 @@
     $$("[data-reveal]").forEach((el) => io.observe(el));
   } else {
     $$("[data-reveal]").forEach((el) => el.classList.add("in-view"));
+  }
+
+  /* ------------------------------------------------ PANEL 3D TILT ------- */
+  // Glass panels tip toward the cursor (§5-2). Motion-safe: skipped when reduced.
+  if (!reduceMotion) {
+    $$("[data-tilt]").forEach((el) => {
+      const max = parseFloat(el.getAttribute("data-tilt-max")) || 7;
+      on(el, "pointermove", (e) => {
+        const r = el.getBoundingClientRect();
+        const px = (e.clientX - r.left) / r.width - 0.5;   // -0.5 … 0.5
+        const py = (e.clientY - r.top) / r.height - 0.5;
+        el.style.setProperty("--tilt-y", (px * max).toFixed(2) + "deg");
+        el.style.setProperty("--tilt-x", (-py * max).toFixed(2) + "deg");
+      }, { passive: true });
+      on(el, "pointerleave", () => {
+        el.style.setProperty("--tilt-x", "0deg");
+        el.style.setProperty("--tilt-y", "0deg");
+      });
+    });
+  }
+
+  /* ------------------------------------------ SCROLL → AURORA HUE SHIFT -- */
+  // The whole aurora slowly rotates violet → cyan/magenta as you scroll down
+  // (§5-3). Reads --aurora-hue in base.css. Skipped under reduced-motion.
+  if (!reduceMotion) {
+    let ticking = false;
+    const shift = () => {
+      ticking = false;
+      const h = document.documentElement;
+      const max = (h.scrollHeight - h.clientHeight) || 1;
+      const p = Math.min(Math.max(h.scrollTop / max, 0), 1);
+      h.style.setProperty("--aurora-hue", (p * -46).toFixed(1) + "deg");
+    };
+    on(window, "scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(shift); } }, { passive: true });
+    shift();
   }
 
   /* ---------------------------------------------- ANIMATED COUNTERS ----- */
@@ -636,7 +774,4 @@
     if (target) target.classList.toggle(t.getAttribute("data-toggle-class"));
   });
 
-  /* ---------------------------------------------- PAGE LOAD FLAG -------- */
-  document.documentElement.classList.add("js-ready");
-  console.log("%c✦ Aurora Glass ready", "color:#7c5cff;font-weight:bold");
 })();

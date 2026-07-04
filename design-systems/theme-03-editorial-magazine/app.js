@@ -144,10 +144,11 @@
     if (lastFocused) lastFocused.focus();
     releaseTrap(el);
   }
-  let trapHandler = null;
+  // 요소별 트랩 핸들러 (전역 단일 변수 금지 — 오버레이 중첩 시 핸들러 유실 방지)
+  const trapHandlers = new WeakMap();
   function trapFocus(el) {
     releaseTrap(el);
-    trapHandler = function (e) {
+    const handler = function (e) {
       if (e.key !== "Tab") return;
       const f = $$('a[href], button:not(:disabled), textarea, input:not(:disabled), select, [tabindex]:not([tabindex="-1"])', el)
         .filter((n) => n.offsetParent !== null);
@@ -156,9 +157,13 @@
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     };
-    el.addEventListener("keydown", trapHandler);
+    trapHandlers.set(el, handler);
+    el.addEventListener("keydown", handler);
   }
-  function releaseTrap(el) { if (trapHandler) el.removeEventListener("keydown", trapHandler); }
+  function releaseTrap(el) {
+    const h = trapHandlers.get(el);
+    if (h) { el.removeEventListener("keydown", h); trapHandlers.delete(el); }
+  }
 
   function bindModals() {
     $$("[data-modal-open]").forEach((btn) => {
@@ -179,26 +184,37 @@
     });
   }
 
-  /* ───────────────────────────── Drawer ───────────────────────────── */
+  /* ───────────────────────────── Drawer (모달과 동급 접근성) ───────────────────────────── */
   function bindDrawers() {
+    let drawerReturn = null;
+    function openDrawer(drawer, overlay) {
+      drawerReturn = document.activeElement;
+      if (drawer) drawer.classList.add("is-open");
+      if (overlay) overlay.classList.add("is-open");
+      document.body.style.overflow = "hidden";
+      if (drawer) {
+        const f = drawer.querySelector('a[href], button:not(:disabled), textarea, input:not(:disabled), select, [tabindex]:not([tabindex="-1"])');
+        if (f) setTimeout(() => f.focus(), 50);
+        trapFocus(drawer);
+      }
+    }
+    function closeAll() {
+      $$(".drawer.is-open").forEach((d) => { releaseTrap(d); d.classList.remove("is-open"); });
+      $$(".drawer-overlay.is-open").forEach((o) => o.classList.remove("is-open"));
+      document.body.style.overflow = "";
+      if (drawerReturn) { drawerReturn.focus(); drawerReturn = null; }
+    }
     $$("[data-drawer-open]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const id = btn.getAttribute("data-drawer-open");
         const drawer = document.getElementById(id);
         const overlay = document.getElementById(id + "-overlay") || $(".drawer-overlay");
-        if (drawer) drawer.classList.add("is-open");
-        if (overlay) overlay.classList.add("is-open");
-        document.body.style.overflow = "hidden";
+        openDrawer(drawer, overlay);
       });
     });
-    function closeAll() {
-      $$(".drawer.is-open").forEach((d) => d.classList.remove("is-open"));
-      $$(".drawer-overlay.is-open").forEach((o) => o.classList.remove("is-open"));
-      document.body.style.overflow = "";
-    }
     $$("[data-drawer-close]").forEach((c) => c.addEventListener("click", closeAll));
     $$(".drawer-overlay").forEach((o) => o.addEventListener("click", closeAll));
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAll(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $(".drawer.is-open")) closeAll(); });
   }
 
   /* ───────────────────────────── Toast ───────────────────────────── */
@@ -292,15 +308,26 @@
       const wrap = trig.closest(".popover-wrap");
       const pop = $(".popover", wrap);
       if (!pop) return;
+      trig.setAttribute("aria-haspopup", "true");
+      trig.setAttribute("aria-expanded", "false");
       trig.addEventListener("click", (e) => {
         e.stopPropagation();
         const open = pop.classList.contains("is-open");
-        $$(".popover.is-open").forEach((p) => p.classList.remove("is-open"));
+        $$(".popover.is-open").forEach((p) => {
+          p.classList.remove("is-open");
+          const t = p.closest(".popover-wrap")?.querySelector("[data-popover-trigger]");
+          if (t) t.setAttribute("aria-expanded", "false");
+        });
         pop.classList.toggle("is-open", !open);
+        trig.setAttribute("aria-expanded", String(!open));
       });
       pop.addEventListener("click", (e) => e.stopPropagation());
     });
-    document.addEventListener("click", () => $$(".popover.is-open").forEach((p) => p.classList.remove("is-open")));
+    document.addEventListener("click", () => $$(".popover.is-open").forEach((p) => {
+      p.classList.remove("is-open");
+      const t = p.closest(".popover-wrap")?.querySelector("[data-popover-trigger]");
+      if (t) t.setAttribute("aria-expanded", "false");
+    }));
   }
 
   /* ───────────────────────── Command Palette (⌘K) ───────────────────────── */
@@ -361,6 +388,8 @@
       close();
       const href = it.getAttribute("data-href");
       if (href) { window.location.href = href; return; }
+      const action = it.getAttribute("data-cmdk-action");
+      if (action === "theme") { Theme.toggle(); return; }
       toast({ type: "info", title: it.getAttribute("data-label") || it.textContent.trim(), text: "명령을 실행했습니다." });
     }));
   }
@@ -377,21 +406,36 @@
     });
   }
 
-  /* ───────────────────────── SegmentedControl ───────────────────────── */
+  /* ───────────────────────── SegmentedControl ─────────────────────────
+     role="radio" 자식이면 radiogroup(aria-checked+방향키), 아니면 tab(aria-selected). */
   function bindSegmented() {
     $$(".segmented").forEach((seg) => {
       const btns = $$("button", seg);
-      btns.forEach((b) =>
-        b.addEventListener("click", () => {
-          btns.forEach((x) => x.setAttribute("aria-selected", "false"));
-          b.setAttribute("aria-selected", "true");
-          const t = b.getAttribute("data-target");
-          if (t) {
-            const group = seg.getAttribute("data-segmented-group");
-            $$('[data-segmented-panel' + (group ? '="' + group + '"' : "") + "]").forEach((p) => p.toggleAttribute("hidden", p.id !== t));
-          }
-        })
-      );
+      if (!btns.length) return;
+      const isRadio = btns.some((b) => b.getAttribute("role") === "radio");
+      const attr = isRadio ? "aria-checked" : "aria-selected";
+      function select(b) {
+        btns.forEach((x) => { x.setAttribute(attr, "false"); if (isRadio) x.tabIndex = -1; });
+        b.setAttribute(attr, "true"); if (isRadio) b.tabIndex = 0;
+        const t = b.getAttribute("data-target");
+        if (t) {
+          const group = seg.getAttribute("data-segmented-group");
+          $$('[data-segmented-panel' + (group ? '="' + group + '"' : "") + "]").forEach((p) => p.toggleAttribute("hidden", p.id !== t));
+        }
+      }
+      btns.forEach((b, i) => {
+        b.addEventListener("click", () => select(b));
+        if (isRadio) b.addEventListener("keydown", (e) => {
+          let n = null;
+          if (e.key === "ArrowRight" || e.key === "ArrowDown") n = (i + 1) % btns.length;
+          else if (e.key === "ArrowLeft" || e.key === "ArrowUp") n = (i - 1 + btns.length) % btns.length;
+          if (n !== null) { e.preventDefault(); btns[n].focus(); select(btns[n]); }
+        });
+      });
+      if (isRadio) {
+        const cur = btns.find((b) => b.getAttribute("aria-checked") === "true") || btns[0];
+        btns.forEach((b) => (b.tabIndex = b === cur ? 0 : -1));
+      }
     });
   }
 
@@ -434,21 +478,35 @@
     });
   }
 
-  /* ───────────────────────── Rating ───────────────────────── */
+  /* ───────────────────────── Rating (radiogroup + 방향키 + aria-checked) ───────────────────────── */
   function bindRating() {
     $$(".rating").forEach((r) => {
       if (r.classList.contains("rating--readonly")) return;
       const stars = $$("button", r);
       const hidden = $("input", r);
       let value = parseInt(r.getAttribute("data-value") || "0", 10);
+      const isRadio = stars.some((s) => s.getAttribute("role") === "radio");
       function paint(n) { stars.forEach((s, i) => s.classList.toggle("is-on", i < n)); }
+      function syncAria() {
+        stars.forEach((s, i) => {
+          if (isRadio) s.setAttribute("aria-checked", String(i + 1 === value));
+          s.tabIndex = (i + 1 === (value || 1)) ? 0 : -1;
+        });
+      }
+      function commit(n) { value = n; if (hidden) hidden.value = value; r.setAttribute("data-value", value); paint(value); syncAria(); }
       stars.forEach((s, i) => {
         s.addEventListener("mouseenter", () => paint(i + 1));
         s.addEventListener("focus", () => paint(i + 1));
-        s.addEventListener("click", () => { value = i + 1; if (hidden) hidden.value = value; paint(value); r.setAttribute("data-value", value); });
+        s.addEventListener("click", () => commit(i + 1));
+        s.addEventListener("keydown", (e) => {
+          let n = null;
+          if (e.key === "ArrowRight" || e.key === "ArrowUp") n = Math.min(stars.length, (value || 0) + 1);
+          else if (e.key === "ArrowLeft" || e.key === "ArrowDown") n = Math.max(1, (value || 1) - 1);
+          if (n !== null) { e.preventDefault(); commit(n); stars[n - 1].focus(); }
+        });
       });
       r.addEventListener("mouseleave", () => paint(value));
-      paint(value);
+      paint(value); syncAria();
     });
   }
 
@@ -591,6 +649,11 @@
       const tbody = $("tbody", table);
       $$("th.sortable", table).forEach((th, colIndex) => {
         const realIndex = Array.from(th.parentElement.children).indexOf(th);
+        // 키보드 조작 가능하게 (마우스 전용 정렬 금지 §4-4)
+        if (!th.hasAttribute("tabindex")) th.setAttribute("tabindex", "0");
+        th.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); th.click(); }
+        });
         th.addEventListener("click", () => {
           const cur = th.getAttribute("aria-sort");
           const dir = cur === "ascending" ? "descending" : "ascending";

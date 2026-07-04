@@ -1,13 +1,22 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="color-scheme" content="light dark" />
+<script>
+  /* Apply saved/preferred theme before first paint — no light flash for dark users. */
+  (function () {
+    try {
+      var t = localStorage.getItem("aurora-glass:theme");
+      if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
 <title>칸반 보드 — Aurora Glass</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="../theme.css" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%237c5cff'/%3E%3Cpath d='M9 20c3-9 11-9 14 0' stroke='%2322d3ee' stroke-width='2.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E" />
 <style>
@@ -35,11 +44,45 @@
     display: flex; flex-direction: column; gap: var(--space-3);
     overflow-y: auto; min-height: 3rem; padding: 2px;
   }
-  .kanban-card { scroll-margin: var(--space-3); }
+  .kanban-card { scroll-margin: var(--space-3); position: relative; }
   .kc-desc { font-size: var(--text-xs); color: var(--color-text-muted); line-height: var(--leading-normal); }
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
   .form-grid .field.span-2 { grid-column: 1 / -1; }
   @media (max-width: 480px) { .form-grid { grid-template-columns: 1fr; } }
+
+  /* ── Avatar identity tints — token-based so they stay theme-aware (no inline hex) ── */
+  .av-jin { background: linear-gradient(135deg, var(--chart-1), var(--chart-2)); }
+  .av-seo { background: linear-gradient(135deg, var(--chart-3), var(--chart-1)); }
+  .av-do  { background: linear-gradient(135deg, var(--chart-2), var(--chart-4)); }
+  .av-ha  { background: linear-gradient(135deg, var(--chart-5), var(--chart-3)); }
+  .av-min { background: linear-gradient(135deg, var(--chart-6), var(--chart-2)); }
+
+  /* ── The WIP column is the board's focal point — one lit pane amid the even grid ── */
+  .kanban-col { position: relative; }
+  .kanban-col-head, .kanban-list { position: relative; z-index: 1; }
+  .kanban-col.col-focus { border-color: var(--color-border-strong); box-shadow: var(--glass-edge), var(--shadow-md), 0 0 0 1px var(--color-primary-soft); }
+  .kanban-col.col-focus::before {
+    content: ""; position: absolute; inset: 0; z-index: 0; border-radius: inherit; pointer-events: none;
+    background: radial-gradient(130% 44% at 50% 0%, var(--color-primary-soft), transparent 72%);
+  }
+
+  /* ── Keyboard column-move controls (buttons injected by the page script below) —
+        the accessible counterpart to drag-and-drop. Revealed on hover / keyboard focus. ── */
+  .kc-move {
+    position: absolute; top: var(--space-2); right: var(--space-2); z-index: 3;
+    display: inline-flex; gap: 3px; opacity: 0; transform: translateY(-3px);
+    transition: opacity var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+  }
+  .kanban-card:hover .kc-move, .kanban-card:focus-within .kc-move { opacity: 1; transform: none; }
+  .kc-move button {
+    width: 1.65rem; height: 1.65rem; border-radius: var(--radius-full);
+    display: grid; place-items: center; color: var(--color-text-muted);
+    background: var(--glass-bg-strong); border: var(--border-1) solid var(--glass-border);
+    box-shadow: var(--glass-edge); transition: color var(--duration-fast), box-shadow var(--duration-fast);
+  }
+  .kc-move button:hover:not(:disabled) { color: var(--color-primary); box-shadow: var(--glow-violet); }
+  .kc-move button:disabled { opacity: 0.32; cursor: not-allowed; box-shadow: none; }
+  .kc-move svg { width: 0.85rem; height: 0.85rem; }
 </style>
 </head>
 <body>
@@ -79,14 +122,14 @@
       <div class="searchbar topbar-search hide-mobile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input class="input" type="search" placeholder="작업 검색…" /></div>
       <div class="topbar-actions">
         <div class="avatar-group hide-mobile" aria-label="참여 멤버">
-          <span class="avatar avatar-sm" style="background:linear-gradient(135deg,#7c5cff,#22d3ee)" title="진섭">진</span>
-          <span class="avatar avatar-sm" style="background:linear-gradient(135deg,#ec4dae,#7c5cff)" title="이서연">서</span>
-          <span class="avatar avatar-sm" style="background:linear-gradient(135deg,#22d3ee,#4f7cff)" title="박도윤">도</span>
-          <span class="avatar avatar-sm" style="background:linear-gradient(135deg,#f59e0b,#ec4dae)" title="최하은">하</span>
+          <span class="avatar avatar-sm av-jin" title="진섭">진</span>
+          <span class="avatar avatar-sm av-seo" title="이서연">서</span>
+          <span class="avatar avatar-sm av-do" title="박도윤">도</span>
+          <span class="avatar avatar-sm av-ha" title="최하은">하</span>
           <span class="avatar avatar-sm avatar-more" title="외 3명">+3</span>
         </div>
-        <button class="btn btn-primary btn-sm" data-open-target="new-task"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>새 작업</button>
-        <button class="btn btn-secondary btn-sm" data-cmdk-open><kbd class="cmdk-hint">⌘K</kbd></button>
+        <button class="btn btn-primary btn-sm glass-sweep" data-open-target="new-task"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>새 작업</button>
+        <button class="btn btn-secondary btn-sm glass-sweep" data-cmdk-open aria-label="명령 팔레트 열기"><kbd class="cmdk-hint">⌘K</kbd></button>
         <button class="icon-pill" data-theme-toggle aria-label="테마"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg></button>
       </div>
     </header>
@@ -96,13 +139,16 @@
         <div>
           <nav class="breadcrumb mb-2" aria-label="경로"><a href="../index.html">홈</a><span class="sep">/</span><span aria-current="page">보드</span></nav>
           <h1>스프린트 24</h1>
-          <p class="ph-sub">6월 9일 – 6월 23일 · 남은 작업 9건 · 완료 4건</p>
+          <p class="ph-sub">6월 9일 – 6월 23일 · 진행 중 5 · 리뷰 대기 2 · 이번 주 완료 3</p>
         </div>
         <div class="row gap-2">
-          <div class="segmented" role="tablist" aria-label="보기 전환"><button aria-selected="true" class="is-active">보드</button><button>리스트</button><button>타임라인</button></div>
+          <div class="segmented" role="radiogroup" aria-label="보기 전환"><button type="button" role="radio" aria-checked="true" class="is-active">보드</button><button type="button" role="radio" aria-checked="false">리스트</button><button type="button" role="radio" aria-checked="false">타임라인</button></div>
           <button class="btn btn-secondary"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.5V19l4 2v-8.5L22 3z"/></svg>필터</button>
         </div>
       </div>
+
+      <!-- polite announcer for keyboard card moves -->
+      <div id="kanban-live" class="sr-only" role="status" aria-live="polite"></div>
 
       <!-- ───────────── BOARD ───────────── -->
       <div class="board-wrap">
@@ -124,7 +170,7 @@
                 <p class="kc-desc">전환율 A/B 테스트용 신규 헤드라인 3안 작성.</p>
                 <div class="kc-foot">
                   <div class="kc-meta">
-                    <span class="avatar avatar-xs" style="background:linear-gradient(135deg,#ec4dae,#7c5cff)">서</span>
+                    <span class="avatar avatar-xs av-seo">서</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>6/24</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>2</span>
                   </div>
@@ -138,7 +184,7 @@
                 <p class="kc-desc">Redis 기반 결과 캐시로 P95 응답시간 단축.</p>
                 <div class="kc-foot">
                   <div class="kc-meta">
-                    <span class="avatar avatar-xs" style="background:linear-gradient(135deg,#22d3ee,#4f7cff)">도</span>
+                    <span class="avatar avatar-xs av-do">도</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>6/27</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>0</span>
                   </div>
@@ -151,7 +197,7 @@
                 <div class="kc-title">온보딩 위저드 사용자 인터뷰</div>
                 <div class="kc-foot">
                   <div class="kc-meta">
-                    <span class="avatar avatar-xs" style="background:linear-gradient(135deg,#f59e0b,#ec4dae)">하</span>
+                    <span class="avatar avatar-xs av-ha">하</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>6/30</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>5</span>
                   </div>
@@ -165,7 +211,7 @@
                 <p class="kc-desc">실패한 이벤트 백오프 재전송 정책 정의.</p>
                 <div class="kc-foot">
                   <div class="kc-meta">
-                    <span class="avatar avatar-xs" style="background:linear-gradient(135deg,#7c5cff,#22d3ee)">진</span>
+                    <span class="avatar avatar-xs av-jin">진</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>7/02</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>1</span>
                   </div>
@@ -177,9 +223,9 @@
           </section>
 
           <!-- 진행 중 -->
-          <section class="kanban-col" data-kanban-col aria-label="진행 중">
+          <section class="kanban-col col-focus" data-kanban-col aria-label="진행 중">
             <div class="kanban-col-head">
-              <span class="col-dot" style="background:var(--violet-500)"></span>
+              <span class="col-dot" style="background:var(--color-primary)"></span>
               <span class="col-title">진행 중</span>
               <span class="badge badge-accent" data-kanban-count>5</span>
               <button class="btn btn-icon btn-ghost btn-sm col-add" data-open-target="new-task" aria-label="진행 중에 작업 추가"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
@@ -192,7 +238,7 @@
                 <p class="kc-desc">소셜 로그인 우선 배치 및 에러 상태 정리.</p>
                 <div class="kc-foot">
                   <div class="kc-meta">
-                    <span class="avatar avatar-xs" style="background:linear-gradient(135deg,#ec4dae,#7c5cff)">서</span>
+                    <span class="avatar avatar-xs av-seo">서</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>6/22</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>8</span>
                   </div>
@@ -206,7 +252,7 @@
                 <p class="kc-desc">구독 결제 및 환불 웹훅 처리 구현.</p>
                 <div class="kc-foot">
                   <div class="kc-meta">
-                    <span class="avatar avatar-xs" style="background:linear-gradient(135deg,#7c5cff,#22d3ee)">진</span>
+                    <span class="avatar avatar-xs av-jin">진</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>6/23</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>12</span>
                   </div>
@@ -220,7 +266,7 @@
                 <p class="kc-desc">읽음 처리 후 카운트가 갱신되지 않는 이슈.</p>
                 <div class="kc-foot">
                   <div class="kc-meta">
-                    <span class="avatar avatar-xs" style="background:linear-gradient(135deg,#22d3ee,#4f7cff)">도</span>
+                    <span class="avatar avatar-xs av-do">도</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>6/22</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>3</span>
                   </div>
@@ -234,7 +280,7 @@
                 <p class="kc-desc">대비 미달 색상 12개를 시맨틱 토큰으로 교체.</p>
                 <div class="kc-foot">
                   <div class="kc-meta">
-                    <span class="avatar avatar-xs" style="background:linear-gradient(135deg,#f59e0b,#ec4dae)">하</span>
+                    <span class="avatar avatar-xs av-ha">하</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>6/25</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>4</span>
                   </div>
@@ -248,7 +294,7 @@
                 <p class="kc-desc">대시보드 초기 렌더 LCP 분석 및 병목 도출.</p>
                 <div class="kc-foot">
                   <div class="kc-meta">
-                    <span class="avatar avatar-xs" style="background:linear-gradient(135deg,#16a34a,#22d3ee)">민</span>
+                    <span class="avatar avatar-xs av-min">민</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>6/26</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>1</span>
                   </div>
@@ -275,7 +321,7 @@
                 <p class="kc-desc">단계 이탈·재진입 시나리오 회귀 테스트.</p>
                 <div class="kc-foot">
                   <div class="kc-meta">
-                    <span class="avatar avatar-xs" style="background:linear-gradient(135deg,#22d3ee,#4f7cff)">도</span>
+                    <span class="avatar avatar-xs av-do">도</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>6/22</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>6</span>
                   </div>
@@ -289,7 +335,7 @@
                 <p class="kc-desc">리프레시 토큰 회전 로직 코드 리뷰 대기.</p>
                 <div class="kc-foot">
                   <div class="kc-meta">
-                    <span class="avatar avatar-xs" style="background:linear-gradient(135deg,#7c5cff,#22d3ee)">진</span>
+                    <span class="avatar avatar-xs av-jin">진</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>6/21</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>9</span>
                   </div>
@@ -316,7 +362,7 @@
                 <p class="kc-desc">컬러·간격·반경 토큰 레퍼런스 페이지 배포.</p>
                 <div class="kc-foot">
                   <div class="kc-meta">
-                    <span class="avatar avatar-xs" style="background:linear-gradient(135deg,#ec4dae,#7c5cff)">서</span>
+                    <span class="avatar avatar-xs av-seo">서</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>6/18</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>7</span>
                   </div>
@@ -330,7 +376,7 @@
                 <p class="kc-desc">SES 전환 및 발송 실패 모니터링 연결.</p>
                 <div class="kc-foot">
                   <div class="kc-meta">
-                    <span class="avatar avatar-xs" style="background:linear-gradient(135deg,#16a34a,#22d3ee)">민</span>
+                    <span class="avatar avatar-xs av-min">민</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>6/17</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>3</span>
                   </div>
@@ -344,7 +390,7 @@
                 <p class="kc-desc">900px 이하 햄버거 토글 및 포커스 트랩 적용.</p>
                 <div class="kc-foot">
                   <div class="kc-meta">
-                    <span class="avatar avatar-xs" style="background:linear-gradient(135deg,#22d3ee,#4f7cff)">도</span>
+                    <span class="avatar avatar-xs av-do">도</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>6/16</span>
                     <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>2</span>
                   </div>
@@ -372,7 +418,7 @@
       </div>
       <button class="btn btn-icon btn-ghost btn-sm modal-close" data-close aria-label="닫기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
-    <form class="modal-body" onsubmit="return false">
+    <form class="modal-body">
       <div class="form-grid">
         <div class="field span-2">
           <label class="field-label" for="nt-title">작업 제목 <span class="req">*</span></label>
@@ -407,8 +453,8 @@
       </div>
     </form>
     <div class="modal-footer">
-      <button class="btn btn-ghost" data-close>취소</button>
-      <button class="btn btn-primary" data-close data-toast="success" data-toast-title="작업이 추가되었습니다"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>추가</button>
+      <button type="button" class="btn btn-ghost" data-close>취소</button>
+      <button type="button" class="btn btn-primary glass-sweep" data-close data-toast="success" data-toast-title="작업을 추가했어요" data-toast-text="스프린트 24 백로그에 담았습니다."><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>추가</button>
     </div>
   </div>
 </div>
@@ -422,13 +468,85 @@
       <div class="cmdk-item is-active" data-href="./dashboard.html"><span class="ci-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span><div><div class="ci-title">대시보드</div></div></div>
       <div class="cmdk-item" data-href="./inbox.html"><span class="ci-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m2 7 10 6 10-6"/></svg></span><div><div class="ci-title">인박스</div></div></div>
       <div class="cmdk-item" data-href="../index.html"><span class="ci-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg></span><div><div class="ci-title">홈으로</div></div></div>
+      <div class="cmdk-item" data-href="./pricing.html"><span class="ci-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12V8H6a2 2 0 0 1 0-4h12v4"/><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg></span><div><div class="ci-title">가격표</div></div></div>
       <div class="cmdk-group-label">액션</div>
       <div class="cmdk-item" data-action="toggle-theme"><span class="ci-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span><div><div class="ci-title">테마 전환</div></div></div>
+      <div class="cmdk-empty" hidden aria-live="polite">
+        <p style="margin:0;font-weight:600;color:var(--color-text)">검색 결과가 없어요</p>
+        <p style="margin:var(--space-1) 0 0;font-size:var(--text-sm)">다른 키워드로 찾아보거나 ESC로 닫을 수 있어요.</p>
+      </div>
     </div>
   </div>
 </div>
 
 <div class="toast-region" role="status" aria-live="polite"></div>
 <script src="../app.js"></script>
+<script>
+/* Keyboard-accessible column moves — the a11y counterpart to drag-and-drop.
+   Injects a compact "◀ ▶" control into every kanban card, moves the card
+   between columns on click / Enter / Space, keeps the count badges in sync,
+   and announces each move through the polite live region. No-op without a board. */
+(function () {
+  var live = document.getElementById("kanban-live");
+  function announce(msg) { if (live) live.textContent = msg; }
+  var PREV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>';
+  var NEXT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
+
+  document.querySelectorAll("[data-kanban]").forEach(function (board) {
+    var cols = Array.prototype.slice.call(board.querySelectorAll("[data-kanban-col]"));
+    function listOf(col) { return col.querySelector("[data-kanban-list]"); }
+    function colName(col) { return col.getAttribute("aria-label") || "다음"; }
+
+    function refresh() {
+      cols.forEach(function (col, ci) {
+        var badge = col.querySelector("[data-kanban-count]");
+        var cards = listOf(col).querySelectorAll(".kanban-card");
+        if (badge) badge.textContent = cards.length;
+        cards.forEach(function (card) {
+          var p = card.querySelector('[data-move="prev"]');
+          var n = card.querySelector('[data-move="next"]');
+          if (p) p.disabled = ci === 0;
+          if (n) n.disabled = ci === cols.length - 1;
+        });
+      });
+    }
+
+    board.querySelectorAll(".kanban-card").forEach(function (card) {
+      if (card.querySelector(".kc-move")) return;
+      var mv = document.createElement("div");
+      mv.className = "kc-move";
+      [["prev", "이전 단계로 이동", PREV], ["next", "다음 단계로 이동", NEXT]].forEach(function (spec) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.setAttribute("data-move", spec[0]);
+        b.setAttribute("draggable", "false");
+        b.setAttribute("aria-label", spec[1]);
+        b.innerHTML = spec[2];
+        mv.appendChild(b);
+      });
+      card.appendChild(mv);
+    });
+
+    board.addEventListener("click", function (e) {
+      var btn = e.target.closest("[data-move]");
+      if (!btn || btn.disabled) return;
+      var card = btn.closest(".kanban-card");
+      var col = btn.closest("[data-kanban-col]");
+      var idx = cols.indexOf(col);
+      var target = cols[idx + (btn.getAttribute("data-move") === "next" ? 1 : -1)];
+      if (!card || !target) return;
+      listOf(target).appendChild(card);
+      refresh();
+      var title = card.querySelector(".kc-title");
+      announce("‘" + (title ? title.textContent : "작업") + "’ 카드를 " + colName(target) + " 열로 옮겼어요.");
+      var same = card.querySelector('[data-move="' + btn.getAttribute("data-move") + '"]');
+      if (same && !same.disabled) same.focus();
+      else { var other = card.querySelector("[data-move]:not(:disabled)"); if (other) other.focus(); }
+    });
+
+    refresh();
+  });
+})();
+</script>
 </body>
 </html>

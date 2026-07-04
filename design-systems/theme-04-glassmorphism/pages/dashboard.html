@@ -1,15 +1,52 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="color-scheme" content="light dark" />
+<script>
+  /* Apply saved/preferred theme before first paint — no light flash for dark users. */
+  (function () {
+    try {
+      var t = localStorage.getItem("aurora-glass:theme");
+      if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
 <title>분석 대시보드 — Aurora Glass</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="../theme.css" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%237c5cff'/%3E%3Cpath d='M9 20c3-9 11-9 14 0' stroke='%2322d3ee' stroke-width='2.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E" />
+<style>
+  /* page-local: chart series + avatar tints via theme-aware --chart-* tokens
+     (keeps dark-mode legible and removes hardcoded hex from the markup) */
+  .lg-dot  { width: 10px; height: 10px; border-radius: 3px;  display: inline-block; flex: none; }
+  .src-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+  .c1 { background: var(--chart-1); }
+  .c2 { background: var(--chart-2); }
+  .c3 { background: var(--chart-3); }
+  .chart-line-1 { stroke: var(--chart-1); }
+  .chart-line-2 { stroke: var(--chart-2); }
+  /* signature: the revenue line inks itself in as the glass chart resolves into
+     focus. Gated on .js-ready + .in-view so no-JS shows the full line, and the
+     global reduced-motion rule collapses the transition to an instant snap. */
+  .js-ready [data-reveal] .chart-line-1 {
+    stroke-dasharray: 2000; stroke-dashoffset: 2000;
+    transition: stroke-dashoffset var(--duration-slower) var(--ease-out);
+  }
+  .js-ready [data-reveal].in-view .chart-line-1 { stroke-dashoffset: 0; }
+  .bar-c3 { background: var(--chart-3); }
+  .avatar-square { border-radius: var(--radius-sm); }
+  .av-vc { background: linear-gradient(135deg, var(--chart-1), var(--chart-2)); }
+  .av-mv { background: linear-gradient(135deg, var(--chart-3), var(--chart-1)); }
+  .av-cb { background: linear-gradient(135deg, var(--chart-2), var(--chart-4)); }
+  .av-wm { background: linear-gradient(135deg, var(--chart-5), var(--chart-3)); }
+  .av-gc { background: linear-gradient(135deg, var(--chart-6), var(--chart-2)); }
+  .av-mw { background: linear-gradient(135deg, var(--chart-3), var(--chart-5)); }
+  .av-vb { background: linear-gradient(135deg, var(--chart-4), var(--chart-1)); }
+</style>
 </head>
 <body>
 <a href="#main" class="skip-link">본문 바로가기</a>
@@ -57,20 +94,20 @@
       <div class="page-header">
         <div>
           <nav class="breadcrumb mb-2" aria-label="경로"><a href="../index.html">홈</a><span class="sep">/</span><span aria-current="page">대시보드</span></nav>
-          <h1>안녕하세요, 진섭님 👋</h1>
-          <p class="ph-sub">오늘의 핵심 지표를 한눈에 확인하세요.</p>
+          <h1>안녕하세요, 진섭님</h1>
+          <p class="ph-sub">여름 세일 첫 주 · 6월 마감 지표를 살펴보고 있어요.</p>
         </div>
         <div class="row gap-2">
-          <div class="segmented" role="tablist" aria-label="기간"><button>7일</button><button aria-selected="true" class="is-active">30일</button><button>90일</button></div>
-          <button class="btn btn-primary" data-toast="success" data-toast-title="리포트 내보내기 완료"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>내보내기</button>
+          <div class="segmented" role="radiogroup" aria-label="조회 기간"><button role="radio" aria-checked="false">7일</button><button role="radio" aria-checked="true" class="is-active">30일</button><button role="radio" aria-checked="false">90일</button></div>
+          <button class="btn btn-primary glass-sweep" data-toast="success" data-toast-title="리포트를 내보냈어요" data-toast-text="6월 분석 리포트를 PDF로 저장했습니다 · 되돌리기"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>내보내기</button>
         </div>
       </div>
 
       <!-- KPI cards -->
       <section class="metrics-grid" aria-label="핵심 지표">
         <div class="statcard" data-reveal>
-          <div class="sc-top"><span class="sc-label">총 매출</span><span class="sc-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span></div>
-          <div class="sc-value" data-count="284920" data-prefix="₩">₩0</div>
+          <div class="sc-top"><span class="sc-label">6월 총 매출</span><span class="sc-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span></div>
+          <div class="sc-value" data-count="4.82" data-decimals="2" data-prefix="₩" data-suffix="억">₩0억</div>
           <div class="sc-foot"><span class="sc-trend up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M7 17 17 7M9 7h8v8"/></svg>18.2%</span><span class="text-subtle">지난달 대비</span></div>
         </div>
         <div class="statcard accent-cyan" data-reveal>
@@ -96,21 +133,21 @@
           <div class="card-header">
             <div><h3 class="card-title">매출 추이</h3><p class="card-subtitle">최근 12개월 · 단위 백만원</p></div>
             <div class="row gap-3 hide-mobile">
-              <span class="row gap-2" style="font-size:var(--text-xs)"><i style="width:10px;height:10px;border-radius:3px;background:var(--violet-500);display:inline-block"></i>매출</span>
-              <span class="row gap-2" style="font-size:var(--text-xs)"><i style="width:10px;height:10px;border-radius:3px;background:var(--cyan-400);display:inline-block"></i>목표</span>
+              <span class="row gap-2" style="font-size:var(--text-xs)"><i class="lg-dot c1"></i>매출</span>
+              <span class="row gap-2" style="font-size:var(--text-xs)"><i class="lg-dot c2"></i>목표</span>
             </div>
           </div>
-          <!-- area chart -->
-          <svg viewBox="0 0 720 260" width="100%" height="260" role="img" aria-label="매출 추이 차트" preserveAspectRatio="none">
+          <!-- area chart — colors via style="" (SVG presentation attrs can't read var()) -->
+          <svg viewBox="0 0 720 260" width="100%" height="260" role="img" aria-label="1월부터 12월까지 월별 매출 추이. 1월 약 38백만원에서 등락을 거치며 6월 82백만원까지 상승했고, 매출선은 대체로 목표선을 웃돌았습니다." preserveAspectRatio="none">
             <defs>
-              <linearGradient id="area-v" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7c5cff" stop-opacity="0.45"/><stop offset="1" stop-color="#7c5cff" stop-opacity="0"/></linearGradient>
+              <linearGradient id="area-v" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--chart-1)" stop-opacity="0.45"/><stop offset="1" style="stop-color:var(--chart-1)" stop-opacity="0"/></linearGradient>
             </defs>
-            <g stroke="var(--color-divider)" stroke-width="1">
+            <g style="stroke:var(--color-divider)" stroke-width="1">
               <line x1="0" y1="40" x2="720" y2="40"/><line x1="0" y1="100" x2="720" y2="100"/><line x1="0" y1="160" x2="720" y2="160"/><line x1="0" y1="220" x2="720" y2="220"/>
             </g>
             <path d="M0,200 C60,180 80,150 120,150 C170,150 190,90 240,100 C290,110 310,60 360,75 C410,90 430,120 480,110 C540,98 560,55 600,50 C650,44 690,70 720,60 L720,260 L0,260 Z" fill="url(#area-v)"/>
-            <path d="M0,200 C60,180 80,150 120,150 C170,150 190,90 240,100 C290,110 310,60 360,75 C410,90 430,120 480,110 C540,98 560,55 600,50 C650,44 690,70 720,60" fill="none" stroke="#7c5cff" stroke-width="3" stroke-linecap="round"/>
-            <path d="M0,210 C60,205 90,185 130,180 C190,172 220,140 270,140 C330,140 350,110 410,118 C470,126 500,95 560,92 C620,89 670,75 720,80" fill="none" stroke="#22d3ee" stroke-width="2.5" stroke-dasharray="6 6" stroke-linecap="round" opacity="0.8"/>
+            <path class="chart-line-1" d="M0,200 C60,180 80,150 120,150 C170,150 190,90 240,100 C290,110 310,60 360,75 C410,90 430,120 480,110 C540,98 560,55 600,50 C650,44 690,70 720,60" fill="none" stroke-width="3" stroke-linecap="round"/>
+            <path class="chart-line-2" d="M0,210 C60,205 90,185 130,180 C190,172 220,140 270,140 C330,140 350,110 410,118 C470,126 500,95 560,92 C620,89 670,75 720,80" fill="none" stroke-width="2.5" stroke-dasharray="6 6" stroke-linecap="round" opacity="0.8"/>
           </svg>
           <div class="row between text-subtle" style="font-size:var(--text-xs);margin-top:var(--space-2)"><span>1월</span><span>3월</span><span>5월</span><span>7월</span><span>9월</span><span>11월</span></div>
         </div>
@@ -121,9 +158,9 @@
             <span class="progress-ring" style="--p:64;--size:8rem;--thick:12px"><span class="pr-label">64%</span></span>
           </div>
           <div class="stack gap-3" style="margin-top:var(--space-3)">
-            <div class="stack gap-1"><div class="between" style="font-size:var(--text-sm)"><span class="row gap-2"><i style="width:10px;height:10px;border-radius:50%;background:var(--violet-500)"></i>오가닉 검색</span><strong>64%</strong></div><div class="progress thin"><div class="bar" style="width:64%"></div></div></div>
-            <div class="stack gap-1"><div class="between" style="font-size:var(--text-sm)"><span class="row gap-2"><i style="width:10px;height:10px;border-radius:50%;background:var(--cyan-400)"></i>직접 유입</span><strong>22%</strong></div><div class="progress thin progress-accent"><div class="bar" style="width:22%"></div></div></div>
-            <div class="stack gap-1"><div class="between" style="font-size:var(--text-sm)"><span class="row gap-2"><i style="width:10px;height:10px;border-radius:50%;background:var(--magenta-500)"></i>소셜</span><strong>14%</strong></div><div class="progress thin"><div class="bar" style="width:14%;background:var(--magenta-500)"></div></div></div>
+            <div class="stack gap-1"><div class="between" style="font-size:var(--text-sm)"><span class="row gap-2"><i class="src-dot c1"></i>오가닉 검색</span><strong>64%</strong></div><div class="progress thin"><div class="bar" style="width:64%"></div></div></div>
+            <div class="stack gap-1"><div class="between" style="font-size:var(--text-sm)"><span class="row gap-2"><i class="src-dot c2"></i>직접 유입</span><strong>22%</strong></div><div class="progress thin progress-accent"><div class="bar" style="width:22%"></div></div></div>
+            <div class="stack gap-1"><div class="between" style="font-size:var(--text-sm)"><span class="row gap-2"><i class="src-dot c3"></i>소셜</span><strong>14%</strong></div><div class="progress thin"><div class="bar bar-c3" style="width:14%"></div></div></div>
           </div>
         </div>
       </section>
@@ -158,7 +195,7 @@
               <tr>
                 <td class="col-check"><input type="checkbox" data-row-select aria-label="선택" /></td>
                 <td class="mono">#A-3919</td>
-                <td><div class="cell-user"><span class="avatar avatar-sm" style="background:linear-gradient(135deg,#ec4dae,#7c5cff)">서</span><div><div>이서연</div><div class="cell-sub">seoyeon@mail.com</div></div></div></td>
+                <td><div class="cell-user"><span class="avatar avatar-sm av-mv">서</span><div><div>이서연</div><div class="cell-sub">seoyeon@mail.com</div></div></div></td>
                 <td><span class="badge badge-warning">배송중</span></td>
                 <td class="num" data-sort="92500">₩92,500</td>
                 <td class="cell-actions"><button class="btn btn-icon btn-ghost btn-sm" aria-label="더보기"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button></td>
@@ -166,7 +203,7 @@
               <tr>
                 <td class="col-check"><input type="checkbox" data-row-select aria-label="선택" /></td>
                 <td class="mono">#A-3918</td>
-                <td><div class="cell-user"><span class="avatar avatar-sm" style="background:linear-gradient(135deg,#22d3ee,#4f7cff)">도</span><div><div>박도윤</div><div class="cell-sub">doyun@mail.com</div></div></div></td>
+                <td><div class="cell-user"><span class="avatar avatar-sm av-cb">도</span><div><div>박도윤</div><div class="cell-sub">doyun@mail.com</div></div></div></td>
                 <td><span class="badge badge-danger">취소</span></td>
                 <td class="num" data-sort="47000">₩47,000</td>
                 <td class="cell-actions"><button class="btn btn-icon btn-ghost btn-sm" aria-label="더보기"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button></td>
@@ -174,7 +211,7 @@
               <tr>
                 <td class="col-check"><input type="checkbox" data-row-select aria-label="선택" /></td>
                 <td class="mono">#A-3917</td>
-                <td><div class="cell-user"><span class="avatar avatar-sm" style="background:linear-gradient(135deg,#f59e0b,#ec4dae)">하</span><div><div>최하은</div><div class="cell-sub">haeun@mail.com</div></div></div></td>
+                <td><div class="cell-user"><span class="avatar avatar-sm av-wm">하</span><div><div>최하은</div><div class="cell-sub">haeun@mail.com</div></div></div></td>
                 <td><span class="badge badge-success">완료</span></td>
                 <td class="num" data-sort="318000">₩318,000</td>
                 <td class="cell-actions"><button class="btn btn-icon btn-ghost btn-sm" aria-label="더보기"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button></td>
@@ -182,7 +219,7 @@
               <tr>
                 <td class="col-check"><input type="checkbox" data-row-select aria-label="선택" /></td>
                 <td class="mono">#A-3916</td>
-                <td><div class="cell-user"><span class="avatar avatar-sm" style="background:linear-gradient(135deg,#16a34a,#22d3ee)">준</span><div><div>정우준</div><div class="cell-sub">woojun@mail.com</div></div></div></td>
+                <td><div class="cell-user"><span class="avatar avatar-sm av-gc">준</span><div><div>정우준</div><div class="cell-sub">woojun@mail.com</div></div></div></td>
                 <td><span class="badge badge-warning">배송중</span></td>
                 <td class="num" data-sort="126000">₩126,000</td>
                 <td class="cell-actions"><button class="btn btn-icon btn-ghost btn-sm" aria-label="더보기"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button></td>
@@ -191,7 +228,7 @@
           </table>
         </div>
         <div class="table-toolbar">
-          <span class="meta"><strong data-selection-count>0</strong>개 선택됨 · 총 1,284건</span>
+          <span class="meta"><strong data-selection-count>0</strong>개 선택됨 · 총 238건</span>
           <div class="pagination">
             <button class="page-btn" aria-label="이전" disabled><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 18-6-6 6-6"/></svg></button>
             <button class="page-btn is-active" aria-current="page">1</button>
@@ -218,10 +255,10 @@
         <div class="card" data-reveal>
           <div class="card-header"><div><h3 class="card-title">상위 상품</h3></div></div>
           <div class="list">
-            <div class="list-item"><span class="avatar avatar-sm" style="border-radius:var(--radius-sm);background:linear-gradient(135deg,#7c5cff,#22d3ee)">01</span><div class="li-body"><div class="li-title">Aurora Pro 라이선스</div><div class="li-sub">소프트웨어</div></div><span class="li-meta"><strong>1,204</strong> 판매</span></div>
-            <div class="list-item"><span class="avatar avatar-sm" style="border-radius:var(--radius-sm);background:linear-gradient(135deg,#ec4dae,#f59e0b)">02</span><div class="li-body"><div class="li-title">Glass UI 키트</div><div class="li-sub">디자인</div></div><span class="li-meta"><strong>980</strong> 판매</span></div>
-            <div class="list-item"><span class="avatar avatar-sm" style="border-radius:var(--radius-sm);background:linear-gradient(135deg,#22d3ee,#16a34a)">03</span><div class="li-body"><div class="li-title">Mesh 배경 팩</div><div class="li-sub">에셋</div></div><span class="li-meta"><strong>642</strong> 판매</span></div>
-            <div class="list-item"><span class="avatar avatar-sm" style="border-radius:var(--radius-sm);background:linear-gradient(135deg,#4f7cff,#7c5cff)">04</span><div class="li-body"><div class="li-title">아이콘 세트 v2</div><div class="li-sub">에셋</div></div><span class="li-meta"><strong>510</strong> 판매</span></div>
+            <div class="list-item"><span class="avatar avatar-sm avatar-square av-vc">01</span><div class="li-body"><div class="li-title">Aurora Pro 라이선스</div><div class="li-sub">소프트웨어</div></div><span class="li-meta"><strong>1,204</strong> 판매</span></div>
+            <div class="list-item"><span class="avatar avatar-sm avatar-square av-mw">02</span><div class="li-body"><div class="li-title">Glass UI 키트</div><div class="li-sub">디자인</div></div><span class="li-meta"><strong>980</strong> 판매</span></div>
+            <div class="list-item"><span class="avatar avatar-sm avatar-square av-gc">03</span><div class="li-body"><div class="li-title">Mesh 배경 팩</div><div class="li-sub">에셋</div></div><span class="li-meta"><strong>642</strong> 판매</span></div>
+            <div class="list-item"><span class="avatar avatar-sm avatar-square av-vb">04</span><div class="li-body"><div class="li-title">아이콘 세트 v2</div><div class="li-sub">에셋</div></div><span class="li-meta"><strong>510</strong> 판매</span></div>
           </div>
         </div>
       </section>
@@ -250,6 +287,10 @@
       <div class="cmdk-item" data-href="../index.html"><span class="ci-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg></span><div><div class="ci-title">홈으로</div></div></div>
       <div class="cmdk-group-label">액션</div>
       <div class="cmdk-item" data-action="toggle-theme"><span class="ci-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span><div><div class="ci-title">테마 전환</div></div></div>
+      <div class="cmdk-empty" hidden aria-live="polite">
+        <p style="margin:0;font-weight:600;color:var(--color-text)">검색 결과가 없어요</p>
+        <p style="margin:var(--space-1) 0 0;font-size:var(--text-sm)">다른 키워드로 찾아보거나 ESC로 닫을 수 있어요.</p>
+      </div>
     </div>
   </div>
 </div>

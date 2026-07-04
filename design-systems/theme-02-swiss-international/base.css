@@ -1,4 +1,5 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap");
+/* Fonts are loaded once in tokens.css (single consolidated @import) to avoid a
+   split, serialized render-blocking chain across two stylesheets. */
 
 /* ============================================================================
    THEME-02 · SWISS INTERNATIONAL  ·  base.css
@@ -382,7 +383,7 @@ h6, .h6 {
 .text-muted  { color: var(--color-text-muted); }
 .text-subtle { color: var(--color-text-subtle); }
 .text-faint  { color: var(--color-text-faint); }
-.text-accent { color: var(--color-accent); }
+.text-accent { color: var(--color-accent-text); }
 .text-ink    { color: var(--color-text); }
 .bg-surface-2 { background: var(--color-surface-2); }
 .bg-inverse   { background: var(--color-inverse); color: var(--color-inverse-fg); }
@@ -504,4 +505,52 @@ body.grid-overlay-on::after {
 @media print {
   .no-print { display: none !important; }
   body { background: #fff; color: #000; }
+}
+
+/* ------------------------------------------------------------------ *
+ * HANGUL REFINEMENT LAYER  (전제: <html lang="ko"> + 스택 순서 교정)
+ * Korean needs looser leading than Latin and no faux italic. Wide mono
+ * tracking (0.16em) is kept — it is inside the 한글 상한(0.15~0.2em) and is
+ * the Swiss signature. Latin still renders in Inter/JetBrains (stack order).
+ * ------------------------------------------------------------------ */
+:lang(ko) {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-break: strict;
+}
+:lang(ko) :is(h1, h2, h3, h4, h5, h6) { line-height: var(--leading-heading-ko); }
+:lang(ko) :is(.display, .text-display, .display--hero,
+              .page-head__title, .poster-hero__display, .page-plate__title,
+              .hub-hero__title) { line-height: var(--leading-display-ko); }
+:lang(ko) :is(.lead, .body, .prose p) { line-height: var(--leading-body-ko); }
+/* Korean has no italic — swap slant for weight so 강조 stays legible. */
+:lang(ko) :is(em, i, cite) { font-style: normal; font-weight: var(--weight-semibold); }
+/* Data always tabular + lining. */
+:lang(ko) :is(.table td, .stat__value, .price, .num, .tabular) {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* ------------------------------------------------------------------ *
+ * SIGNATURE MOTION · rule-draw + fade.
+ * DNA allows NO translate — only opacity fade and hairlines that are DRAWN
+ * left→right (scaleX). Hidden state is gated on html.js so a no-JS load (or
+ * JS failure before boot) still paints complete content. Under reduced-motion
+ * the hidden state is never applied.  (§3-C)
+ * ------------------------------------------------------------------ */
+@media (prefers-reduced-motion: no-preference) {
+  html.js [data-reveal] { opacity: 0; }
+  html.js [data-reveal].is-in {
+    opacity: 1;
+    transition: opacity var(--duration-slow) var(--ease-out);
+  }
+  /* A hairline that draws itself in. Apply ONLY to line-shaped elements
+     (.rule, borders) — never to text, which scaleX would squash. */
+  html.js [data-rule-draw] {
+    transform: scaleX(0);
+    transform-origin: left center;
+  }
+  html.js [data-rule-draw].is-in {
+    transform: scaleX(1);
+    transition: transform var(--duration-slow) var(--ease-standard);
+  }
 }

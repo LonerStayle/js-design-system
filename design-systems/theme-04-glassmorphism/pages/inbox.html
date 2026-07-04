@@ -1,23 +1,50 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="color-scheme" content="light dark" />
+<script>
+  /* Apply saved/preferred theme before first paint — no light flash for dark users. */
+  (function () {
+    try {
+      var t = localStorage.getItem("aurora-glass:theme");
+      if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
 <title>인박스 — Aurora Glass</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="../theme.css" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%237c5cff'/%3E%3Cpath d='M9 20c3-9 11-9 14 0' stroke='%2322d3ee' stroke-width='2.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E" />
 <style>
   /* page-local layout only — uses design-system CSS vars */
-  .app-main { height: 100vh; overflow: hidden; }
+  .app-main { height: 100dvh; overflow: hidden; }
   .inbox-panes { flex: 1; min-height: 0; }
+
+  /* sender avatar tints — via theme-aware --chart-* so white initials keep
+     contrast in dark mode (raw hex would stay dim). No hardcoded hex in markup. */
+  .av-vc { background: linear-gradient(135deg, var(--chart-1), var(--chart-2)); }
+  .av-cb { background: linear-gradient(135deg, var(--chart-2), var(--chart-4)); }
+  .av-mv { background: linear-gradient(135deg, var(--chart-3), var(--chart-1)); }
+  .av-gc { background: linear-gradient(135deg, var(--chart-6), var(--chart-2)); }
+  .av-wm { background: linear-gradient(135deg, var(--chart-5), var(--chart-3)); }
+  .av-vb { background: linear-gradient(135deg, var(--chart-4), var(--chart-1)); }
+  .av-mw { background: linear-gradient(135deg, var(--chart-3), var(--chart-5)); }
+  .av-wg { background: linear-gradient(135deg, var(--chart-5), var(--chart-6)); }
+  .av-gb { background: linear-gradient(135deg, var(--chart-6), var(--chart-4)); }
+
+  /* back-to-list control — only surfaced on the mobile stacked layout */
+  .inbox-back { display: none; }
   .pane-nav .pane-body { padding: var(--space-3); }
   .folder-link { position: relative; }
   .folder-link .badge { margin-left: auto; }
   .label-dot { width: 0.7rem; height: 0.7rem; border-radius: 50%; flex: none; }
+  .ld-work { background: var(--chart-4); }
+  .ld-personal { background: var(--chart-6); }
+  .ld-bill { background: var(--chart-5); }
   .mail-row {
     display: flex; gap: var(--space-3); align-items: flex-start;
     padding: var(--space-3) var(--space-4);
@@ -45,7 +72,28 @@
   .read-pane .pane-body { padding: var(--space-6); }
   .reply-box { margin-top: var(--space-5); padding-top: var(--space-5); border-top: var(--border-1) solid var(--color-divider); }
   .pane-search .input { border-radius: var(--radius-full); }
-  @media (max-width: 760px) { .app-main { height: auto; overflow: visible; } .inbox-panes { min-height: 70vh; } }
+
+  /* On mobile the drawer sidebar shouldn't stay a 76px icon rail — expand it so
+     labels are legible when it slides in over the content. */
+  @media (max-width: 900px) {
+    .app-shell > .sidebar.collapsed { width: var(--sidebar-w); }
+    .app-shell > .sidebar.collapsed .sb-label,
+    .app-shell > .sidebar.collapsed .sidebar-link .badge { opacity: 1; width: auto; }
+    .app-shell > .sidebar.collapsed .sidebar-section-label { opacity: 1; }
+  }
+
+  @media (max-width: 760px) { .app-main { height: auto; overflow: visible; } .inbox-panes { min-height: 70dvh; } }
+
+  /* ≤680px the 3-pane inbox collapses to a single column. Instead of stranding
+     the user on the reading pane with no way back (the base rule hides the list),
+     stack it: list first, reading slides in with a back control (§4-6-2). */
+  @media (max-width: 680px) {
+    .panes-3.inbox-panes .pane-list { display: flex; }
+    .panes-3.inbox-panes .read-pane { display: none; }
+    .panes-3.inbox-panes.reading-open .pane-list { display: none; }
+    .panes-3.inbox-panes.reading-open .read-pane { display: flex; }
+    .inbox-back { display: inline-grid; }
+  }
 </style>
 </head>
 <body>
@@ -107,9 +155,9 @@
           <div class="sidebar-section">
             <div class="sidebar-section-label">라벨</div>
             <div class="list list-divided">
-              <a class="list-item folder-link sidebar-link" href="#mail-list"><i class="label-dot" style="background:#4f7cff"></i><span>업무</span><span class="badge badge-neutral">5</span></a>
-              <a class="list-item folder-link sidebar-link" href="#mail-list"><i class="label-dot" style="background:#16a34a"></i><span>개인</span><span class="badge badge-neutral">2</span></a>
-              <a class="list-item folder-link sidebar-link" href="#mail-list"><i class="label-dot" style="background:#f59e0b"></i><span>청구서</span><span class="badge badge-neutral">3</span></a>
+              <a class="list-item folder-link sidebar-link" href="#mail-list"><i class="label-dot ld-work"></i><span>업무</span><span class="badge badge-neutral">5</span></a>
+              <a class="list-item folder-link sidebar-link" href="#mail-list"><i class="label-dot ld-personal"></i><span>개인</span><span class="badge badge-neutral">2</span></a>
+              <a class="list-item folder-link sidebar-link" href="#mail-list"><i class="label-dot ld-bill"></i><span>청구서</span><span class="badge badge-neutral">3</span></a>
             </div>
           </div>
         </div>
@@ -118,9 +166,9 @@
       <!-- (b) MAIL LIST -->
       <section class="pane pane-list" aria-label="메일 목록" id="mail-list">
         <div class="pane-head">
-          <div class="segmented" role="tablist" aria-label="필터">
-            <button role="tab" aria-selected="true" class="is-active">전체</button>
-            <button role="tab" aria-selected="false">안읽음</button>
+          <div class="segmented" role="radiogroup" aria-label="메일 필터" data-mail-filter>
+            <button role="radio" aria-checked="true" class="is-active" data-value="all">전체</button>
+            <button role="radio" aria-checked="false" data-value="unread">안읽음</button>
           </div>
           <button class="btn btn-icon btn-ghost btn-sm" style="margin-left:auto" aria-label="정렬"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5h10M11 9h7M11 13h4M3 17l3 3 3-3M6 6v14"/></svg></button>
         </div>
@@ -132,7 +180,7 @@
             data-subject="신규 디자인 시스템 v2.0 리뷰 요청"
             data-date="2026년 6월 21일 (일) 오전 9:24"
             data-body="진섭님 안녕하세요, 디자인팀 박지민입니다.|||Aurora Glass 디자인 시스템 v2.0 초안이 완성되어 공유드립니다. 이번 버전에서는 글래스모피즘 토큰을 재정비하고 컴포넌트 62종을 다크 모드까지 전수 점검했습니다. 특히 사이드바와 모달의 블러 강도를 통일해 일관성을 높였습니다.|||월요일 오전 디자인 리뷰 전까지 첨부된 스펙 문서를 한 번 검토해 주시면 감사하겠습니다. 의견은 댓글로 남겨주셔도 좋고, 회의 때 말씀해 주셔도 됩니다. 감사합니다!">
-            <span class="avatar avatar-sm" style="background:linear-gradient(135deg,#7c5cff,#22d3ee)">지</span>
+            <span class="avatar avatar-sm av-vc">지</span>
             <div class="mr-body">
               <div class="mr-top"><span class="unread-dot" aria-hidden="true"></span><span class="mr-name">박지민 · 디자인팀</span><span class="mr-time">오전 9:24</span></div>
               <div class="mr-subject">신규 디자인 시스템 v2.0 리뷰 요청</div>
@@ -148,7 +196,7 @@
             data-subject="6월 정기결제 영수증이 발행되었습니다"
             data-date="2026년 6월 21일 (일) 오전 8:02"
             data-body="안녕하세요, 토스페이먼츠입니다.|||Aurora Pro 플랜 6월 정기결제 ₩29,000원이 정상 처리되었습니다. 결제 수단은 신한카드(****-1029)이며, 다음 결제일은 2026년 7월 21일입니다.|||영수증은 첨부된 PDF에서 확인하실 수 있습니다. 결제 관련 문의는 고객센터로 연락 주세요.">
-            <span class="avatar avatar-sm" style="background:linear-gradient(135deg,#4f7cff,#22d3ee)">토</span>
+            <span class="avatar avatar-sm av-cb">토</span>
             <div class="mr-body">
               <div class="mr-top"><span class="unread-dot" aria-hidden="true"></span><span class="mr-name">결제 알림 · 토스페이먼츠</span><span class="mr-time">오전 8:02</span></div>
               <div class="mr-subject">6월 정기결제 영수증이 발행되었습니다</div>
@@ -164,7 +212,7 @@
             data-subject="여름 세일 캠페인 최종 카피 확인 부탁드려요"
             data-date="2026년 6월 20일 (토) 오후 6:41"
             data-body="진섭님, 마케팅팀 이서연입니다.|||여름 세일 캠페인 이메일 카피 최종본을 정리했습니다. 헤드라인 3개 중 A안(시원한 여름, 더 시원한 할인)으로 가는 게 클릭률이 가장 좋을 것 같아요. 발송 대상은 활성 사용자 4,200명입니다.|||오늘 중으로 확인 주시면 내일 오전 10시에 예약 발송하겠습니다. 빠른 회신 부탁드려요!">
-            <span class="avatar avatar-sm" style="background:linear-gradient(135deg,#ec4dae,#7c5cff)">서</span>
+            <span class="avatar avatar-sm av-mv">서</span>
             <div class="mr-body">
               <div class="mr-top"><span class="unread-dot" aria-hidden="true"></span><span class="mr-name">이서연 · 마케팅</span><span class="mr-time">어제</span></div>
               <div class="mr-subject">여름 세일 캠페인 최종 카피 확인 부탁드려요</div>
@@ -180,7 +228,7 @@
             data-subject="[aurora-glass] PR #248 이 머지되었습니다"
             data-date="2026년 6월 20일 (토) 오후 3:12"
             data-body="Pull request #248 \"feat: 다크 모드 토큰 전수 점검\" 이 main 브랜치에 머지되었습니다.|||변경된 파일은 14개이며, 리뷰어 2명의 승인을 받았습니다. 배포 파이프라인이 자동으로 트리거되어 프리뷰 환경에 반영될 예정입니다.|||자세한 내용은 GitHub에서 확인하세요.">
-            <span class="avatar avatar-sm" style="background:linear-gradient(135deg,#16a34a,#22d3ee)">GH</span>
+            <span class="avatar avatar-sm av-gc">GH</span>
             <div class="mr-body">
               <div class="mr-top"><span class="mr-name">GitHub</span><span class="mr-time">어제</span></div>
               <div class="mr-subject">[aurora-glass] PR #248 이 머지되었습니다</div>
@@ -196,7 +244,7 @@
             data-subject="7월 워크숍 일정 및 참석 여부 회신"
             data-date="2026년 6월 20일 (토) 오전 11:05"
             data-body="안녕하세요 진섭님, 인사팀 최하은입니다.|||7월 12일(토) 강원도 양양에서 진행되는 하계 워크숍 안내드립니다. 1박 2일 일정이며 팀빌딩 세션과 자유 시간이 포함되어 있습니다.|||참석 여부를 6월 27일까지 회신해 주시면 숙소 배정에 반영하겠습니다. 식이 알레르기가 있으시면 함께 알려주세요.">
-            <span class="avatar avatar-sm" style="background:linear-gradient(135deg,#f59e0b,#ec4dae)">하</span>
+            <span class="avatar avatar-sm av-wm">하</span>
             <div class="mr-body">
               <div class="mr-top"><span class="mr-name">최하은 · 인사팀</span><span class="mr-time">어제</span></div>
               <div class="mr-subject">7월 워크숍 일정 및 참석 여부 회신</div>
@@ -212,7 +260,7 @@
             data-subject="API v3 마이그레이션 일정 공유"
             data-date="2026년 6월 19일 (금) 오후 5:30"
             data-body="진섭님, 백엔드팀 정우준입니다.|||기존 API v2 의 지원 종료가 8월 말로 확정되어 v3 마이그레이션 일정을 공유드립니다. 인증 방식이 OAuth 2.1 로 변경되며, 응답 포맷도 일부 달라집니다.|||상세 변경 사항은 첨부 문서에 정리해 두었습니다. 영향받는 클라이언트 측 코드 확인 후 다음 주 스프린트에 반영 부탁드립니다.">
-            <span class="avatar avatar-sm" style="background:linear-gradient(135deg,#22d3ee,#4f7cff)">우</span>
+            <span class="avatar avatar-sm av-cb">우</span>
             <div class="mr-body">
               <div class="mr-top"><span class="mr-name">정우준 · 백엔드</span><span class="mr-time">6월 19일</span></div>
               <div class="mr-subject">API v3 마이그레이션 일정 공유</div>
@@ -228,7 +276,7 @@
             data-subject="이번 주 워크스페이스 활동 요약"
             data-date="2026년 6월 19일 (금) 오전 9:00"
             data-body="이번 주 Aurora 워크스페이스에서는 페이지 38개가 편집되었고, 댓글 124개가 작성되었습니다.|||가장 활발했던 페이지는 \"제품 로드맵 2026 H2\" 였으며, 새 멤버 2명이 합류했습니다.|||주간 요약 알림은 설정에서 변경하실 수 있습니다.">
-            <span class="avatar avatar-sm" style="background:linear-gradient(135deg,#7c5cff,#4f7cff)">N</span>
+            <span class="avatar avatar-sm av-vb">N</span>
             <div class="mr-body">
               <div class="mr-top"><span class="mr-name">Notion</span><span class="mr-time">6월 19일</span></div>
               <div class="mr-subject">이번 주 워크스페이스 활동 요약</div>
@@ -244,7 +292,7 @@
             data-subject="라이선스 환불 문의드립니다"
             data-date="2026년 6월 18일 (목) 오후 8:47"
             data-body="안녕하세요, 어제 Aurora Pro 라이선스를 구매한 김민준입니다.|||실수로 연간 플랜을 두 번 결제한 것 같습니다. 결제 내역에 동일 금액이 두 건 표시되어 있어 한 건은 환불을 요청드리고 싶습니다.|||주문번호는 #A-3920 이며, 빠른 처리 부탁드립니다. 감사합니다.">
-            <span class="avatar avatar-sm" style="background:linear-gradient(135deg,#ec4dae,#f59e0b)">민</span>
+            <span class="avatar avatar-sm av-mw">민</span>
             <div class="mr-body">
               <div class="mr-top"><span class="mr-name">김민준 · 고객</span><span class="mr-time">6월 18일</span></div>
               <div class="mr-subject">라이선스 환불 문의드립니다</div>
@@ -260,7 +308,7 @@
             data-subject="박지민님이 댓글을 남겼습니다"
             data-date="2026년 6월 18일 (목) 오후 2:18"
             data-body="\"Aurora Glass / Components\" 파일에서 박지민님이 회원님을 멘션했습니다.|||남긴 댓글: \"이 버튼 호버 글로우는 진섭님 의견대로 violet 으로 통일했어요. 확인 부탁해요 🙏\"|||Figma 에서 댓글을 확인하고 답장할 수 있습니다.">
-            <span class="avatar avatar-sm" style="background:linear-gradient(135deg,#f59e0b,#16a34a)">F</span>
+            <span class="avatar avatar-sm av-wg">F</span>
             <div class="mr-body">
               <div class="mr-top"><span class="mr-name">Figma</span><span class="mr-time">6월 18일</span></div>
               <div class="mr-subject">박지민님이 댓글을 남겼습니다</div>
@@ -276,7 +324,7 @@
             data-subject="6월 엔터프라이즈 계약 현황 보고"
             data-date="2026년 6월 17일 (수) 오후 4:55"
             data-body="진섭님, 영업팀 강수아입니다.|||6월 엔터프라이즈 신규 계약은 총 7건, 누적 계약액 ₩1억 8천만원으로 목표 대비 112%를 달성했습니다. 특히 제조업 고객사 3곳이 연간 계약으로 전환되었습니다.|||월간 상세 리포트는 첨부 파일에 정리했습니다. 다음 분기 파이프라인 회의에서 다시 공유드리겠습니다.">
-            <span class="avatar avatar-sm" style="background:linear-gradient(135deg,#16a34a,#4f7cff)">수</span>
+            <span class="avatar avatar-sm av-gb">수</span>
             <div class="mr-body">
               <div class="mr-top"><span class="mr-name">강수아 · 영업</span><span class="mr-time">6월 17일</span></div>
               <div class="mr-subject">6월 엔터프라이즈 계약 현황 보고</div>
@@ -290,6 +338,7 @@
       <!-- (c) READING PANE -->
       <section class="pane read-pane" aria-label="메일 본문" aria-live="polite">
         <div class="pane-head">
+          <button class="btn btn-icon btn-ghost btn-sm inbox-back" data-inbox-back aria-label="메일 목록으로 돌아가기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></button>
           <h2 class="card-title" id="read-subject" style="font-size:var(--text-base);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">신규 디자인 시스템 v2.0 리뷰 요청</h2>
           <div class="row gap-1" style="margin-left:auto">
             <button class="btn btn-icon btn-ghost btn-sm" aria-label="보관"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg></button>
@@ -300,7 +349,7 @@
         </div>
         <div class="pane-body">
           <div class="read-from">
-            <span class="avatar" id="read-avatar" style="background:linear-gradient(135deg,#7c5cff,#22d3ee)">지</span>
+            <span class="avatar av-vc" id="read-avatar">지</span>
             <div class="rf-meta" style="flex:1">
               <div class="row gap-2" style="flex-wrap:wrap"><strong id="read-name" style="color:var(--color-text-strong)">박지민 · 디자인팀</strong><span class="text-subtle" id="read-email" style="font-size:var(--text-sm)">&lt;jimin.park@aurora.io&gt;</span></div>
               <div class="text-subtle" style="font-size:var(--text-xs);margin-top:2px">받는사람: 나 (jinsup@aurora.io)</div>
@@ -325,7 +374,7 @@
             <textarea class="textarea" id="reply-text" style="margin-top:var(--space-2)" placeholder="답장을 작성하세요…"></textarea>
             <div class="row gap-2" style="margin-top:var(--space-3);justify-content:flex-end">
               <button class="btn btn-ghost btn-sm" aria-label="첨부"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.4 11.1-9.2 9.2a5 5 0 0 1-7-7l9.2-9.2a3.3 3.3 0 0 1 4.7 4.7l-9.2 9.2a1.7 1.7 0 0 1-2.4-2.4l8.5-8.5"/></svg>첨부</button>
-              <button class="btn btn-primary" data-toast="success" data-toast-title="답장을 보냈습니다" data-toast-text="박지민님에게 메일이 전송되었습니다."><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>보내기</button>
+              <button class="btn btn-primary glass-sweep" data-toast="success" data-toast-title="답장을 보냈어요" data-toast-text="박지민님에게 메일을 전송했습니다 · 되돌리기"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>보내기</button>
             </div>
           </div>
         </div>
@@ -360,7 +409,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" data-close>취소</button>
-      <button class="btn btn-primary" data-close data-toast="success" data-toast-title="메일을 보냈습니다"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>보내기</button>
+      <button class="btn btn-primary glass-sweep" data-close data-toast="success" data-toast-title="메일을 보냈어요" data-toast-text="보낸편지함에서 확인할 수 있어요."><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>보내기</button>
     </div>
   </div>
 </div>
@@ -377,6 +426,10 @@
       <div class="cmdk-group-label">액션</div>
       <div class="cmdk-item" data-open-target="compose"><span class="ci-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><div><div class="ci-title">새 메일 작성</div></div></div>
       <div class="cmdk-item" data-action="toggle-theme"><span class="ci-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span><div><div class="ci-title">테마 전환</div></div></div>
+      <div class="cmdk-empty" hidden aria-live="polite">
+        <p style="margin:0;font-weight:600;color:var(--color-text)">검색 결과가 없어요</p>
+        <p style="margin:var(--space-1) 0 0;font-size:var(--text-sm)">다른 키워드로 찾아보거나 ESC로 닫을 수 있어요.</p>
+      </div>
     </div>
   </div>
 </div>
@@ -384,7 +437,8 @@
 <div class="toast-region" role="status" aria-live="polite"></div>
 <script src="../app.js"></script>
 <script>
-  /* page-specific: clicking a mail row updates the reading pane (b → c) */
+  /* page-specific: mail row → reading pane (b → c), mobile list/read stack,
+     and the 전체/안읽음 filter (a real filter — no feature that isn't wired). */
   (function () {
     var list = document.getElementById("mail-list");
     var subjectEl = document.getElementById("read-subject");
@@ -393,6 +447,10 @@
     var dateEl = document.getElementById("read-date");
     var bodyEl = document.getElementById("read-body");
     var avatarEl = document.getElementById("read-avatar");
+    var panes = document.querySelector(".inbox-panes");
+    var backBtn = document.querySelector("[data-inbox-back]");
+    var filterSeg = document.querySelector("[data-mail-filter]");
+    var mqStack = window.matchMedia("(max-width: 680px)");
     if (!list || !subjectEl || !bodyEl) return;
 
     function selectRow(row) {
@@ -413,7 +471,10 @@
         var srcAvatar = row.querySelector(".avatar");
         if (srcAvatar) {
           avatarEl.textContent = srcAvatar.textContent;
-          avatarEl.setAttribute("style", srcAvatar.getAttribute("style") || "");
+          // carry the sender's tint class (av-*) so the reading avatar matches
+          avatarEl.className = "avatar";
+          var tint = Array.prototype.slice.call(srcAvatar.classList).filter(function (c) { return c.indexOf("av-") === 0; })[0];
+          if (tint) avatarEl.classList.add(tint);
         }
       }
 
@@ -426,6 +487,10 @@
         p.textContent = text;
         bodyEl.appendChild(p);
       });
+
+      // mobile: slide the reading pane in over the list, move focus for AT
+      if (panes) panes.classList.add("reading-open");
+      if (mqStack.matches && backBtn) setTimeout(function () { backBtn.focus(); }, 40);
     }
 
     list.addEventListener("click", function (e) {
@@ -436,6 +501,22 @@
       if (e.key !== "Enter" && e.key !== " ") return;
       var row = e.target.closest(".mail-row");
       if (row) { e.preventDefault(); selectRow(row); }
+    });
+
+    // mobile: back to the list
+    if (backBtn) backBtn.addEventListener("click", function () {
+      if (panes) panes.classList.remove("reading-open");
+      var active = list.querySelector(".mail-row.is-active");
+      if (active) active.focus();
+    });
+
+    // 전체 / 안읽음 filter — hides read rows when 안읽음 is chosen
+    if (filterSeg) filterSeg.addEventListener("segchange", function (e) {
+      var val = (e.detail && e.detail.value ? e.detail.value : "").trim();
+      var unreadOnly = val === "unread" || val === "안읽음";
+      list.querySelectorAll(".mail-row").forEach(function (r) {
+        r.hidden = unreadOnly && !r.classList.contains("unread");
+      });
     });
   })();
 </script>
