@@ -1,0 +1,79 @@
+/* ============================================================================
+   COMPONENT · MOTION — "STAMP" (signature arrival grammar)
+   Everything on this system arrives the same way a rubber stamp hits paper:
+   slightly rotated + oversized, then SLAMMED flat in one snap. No fade-up,
+   no blur, no easing curls — the same physics as .pressable and modal-slam,
+   promoted to a page-level grammar.
+   ----------------------------------------------------------------------------
+   USAGE
+     <div data-reveal>…</div>                    stamped when scrolled into view
+     <div data-stagger> <x data-reveal/> … </div> children stamped 70ms apart
+                                                  (JS assigns --stamp-delay)
+   CONTRACT
+   · app.js adds class "js" to <html> and an IntersectionObserver adds .is-in.
+   · Hidden state exists ONLY under html.js — no JS, no hiding. Content can
+     never be stranded at opacity:0.
+   · prefers-reduced-motion: app.js adds .is-in immediately; the global guard
+     zeroes the animation → content is simply there, fully composed.
+   ============================================================================ */
+
+html.js [data-reveal] { opacity: 0; }
+
+html.js [data-reveal].is-in {
+  animation: stamp-in var(--duration-stamp) var(--ease-snap) both;
+  animation-delay: var(--stamp-delay, 0ms);
+}
+
+@keyframes stamp-in {
+  0% {
+    opacity: 0;
+    transform: scale(var(--stamp-scale)) rotate(var(--stamp-tilt));
+  }
+  62% {
+    opacity: 1;
+    transform: scale(0.985) rotate(0deg);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Tilted elements (stickers, poster planes) keep their resting rotation:
+   give them data-reveal + a --stamp-rest override so 100% lands on the tilt. */
+[data-reveal].tilt-ccw,
+[data-reveal].sticker       { --stamp-rest: var(--tilt-ccw); }
+[data-reveal].tilt,
+[data-reveal].sticker--cw   { --stamp-rest: var(--tilt-cw); }
+[data-reveal].tilt-loud     { --stamp-rest: var(--tilt-cw-loud); }
+[data-reveal].tilt-ccw-loud { --stamp-rest: var(--tilt-ccw-loud); }
+html.js [data-reveal][class*="tilt"].is-in,
+html.js [data-reveal].sticker.is-in {
+  animation-name: stamp-in-tilted;
+}
+@keyframes stamp-in-tilted {
+  0% {
+    opacity: 0;
+    transform: scale(var(--stamp-scale)) rotate(calc(var(--stamp-rest, 0deg) + var(--stamp-tilt)));
+  }
+  62% {
+    opacity: 1;
+    transform: scale(0.985) rotate(var(--stamp-rest, 0deg));
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(var(--stamp-rest, 0deg));
+  }
+}
+
+/* Reduced motion: no animation, no stagger delay — content is simply there.
+   (The global guard zeroes durations but NOT delays, so this is required.) */
+@media (prefers-reduced-motion: reduce) {
+  html.js [data-reveal] { opacity: 1; }
+  html.js [data-reveal].is-in { animation: none; }
+}
+
+/* Safety net: if the observer never fires (very old engine), un-hide. */
+@supports not (translate: none) {
+  html.js [data-reveal] { opacity: 1; }
+}

@@ -1,9 +1,21 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
+<script>
+/* FOUC 방지 — 저장된 판본을 페인트 전에 적용 (다크 = 캐노니컬 기본) */
+(function () {
+  try {
+    var t = localStorage.getItem('theme-24-mode') || 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) { document.documentElement.setAttribute('data-theme', 'dark'); }
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Analytics Dashboard · Folio 24</title>
+<title>필사실 장부 · Folio 24</title>
+<meta name="description" content="장서각 필사실의 반기 결산 장부 — 입수·복원·열람 실적을 동판화풍 차트로 살핍니다.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="../base.css">
 <link rel="stylesheet" href="../components/buttons.css">
 <link rel="stylesheet" href="../components/forms.css">
@@ -11,10 +23,13 @@
 <link rel="stylesheet" href="../components/feedback.css">
 <link rel="stylesheet" href="../components/navigation.css">
 <style>
+/* ── 씬 변주: 장부 페이지는 데이터가 주인공 — 촛불 광원을 한 단계 낮춘다 ── */
+:root[data-theme="dark"] { --candle-pool-opacity: 0.7; }
+
 /* ── Page layout ─────────────────────────────────── */
 .page-shell {
   display: flex;
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 .sidebar {
   width: 240px;
@@ -38,6 +53,8 @@
   padding-left: 0;
   padding-right: 0;
 }
+/* 검색 항목은 링크가 아니라 버튼 — 링크 어법을 그대로 물려받는다 */
+button.sidebar__link { width: 100%; text-align: left; font-size: var(--text-sm); }
 .main-area {
   flex: 1;
   min-width: 0;
@@ -45,15 +62,16 @@
   flex-direction: column;
 }
 .page-header {
+  position: relative;
   padding: var(--space-4) var(--space-6);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--color-border-subtle);
   display: flex;
   align-items: center;
   gap: var(--space-4);
   flex-wrap: wrap;
 }
-.page-header__left { flex: 1; }
-.page-header__right { display: flex; align-items: center; gap: var(--space-2); flex-shrink: 0; }
+.page-header__left { flex: 1; min-width: 240px; }
+.page-header__right { display: flex; align-items: center; gap: var(--space-2); min-width: 0; flex-wrap: wrap; }
 
 .page-body {
   flex: 1;
@@ -63,12 +81,22 @@
   gap: var(--space-6);
 }
 
-/* stat row */
+/* ── 스탯 벤토 — 균등 4칸 파기: 권두 지표 하나가 판형째로 크다 ── */
 .stat-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--space-4);
 }
+.stat--hero { grid-column: span 2; }
+.stat--hero .stat__value { font-size: var(--text-5xl); }
+.stat--hero .stat__spark { width: 148px; height: 46px; }
+.stat__unit { font-size: 0.38em; color: var(--color-text-muted); font-family: var(--font-serif); margin-left: 0.12em; }
+.stat__folio { /* 장부의 폴리오 번호 — 판면 밖 워터마크 */
+  position: absolute; right: var(--space-3); top: -0.18em;
+  font-size: var(--text-6xl); opacity: 0.08; line-height: 1;
+  pointer-events: none; user-select: none;
+}
+.stat .margin-note { display: block; margin-top: var(--space-3); }
 
 /* chart + bar layout */
 .chart-row {
@@ -84,13 +112,48 @@
   gap: var(--space-4);
   align-items: start;
 }
+/* 그리드 아이템 min-content 폭주 방지 — 장부 테이블은 table-wrap 내부 스크롤로 */
+.lower-row > *, .chart-row > * { min-width: 0; }
+.lower-row .card__header { flex-wrap: wrap; }
+.ledger-search { width: 200px; }
 
-/* SVG chart inner */
+/* ── 동판화 차트 — SVG 색은 전부 차트 토큰만 소비 ── */
 .chart-area {
   width: 100%;
   aspect-ratio: 16/7;
   display: block;
 }
+.ch-line-1 { stroke: var(--chart-line-1); }
+.ch-line-2 { stroke: var(--chart-line-2); }
+.ch-line-3 { stroke: var(--chart-line-3); }
+.ch-dot-1  { fill: var(--chart-line-1); }
+.ch-hatch-1 { stroke: var(--chart-line-1); }
+.ch-hatch-2 { stroke: var(--chart-line-2); }
+.ch-grid   { stroke: var(--chart-grid); }
+.ch-axis   { fill: var(--chart-axis); font-family: var(--font-display); font-size: 10px; letter-spacing: 0.04em; }
+.ch-bar-1 { fill: var(--chart-line-1); opacity: 0.82; }
+.ch-bar-2 { fill: var(--chart-line-2); opacity: 0.82; }
+.ch-bar-3 { fill: var(--chart-line-3); opacity: 0.82; }
+.ch-bar-4 { fill: var(--chart-line-4); opacity: 0.75; }
+.ch-bar-5 { fill: var(--color-text-subtle); opacity: 0.6; }
+.ch-glyph { fill: var(--chart-axis); font-family: var(--font-serif); font-size: 11px; }
+
+/* 범례 */
+.legend { display: flex; gap: var(--space-4); align-items: center; flex-wrap: wrap; }
+.legend__item { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-xs); color: var(--color-text-muted); }
+.legend__swatch { display: inline-block; width: 20px; height: 2px; border-radius: 2px; }
+.legend__swatch--1 { background: var(--chart-line-1); }
+.legend__swatch--2 { background: var(--chart-line-2); }
+.legend__swatch--3 { background: repeating-linear-gradient(90deg, var(--chart-line-3) 0 5px, transparent 5px 8px); }
+.legend-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.legend-list li { display: flex; justify-content: space-between; align-items: center; font-size: var(--text-xs); }
+.legend-list .lg-name { display: inline-flex; align-items: center; gap: 6px; color: var(--color-text); }
+.lg-chip { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.lg-chip--1 { background: var(--chart-line-1); }
+.lg-chip--2 { background: var(--chart-line-2); }
+.lg-chip--3 { background: var(--chart-line-3); }
+.lg-chip--4 { background: var(--chart-line-4); }
+.lg-chip--5 { background: var(--color-text-subtle); }
 
 /* progress ring row */
 .ring-row {
@@ -99,9 +162,53 @@
   flex-wrap: wrap;
   justify-content: center;
 }
+.ring-caption { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 4px; }
+
+/* 상태 점 — 장서 상태 등급 */
+.cond-badge { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: baseline; }
+.cond--fine { background: var(--color-success); }
+.cond--fair { background: var(--color-warning); }
+.cond--poor { background: var(--color-danger-border); }
+
+/* Table tweaks */
+.table td, .table th { vertical-align: middle; }
+.table .cell-sub { font-size: var(--text-xs); color: var(--color-text-muted); }
+.table .cell-price { white-space: nowrap; }
+
+/* timeline in panel */
+.side-panel { display: flex; flex-direction: column; gap: var(--space-4); }
+
+/* progress label */
+.prog-label { display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--color-text-muted); margin-bottom: var(--space-1); }
+.progress__bar--success { background: var(--color-success); }
+.progress__bar--gold { background: var(--color-accent); }
+
+/* table pagination row */
+.table-foot {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--color-border-subtle);
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: var(--space-2);
+}
+.table-foot__count { font-size: var(--text-xs); color: var(--color-text-muted); }
+
+/* Sidebar icon alignment */
+.sidebar__link svg { flex-shrink: 0; }
+
+/* 모바일 서가 오프캔버스 스크림 */
+.mob-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: var(--color-overlay);
+  z-index: 199;
+}
+.mob-overlay.is-visible { display: block; }
+.mob-menu-btn { display: none; }
 
 /* Responsive ------------------------------------------------ */
 @media (max-width: 1280px) {
+  .stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat--hero { grid-column: span 2; }
   .chart-row { grid-template-columns: 1fr; }
   .lower-row { grid-template-columns: 1fr; }
 }
@@ -125,59 +232,39 @@
   }
   .sidebar .sidebar__link { justify-content: flex-start; padding-left: var(--space-4); padding-right: var(--space-4); }
   .page-body { padding: var(--space-4); gap: var(--space-4); }
-  .stat-row { grid-template-columns: repeat(2, 1fr); }
   .page-header { padding: var(--space-3) var(--space-4); }
   .mob-menu-btn { display: inline-flex !important; }
 }
 @media (max-width: 640px) {
   .stat-row { grid-template-columns: 1fr; }
+  .stat--hero { grid-column: auto; }
   .chart-row { grid-template-columns: 1fr; }
   .lower-row { grid-template-columns: 1fr; }
-  .page-header__right .segmented { display: none; }
+  .ledger-search { width: 100%; }
 }
-.mob-menu-btn { display: none; }
-
-/* Table tweaks */
-.table td, .table th { vertical-align: middle; }
-.cond-badge { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
-
-/* Sidebar icon alignment */
-.sidebar__link svg { flex-shrink: 0; }
-
-/* timeline in panel */
-.side-panel { display: flex; flex-direction: column; gap: var(--space-4); }
-
-/* progress label */
-.prog-label { display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--text-muted); margin-bottom: var(--space-1); }
 </style>
 </head>
 <body>
-<a class="skip-link" href="#main">Skip to content</a>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
 
 <!-- TOP NAV -->
-<nav class="navbar" aria-label="Primary">
-  <button class="btn btn--ghost btn--sm btn--icon mob-menu-btn" id="mob-sidebar-btn" aria-label="Open navigation" aria-expanded="false" aria-controls="sidebar">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+<nav class="navbar" aria-label="주요 내비게이션">
+  <button class="btn btn--ghost btn--sm btn--icon mob-menu-btn" id="mob-sidebar-btn" aria-label="서가 목록 열기" aria-expanded="false" aria-controls="sidebar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1"/><line x1="9" y1="4" x2="9" y2="20"/></svg>
   </button>
   <a class="navbar__brand" href="../index.html">
     <span class="mark" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 5a2 2 0 0 1 2-2h6v18H5a2 2 0 0 1-2-2zM21 5a2 2 0 0 0-2-2h-6v18h6a2 2 0 0 0 2-2z"/></svg></span>
     <span>Folio<span class="text-accent">·</span>24</span>
   </a>
-  <div class="navbar__nav">
-    <a class="nav-link is-active" href="dashboard.html" aria-current="page">Dashboard</a>
-    <a class="nav-link" href="kanban.html">Board</a>
-    <a class="nav-link" href="inbox.html">Letters</a>
-    <a class="nav-link" href="article.html">Reading Room</a>
-  </div>
   <span class="navbar__spacer"></span>
   <div class="navbar__actions">
-    <button class="btn btn--ghost btn--sm" data-cmdk-open aria-label="Open command palette">
+    <button class="btn btn--ghost btn--sm" data-cmdk-open aria-label="명령 팔레트 열기">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <kbd>⌘K</kbd>
+      <span class="hide-mobile">검색</span> <kbd>⌘K</kbd>
     </button>
     <button class="btn btn--secondary btn--sm" data-theme-toggle aria-pressed="false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-      <span data-theme-label>Parchment</span>
+      <span data-theme-label>양피지</span>
     </button>
   </div>
 </nav>
@@ -185,53 +272,53 @@
 <!-- PAGE SHELL -->
 <div class="page-shell">
 
-  <!-- SIDEBAR -->
-  <aside class="sidebar" id="sidebar" role="navigation" aria-label="Scriptorium sections">
+  <!-- SIDEBAR — 서고 구역 -->
+  <aside class="sidebar" id="sidebar" aria-label="서고 구역">
     <div class="sidebar__head">
       <span class="blackletter text-accent" style="font-size:1.1rem;">Scriptorium</span>
-      <button class="btn btn--ghost btn--sm btn--icon sidebar__collapse" data-sidebar-toggle aria-label="Collapse sidebar" aria-expanded="true" aria-controls="sidebar">
+      <button class="btn btn--ghost btn--sm btn--icon sidebar__collapse" data-sidebar-toggle aria-label="서가 목록 접기" aria-controls="sidebar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
-        <span>Collapse</span>
+        <span>접기</span>
       </button>
     </div>
 
-    <nav class="sidebar__nav" aria-label="Main sections">
-      <span class="sidebar__section-label">Overview</span>
+    <nav class="sidebar__nav" aria-label="서고 구역 목록">
+      <span class="sidebar__section-label">개관</span>
       <a class="sidebar__link is-active" href="dashboard.html" aria-current="page">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-        <span class="sidebar__label">Analytics</span>
+        <span class="sidebar__label">장부 분석</span>
       </a>
       <a class="sidebar__link" href="kanban.html">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16" aria-hidden="true"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="12" rx="1"/><rect x="17" y="3" width="5" height="15" rx="1"/></svg>
-        <span class="sidebar__label">Acquisition Board</span>
+        <span class="sidebar__label">입수 심의판</span>
       </a>
 
-      <span class="sidebar__section-label">Catalogue</span>
-      <a class="sidebar__link" href="#">
+      <span class="sidebar__section-label">서고</span>
+      <a class="sidebar__link" href="product.html">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-        <span class="sidebar__label">Volumes</span>
+        <span class="sidebar__label">장서 도록</span>
       </a>
-      <a class="sidebar__link" href="#">
+      <a class="sidebar__link" href="article.html">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        <span class="sidebar__label">Manuscripts</span>
+        <span class="sidebar__label">리딩 룸</span>
       </a>
-      <a class="sidebar__link" href="#">
+      <button class="sidebar__link" type="button" data-cmdk-open>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <span class="sidebar__label">Search Folio</span>
-      </a>
+        <span class="sidebar__label">서가 검색</span>
+      </button>
 
-      <span class="sidebar__section-label">Administration</span>
+      <span class="sidebar__section-label">관리</span>
       <a class="sidebar__link" href="inbox.html">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-        <span class="sidebar__label">Correspondence</span>
+        <span class="sidebar__label">서신함</span>
       </a>
-      <a class="sidebar__link" href="#">
+      <a class="sidebar__link" href="profile.html">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        <span class="sidebar__label">Fellows &amp; Readers</span>
+        <span class="sidebar__label">연구원 명부</span>
       </a>
-      <a class="sidebar__link" href="#">
+      <a class="sidebar__link" href="settings.html">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-        <span class="sidebar__label">Settings</span>
+        <span class="sidebar__label">환경 설정</span>
       </a>
     </nav>
   </aside>
@@ -240,96 +327,97 @@
   <main class="main-area" id="main">
 
     <!-- PAGE HEADER BAR -->
-    <header class="page-header" role="banner">
+    <header class="page-header">
       <div class="page-header__left">
-        <nav class="breadcrumb" aria-label="Breadcrumb">
+        <nav class="breadcrumb" aria-label="현재 위치">
           <a href="../index.html">Folio·24</a>
           <span class="sep" aria-hidden="true">›</span>
-          <span aria-current="page">Analytics</span>
+          <span aria-current="page">장부 분석</span>
         </nav>
-        <div style="display:flex;align-items:baseline;gap:var(--space-3);margin-top:var(--space-1);">
-          <h1 style="font-size:var(--text-xl);font-weight:600;margin:0;">Scriptorium Analytics</h1>
-          <span class="eyebrow text-accent" style="font-size:var(--text-xs);">Anno Domini MMXXV</span>
+        <div style="display:flex;align-items:baseline;gap:var(--space-3);margin-top:var(--space-1);flex-wrap:wrap;">
+          <h1 style="font-size:var(--text-xl);margin:0;">필사실 장부</h1>
+          <span class="eyebrow" style="font-size:var(--text-2xs);">장서각 필사실 · Anno MMXXVI</span>
         </div>
       </div>
       <div class="page-header__right">
-        <div class="segmented" role="group" aria-label="Date range">
-          <button class="btn btn--sm" data-seg aria-pressed="false">VII Days</button>
-          <button class="btn btn--sm" data-seg aria-pressed="false">XXX Days</button>
-          <button class="btn btn--sm" data-seg aria-pressed="true">Quarterly</button>
-          <button class="btn btn--sm" data-seg aria-pressed="false">Annual</button>
+        <div class="segmented" role="radiogroup" aria-label="집계 기간 선택" data-segmented>
+          <button role="radio" aria-checked="false">7일</button>
+          <button role="radio" aria-checked="false">30일</button>
+          <button role="radio" aria-checked="true">분기</button>
+          <button role="radio" aria-checked="false">연간</button>
         </div>
-        <button class="btn btn--primary btn--sm">
+        <button class="btn btn--primary btn--sm" data-toast data-toast-title="장부 내보내기" data-toast="상반기 장부를 PDF로 묶는 중입니다. 완성되면 서신으로 알려드리겠습니다." data-toast-variant="info">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Export Ledger
+          장부 내보내기
         </button>
       </div>
     </header>
 
     <!-- PAGE BODY -->
-    <div class="page-body" data-reveal>
+    <div class="page-body">
 
-      <!-- STAT CARDS ROW -->
+      <!-- STAT BENTO -->
       <section aria-labelledby="stats-heading">
         <h2 id="stats-heading" class="eyebrow" style="margin-bottom:var(--space-3);">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14" aria-hidden="true" style="display:inline;margin-right:4px;vertical-align:middle;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          Quarterly Vitals — Q III MMXXV
+          반기 결산 — 2026년 상반기
         </h2>
         <div class="stat-row" role="list">
 
-          <!-- Stat 1 -->
-          <article class="card stat" role="listitem" data-reveal>
-            <div class="stat__label">Volumes Catalogued</div>
-            <div class="stat__value">4,817</div>
-            <div class="stat__delta stat__delta--up" aria-label="Up 12% from last quarter">
+          <!-- 권두 지표 — 특장본 -->
+          <article class="card card--illuminated stat stat--hero" role="listitem" data-reveal>
+            <span class="stat__folio blackletter" aria-hidden="true">I</span>
+            <div class="stat__label">정리 완료 장서</div>
+            <div class="stat__value">4,817<span class="stat__unit">권</span></div>
+            <div class="stat__delta stat__delta--up" aria-label="전년 동기 대비 12.4% 증가">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>
-              +12% vs Q II
+              +12.4% · 전년 동기
             </div>
-            <svg class="stat__spark" viewBox="0 0 80 32" fill="none" aria-hidden="true" role="img">
+            <svg class="stat__spark" viewBox="0 0 80 32" fill="none" aria-hidden="true">
               <polyline points="0,28 8,24 16,26 24,20 32,18 40,14 48,16 56,10 64,8 72,5 80,4"
-                stroke="var(--color-accent,#c9a84c)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                style="stroke:var(--chart-line-1)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </article>
 
           <!-- Stat 2 -->
-          <article class="card stat" role="listitem" data-reveal>
-            <div class="stat__label">Active Readers</div>
-            <div class="stat__value">238</div>
-            <div class="stat__delta stat__delta--up" aria-label="Up 7% from last quarter">
+          <article class="card stat" role="listitem" data-reveal data-delay="1">
+            <div class="stat__label">활동 열람자</div>
+            <div class="stat__value">238<span class="stat__unit">명</span></div>
+            <div class="stat__delta stat__delta--up" aria-label="전 분기 대비 7.1% 증가">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>
-              +7% vs Q II
+              +7.1% · 전 분기
             </div>
-            <svg class="stat__spark" viewBox="0 0 80 32" fill="none" aria-hidden="true" role="img">
+            <svg class="stat__spark" viewBox="0 0 80 32" fill="none" aria-hidden="true">
               <polyline points="0,22 8,18 16,20 24,16 32,14 40,18 48,12 56,14 64,10 72,12 80,9"
-                stroke="var(--color-success,#4a7c59)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                style="stroke:var(--chart-line-3)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </article>
 
-          <!-- Stat 3 -->
-          <article class="card stat" role="listitem" data-reveal>
-            <div class="stat__label">Marginalia &amp; Annotations</div>
-            <div class="stat__value">12,304</div>
-            <div class="stat__delta stat__delta--down" aria-label="Down 3% from last quarter">
+          <!-- Stat 3 — 이상치: 사서의 방주가 붙는다 -->
+          <article class="card stat" role="listitem" data-reveal data-delay="2">
+            <div class="stat__label">방주 · 주석</div>
+            <div class="stat__value">12,304<span class="stat__unit">건</span></div>
+            <div class="stat__delta stat__delta--down" aria-label="전 분기 대비 3.2% 감소">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-              −3% vs Q II
+              −3.2% · 전 분기
             </div>
-            <svg class="stat__spark" viewBox="0 0 80 32" fill="none" aria-hidden="true" role="img">
+            <svg class="stat__spark" viewBox="0 0 80 32" fill="none" aria-hidden="true">
               <polyline points="0,8 8,10 16,7 24,12 32,9 40,14 48,11 56,16 64,18 72,22 80,24"
-                stroke="var(--color-danger,#8b0000)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                style="stroke:var(--chart-line-2)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
+            <span class="margin-note margin-note--sm">격리 서가 탓에 열람이 줄었나 — 살펴볼 것. 서연</span>
           </article>
 
           <!-- Stat 4 -->
-          <article class="card stat" role="listitem" data-reveal>
-            <div class="stat__label">Restoration Hours</div>
-            <div class="stat__value">1,562 h</div>
-            <div class="stat__delta stat__delta--up" aria-label="Up 21% from last quarter">
+          <article class="card stat" role="listitem" data-reveal data-delay="3">
+            <div class="stat__label">복원 작업</div>
+            <div class="stat__value">1,562<span class="stat__unit">시간</span></div>
+            <div class="stat__delta stat__delta--up" aria-label="전 분기 대비 21% 증가">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>
-              +21% vs Q II
+              +21% · 전 분기
             </div>
-            <svg class="stat__spark" viewBox="0 0 80 32" fill="none" aria-hidden="true" role="img">
+            <svg class="stat__spark" viewBox="0 0 80 32" fill="none" aria-hidden="true">
               <polyline points="0,26 8,24 16,22 24,20 32,17 40,15 48,14 56,11 64,8 72,6 80,3"
-                stroke="var(--color-accent,#c9a84c)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                style="stroke:var(--chart-line-1)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </article>
 
@@ -339,107 +427,96 @@
       <!-- CHART ROW -->
       <section aria-labelledby="charts-heading" class="chart-row">
 
-        <!-- Area Chart -->
+        <!-- 동판화 영역 차트 -->
         <article class="card card--illuminated" data-reveal>
           <div class="card__header">
             <div>
-              <div class="eyebrow">Acquisitions by Month</div>
-              <h2 class="card__title" id="charts-heading">Acquisitions per Mensem, MMXXV</h2>
-              <p class="card__subtitle text-muted" style="font-size:var(--text-xs);">All categories · Scriptorium of St. Aldhelm, Oxford</p>
+              <div class="eyebrow">월별 입수</div>
+              <h2 class="card__title" id="charts-heading">월별 입수 현황 — 최근 12개월</h2>
+              <p class="card__subtitle text-muted" style="font-size:var(--text-xs);">전 분류 · 2025년 7월 ~ 2026년 6월 · 장서각 필사실</p>
             </div>
-            <div style="display:flex;gap:var(--space-2);align-items:center;flex-wrap:wrap;">
-              <span style="display:flex;align-items:center;gap:4px;font-size:var(--text-xs);color:var(--text-muted);">
-                <span style="display:inline-block;width:20px;height:2px;background:#c9a84c;border-radius:2px;"></span> Codices
-              </span>
-              <span style="display:flex;align-items:center;gap:4px;font-size:var(--text-xs);color:var(--text-muted);">
-                <span style="display:inline-block;width:20px;height:2px;background:#7b2d3e;border-radius:2px;"></span> Manuscripts
-              </span>
-              <span style="display:flex;align-items:center;gap:4px;font-size:var(--text-xs);color:var(--text-muted);">
-                <span style="display:inline-block;width:20px;height:2px;background:#4a7c59;border-radius:2px;stroke-dasharray:4 2"></span> Incunabula
-              </span>
+            <div class="legend" aria-hidden="true">
+              <span class="legend__item"><span class="legend__swatch legend__swatch--1"></span> 목판본</span>
+              <span class="legend__item"><span class="legend__swatch legend__swatch--2"></span> 필사본</span>
+              <span class="legend__item"><span class="legend__swatch legend__swatch--3"></span> 활자본</span>
             </div>
           </div>
           <div class="card__body" style="padding:0 var(--space-4) var(--space-4);">
-            <svg class="chart-area" viewBox="0 0 700 220" aria-label="Line chart of acquisitions by month for MMXXV" role="img">
-              <title>Acquisitions per Mensem MMXXV</title>
-              <!-- Grid -->
+            <svg class="chart-area" viewBox="0 0 700 220" role="img" aria-label="최근 12개월 입수 추이 선 그래프. 목판본은 2025년 7월 82권에서 2026년 5월 196권까지 올랐다가 6월 188권, 필사본은 40권에서 75권 수준으로 완만히 증가, 활자본은 월 12권에서 38권 사이를 오갑니다.">
+              <title>월별 입수 현황 — 최근 12개월</title>
               <defs>
                 <pattern id="grid" width="58.3" height="44" patternUnits="userSpaceOnUse">
-                  <path d="M 58.3 0 L 0 0 0 44" fill="none" stroke="rgba(201,168,76,0.08)" stroke-width="1"/>
+                  <path d="M 58.3 0 L 0 0 0 44" fill="none" class="ch-grid" stroke-width="1"/>
                 </pattern>
-                <linearGradient id="goldFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="#c9a84c" stop-opacity="0.22"/>
-                  <stop offset="100%" stop-color="#c9a84c" stop-opacity="0"/>
-                </linearGradient>
-                <linearGradient id="burFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="#7b2d3e" stop-opacity="0.18"/>
-                  <stop offset="100%" stop-color="#7b2d3e" stop-opacity="0"/>
-                </linearGradient>
-                <linearGradient id="greenFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="#4a7c59" stop-opacity="0.15"/>
-                  <stop offset="100%" stop-color="#4a7c59" stop-opacity="0"/>
-                </linearGradient>
+                <!-- 동판화 크로스해치 — 면 채움은 잉크 선영으로 -->
+                <pattern id="hatchGold" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                  <line x1="0" y1="0" x2="0" y2="6" class="ch-hatch-1" stroke-width="1" opacity="0.34"/>
+                </pattern>
+                <pattern id="hatchBur" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">
+                  <line x1="0" y1="0" x2="0" y2="7" class="ch-hatch-2" stroke-width="1" opacity="0.3"/>
+                </pattern>
               </defs>
               <rect width="700" height="220" fill="url(#grid)"/>
 
-              <!-- Y axis labels -->
-              <text x="4" y="20" font-size="9" fill="rgba(201,168,76,0.5)" font-family="serif">200</text>
-              <text x="4" y="64" font-size="9" fill="rgba(201,168,76,0.5)" font-family="serif">150</text>
-              <text x="4" y="108" font-size="9" fill="rgba(201,168,76,0.5)" font-family="serif">100</text>
-              <text x="4" y="152" font-size="9" fill="rgba(201,168,76,0.5)" font-family="serif">50</text>
-              <text x="4" y="196" font-size="9" fill="rgba(201,168,76,0.5)" font-family="serif">0</text>
-
-              <!-- X axis month labels -->
-              <g font-size="9" fill="rgba(201,168,76,0.5)" font-family="serif">
-                <text x="36" y="215" text-anchor="middle">Ian.</text>
-                <text x="94" y="215" text-anchor="middle">Feb.</text>
-                <text x="152" y="215" text-anchor="middle">Mar.</text>
-                <text x="210" y="215" text-anchor="middle">Apr.</text>
-                <text x="268" y="215" text-anchor="middle">Mai.</text>
-                <text x="326" y="215" text-anchor="middle">Iun.</text>
-                <text x="384" y="215" text-anchor="middle">Iul.</text>
-                <text x="442" y="215" text-anchor="middle">Aug.</text>
-                <text x="500" y="215" text-anchor="middle">Sep.</text>
-                <text x="558" y="215" text-anchor="middle">Oct.</text>
-                <text x="616" y="215" text-anchor="middle">Nov.</text>
-                <text x="674" y="215" text-anchor="middle">Dec.</text>
+              <!-- Y축 눈금 (권) -->
+              <g class="ch-axis">
+                <text x="4" y="20">200</text>
+                <text x="4" y="64">150</text>
+                <text x="4" y="108">100</text>
+                <text x="4" y="152">50</text>
+                <text x="4" y="196">0</text>
               </g>
 
-              <!-- Codices area + line (gold) -->
-              <!-- Data: 82,95,110,130,118,145,162,170,155,180,195,188 → scale: y = 196 - val*0.88 -->
+              <!-- X축 월 라벨 -->
+              <g class="ch-axis" text-anchor="middle">
+                <text x="36" y="215">7월</text>
+                <text x="94" y="215">8월</text>
+                <text x="152" y="215">9월</text>
+                <text x="210" y="215">10월</text>
+                <text x="268" y="215">11월</text>
+                <text x="326" y="215">12월</text>
+                <text x="384" y="215">1월</text>
+                <text x="442" y="215">2월</text>
+                <text x="500" y="215">3월</text>
+                <text x="558" y="215">4월</text>
+                <text x="616" y="215">5월</text>
+                <text x="674" y="215">6월</text>
+              </g>
+
+              <!-- 목판본 — 크로스해치 면 + 골드 선
+                   데이터: 82,95,110,130,118,146,161,171,155,178,196,188 (y = 196 − 권수×0.88) -->
               <polygon
-                points="36,124 94,112 152,99 210,81 268,92 326,68 384,54 442,45 500,60 558,38 616,24 674,31 674,196 36,196"
-                fill="url(#goldFill)"/>
+                points="36,124 94,112 152,99 210,82 268,92 326,68 384,54 442,46 500,60 558,39 616,24 674,31 674,196 36,196"
+                fill="url(#hatchGold)"/>
               <polyline
-                points="36,124 94,112 152,99 210,81 268,92 326,68 384,54 442,45 500,60 558,38 616,24 674,31"
-                fill="none" stroke="#c9a84c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-              <!-- dots -->
-              <g fill="#c9a84c">
+                points="36,124 94,112 152,99 210,82 268,92 326,68 384,54 442,46 500,60 558,39 616,24 674,31"
+                fill="none" class="ch-line-1" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+              <!-- 잉크 방울 데이터 포인트 -->
+              <g class="ch-dot-1">
                 <circle cx="36" cy="124" r="3"/><circle cx="94" cy="112" r="3"/>
-                <circle cx="152" cy="99" r="3"/><circle cx="210" cy="81" r="3"/>
+                <circle cx="152" cy="99" r="3"/><circle cx="210" cy="82" r="3"/>
                 <circle cx="268" cy="92" r="3"/><circle cx="326" cy="68" r="3"/>
-                <circle cx="384" cy="54" r="3"/><circle cx="442" cy="45" r="3"/>
-                <circle cx="500" cy="60" r="3"/><circle cx="558" cy="38" r="3"/>
+                <circle cx="384" cy="54" r="3"/><circle cx="442" cy="46" r="3"/>
+                <circle cx="500" cy="60" r="3"/><circle cx="558" cy="39" r="3"/>
                 <circle cx="616" cy="24" r="3"/><circle cx="674" cy="31" r="3"/>
               </g>
 
-              <!-- Manuscripts area + line (burgundy) -->
-              <!-- Data: 40,45,52,48,60,55,68,72,65,78,80,75 → scale y = 196 - val*0.88 -->
+              <!-- 필사본 — 역방향 해치 면 + 버건디 선
+                   데이터: 40,45,52,48,60,55,68,72,65,78,80,75 -->
               <polygon
-                points="36,161 94,156 152,150 210,154 268,143 326,148 384,136 442,133 500,139 558,127 616,125 674,130 674,196 36,196"
-                fill="url(#burFill)"/>
+                points="36,161 94,156 152,150 210,154 268,143 326,148 384,136 442,133 500,139 558,127 616,126 674,130 674,196 36,196"
+                fill="url(#hatchBur)"/>
               <polyline
-                points="36,161 94,156 152,150 210,154 268,143 326,148 384,136 442,133 500,139 558,127 616,125 674,130"
-                fill="none" stroke="#7b2d3e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+                points="36,161 94,156 152,150 210,154 268,143 326,148 384,136 442,133 500,139 558,127 616,126 674,130"
+                fill="none" class="ch-line-2" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
 
-              <!-- Incunabula dashed line (green) -->
-              <!-- Data: 12,18,22,15,25,28,20,32,27,35,38,30 → y = 196 - val*0.88 -->
+              <!-- 활자본 — 점선 (데이터: 12,18,22,15,25,28,20,32,27,35,38,30) -->
               <polyline
-                points="36,185 94,180 152,177 210,183 268,174 326,171 384,178 442,168 500,172 558,165 616,162 674,170"
-                fill="none" stroke="#4a7c59" stroke-width="1.8" stroke-dasharray="5 3" stroke-linejoin="round" stroke-linecap="round"/>
+                points="36,185 94,180 152,177 210,183 268,174 326,171 384,178 442,168 500,172 558,165 616,163 674,170"
+                fill="none" class="ch-line-3" stroke-width="1.8" stroke-dasharray="5 3" stroke-linejoin="round" stroke-linecap="round"/>
 
-              <!-- Horizontal grid lines -->
-              <g stroke="rgba(201,168,76,0.06)" stroke-width="1">
+              <!-- 가로 보조선 -->
+              <g class="ch-grid" stroke-width="1" opacity="0.6">
                 <line x1="20" y1="18" x2="700" y2="18"/>
                 <line x1="20" y1="62" x2="700" y2="62"/>
                 <line x1="20" y1="106" x2="700" y2="106"/>
@@ -450,85 +527,49 @@
           </div>
         </article>
 
-        <!-- Bar Chart -->
-        <article class="card" data-reveal>
+        <!-- 분류별 막대 차트 — 사부분류 -->
+        <article class="card" data-reveal data-delay="1">
           <div class="card__header">
-            <div class="eyebrow">By Classification</div>
-            <h2 class="card__title" style="font-size:var(--text-base);">Subject Distribution</h2>
+            <div>
+              <div class="eyebrow">분류별</div>
+              <h2 class="card__title" style="font-size:var(--text-base);">사부분류 소장 분포</h2>
+            </div>
           </div>
           <div class="card__body" style="padding:0 var(--space-4) var(--space-4);">
-            <svg viewBox="0 0 240 200" style="width:100%;display:block;" aria-label="Bar chart of acquisitions by subject classification" role="img">
-              <title>Subject Distribution of Acquisitions</title>
-              <!-- Bars -->
+            <svg viewBox="0 0 260 200" style="width:100%;display:block;" role="img" aria-label="분류별 소장 분포 막대 그래프. 경부 1,842권으로 35.6%, 사부 1,147권 22.2%, 자부 923권 17.8%, 집부 699권 13.5%, 양장본 562권 10.9%.">
+              <title>사부분류 소장 분포</title>
               <g>
-                <!-- Theology -->
-                <rect x="20" y="40" width="30" height="130" rx="2" fill="rgba(201,168,76,0.8)"/>
-                <text x="35" y="36" text-anchor="middle" font-size="9" fill="#c9a84c" font-family="serif">1,842</text>
-                <text x="35" y="186" text-anchor="middle" font-size="8" fill="rgba(201,168,76,0.6)" font-family="serif">Theo.</text>
+                <rect x="24" y="40" width="30" height="130" rx="2" class="ch-bar-1"/>
+                <text x="39" y="34" text-anchor="middle" class="ch-axis">1,842</text>
+                <text x="39" y="188" text-anchor="middle" class="ch-glyph">經</text>
 
-                <!-- Natural Philosophy -->
-                <rect x="68" y="68" width="30" height="102" rx="2" fill="rgba(123,45,62,0.8)"/>
-                <text x="83" y="64" text-anchor="middle" font-size="9" fill="#7b2d3e" font-family="serif">1,147</text>
-                <text x="83" y="186" text-anchor="middle" font-size="8" fill="rgba(201,168,76,0.6)" font-family="serif">Nat.Ph.</text>
+                <rect x="72" y="68" width="30" height="102" rx="2" class="ch-bar-2"/>
+                <text x="87" y="62" text-anchor="middle" class="ch-axis">1,147</text>
+                <text x="87" y="188" text-anchor="middle" class="ch-glyph">史</text>
 
-                <!-- Rhetoric -->
-                <rect x="116" y="88" width="30" height="82" rx="2" fill="rgba(74,124,89,0.8)"/>
-                <text x="131" y="84" text-anchor="middle" font-size="9" fill="#4a7c59" font-family="serif">923</text>
-                <text x="131" y="186" text-anchor="middle" font-size="8" fill="rgba(201,168,76,0.6)" font-family="serif">Rhet.</text>
+                <rect x="120" y="88" width="30" height="82" rx="2" class="ch-bar-3"/>
+                <text x="135" y="82" text-anchor="middle" class="ch-axis">923</text>
+                <text x="135" y="188" text-anchor="middle" class="ch-glyph">子</text>
 
-                <!-- Astronomy -->
-                <rect x="164" y="108" width="30" height="62" rx="2" fill="rgba(150,100,50,0.7)"/>
-                <text x="179" y="104" text-anchor="middle" font-size="9" fill="#c9a84c" font-family="serif">699</text>
-                <text x="179" y="186" text-anchor="middle" font-size="8" fill="rgba(201,168,76,0.6)" font-family="serif">Astr.</text>
+                <rect x="168" y="108" width="30" height="62" rx="2" class="ch-bar-4"/>
+                <text x="183" y="102" text-anchor="middle" class="ch-axis">699</text>
+                <text x="183" y="188" text-anchor="middle" class="ch-glyph">集</text>
 
-                <!-- History -->
-                <rect x="212" y="120" width="30" height="50" rx="2" fill="rgba(100,80,140,0.7)"/>
-                <text x="227" y="116" text-anchor="middle" font-size="9" fill="rgba(201,168,76,0.7)" font-family="serif">562</text>
-                <text x="227" y="186" text-anchor="middle" font-size="8" fill="rgba(201,168,76,0.6)" font-family="serif">Hist.</text>
+                <rect x="216" y="120" width="30" height="50" rx="2" class="ch-bar-5"/>
+                <text x="231" y="114" text-anchor="middle" class="ch-axis">562</text>
+                <text x="231" y="188" text-anchor="middle" class="ch-glyph">洋</text>
               </g>
-              <!-- baseline -->
-              <line x1="10" y1="170" x2="260" y2="170" stroke="rgba(201,168,76,0.2)" stroke-width="1"/>
+              <line x1="12" y1="170" x2="252" y2="170" class="ch-grid" stroke-width="1"/>
             </svg>
 
             <div class="ornate-rule" aria-hidden="true" style="margin:var(--space-2) 0;"></div>
 
-            <!-- mini legend list -->
-            <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:var(--space-2);">
-              <li style="display:flex;justify-content:space-between;font-size:var(--text-xs);">
-                <span style="display:flex;align-items:center;gap:6px;">
-                  <span style="display:inline-block;width:10px;height:10px;background:rgba(201,168,76,0.8);border-radius:2px;"></span>
-                  <span>Theologia</span>
-                </span>
-                <span class="text-gold">38%</span>
-              </li>
-              <li style="display:flex;justify-content:space-between;font-size:var(--text-xs);">
-                <span style="display:flex;align-items:center;gap:6px;">
-                  <span style="display:inline-block;width:10px;height:10px;background:rgba(123,45,62,0.8);border-radius:2px;"></span>
-                  <span>Nat. Philosophia</span>
-                </span>
-                <span class="text-muted">24%</span>
-              </li>
-              <li style="display:flex;justify-content:space-between;font-size:var(--text-xs);">
-                <span style="display:flex;align-items:center;gap:6px;">
-                  <span style="display:inline-block;width:10px;height:10px;background:rgba(74,124,89,0.8);border-radius:2px;"></span>
-                  <span>Rhetorica</span>
-                </span>
-                <span class="text-muted">19%</span>
-              </li>
-              <li style="display:flex;justify-content:space-between;font-size:var(--text-xs);">
-                <span style="display:flex;align-items:center;gap:6px;">
-                  <span style="display:inline-block;width:10px;height:10px;background:rgba(150,100,50,0.7);border-radius:2px;"></span>
-                  <span>Astronomia</span>
-                </span>
-                <span class="text-muted">14%</span>
-              </li>
-              <li style="display:flex;justify-content:space-between;font-size:var(--text-xs);">
-                <span style="display:flex;align-items:center;gap:6px;">
-                  <span style="display:inline-block;width:10px;height:10px;background:rgba(100,80,140,0.7);border-radius:2px;"></span>
-                  <span>Historia</span>
-                </span>
-                <span class="text-muted">5%</span>
-              </li>
+            <ul class="legend-list">
+              <li><span class="lg-name"><span class="lg-chip lg-chip--1" aria-hidden="true"></span>경부(經) — 경전·유가</span><span class="text-gold">35.6%</span></li>
+              <li><span class="lg-name"><span class="lg-chip lg-chip--2" aria-hidden="true"></span>사부(史) — 사서·지리</span><span class="text-muted">22.2%</span></li>
+              <li><span class="lg-name"><span class="lg-chip lg-chip--3" aria-hidden="true"></span>자부(子) — 제자·의방</span><span class="text-muted">17.8%</span></li>
+              <li><span class="lg-name"><span class="lg-chip lg-chip--4" aria-hidden="true"></span>집부(集) — 문집·시문</span><span class="text-muted">13.5%</span></li>
+              <li><span class="lg-name"><span class="lg-chip lg-chip--5" aria-hidden="true"></span>양장본(洋) — 서양서</span><span class="text-muted">10.9%</span></li>
             </ul>
           </div>
         </article>
@@ -538,205 +579,172 @@
       <!-- LOWER ROW: table + side panel -->
       <section class="lower-row" aria-labelledby="catalogue-heading">
 
-        <!-- CATALOGUE TABLE -->
+        <!-- 소장 장부 테이블 -->
         <article class="card" data-reveal>
           <div class="card__header">
             <div>
-              <div class="eyebrow">Scriptorium Registry</div>
-              <h2 class="card__title" id="catalogue-heading">Catalogue Ledger — Q III MMXXV</h2>
+              <div class="eyebrow">필사실 대장</div>
+              <h2 class="card__title" id="catalogue-heading">소장 장부 — 2026년 상반기</h2>
             </div>
-            <div style="display:flex;gap:var(--space-2);">
-              <div class="searchbar" style="width:180px;">
-                <svg slot="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-                <input type="search" class="input" placeholder="Search volumes…" aria-label="Search catalogue ledger" data-filter="#catalogue-tbody [data-filter-item]">
-              </div>
-              <button class="btn btn--ghost btn--sm" aria-label="Filter options">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                Filter
-              </button>
+            <div class="searchbar ledger-search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+              <input type="search" placeholder="서명·저자 검색…" aria-label="소장 장부 검색" data-filter="#catalogue-tbody">
             </div>
           </div>
           <div class="card__body" style="padding:0;">
             <div class="table-wrap">
-              <table class="table table--striped" data-sortable aria-label="Catalogue ledger">
+              <table class="table table--striped" data-sortable aria-label="소장 장부">
                 <thead>
                   <tr>
                     <th scope="col" style="width:36px;">
-                      <input type="checkbox" class="check" data-select-all aria-label="Select all records"/>
+                      <input type="checkbox" data-select-all aria-label="전체 선택"/>
                     </th>
                     <th scope="col" class="sortable">
-                      Title <span class="sort-ind" aria-hidden="true"></span>
+                      서명 <span class="sort-ind" aria-hidden="true"></span>
                     </th>
                     <th scope="col" class="sortable">
-                      Author <span class="sort-ind" aria-hidden="true"></span>
+                      저자 <span class="sort-ind" aria-hidden="true"></span>
                     </th>
                     <th scope="col" class="sortable">
-                      Century <span class="sort-ind" aria-hidden="true"></span>
+                      간행 <span class="sort-ind" aria-hidden="true"></span>
                     </th>
                     <th scope="col" class="sortable">
-                      Status <span class="sort-ind" aria-hidden="true"></span>
+                      상태 <span class="sort-ind" aria-hidden="true"></span>
                     </th>
                     <th scope="col" class="sortable" style="text-align:right;">
-                      Estimated Value <span class="sort-ind" aria-hidden="true"></span>
+                      감정가 <span class="sort-ind" aria-hidden="true"></span>
                     </th>
                     <th scope="col" class="sortable">
-                      Condition <span class="sort-ind" aria-hidden="true"></span>
+                      보존 등급 <span class="sort-ind" aria-hidden="true"></span>
                     </th>
                   </tr>
                 </thead>
                 <tbody id="catalogue-tbody">
                   <tr data-filter-item>
-                    <td><input type="checkbox" class="check" data-row-select aria-label="Select Summa Theologiae"/></td>
+                    <td><input type="checkbox" data-row-select aria-label="동의보감 선택"/></td>
                     <td>
-                      <span class="text-gold" style="font-style:italic;">Summa Theologiae</span>
-                      <div style="font-size:var(--text-xs);color:var(--text-muted);">Codex · Parchment</div>
+                      <span class="text-gold">동의보감(東醫寶鑑)</span>
+                      <div class="cell-sub">훈련도감자본 · 닥종이</div>
                     </td>
-                    <td>Thomas Aquinas</td>
-                    <td><span class="badge badge--wax">XIII</span></td>
-                    <td><span class="badge badge--success">Active</span></td>
-                    <td style="text-align:right;font-variant-numeric:tabular-nums;">£ 142,000</td>
-                    <td>
-                      <span class="cond-badge" style="background:#4a7c59;" aria-hidden="true"></span>
-                      <span>Fine</span>
-                    </td>
+                    <td>허준</td>
+                    <td><span class="badge badge--wax">1613</span></td>
+                    <td><span class="badge badge--success">열람 가능</span></td>
+                    <td class="num cell-price" data-sort="8.2">₩8.2억</td>
+                    <td><span class="cond-badge cond--fine" aria-hidden="true"></span><span>최상</span></td>
                   </tr>
                   <tr data-filter-item>
-                    <td><input type="checkbox" class="check" data-row-select aria-label="Select Naturalis Historia"/></td>
+                    <td><input type="checkbox" data-row-select aria-label="삼국유사 임신본 선택"/></td>
                     <td>
-                      <span class="text-gold" style="font-style:italic;">Naturalis Historia</span>
-                      <div style="font-size:var(--text-xs);color:var(--text-muted);">Codex · Vellum</div>
+                      <span class="text-gold">삼국유사(三國遺事) 임신본</span>
+                      <div class="cell-sub">목판본 · 경주부 간행</div>
                     </td>
-                    <td>Plinius Maior</td>
-                    <td><span class="badge badge--wax">I</span></td>
-                    <td><span class="badge" style="--badge-bg:var(--color-warning,#8b6914);">Restoration</span></td>
-                    <td style="text-align:right;font-variant-numeric:tabular-nums;">£ 284,500</td>
-                    <td>
-                      <span class="cond-badge" style="background:#8b6914;" aria-hidden="true"></span>
-                      <span>Fair</span>
-                    </td>
+                    <td>일연</td>
+                    <td><span class="badge badge--wax">1512</span></td>
+                    <td><span class="badge badge--warning">복원 중</span></td>
+                    <td class="num cell-price" data-sort="12.4">₩12.4억</td>
+                    <td><span class="cond-badge cond--fair" aria-hidden="true"></span><span>보통</span></td>
                   </tr>
                   <tr data-filter-item>
-                    <td><input type="checkbox" class="check" data-row-select aria-label="Select De Architectura"/></td>
+                    <td><input type="checkbox" data-row-select aria-label="월인석보 선택"/></td>
                     <td>
-                      <span class="text-gold" style="font-style:italic;">De Architectura</span>
-                      <div style="font-size:var(--text-xs);color:var(--text-muted);">Manuscript · Ink on Linen</div>
+                      <span class="text-gold">월인석보(月印釋譜) 권9·10</span>
+                      <div class="cell-sub">초간본 · 갑인자 계열</div>
                     </td>
-                    <td>Vitruvius Pollio</td>
-                    <td><span class="badge badge--wax">I BC</span></td>
-                    <td><span class="badge badge--success">Active</span></td>
-                    <td style="text-align:right;font-variant-numeric:tabular-nums;">£ 97,200</td>
-                    <td>
-                      <span class="cond-badge" style="background:#4a7c59;" aria-hidden="true"></span>
-                      <span>Very Good</span>
-                    </td>
+                    <td>세조 명찬</td>
+                    <td><span class="badge badge--wax">1459</span></td>
+                    <td><span class="badge badge--danger">격리</span></td>
+                    <td class="num cell-price" data-sort="15.7">₩15.7억</td>
+                    <td><span class="cond-badge cond--poor" aria-hidden="true"></span><span>불량</span></td>
                   </tr>
                   <tr data-filter-item>
-                    <td><input type="checkbox" class="check" data-row-select aria-label="Select Divina Commedia"/></td>
+                    <td><input type="checkbox" data-row-select aria-label="향약집성방 선택"/></td>
                     <td>
-                      <span class="text-gold" style="font-style:italic;">Divina Commedia</span>
-                      <div style="font-size:var(--text-xs);color:var(--text-muted);">Illuminated · Parchment</div>
+                      <span class="text-gold">향약집성방(鄕藥集成方)</span>
+                      <div class="cell-sub">목판본 · 저지</div>
                     </td>
-                    <td>Dante Alighieri</td>
-                    <td><span class="badge badge--wax">XIV</span></td>
-                    <td><span class="badge badge--danger">Quarantine</span></td>
-                    <td style="text-align:right;font-variant-numeric:tabular-nums;">£ 513,000</td>
-                    <td>
-                      <span class="cond-badge" style="background:#8b0000;" aria-hidden="true"></span>
-                      <span>Poor</span>
-                    </td>
+                    <td>유효통 외</td>
+                    <td><span class="badge badge--wax">1433</span></td>
+                    <td><span class="badge badge--success">열람 가능</span></td>
+                    <td class="num cell-price" data-sort="6.8">₩6.8억</td>
+                    <td><span class="cond-badge cond--fine" aria-hidden="true"></span><span>양호</span></td>
                   </tr>
                   <tr data-filter-item>
-                    <td><input type="checkbox" class="check" data-row-select aria-label="Select Etymologiae"/></td>
+                    <td><input type="checkbox" data-row-select aria-label="훈민정음 해례본 영인 선택"/></td>
                     <td>
-                      <span class="text-gold" style="font-style:italic;">Etymologiae</span>
-                      <div style="font-size:var(--text-xs);color:var(--text-muted);">Codex · Parchment</div>
+                      <span class="text-gold">훈민정음 해례본 (영인)</span>
+                      <div class="cell-sub">조선어학회 영인 초쇄</div>
                     </td>
-                    <td>Isidorus Hispalensis</td>
-                    <td><span class="badge badge--wax">VII</span></td>
-                    <td><span class="badge badge--success">Active</span></td>
-                    <td style="text-align:right;font-variant-numeric:tabular-nums;">£ 68,800</td>
-                    <td>
-                      <span class="cond-badge" style="background:#4a7c59;" aria-hidden="true"></span>
-                      <span>Good</span>
-                    </td>
+                    <td>세종 명찬</td>
+                    <td><span class="badge badge--wax">1946</span></td>
+                    <td><span class="badge badge--success">열람 가능</span></td>
+                    <td class="num cell-price" data-sort="0.215">₩2,150만</td>
+                    <td><span class="cond-badge cond--fine" aria-hidden="true"></span><span>최상</span></td>
                   </tr>
                   <tr data-filter-item>
-                    <td><input type="checkbox" class="check" data-row-select aria-label="Select Historia Ecclesiastica"/></td>
+                    <td><input type="checkbox" data-row-select aria-label="승정원일기 낙질 선택"/></td>
                     <td>
-                      <span class="text-gold" style="font-style:italic;">Historia Ecclesiastica</span>
-                      <div style="font-size:var(--text-xs);color:var(--text-muted);">Codex · Parchment</div>
+                      <span class="text-gold">승정원일기 낙질 3책</span>
+                      <div class="cell-sub">필사본 · 초서</div>
                     </td>
-                    <td>Beda Venerabilis</td>
-                    <td><span class="badge badge--wax">VIII</span></td>
-                    <td><span class="badge" style="--badge-bg:var(--color-warning,#8b6914);">On Loan</span></td>
-                    <td style="text-align:right;font-variant-numeric:tabular-nums;">£ 185,400</td>
-                    <td>
-                      <span class="cond-badge" style="background:#4a7c59;" aria-hidden="true"></span>
-                      <span>Fine</span>
-                    </td>
+                    <td>승정원</td>
+                    <td><span class="badge badge--wax">17세기</span></td>
+                    <td><span class="badge badge--warning">대출 중</span></td>
+                    <td class="num cell-price" data-sort="3.9">₩3.9억</td>
+                    <td><span class="cond-badge cond--fine" aria-hidden="true"></span><span>양호</span></td>
                   </tr>
                   <tr data-filter-item>
-                    <td><input type="checkbox" class="check" data-row-select aria-label="Select Almagest"/></td>
+                    <td><input type="checkbox" data-row-select aria-label="열하일기 필사본 선택"/></td>
                     <td>
-                      <span class="text-gold" style="font-style:italic;">Almagest (Arabice)</span>
-                      <div style="font-size:var(--text-xs);color:var(--text-muted);">Translation · Vellum</div>
+                      <span class="text-gold">열하일기(熱河日記) 필사본</span>
+                      <div class="cell-sub">필사본 · 행서 · 12책</div>
                     </td>
-                    <td>Claudius Ptolemaeus</td>
-                    <td><span class="badge badge--wax">IX</span></td>
-                    <td><span class="badge badge--success">Active</span></td>
-                    <td style="text-align:right;font-variant-numeric:tabular-nums;">£ 221,750</td>
-                    <td>
-                      <span class="cond-badge" style="background:#4a7c59;" aria-hidden="true"></span>
-                      <span>Very Good</span>
-                    </td>
+                    <td>박지원</td>
+                    <td><span class="badge badge--wax">18세기</span></td>
+                    <td><span class="badge badge--success">열람 가능</span></td>
+                    <td class="num cell-price" data-sort="1.2">₩1.2억</td>
+                    <td><span class="cond-badge cond--fine" aria-hidden="true"></span><span>양호</span></td>
                   </tr>
                   <tr data-filter-item>
-                    <td><input type="checkbox" class="check" data-row-select aria-label="Select Novum Organum"/></td>
+                    <td><input type="checkbox" data-row-select aria-label="목민심서 초고본 선택"/></td>
                     <td>
-                      <span class="text-gold" style="font-style:italic;">Novum Organum</span>
-                      <div style="font-size:var(--text-xs);color:var(--text-muted);">Printed · First Edition</div>
+                      <span class="text-gold">목민심서(牧民心書) 초고본</span>
+                      <div class="cell-sub">필사본 · 두주 다수</div>
                     </td>
-                    <td>Franciscus Bacon</td>
-                    <td><span class="badge badge--wax">XVII</span></td>
-                    <td><span class="badge badge--success">Active</span></td>
-                    <td style="text-align:right;font-variant-numeric:tabular-nums;">£ 44,600</td>
-                    <td>
-                      <span class="cond-badge" style="background:#c9a84c;" aria-hidden="true"></span>
-                      <span>Good</span>
-                    </td>
+                    <td>정약용</td>
+                    <td><span class="badge badge--wax">1818</span></td>
+                    <td><span class="badge badge--warning">복원 중</span></td>
+                    <td class="num cell-price" data-sort="4.6">₩4.6억</td>
+                    <td><span class="cond-badge cond--fair" aria-hidden="true"></span><span>보통</span></td>
                   </tr>
                   <tr data-filter-item>
-                    <td><input type="checkbox" class="check" data-row-select aria-label="Select De humani corporis fabrica"/></td>
+                    <td><input type="checkbox" data-row-select aria-label="인체 구조에 관하여 선택"/></td>
                     <td>
                       <span class="text-gold" style="font-style:italic;">De humani corporis fabrica</span>
-                      <div style="font-size:var(--text-xs);color:var(--text-muted);">Folio · Woodcut Illustrated</div>
+                      <div class="cell-sub">양장 초판 · 목판 삽화</div>
                     </td>
-                    <td>Andreas Vesalius</td>
-                    <td><span class="badge badge--wax">XVI</span></td>
-                    <td><span class="badge" style="--badge-bg:var(--color-warning,#8b6914);">Restoration</span></td>
-                    <td style="text-align:right;font-variant-numeric:tabular-nums;">£ 329,000</td>
-                    <td>
-                      <span class="cond-badge" style="background:#8b6914;" aria-hidden="true"></span>
-                      <span>Fair</span>
-                    </td>
+                    <td>베살리우스</td>
+                    <td><span class="badge badge--wax">1543</span></td>
+                    <td><span class="badge badge--success">열람 가능</span></td>
+                    <td class="num cell-price" data-sort="5.5">₩5.5억</td>
+                    <td><span class="cond-badge cond--fine" aria-hidden="true"></span><span>최상</span></td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
             <!-- Pagination -->
-            <div style="padding:var(--space-3) var(--space-4);border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-2);">
-              <span style="font-size:var(--text-xs);color:var(--text-muted);">Showing 9 of 4,817 entries</span>
-              <nav class="pagination" aria-label="Table pagination">
-                <button class="btn btn--ghost btn--sm" disabled aria-label="Previous page" aria-disabled="true">
+            <div class="table-foot">
+              <span class="table-foot__count">전체 4,817권 중 1–9권</span>
+              <nav class="pagination" aria-label="장부 페이지 이동">
+                <button class="btn btn--ghost btn--sm" disabled aria-label="이전 페이지">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
                 </button>
-                <button class="btn btn--primary btn--sm" aria-label="Page 1" aria-current="page">1</button>
-                <button class="btn btn--ghost btn--sm" aria-label="Page 2">2</button>
-                <button class="btn btn--ghost btn--sm" aria-label="Page 3">3</button>
-                <span class="text-muted" style="padding:0 var(--space-1);font-size:var(--text-sm);">…</span>
-                <button class="btn btn--ghost btn--sm" aria-label="Page 535">535</button>
-                <button class="btn btn--ghost btn--sm" aria-label="Next page">
+                <button class="btn btn--primary btn--sm" aria-label="1페이지" aria-current="page">1</button>
+                <button class="btn btn--ghost btn--sm" aria-label="2페이지">2</button>
+                <button class="btn btn--ghost btn--sm" aria-label="3페이지">3</button>
+                <span class="text-muted" style="padding:0 var(--space-1);font-size:var(--text-sm);" aria-hidden="true">…</span>
+                <button class="btn btn--ghost btn--sm" aria-label="536페이지">536</button>
+                <button class="btn btn--ghost btn--sm" aria-label="다음 페이지">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
                 </button>
               </nav>
@@ -747,75 +755,75 @@
         <!-- SIDE PANEL -->
         <div class="side-panel">
 
-          <!-- Recent Activity Timeline -->
+          <!-- 필사실 일지 -->
           <article class="card" data-reveal>
             <div class="card__header">
-              <div class="eyebrow">Recent Events</div>
-              <h2 class="card__title" style="font-size:var(--text-base);">Scriptorium Activity</h2>
+              <div class="eyebrow">최근 기록</div>
+              <h2 class="card__title" style="font-size:var(--text-base);">필사실 일지</h2>
             </div>
             <div class="card__body">
-              <ol class="timeline" aria-label="Recent scriptorium activity">
+              <ol class="timeline" aria-label="필사실 최근 활동">
                 <li class="timeline__item">
                   <span class="timeline__dot" aria-hidden="true"></span>
-                  <time class="timeline__time" datetime="2025-07-18T09:14">18 Iul. · 09:14</time>
-                  <div class="timeline__title">Novum acquisition confirmed</div>
-                  <p class="timeline__body">Dr. Cavendish secured the <em>Liber Abaci</em> (c. XIII) from auction at Christie's, est. £ 480,000.</p>
+                  <time class="timeline__time" datetime="2026-07-03T09:14">7월 3일 · 09:14</time>
+                  <div class="timeline__title">신규 입수 확정</div>
+                  <p class="timeline__body">한서연 수석사서가 『산술서(算術書)』 13세기 사본을 서울옥션 고서 경매에서 낙찰했습니다. 낙찰가 ₩4.8억.</p>
                 </li>
                 <li class="timeline__item">
                   <span class="timeline__dot" aria-hidden="true"></span>
-                  <time class="timeline__time" datetime="2025-07-17T14:30">17 Iul. · 14:30</time>
-                  <div class="timeline__title">Restoration complete</div>
-                  <p class="timeline__body"><em>Codex Vindobonensis</em> binding restored; returned to Main Hall, shelf VII, folio XII.</p>
+                  <time class="timeline__time" datetime="2026-07-02T14:30">7월 2일 · 14:30</time>
+                  <div class="timeline__title">복원 완료</div>
+                  <p class="timeline__body">『삼국유사』 임신본 표지 배접을 마치고 본관 제7서가 12번 폴리오로 돌려놓았습니다.</p>
                 </li>
                 <li class="timeline__item">
                   <span class="timeline__dot" aria-hidden="true"></span>
-                  <time class="timeline__time" datetime="2025-07-16T11:00">16 Iul. · 11:00</time>
-                  <div class="timeline__title">Fellow admitted</div>
-                  <p class="timeline__body">Miss Elara Thornton (Balliol) granted reading access, specialisation: medieval cosmography.</p>
+                  <time class="timeline__time" datetime="2026-07-01T11:00">7월 1일 · 11:00</time>
+                  <div class="timeline__title">신규 연구원 승인</div>
+                  <p class="timeline__body">김하윤 연구원(중세 천문지리)에게 귀중본 열람권을 발급했습니다.</p>
                 </li>
                 <li class="timeline__item">
                   <span class="timeline__dot" aria-hidden="true"></span>
-                  <time class="timeline__time" datetime="2025-07-15T16:45">15 Iul. · 16:45</time>
-                  <div class="timeline__title">Loan recalled</div>
-                  <p class="timeline__body"><em>Historia Ecclesiastica</em> on loan to the Bodleian — recall notice issued, due 01 Aug.</p>
+                  <time class="timeline__time" datetime="2026-06-30T16:45">6월 30일 · 16:45</time>
+                  <div class="timeline__title">대출 회수 통지</div>
+                  <p class="timeline__body">『승정원일기』 낙질 — 규장각 대출분 회수 통지장을 발송했습니다. 반납 기한 8월 1일.</p>
                 </li>
                 <li class="timeline__item">
                   <span class="timeline__dot" aria-hidden="true"></span>
-                  <time class="timeline__time" datetime="2025-07-14T08:20">14 Iul. · 08:20</time>
-                  <div class="timeline__title">Digitisation begun</div>
-                  <p class="timeline__body">High-resolution imaging of <em>Divina Commedia</em> commenced — est. completion XIV days.</p>
+                  <time class="timeline__time" datetime="2026-06-28T08:20">6월 28일 · 08:20</time>
+                  <div class="timeline__title">디지털화 착수</div>
+                  <p class="timeline__body">『월인석보』 권9 고해상 촬영을 시작했습니다. 완료 예상 14일.</p>
                 </li>
               </ol>
             </div>
           </article>
 
-          <!-- Quarterly Progress -->
-          <article class="card card--accent-top" data-reveal>
+          <!-- 반기 목표 -->
+          <article class="card card--accent-top" data-reveal data-delay="1">
             <div class="card__header">
-              <div class="eyebrow">Quarterly Targets</div>
-              <h2 class="card__title" style="font-size:var(--text-base);">Progressus Trimestralis</h2>
+              <div class="eyebrow">반기 목표</div>
+              <h2 class="card__title" style="font-size:var(--text-base);">상반기 결산 진행</h2>
             </div>
             <div class="card__body" style="display:flex;flex-direction:column;gap:var(--space-4);">
 
               <!-- Progress rings -->
               <div class="ring-row">
                 <div style="text-align:center;">
-                  <div class="progress-ring" style="--val:76;" aria-valuenow="76" aria-valuemin="0" aria-valuemax="100" role="progressbar" aria-label="Cataloguing progress 76%">
+                  <div class="progress-ring" style="--val:76;" role="progressbar" aria-valuenow="76" aria-valuemin="0" aria-valuemax="100" aria-label="목록 정리 진행률 76%">
                     <span class="progress-ring__label">76%</span>
                   </div>
-                  <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:4px;">Cataloguing</div>
+                  <div class="ring-caption">목록 정리</div>
                 </div>
                 <div style="text-align:center;">
-                  <div class="progress-ring" style="--val:54;" aria-valuenow="54" aria-valuemin="0" aria-valuemax="100" role="progressbar" aria-label="Digitisation progress 54%">
+                  <div class="progress-ring" style="--val:54;" role="progressbar" aria-valuenow="54" aria-valuemin="0" aria-valuemax="100" aria-label="디지털화 진행률 54%">
                     <span class="progress-ring__label">54%</span>
                   </div>
-                  <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:4px;">Digitisation</div>
+                  <div class="ring-caption">디지털화</div>
                 </div>
                 <div style="text-align:center;">
-                  <div class="progress-ring" style="--val:89;" aria-valuenow="89" aria-valuemin="0" aria-valuemax="100" role="progressbar" aria-label="Restoration hours target 89%">
+                  <div class="progress-ring" style="--val:89;" role="progressbar" aria-valuenow="89" aria-valuemin="0" aria-valuemax="100" aria-label="복원 목표 진행률 89%">
                     <span class="progress-ring__label">89%</span>
                   </div>
-                  <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:4px;">Restoration</div>
+                  <div class="ring-caption">복원</div>
                 </div>
               </div>
 
@@ -824,38 +832,38 @@
               <!-- Linear progress bars -->
               <div>
                 <div class="prog-label">
-                  <span>Acquisitions budget</span>
-                  <span class="text-gold">£ 1.4M / £ 2M</span>
+                  <span>입수 예산 집행</span>
+                  <span class="text-gold">₩14.2억 / ₩20억</span>
                 </div>
-                <div class="progress" role="progressbar" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100" aria-label="Acquisitions budget 70% used">
-                  <div class="progress__bar" style="width:70%;"></div>
-                </div>
-              </div>
-              <div>
-                <div class="prog-label">
-                  <span>Reading Hall capacity</span>
-                  <span>168 / 238</span>
-                </div>
-                <div class="progress" role="progressbar" aria-valuenow="71" aria-valuemin="0" aria-valuemax="100" aria-label="Reading hall capacity 71%">
-                  <div class="progress__bar progress__bar--striped" style="width:71%;"></div>
+                <div class="progress" role="progressbar" aria-valuenow="71" aria-valuemin="0" aria-valuemax="100" aria-label="입수 예산 71% 집행">
+                  <div class="progress__bar" style="width:71%;"></div>
                 </div>
               </div>
               <div>
                 <div class="prog-label">
-                  <span>Manuscripts indexed</span>
-                  <span>3,629 / 4,817</span>
+                  <span>열람석 가동</span>
+                  <span>152 / 238석</span>
                 </div>
-                <div class="progress" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" aria-label="Manuscripts indexed 75%">
-                  <div class="progress__bar" style="width:75%;background:var(--color-success,#4a7c59);"></div>
+                <div class="progress progress--striped" role="progressbar" aria-valuenow="64" aria-valuemin="0" aria-valuemax="100" aria-label="열람석 가동률 64%">
+                  <div class="progress__bar" style="width:64%;"></div>
                 </div>
               </div>
               <div>
                 <div class="prog-label">
-                  <span>Folios restored this Q</span>
-                  <span>89 / 120 h</span>
+                  <span>색인 완료</span>
+                  <span>3,629 / 4,817권</span>
                 </div>
-                <div class="progress progress--thin" role="progressbar" aria-valuenow="74" aria-valuemin="0" aria-valuemax="100" aria-label="Folios restored 74% of quarterly target">
-                  <div class="progress__bar" style="width:74%;background:var(--color-accent,#c9a84c);"></div>
+                <div class="progress" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" aria-label="색인 완료율 75%">
+                  <div class="progress__bar progress__bar--success" style="width:75%;"></div>
+                </div>
+              </div>
+              <div>
+                <div class="prog-label">
+                  <span>복원 시간 (분기)</span>
+                  <span>89 / 120시간</span>
+                </div>
+                <div class="progress progress--thin" role="progressbar" aria-valuenow="74" aria-valuemin="0" aria-valuemax="100" aria-label="분기 복원 시간 목표 74% 달성">
+                  <div class="progress__bar progress__bar--gold" style="width:74%;"></div>
                 </div>
               </div>
 
@@ -868,26 +876,26 @@
       </section>
 
       <!-- ALERT BANNER -->
-      <div class="alert alert--warning" role="alert" data-reveal>
+      <div class="alert alert--warning" id="quarantine-alert" data-reveal>
         <span class="alert__icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </span>
         <div>
-          <strong class="alert__title">Caveat Lector —</strong>
-          <span class="alert__body"> Three volumes currently in Quarantine pending humidity assessment. Restoration estimates updated 15 Iul. Consult Dr. Pemberton before accessing Hall C.</span>
+          <strong class="alert__title">열람 주의 —</strong>
+          <span class="alert__body"> 습도 평가가 끝날 때까지 장서 3권이 격리 중입니다. 복원 견적은 7월 1일자로 갱신되었습니다. 다동 서고 출입 전 보존과 민병훈 과장에게 문의하십시오.</span>
         </div>
-        <button class="alert__close btn btn--ghost btn--sm btn--icon" aria-label="Dismiss notice">×</button>
+        <button class="alert__close btn btn--ghost btn--sm btn--icon" data-alert-dismiss aria-label="공지 닫기">×</button>
       </div>
 
     </div>
     <!-- /page-body -->
 
-    <!-- FOOTER -->
-    <footer style="text-align:center;padding:var(--space-4) var(--space-6);border-top:1px solid var(--border);">
-      <div class="fleur" aria-hidden="true">❧</div>
-      <p class="text-muted" style="font-size:var(--text-xs);margin:var(--space-1) 0 0;">
-        Scriptorium of St. Aldhelm · Oxford · Est. MCMLII · <em>Lux in Tenebris</em>
-        · <a href="../index.html" style="color:var(--text-muted);">Return to Design System</a>
+    <!-- FOOTER — 간기 -->
+    <footer style="text-align:center;padding:var(--space-5) var(--space-6);border-top:1px solid var(--color-border-subtle);">
+      <div class="fleur" aria-hidden="true" style="margin:0 auto var(--space-2);"></div>
+      <p class="text-muted" style="font-size:var(--text-xs);margin:0;">
+        장서각 필사실 · 창설 MCMLII · <em>Lux in Tenebris</em>
+        · <a href="../index.html" style="color:var(--color-text-muted);">카탈로그로 돌아가기</a>
       </p>
     </footer>
 
@@ -897,38 +905,79 @@
 </div>
 <!-- /page-shell -->
 
-<!-- Mobile sidebar overlay -->
-<div id="mob-sidebar-overlay" aria-hidden="true" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:199;" onclick="closeMobSidebar()"></div>
+<!-- Mobile sidebar scrim -->
+<div id="mob-sidebar-overlay" class="mob-overlay" aria-hidden="true"></div>
 
+<!-- COMMAND PALETTE -->
+<div class="cmdk-overlay" id="cmdk" role="dialog" aria-modal="true" aria-label="명령 팔레트" aria-hidden="true">
+  <div class="cmdk">
+    <div class="cmdk__search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input class="cmdk__input" placeholder="명령을 입력하거나 검색하세요…" aria-label="명령 팔레트 검색" />
+      <kbd>ESC</kbd>
+    </div>
+    <div class="cmdk__list">
+      <div class="cmdk__group-label">이동</div>
+      <div class="cmdk__item" role="option" data-href="inbox.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> 서신함 열기 <span class="cmdk__hint">페이지 III</span></div>
+      <div class="cmdk__item" role="option" data-href="article.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> 리딩 룸 읽기 <span class="cmdk__hint">페이지 X</span></div>
+      <div class="cmdk__item" role="option" data-href="../index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 9.5 12 3l9 6.5V21H3z"/></svg> 카탈로그로 돌아가기</div>
+      <div class="cmdk__group-label">동작</div>
+      <div class="cmdk__item" role="option" data-action="toggle-theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg> 테마 전환 (양피지 / 촛불)</div>
+      <div class="cmdk__item" role="option" data-toast-title="서표 끼움" data-toast="장부 페이지에 서표를 끼워 두었습니다. 언제든 다시 펼칠 수 있습니다."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> 이 페이지에 서표 끼우기</div>
+      <div class="cmdk__empty" hidden>이 폴리오에서 명령을 찾을 수 없습니다.</div>
+    </div>
+  </div>
+</div>
+
+<script src="../app.js"></script>
 <script>
-// Mobile sidebar toggle
-(function(){
+/* 페이지 전용 — 모바일 서가 오프캔버스(포커스 이동·트랩·ESC·복원) + 공지 닫기 */
+(function () {
+  'use strict';
   var btn = document.getElementById('mob-sidebar-btn');
   var sidebar = document.getElementById('sidebar');
   var overlay = document.getElementById('mob-sidebar-overlay');
-  if(btn && sidebar){
-    btn.addEventListener('click', function(){
-      var open = sidebar.classList.toggle('is-open');
-      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-      if(overlay){ overlay.style.display = open ? 'block' : 'none'; overlay.setAttribute('aria-hidden', open ? 'false' : 'true'); }
+
+  function openSidebar() {
+    sidebar.classList.add('is-open');
+    btn.setAttribute('aria-expanded', 'true');
+    overlay.classList.add('is-visible');
+    overlay.setAttribute('aria-hidden', 'false');
+    var first = sidebar.querySelector('a, button');
+    if (first) setTimeout(function () { first.focus(); }, 60);
+  }
+  function closeSidebar() {
+    sidebar.classList.remove('is-open');
+    btn.setAttribute('aria-expanded', 'false');
+    overlay.classList.remove('is-visible');
+    overlay.setAttribute('aria-hidden', 'true');
+    btn.focus();
+  }
+  if (btn && sidebar && overlay) {
+    btn.addEventListener('click', function () {
+      sidebar.classList.contains('is-open') ? closeSidebar() : openSidebar();
+    });
+    overlay.addEventListener('click', closeSidebar);
+    sidebar.addEventListener('keydown', function (e) {
+      if (!sidebar.classList.contains('is-open')) return;
+      if (e.key === 'Escape') { closeSidebar(); return; }
+      if (e.key !== 'Tab') return;
+      var f = Array.prototype.filter.call(
+        sidebar.querySelectorAll('a[href], button:not(:disabled)'),
+        function (el) { return el.offsetParent !== null; }
+      );
+      if (!f.length) return;
+      var first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     });
   }
-  window.closeMobSidebar = function(){
-    if(sidebar) sidebar.classList.remove('is-open');
-    if(btn) btn.setAttribute('aria-expanded','false');
-    if(overlay){ overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); }
-  };
 
-  // Segmented control (date range)
-  document.querySelectorAll('[data-seg]').forEach(function(el){
-    el.addEventListener('click', function(){
-      document.querySelectorAll('[data-seg]').forEach(function(b){ b.setAttribute('aria-pressed','false'); b.classList.remove('btn--primary'); b.classList.add('btn--ghost'); });
-      el.setAttribute('aria-pressed','true'); el.classList.add('btn--primary'); el.classList.remove('btn--ghost');
-    });
-  });
+  /* 격리 공지 닫기 */
+  var alertEl = document.getElementById('quarantine-alert');
+  var dismiss = alertEl && alertEl.querySelector('[data-alert-dismiss]');
+  if (dismiss) dismiss.addEventListener('click', function () { alertEl.remove(); });
 })();
 </script>
-
-<script src="../app.js"></script>
 </body>
 </html>

@@ -37,12 +37,18 @@
   var $$ = function (s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); };
   var prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  // Motion contract: [data-reveal] elements are hidden ONLY under html.js
+  // (components/motion.css) — no JS means no hiding, content always visible.
+  document.documentElement.classList.add("js");
+
   /* ===================== THEME TOGGLE ===================== */
   function initTheme() {
     var root = document.documentElement;
     var stored = null;
     try { stored = localStorage.getItem("nb-theme"); } catch (e) {}
-    var initial = stored || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    // Priority: saved value → attribute already set by the head FOUC snippet → OS
+    var initial = stored || root.getAttribute("data-theme") ||
+      (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
     root.setAttribute("data-theme", initial);
     syncThemeButtons(initial);
 
@@ -59,7 +65,7 @@
     $$("[data-theme-toggle]").forEach(function (b) {
       b.setAttribute("aria-pressed", String(theme === "dark"));
       var label = b.querySelector("[data-theme-label]");
-      if (label) label.textContent = theme === "dark" ? "Dark" : "Light";
+      if (label) label.textContent = theme === "dark" ? "다크" : "라이트";
     });
   }
 
@@ -123,12 +129,21 @@
     return $$('a[href],button:not(:disabled),textarea,input,select,[tabindex]:not([tabindex="-1"])', node)
       .filter(function (el) { return el.offsetParent !== null || el === document.activeElement; });
   }
+  function syncOverlayTriggers(el, expanded) {
+    // keep burger / opener buttons honest about their drawer state
+    var id = el.getAttribute("data-drawer") || el.getAttribute("data-modal");
+    if (!id) return;
+    $$('[data-drawer-open="' + id + '"], [data-modal-open="' + id + '"]').forEach(function (t) {
+      t.setAttribute("aria-expanded", String(expanded));
+    });
+  }
   function openOverlay(el) {
     if (!el || el.classList.contains("is-open")) return;
     lastFocused = document.activeElement;
     el.classList.add("is-open");
     el.removeAttribute("hidden");
     el.setAttribute("aria-hidden", "false");
+    syncOverlayTriggers(el, true);
     document.body.style.overflow = "hidden";
     var f = getFocusable(el)[0];
     if (f) f.focus();
@@ -137,6 +152,7 @@
     if (!el || !el.classList.contains("is-open")) return;
     el.classList.remove("is-open");
     el.setAttribute("aria-hidden", "true");
+    syncOverlayTriggers(el, false);
     setTimeout(function () { if (!el.classList.contains("is-open")) el.setAttribute("hidden", ""); }, prefersReduced ? 0 : 200);
     if (!$(".is-open[data-modal], .is-open[data-drawer]")) document.body.style.overflow = "";
     if (lastFocused && lastFocused.focus) lastFocused.focus();
@@ -195,7 +211,7 @@
         (opts.title ? '<div class="toast__title">' + esc(opts.title) + "</div>" : "") +
         (opts.message ? '<div class="toast__msg">' + esc(opts.message) + "</div>" : "") +
       "</div>" +
-      '<button class="toast__close" aria-label="Dismiss">&times;</button>';
+      '<button class="toast__close" aria-label="닫기">&times;</button>';
     host.appendChild(el);
     requestAnimationFrame(function () { el.classList.add("is-in"); });
     var timer = setTimeout(remove, opts.duration || 4200);
@@ -213,7 +229,7 @@
       var t = e.target.closest("[data-toast]");
       if (!t) return;
       showToast({
-        title: t.getAttribute("data-title") || "Notification",
+        title: t.getAttribute("data-title") || "알림",
         message: t.getAttribute("data-message") || "",
         variant: t.getAttribute("data-variant") || "default"
       });
@@ -252,7 +268,7 @@
       var item = e.target.closest("[data-menu-item]");
       if (item) {
         var label = item.textContent.trim();
-        if (item.hasAttribute("data-menu-toast")) showToast({ title: "Selected", message: label, variant: "info" });
+        if (item.hasAttribute("data-menu-toast")) showToast({ title: "선택됨", message: label, variant: "info" });
       }
       if (!e.target.closest("[data-popover]")) closeAllPopups();
     });
@@ -334,7 +350,7 @@
     items.forEach(function (it) {
       it.addEventListener("click", function () {
         closeOverlay(palette);
-        showToast({ title: "Command", message: it.getAttribute("data-command-item") || it.textContent.trim(), variant: "info" });
+        showToast({ title: "명령 실행", message: it.getAttribute("data-command-item") || it.textContent.trim(), variant: "info" });
       });
       it.addEventListener("mousemove", function () {
         items.forEach(function (i) { i.classList.remove("is-active"); });
@@ -372,12 +388,15 @@
     });
   }
 
-  /* ===================== RATING ===================== */
+  /* ===================== RATING =====================
+     Input rating = real radiogroup: role=radio children, aria-checked,
+     arrow-key operation, roving tabindex. */
   function initRatings() {
     $$("[data-rating]").forEach(function (r) {
       var max = parseInt(r.getAttribute("data-max") || "5", 10);
       var value = parseInt(r.getAttribute("data-value") || "0", 10);
       r.setAttribute("role", "radiogroup");
+      if (!r.getAttribute("aria-label")) r.setAttribute("aria-label", "별점 선택");
       r.innerHTML = "";
       var stars = [];
       for (var i = 1; i <= max; i++) {
@@ -385,16 +404,38 @@
           var b = document.createElement("button");
           b.type = "button";
           b.className = "rating__star";
-          b.setAttribute("aria-label", n + " star" + (n > 1 ? "s" : ""));
+          b.setAttribute("role", "radio");
+          b.setAttribute("aria-label", "별 " + n + "개");
           b.innerHTML = icons.star;
-          b.addEventListener("click", function () { value = n; paint(value); r.setAttribute("data-value", n); });
+          b.addEventListener("click", function () { set(n); });
           b.addEventListener("mouseenter", function () { paint(n); });
           stars.push(b); r.appendChild(b);
         })(i);
       }
       r.addEventListener("mouseleave", function () { paint(value); });
+      r.addEventListener("keydown", function (e) {
+        var delta = 0;
+        if (e.key === "ArrowRight" || e.key === "ArrowUp") delta = 1;
+        else if (e.key === "ArrowLeft" || e.key === "ArrowDown") delta = -1;
+        else return;
+        e.preventDefault();
+        set(Math.min(max, Math.max(1, value + delta)));
+        stars[value - 1].focus();
+      });
+      function set(n) {
+        value = n;
+        r.setAttribute("data-value", n);
+        paint(n);
+        sync();
+      }
+      function sync() {
+        stars.forEach(function (s, idx) {
+          s.setAttribute("aria-checked", String(idx + 1 === value));
+          s.tabIndex = (value ? idx + 1 === value : idx === 0) ? 0 : -1;
+        });
+      }
       function paint(n) { stars.forEach(function (s, idx) { s.classList.toggle("is-on", idx < n); }); }
-      paint(value);
+      paint(value); sync();
     });
   }
 
@@ -407,7 +448,7 @@
         text = text.trim(); if (!text) return;
         var chip = document.createElement("span");
         chip.className = "chip";
-        chip.innerHTML = esc(text) + ' <button type="button" class="chip__x" aria-label="Remove ' + esc(text) + '">&times;</button>';
+        chip.innerHTML = esc(text) + ' <button type="button" class="chip__x" aria-label="' + esc(text) + ' 삭제">&times;</button>';
         box.insertBefore(chip, field);
       }
       field.addEventListener("keydown", function (e) {
@@ -534,7 +575,7 @@
       if (dotsWrap) {
         slides.forEach(function (_, n) {
           var d = document.createElement("button");
-          d.className = "carousel__dot"; d.type = "button"; d.setAttribute("aria-label", "Slide " + (n + 1));
+          d.className = "carousel__dot"; d.type = "button"; d.setAttribute("aria-label", (n + 1) + "번째 슬라이드로 이동");
           d.addEventListener("click", function () { go(n); });
           dotsWrap.appendChild(d);
         });
@@ -542,7 +583,10 @@
       function go(n) {
         i = (n + slides.length) % slides.length;
         track.style.transform = "translateX(" + (-i * 100) + "%)";
-        if (dotsWrap) $$(".carousel__dot", dotsWrap).forEach(function (d, k) { d.classList.toggle("is-on", k === i); });
+        if (dotsWrap) $$(".carousel__dot", dotsWrap).forEach(function (d, k) {
+          d.classList.toggle("is-on", k === i);
+          if (k === i) d.setAttribute("aria-current", "true"); else d.removeAttribute("aria-current");
+        });
       }
       if (prev) prev.addEventListener("click", function () { go(i - 1); });
       if (next) next.addEventListener("click", function () { go(i + 1); });
@@ -597,7 +641,7 @@
         options.filter(function (o) { return o.classList.contains("is-selected"); }).forEach(function (o) {
           var chip = document.createElement("span");
           chip.className = "chip";
-          chip.innerHTML = esc(o.getAttribute("data-combobox-option")) + ' <button class="chip__x" aria-label="Remove">&times;</button>';
+          chip.innerHTML = esc(o.getAttribute("data-combobox-option")) + ' <button class="chip__x" aria-label="삭제">&times;</button>';
           chip.querySelector(".chip__x").addEventListener("click", function (ev) { ev.stopPropagation(); o.classList.remove("is-selected"); renderChips(); });
           chipHost.appendChild(chip);
         });
@@ -646,7 +690,7 @@
           try { document.execCommand("copy"); } catch (y) {} ta.remove();
         }
         var old = c.getAttribute("data-label-default") || c.textContent;
-        c.textContent = "Copied!";
+        c.textContent = "복사됨!";
         setTimeout(function () { c.textContent = old; }, 1400);
       }
       var p = e.target.closest("[data-toggle-password]");
@@ -673,7 +717,84 @@
       }
       requestAnimationFrame(frame);
     });
-    function format(n) { return n.toLocaleString("en-US"); }
+    function format(n) { return n.toLocaleString("ko-KR"); }
+  }
+
+  /* ===================== STAMP REVEAL (signature motion) =====================
+     [data-reveal] gets stamped in on scroll (components/motion.css).
+     [data-stagger] containers delay children by --stamp-stagger each.
+     Reduced motion / no IO support → everything visible immediately. */
+  function initReveal() {
+    var els = $$("[data-reveal]");
+    if (!els.length) return;
+    // stagger groups: assign per-child delay before observing
+    $$("[data-stagger]").forEach(function (group) {
+      $$("[data-reveal]", group).forEach(function (el, i) {
+        el.style.setProperty("--stamp-delay", "calc(var(--stamp-stagger) * " + Math.min(i, 8) + ")");
+      });
+    });
+    if (prefersReduced || !("IntersectionObserver" in window)) {
+      els.forEach(function (el) { el.classList.add("is-in"); });
+      return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) { en.target.classList.add("is-in"); io.unobserve(en.target); }
+      });
+    }, { threshold: 0.15 });
+    els.forEach(function (el) { io.observe(el); });
+  }
+
+  /* ===================== LIVE ANNOUNCER ===================== */
+  function announce(msg) {
+    var region = $("[data-live-region]");
+    if (!region) {
+      region = document.createElement("div");
+      region.setAttribute("data-live-region", "");
+      region.className = "sr-only";
+      region.setAttribute("aria-live", "polite");
+      document.body.appendChild(region);
+    }
+    region.textContent = "";
+    setTimeout(function () { region.textContent = msg; }, 30);
+  }
+
+  /* ===================== KANBAN KEYBOARD MOVE =====================
+     DnD alternative: buttons inside a card move it across columns.
+     <button data-kanban-move="-1" aria-label="이전 열로 이동">←</button>
+     <button data-kanban-move="1"  aria-label="다음 열로 이동">→</button> */
+  function initKanbanMove() {
+    document.addEventListener("click", function (e) {
+      var btn = e.target.closest("[data-kanban-move]");
+      if (!btn) return;
+      var card = btn.closest(".kanban-card");
+      var col = btn.closest("[data-kanban-col]");
+      if (!card || !col) return;
+      var cols = $$("[data-kanban-col]", col.closest(".kanban") || document);
+      var idx = cols.indexOf(col);
+      var next = cols[idx + parseInt(btn.getAttribute("data-kanban-move"), 10)];
+      if (!next) return;
+      var list = $(".kanban-list", next) || next;
+      list.appendChild(card);
+      btn.focus();
+      var title = ($(".kanban-card__title", card) || card).textContent.trim();
+      var colName = ($(".kanban-col__title", next) || next).textContent.trim();
+      announce('"' + title + '" 카드를 "' + colName + '" 열로 옮겼습니다.');
+    });
+  }
+
+  /* ===================== TOGGLE GROUP (aria-pressed sync) =====================
+     <div class="btn-group" data-toggle-group> <button aria-pressed="true">…</button> … */
+  function initToggleGroups() {
+    document.addEventListener("click", function (e) {
+      var btn = e.target.closest("[data-toggle-group] [aria-pressed]");
+      if (!btn) return;
+      $$("[aria-pressed]", btn.closest("[data-toggle-group]")).forEach(function (b) {
+        var on = b === btn;
+        b.setAttribute("aria-pressed", String(on));
+        b.classList.toggle("is-active", on);
+      });
+    });
   }
 
   /* ===================== helpers ===================== */
@@ -684,7 +805,8 @@
     warning: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.01"/></svg>',
     danger:  '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>',
     "default":'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="9"/><path d="M12 8v.01M12 11v5"/></svg>',
-    star:    '<svg viewBox="0 0 24 24" fill="currentColor" stroke="var(--color-border)" stroke-width="2"><path d="M12 2l3 6.5 7 .6-5.2 4.6L18.5 21 12 17.3 5.5 21l1.7-7.3L2 9.1l7-.6z"/></svg>'
+    /* NB: SVG presentation attrs can't resolve var() — stroke lives in style="" */
+    star:    '<svg viewBox="0 0 24 24" fill="currentColor" style="stroke:var(--color-border)" stroke-width="2"><path d="M12 2l3 6.5 7 .6-5.2 4.6L18.5 21 12 17.3 5.5 21l1.7-7.3L2 9.1l7-.6z"/></svg>'
   };
 
   /* ===================== boot ===================== */
@@ -692,11 +814,12 @@
     initTheme(); initTabs(); initAccordion(); initOverlays(); initToast();
     initDropdown(); initContextMenu(); initCommandPalette(); initStepper();
     initSliders(); initRatings(); initChipInput(); initFileDrop(); initTables();
-    initKanban(); initCarousel(); initSidebar(); initCombobox(); initWizard(); initMisc();
+    initKanban(); initKanbanMove(); initCarousel(); initSidebar(); initCombobox();
+    initWizard(); initMisc(); initToggleGroups(); initReveal();
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
 
   // public API
-  window.NB = { toast: showToast, openOverlay: openOverlay, closeOverlay: closeOverlay };
+  window.NB = { toast: showToast, openOverlay: openOverlay, closeOverlay: closeOverlay, announce: announce };
 })();

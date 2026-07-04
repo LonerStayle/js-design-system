@@ -1,655 +1,713 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Analytics Dashboard — Neo-Brutalism</title>
-  <link rel="stylesheet" href="../styles.css">
-  <style>
-    /* ---- Page-scoped layout shell (not a component) ---------------------- */
-    .dash {
-      display: flex;
-      align-items: stretch;
-      min-height: 100vh;
-    }
-    .dash__main {
-      flex: 1 1 auto;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-    }
-    .dash__inner {
-      flex: 1 1 auto;
-      width: 100%;
-      max-width: 1320px;
-      margin-inline: auto;
-      padding: var(--space-6) var(--space-6) var(--space-10);
-    }
-    /* page header row */
-    .dash__head {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: var(--space-4);
-      margin-bottom: var(--space-6);
-    }
-    .dash__title {
-      font-family: var(--font-display);
-      font-weight: var(--weight-black);
-      font-size: var(--text-5xl);
-      line-height: 0.95;
-      letter-spacing: var(--tracking-tight);
-      margin: var(--space-2) 0 0;
-    }
-    .dash__head-actions { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>대시보드 — NEO//BRUTAL</title>
+<script>
+/* FOUC guard — 저장된 테마를 첫 페인트 전에 적용 (app.js와 같은 키: nb-theme) */
+(function () {
+  try {
+    var t = localStorage.getItem("nb-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="../styles.css">
+<style>
+  /* ---- 페이지 셸 (컴포넌트 아님 — 조립 전용) --------------------------- */
+  .dash { display: flex; align-items: stretch; min-height: 100dvh; }
+  .dash__main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+  .dash__inner {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: 1320px;
+    margin-inline: auto;
+    padding: var(--space-6) var(--space-6) var(--space-10);
+  }
+  .dash__head {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    flex-wrap: wrap; gap: var(--space-4);
+    margin-bottom: var(--space-6);
+  }
+  .dash__title {
+    font-family: var(--font-display);
+    font-weight: var(--weight-black);
+    font-synthesis-weight: none;
+    font-size: clamp(var(--text-4xl), 5.5vw, var(--text-6xl));
+    letter-spacing: var(--tracking-tight);
+    line-height: var(--leading-display-ko);
+    margin: var(--space-2) 0 0;
+  }
+  .dash__head-actions { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
 
-    /* two-column content split: charts/table left, activity right */
-    .dash__split {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 360px;
-      gap: var(--space-5);
-      align-items: start;
-    }
-    @media (max-width: 1180px) {
-      .dash__split { grid-template-columns: minmax(0, 1fr); }
-    }
+  /* 본문 2분할: 차트·테이블 | 활동 */
+  .dash__split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: var(--space-5);
+    align-items: start;
+  }
+  @media (max-width: 1180px) { .dash__split { grid-template-columns: minmax(0, 1fr); } }
 
-    /* avatar chip in navbar */
-    .navbar__avatar {
-      width: 36px; height: 36px; flex: none;
-      display: inline-flex; align-items: center; justify-content: center;
-      font-family: var(--font-display); font-weight: var(--weight-black);
-      font-size: var(--text-sm);
-      background: var(--pink-500); color: var(--paper);
-      border: var(--border-3) solid var(--color-border);
-      border-radius: var(--radius-md);
-      box-shadow: var(--shadow-xs);
-    }
+  /* 네비바 아바타 칩 */
+  .navbar__avatar {
+    width: 36px; height: 36px; flex: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: var(--weight-black); font-synthesis-weight: none;
+    font-size: var(--text-sm);
+    background: var(--pink-500); color: var(--paper);
+    border: var(--border-3) solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-xs);
+  }
 
-    /* ---- BAR CHART (pure CSS) ------------------------------------------- */
-    .barchart { display: flex; flex-direction: column; gap: var(--space-3); }
-    .barchart__plot {
-      display: flex;
-      align-items: flex-end;
-      gap: var(--space-2);
-      height: 240px;
-      padding-top: var(--space-2);
-      border-bottom: var(--border-3) solid var(--color-border);
-    }
-    .barchart__col {
-      flex: 1 1 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-end;
-      height: 100%;
-      min-width: 0;
-    }
-    .barchart__bar {
-      width: 100%;
-      background: var(--blue-500);
-      border: var(--border-3) solid var(--color-border);
-      border-bottom: none;
-      transition: transform var(--duration-base) var(--ease-snap);
-    }
-    .barchart__col:hover .barchart__bar { background: var(--pink-500); }
-    .barchart__col:nth-child(4n) .barchart__bar { background: var(--lime-500); }
-    .barchart__axis {
-      display: flex;
-      gap: var(--space-2);
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-    .barchart__axis li {
-      flex: 1 1 0;
-      text-align: center;
-      font-family: var(--font-mono);
-      font-size: var(--text-2xs);
-      font-weight: var(--weight-bold);
-      text-transform: uppercase;
-      letter-spacing: var(--tracking-wide);
-      color: var(--color-text-muted);
-    }
+  /* ---- KPI 벤토 — 균등 4칸 금지, 주간 매출이 2×2 히어로 셀 ------------- */
+  .kpi-bento {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-areas: "hero hero a b" "hero hero c d";
+    gap: var(--space-5);
+    margin-bottom: var(--space-5);
+  }
+  .kpi-a { grid-area: a; } .kpi-b { grid-area: b; }
+  .kpi-c { grid-area: c; } .kpi-d { grid-area: d; }
+  @media (max-width: 1180px) {
+    .kpi-bento { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "hero hero" "a b" "c d"; }
+  }
+  @media (max-width: 560px) {
+    .kpi-bento { grid-template-columns: minmax(0, 1fr); grid-template-areas: "hero" "a" "b" "c" "d"; }
+  }
 
-    /* ---- LINE CHART ----------------------------------------------------- */
-    .linechart { width: 100%; }
-    .linechart svg { display: block; width: 100%; height: auto; }
-    .chart-legend {
-      display: flex; flex-wrap: wrap; gap: var(--space-4);
-      margin-top: var(--space-3);
-    }
-    .chart-legend span {
-      display: inline-flex; align-items: center; gap: var(--space-2);
-      font-family: var(--font-mono); font-size: var(--text-2xs);
-      font-weight: var(--weight-bold); text-transform: uppercase;
-      letter-spacing: var(--tracking-wide); color: var(--color-text-muted);
-    }
-    .chart-legend i { width: 18px; height: 8px; border: var(--border-2) solid var(--color-border); flex: none; }
+  /* 히어로 stat = 파란 색면 섬 — 텍스트는 종이색으로 고정, 보더·그림자는
+     시맨틱 그대로(라이트=잉크, 다크=종이) 자동 반전 */
+  .stat--hero {
+    grid-area: hero;
+    background: var(--blue-500);
+    color: var(--paper);
+    --color-text: var(--paper);        /* spark 막대도 이 토큰을 소비 */
+    --color-text-muted: var(--paper);
+    box-shadow: var(--shadow-lg);
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+  .stat--hero .stat__value {
+    font-size: clamp(var(--text-5xl), 7vw, var(--text-7xl));
+    line-height: var(--leading-none);
+  }
+  .stat--hero .stat__icon { background: var(--yellow-500); color: var(--ink); border-color: var(--ink); }
+  .stat--hero .spark { height: 72px; }
+  .stat--hero .stat__note { font-family: var(--font-mono); font-size: var(--text-xs); opacity: .92; }
 
-    /* stat icon accents per card */
-    .stat--blue   .stat__icon { background: var(--blue-500);   color: var(--paper); }
-    .stat--pink   .stat__icon { background: var(--pink-500);   color: var(--paper); }
-    .stat--lime   .stat__icon { background: var(--lime-500);   color: var(--ink); }
-    .stat--yellow .stat__icon { background: var(--yellow-500); color: var(--ink); }
-    .stat .spark span:nth-child(odd)  { background: var(--color-text); }
-    .stat .spark span:last-child      { background: var(--blue-500); }
+  /* 서브 stat 아이콘 색면 */
+  .stat--lime   .stat__icon { background: var(--lime-500);   color: var(--ink); }
+  .stat--pink   .stat__icon { background: var(--pink-500);   color: var(--paper); }
+  .stat--yellow .stat__icon { background: var(--yellow-500); color: var(--ink); }
+  .stat .spark span:last-child { background: var(--blue-500); }
+  .stat--pink .spark span:last-child { background: var(--pink-500); }
 
-    .charts-stack { display: flex; flex-direction: column; gap: var(--space-5); }
+  /* ---- 막대 차트 (순수 CSS) -------------------------------------------- */
+  .barchart { display: flex; flex-direction: column; gap: var(--space-3); }
+  .barchart__plot {
+    display: flex; align-items: flex-end; gap: var(--space-2);
+    height: 240px;
+    padding-top: var(--space-2);
+    border-bottom: var(--border-3) solid var(--color-border);
+  }
+  .barchart__col {
+    flex: 1 1 0; min-width: 0; height: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  }
+  .barchart__bar {
+    width: 100%;
+    background: var(--blue-500);
+    border: var(--border-3) solid var(--color-border);
+    border-bottom: none;
+    transition: transform var(--duration-base) var(--ease-snap);
+  }
+  .barchart__col:hover .barchart__bar { background: var(--pink-500); }
+  .barchart__col--peak .barchart__bar { background: var(--lime-500); }
+  .barchart__axis { display: flex; gap: var(--space-2); list-style: none; margin: 0; padding: 0; }
+  .barchart__axis li {
+    flex: 1 1 0; text-align: center;
+    font-family: var(--font-mono); font-size: var(--text-2xs); font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-caps-ko);
+    color: var(--color-text-muted);
+    white-space: nowrap;
+  }
 
-    @media (max-width: 720px) {
-      .dash__inner { padding: var(--space-4) var(--space-4) var(--space-8); }
-      .dash__title { font-size: var(--text-4xl); }
-      .barchart__plot { height: 180px; }
-    }
-  </style>
+  /* ---- 라인 차트 — SVG 색은 클래스 경유 (presentation attr var() 금지) -- */
+  .linechart { width: 100%; }
+  .linechart svg { display: block; width: 100%; height: auto; }
+  .linechart .grid-line   { stroke: var(--color-border-subtle); }
+  .linechart .line--prev  { stroke: var(--pink-500); }
+  .linechart .line--cur   { stroke: var(--blue-500); }
+  .linechart .dot         { fill: var(--color-surface); stroke: var(--blue-500); }
+  .chart-legend { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-top: var(--space-3); }
+  .chart-legend span {
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    font-family: var(--font-mono); font-size: var(--text-2xs); font-weight: var(--weight-bold);
+    letter-spacing: var(--tracking-caps-ko); color: var(--color-text-muted);
+  }
+  .chart-legend i { width: 18px; height: 8px; border: var(--border-2) solid var(--color-border); flex: none; }
+  .chart-legend .key--blue { background: var(--blue-500); }
+  .chart-legend .key--pink { background: var(--pink-500); }
+
+  .charts-stack { display: flex; flex-direction: column; gap: var(--space-5); }
+
+  /* 푸터 명판(미니) */
+  .dash-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: var(--space-3);
+    border-top: var(--border-3) solid var(--color-border);
+    padding: var(--space-4) var(--space-6);
+  }
+
+  @media (max-width: 720px) {
+    .dash__inner { padding: var(--space-4) var(--space-4) var(--space-8); }
+    .barchart__plot { height: 180px; }
+    .barchart__axis li:nth-child(odd) { visibility: hidden; } /* 좁은 폭: 격월 라벨만 */
+  }
+</style>
 </head>
 <body>
 
-  <!-- ================= NAVBAR ================= -->
-  <header class="navbar navbar--sticky navbar--accent-blue">
-    <button class="navbar__burger" data-sidebar-toggle="main" aria-expanded="false" aria-label="Toggle sidebar">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true">
-        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-      </svg>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
+
+<!-- ====================== ICON SPRITE ====================== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-bolt" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18M3 12h18M3 18h18"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="4.5"/><path d="M12 1v3M12 20v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1 12h3M20 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="5" width="18" height="14"/><path d="M3 6l9 7 9-7"/></symbol>
+  <symbol id="i-board" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="16"/><path d="M9 4v16M15 4v16"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 8 12 3l9 5-9 5Z"/><path d="M3 8v8l9 5 9-5V8"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="6" width="18" height="13"/><path d="M3 10h18"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M22 12h-3M5 12H2M19 5l-2 2M7 17l-2 2M19 19l-2-2M7 7L5 5"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></symbol>
+  <symbol id="i-cart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 4h2l2.5 12h11L21 7H6"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></symbol>
+  <symbol id="i-won" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6l3.4 12L12 6l5.6 12L21 6"/><path d="M4.5 12h15"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 10v5M12 18h.01"/></symbol>
+  <symbol id="i-loop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><polyline points="20 3 20 8 15 8"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3v12"/><polyline points="7 10 12 15 17 10"/><path d="M4 20h16"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .8-1 1.7"/><path d="M12 17v.01"/></symbol>
+</svg>
+
+<!-- ====================== NAVBAR ====================== -->
+<header class="navbar navbar--sticky navbar--accent-blue" role="banner">
+  <a class="navbar__brand" href="../index.html" aria-label="Neo-Brutalism 홈">
+    <span class="navbar__logo fill-blue" aria-hidden="true"><svg width="20" height="20"><use href="#i-bolt"/></svg></span>
+    <span class="navbar__brand-text">NEO//BRUTAL</span>
+  </a>
+  <nav class="navbar__nav" aria-label="주요 메뉴">
+    <a class="navbar__link" href="dashboard.html" aria-current="page">대시보드</a>
+    <a class="navbar__link" href="inbox.html">받은편지함</a>
+    <a class="navbar__link" href="settings.html">설정</a>
+    <a class="navbar__link" href="profile.html">프로필</a>
+  </nav>
+  <div class="navbar__actions">
+    <button class="btn btn--secondary btn--sm" data-command-open aria-label="커맨드 팔레트 열기">
+      <svg width="16" height="16"><use href="#i-search"/></svg> <kbd class="hide-md-down">⌘K</kbd>
     </button>
+    <button class="btn btn--icon btn--secondary" data-theme-toggle aria-label="라이트/다크 테마 전환">
+      <svg width="18" height="18" class="hide-dark"><use href="#i-sun"/></svg>
+      <svg width="18" height="18" class="hide-light"><use href="#i-moon"/></svg>
+    </button>
+    <span class="navbar__divider" aria-hidden="true"></span>
+    <span class="navbar__avatar" title="한지원" aria-label="계정: 한지원">한</span>
+    <button class="navbar__burger" data-drawer-open="mobile-nav" aria-expanded="false" aria-label="메뉴 열기">
+      <svg width="20" height="20"><use href="#i-menu"/></svg>
+    </button>
+  </div>
+</header>
 
-    <a class="navbar__brand" href="../index.html">
-      <span class="navbar__logo">N</span>
-      <span class="navbar__brand-text">Neobrut</span>
-    </a>
+<!-- 실적 전광판 — 시그니처 마퀴의 파란 판 변주 (수치는 아래 본문에 실존) -->
+<div class="marquee marquee--blue marquee--slow" aria-hidden="true">
+  <div class="marquee__track">
+    <span class="marquee__item">이번 주 매출 ₩4,821만</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">신규 가입 1,847명</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">주문 926건</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">쿠폰 SUMMER-25 사용 847회</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">재구매율 27.4%</span><span class="marquee__item">✶</span>
+  </div>
+  <div class="marquee__track">
+    <span class="marquee__item">이번 주 매출 ₩4,821만</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">신규 가입 1,847명</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">주문 926건</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">쿠폰 SUMMER-25 사용 847회</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">재구매율 27.4%</span><span class="marquee__item">✶</span>
+  </div>
+</div>
 
-    <nav class="navbar__nav" aria-label="Primary">
-      <a class="navbar__link" href="../index.html" aria-current="page">Dashboard</a>
-      <a class="navbar__link" href="#reports">Reports</a>
-      <a class="navbar__link" href="#audiences">Audiences</a>
-      <a class="navbar__link" href="#billing">Billing</a>
+<!-- ====================== DASH SHELL ====================== -->
+<div class="dash">
+
+  <!-- ---------- SIDEBAR ---------- -->
+  <aside class="sidebar sidebar--accent-blue" data-sidebar="main" aria-label="워크스페이스 메뉴">
+    <div class="sidebar__head">
+      <a class="sidebar__brand" href="../index.html">
+        <span class="sidebar__logo fill-blue" aria-hidden="true"><svg width="18" height="18"><use href="#i-bolt"/></svg></span>
+        <span class="sidebar__brand-text">무접점상회</span>
+      </a>
+      <button class="sidebar__collapse" data-sidebar-toggle="main" aria-expanded="true" aria-label="사이드바 접기">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><polyline points="14 6 8 12 14 18"/></svg>
+      </button>
+    </div>
+
+    <nav class="sidebar__nav">
+      <p class="sidebar__section">개요</p>
+      <a class="sidebar__item is-active" href="dashboard.html" aria-current="page">
+        <span class="sidebar__icon"><svg width="18" height="18"><use href="#i-grid"/></svg></span>
+        <span class="sidebar__label">대시보드</span>
+      </a>
+      <a class="sidebar__item" href="inbox.html">
+        <span class="sidebar__icon"><svg width="18" height="18"><use href="#i-mail"/></svg></span>
+        <span class="sidebar__label">받은편지함</span>
+        <span class="sidebar__badge">12</span>
+      </a>
+      <a class="sidebar__item" href="kanban.html">
+        <span class="sidebar__icon"><svg width="18" height="18"><use href="#i-board"/></svg></span>
+        <span class="sidebar__label">작업 보드</span>
+      </a>
+
+      <p class="sidebar__section">스토어</p>
+      <a class="sidebar__item" href="product.html">
+        <span class="sidebar__icon"><svg width="18" height="18"><use href="#i-box"/></svg></span>
+        <span class="sidebar__label">상품</span>
+      </a>
+      <a class="sidebar__item" href="pricing.html">
+        <span class="sidebar__icon"><svg width="18" height="18"><use href="#i-card"/></svg></span>
+        <span class="sidebar__label">요금제</span>
+      </a>
+
+      <p class="sidebar__section">계정</p>
+      <a class="sidebar__item" href="settings.html">
+        <span class="sidebar__icon"><svg width="18" height="18"><use href="#i-gear"/></svg></span>
+        <span class="sidebar__label">설정</span>
+      </a>
+      <a class="sidebar__item" href="profile.html">
+        <span class="sidebar__icon"><svg width="18" height="18"><use href="#i-user"/></svg></span>
+        <span class="sidebar__label">프로필</span>
+      </a>
+      <a class="sidebar__item" href="../index.html">
+        <span class="sidebar__icon"><svg width="18" height="18"><use href="#i-help"/></svg></span>
+        <span class="sidebar__label">시스템 홈</span>
+      </a>
     </nav>
 
-    <div class="navbar__actions">
-      <button class="btn btn--secondary btn--sm" data-command-open aria-label="Open command palette">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true" style="width:1.05em;height:1.05em">
-          <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.7" y2="16.7"/>
-        </svg>
-        <span class="hide-md-down">Search</span>
-        <kbd class="hide-md-down" style="font-family:var(--font-mono);font-size:var(--text-2xs);border:var(--border-2) solid currentColor;padding:0 4px;border-radius:var(--radius-sm)">⌘K</kbd>
-      </button>
-
-      <button class="btn btn--icon btn--secondary" data-theme-toggle aria-label="Toggle theme">
-        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-          <circle cx="12" cy="12" r="4.5"/>
-          <line x1="12" y1="1.5" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22.5"/>
-          <line x1="1.5" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22.5" y2="12"/>
-          <line x1="4.2" y1="4.2" x2="6" y2="6"/><line x1="18" y1="18" x2="19.8" y2="19.8"/>
-          <line x1="19.8" y1="4.2" x2="18" y2="6"/><line x1="6" y1="18" x2="4.2" y2="19.8"/>
-        </svg>
-        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true" hidden>
-          <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.5 6.5 0 0 0 9.8 9.8Z"/>
-        </svg>
-      </button>
-
-      <span class="navbar__divider" aria-hidden="true"></span>
-      <span class="navbar__avatar" title="Mara Velez" aria-label="Account: Mara Velez">MV</span>
+    <div class="sidebar__foot">
+      <span class="sidebar__avatar">지</span>
+      <span class="sidebar__foot-meta">
+        <span class="sidebar__foot-name">한지원</span>
+        <span class="sidebar__foot-sub">운영자 · 프로</span>
+      </span>
     </div>
-  </header>
+  </aside>
 
-  <!-- ================= DASH SHELL ================= -->
-  <div class="dash">
+  <!-- ---------- MAIN ---------- -->
+  <main class="dash__main" id="main">
+    <div class="dash__inner">
 
-    <!-- ---------- SIDEBAR ---------- -->
-    <aside class="sidebar sidebar--accent-blue" data-sidebar="main" aria-label="Main navigation">
-      <div class="sidebar__head">
-        <a class="sidebar__brand" href="../index.html">
-          <span class="sidebar__logo">N</span>
-          <span class="sidebar__brand-text">Neobrut</span>
-        </a>
-        <button class="sidebar__collapse" data-sidebar-toggle="main" aria-expanded="true" aria-label="Collapse sidebar">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true">
-            <polyline points="14 6 8 12 14 18"/>
-          </svg>
-        </button>
-      </div>
-
-      <nav class="sidebar__nav">
-        <p class="sidebar__section">Overview</p>
-        <a class="sidebar__item is-active" href="#" aria-current="page">
-          <span class="sidebar__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
-          </span>
-          <span class="sidebar__label">Dashboard</span>
-        </a>
-        <a class="sidebar__item" href="#">
-          <span class="sidebar__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="4" y1="20" x2="4" y2="11"/><line x1="10" y1="20" x2="10" y2="4"/><line x1="16" y1="20" x2="16" y2="13"/><line x1="22" y1="20" x2="2" y2="20"/></svg>
-          </span>
-          <span class="sidebar__label">Analytics</span>
-        </a>
-        <a class="sidebar__item" href="#">
-          <span class="sidebar__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 5.5a3.5 3.5 0 0 1 0 6"/><path d="M18 20a6 6 0 0 0-3-5.2"/></svg>
-          </span>
-          <span class="sidebar__label">Customers</span>
-        </a>
-        <a class="sidebar__item" href="#">
-          <span class="sidebar__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 7h14l-1.2 11.5a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8Z"/><path d="M8.5 7a3.5 3.5 0 0 1 7 0"/></svg>
-          </span>
-          <span class="sidebar__label">Orders</span>
-          <span class="sidebar__badge">28</span>
-        </a>
-        <a class="sidebar__item" href="#">
-          <span class="sidebar__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M3 8 12 3l9 5-9 5Z"/><path d="M3 8v8l9 5 9-5V8"/></svg>
-          </span>
-          <span class="sidebar__label">Products</span>
-        </a>
-
-        <p class="sidebar__section">Workspace</p>
-        <a class="sidebar__item" href="#">
-          <span class="sidebar__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="9" x2="9" y2="20"/></svg>
-          </span>
-          <span class="sidebar__label">Campaigns</span>
-        </a>
-        <a class="sidebar__item" href="#">
-          <span class="sidebar__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M4 19V5a1 1 0 0 1 1-1h10l4 4v11a1 1 0 0 1-1 1Z"/><polyline points="8 9 12 9"/><polyline points="8 13 16 13"/><polyline points="8 17 16 17"/></svg>
-          </span>
-          <span class="sidebar__label">Invoices</span>
-          <span class="sidebar__badge">5</span>
-        </a>
-        <a class="sidebar__item" href="#">
-          <span class="sidebar__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
-          </span>
-          <span class="sidebar__label">Settings</span>
-        </a>
-
-        <p class="sidebar__section">Support</p>
-        <a class="sidebar__item" href="#">
-          <span class="sidebar__icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .8-1 1.7"/><line x1="12" y1="17" x2="12" y2="17.01"/></svg>
-          </span>
-          <span class="sidebar__label">Help Center</span>
-        </a>
+      <nav class="breadcrumb breadcrumb--chevron" aria-label="브레드크럼">
+        <ol class="breadcrumb__list" role="list">
+          <li class="breadcrumb__item"><a class="breadcrumb__link" href="../index.html">홈</a></li>
+          <li class="breadcrumb__item"><a class="breadcrumb__link" href="dashboard.html">스토어</a></li>
+          <li class="breadcrumb__item"><span class="breadcrumb__current" aria-current="page">대시보드</span></li>
+        </ol>
       </nav>
 
-      <div class="sidebar__foot">
-        <span class="sidebar__avatar">MV</span>
-        <span class="sidebar__foot-meta">
-          <span class="sidebar__foot-name">Mara Velez</span>
-          <span class="sidebar__foot-sub">Owner · Pro</span>
-        </span>
+      <div class="dash__head">
+        <div>
+          <p class="eyebrow">7월 4일 (금) · 여름 신규가입 캠페인 7일차 · 4분 전 동기화</p>
+          <h1 class="dash__title">이번 주, <span class="highlight">신기록.</span></h1>
+        </div>
+        <div class="dash__head-actions">
+          <div class="segmented" role="radiogroup" aria-label="기간 선택">
+            <label><input type="radio" name="range" value="day"><span>일</span></label>
+            <label><input type="radio" name="range" value="week" checked><span>주</span></label>
+            <label><input type="radio" name="range" value="month"><span>월</span></label>
+          </div>
+          <button class="btn btn--primary" data-toast data-title="내보내기 시작" data-message="주간 리포트 PDF를 만드는 중입니다. 끝나면 알려드립니다." data-variant="info">
+            <svg width="18" height="18"><use href="#i-download"/></svg>
+            주간 리포트
+          </button>
+        </div>
       </div>
-    </aside>
 
-    <!-- ---------- MAIN ---------- -->
-    <main class="dash__main">
-      <div class="dash__inner">
-
-        <!-- breadcrumb + title + controls -->
-        <nav class="breadcrumb breadcrumb--chevron" aria-label="Breadcrumb">
-          <ol class="breadcrumb__list" role="list">
-            <li class="breadcrumb__item"><a class="breadcrumb__link" href="../index.html">Home</a></li>
-            <li class="breadcrumb__item"><a class="breadcrumb__link" href="#">Analytics</a></li>
-            <li class="breadcrumb__item"><span class="breadcrumb__current" aria-current="page">Overview</span></li>
-          </ol>
-        </nav>
-
-        <div class="dash__head">
-          <div>
-            <p class="eyebrow">Reporting · Last sync 4 min ago</p>
-            <h1 class="dash__title">Overview</h1>
+      <!-- ===== KPI 벤토 — 주간 매출이 2×2 파란 색면 ===== -->
+      <div class="kpi-bento" data-stagger>
+        <div class="stat stat--hero" data-reveal>
+          <div class="stat__top">
+            <span class="stat__label">이번 주 매출 · 6/28 – 7/4</span>
+            <span class="stat__icon" aria-hidden="true"><svg width="18" height="18"><use href="#i-won"/></svg></span>
           </div>
-          <div class="dash__head-actions">
-            <div class="segmented" role="group" aria-label="Date range">
-              <label><input type="radio" name="range" value="day"><span>Day</span></label>
-              <label><input type="radio" name="range" value="week" checked><span>Week</span></label>
-              <label><input type="radio" name="range" value="month"><span>Month</span></label>
-            </div>
-            <button class="btn btn--primary">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true" style="width:1.05em;height:1.05em"><path d="M12 3v12"/><polyline points="7 10 12 15 17 10"/><line x1="4" y1="20" x2="20" y2="20"/></svg>
-              Export
-            </button>
+          <div class="stat__value">₩4,821만</div>
+          <div class="stat__delta stat__delta--up">▲ 18.2% 지난주 대비</div>
+          <div class="spark" aria-hidden="true">
+            <span style="height:42%"></span><span style="height:58%"></span><span style="height:51%"></span><span style="height:66%"></span><span style="height:73%"></span><span style="height:64%"></span><span style="height:100%"></span>
           </div>
+          <p class="stat__note">캠페인 쿠폰 매출 ₩1,238만 포함 · 금요일 최고치</p>
         </div>
 
-        <!-- ===== STAT CARDS ===== -->
-        <div class="grid grid-4" style="margin-bottom: var(--space-5)">
-          <div class="stat stat--blue">
-            <div class="stat__top">
-              <span class="stat__label">Revenue</span>
-              <span class="stat__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:1.1em;height:1.1em"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 6.5C17 4.6 14.8 4 12 4S7 4.9 7 7s2.5 2.6 5 3 5 1 5 3.2-2.2 3.3-5 3.3-5-.8-5-2.8"/></svg>
-              </span>
-            </div>
-            <div class="stat__value">$84,120</div>
-            <div class="stat__delta stat__delta--up">▲ 12.4% vs last wk</div>
-            <div class="spark" aria-hidden="true">
-              <span style="height:38%"></span><span style="height:52%"></span><span style="height:44%"></span><span style="height:66%"></span><span style="height:58%"></span><span style="height:74%"></span><span style="height:88%"></span>
-            </div>
+        <div class="stat stat--lime kpi-a" data-reveal>
+          <div class="stat__top">
+            <span class="stat__label">신규 가입</span>
+            <span class="stat__icon" aria-hidden="true"><svg width="18" height="18"><use href="#i-user"/></svg></span>
           </div>
-
-          <div class="stat stat--lime">
-            <div class="stat__top">
-              <span class="stat__label">Active users</span>
-              <span class="stat__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:1.1em;height:1.1em"><circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17" cy="8" r="2.6"/><path d="M16 14a5 5 0 0 1 5 6"/></svg>
-              </span>
-            </div>
-            <div class="stat__value">12,480</div>
-            <div class="stat__delta stat__delta--up">▲ 3.1% vs last wk</div>
-            <div class="spark" aria-hidden="true">
-              <span style="height:50%"></span><span style="height:46%"></span><span style="height:60%"></span><span style="height:55%"></span><span style="height:64%"></span><span style="height:58%"></span><span style="height:70%"></span>
-            </div>
-          </div>
-
-          <div class="stat stat--pink">
-            <div class="stat__top">
-              <span class="stat__label">Orders</span>
-              <span class="stat__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:1.1em;height:1.1em"><path d="M5 7h14l-1.2 11.5a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8Z"/><path d="M8.5 7a3.5 3.5 0 0 1 7 0"/></svg>
-              </span>
-            </div>
-            <div class="stat__value">1,204</div>
-            <div class="stat__delta stat__delta--down">▼ 2.0% vs last wk</div>
-            <div class="spark" aria-hidden="true">
-              <span style="height:72%"></span><span style="height:64%"></span><span style="height:70%"></span><span style="height:58%"></span><span style="height:62%"></span><span style="height:50%"></span><span style="height:46%"></span>
-            </div>
-          </div>
-
-          <div class="stat stat--yellow">
-            <div class="stat__top">
-              <span class="stat__label">Churn rate</span>
-              <span class="stat__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:1.1em;height:1.1em"><path d="M3 6l7 7 4-4 7 7"/><polyline points="21 11 21 16 16 16"/></svg>
-              </span>
-            </div>
-            <div class="stat__value">1.8%</div>
-            <div class="stat__delta stat__delta--flat">▬ Flat vs last wk</div>
-            <div class="spark" aria-hidden="true">
-              <span style="height:54%"></span><span style="height:52%"></span><span style="height:55%"></span><span style="height:53%"></span><span style="height:54%"></span><span style="height:52%"></span><span style="height:54%"></span>
-            </div>
-          </div>
+          <div class="stat__value">1,847명</div>
+          <div class="stat__delta stat__delta--up">▲ 42.6% 캠페인 효과</div>
         </div>
 
-        <!-- ===== SPLIT: charts/table | activity ===== -->
-        <div class="dash__split">
-
-          <!-- LEFT COLUMN -->
-          <div class="charts-stack">
-
-            <!-- BAR CHART -->
-            <section class="card" aria-labelledby="bar-h">
-              <div class="card__head">
-                <h2 class="card__title" id="bar-h">Monthly revenue</h2>
-                <span class="badge badge--lime">FY 2026 · $928K</span>
-              </div>
-              <div class="card__body">
-                <div class="barchart">
-                  <div class="barchart__plot" role="img" aria-label="Bar chart of monthly revenue from January to December 2026">
-                    <div class="barchart__col"><div class="barchart__bar" style="height:48%"></div></div>
-                    <div class="barchart__col"><div class="barchart__bar" style="height:42%"></div></div>
-                    <div class="barchart__col"><div class="barchart__bar" style="height:55%"></div></div>
-                    <div class="barchart__col"><div class="barchart__bar" style="height:63%"></div></div>
-                    <div class="barchart__col"><div class="barchart__bar" style="height:58%"></div></div>
-                    <div class="barchart__col"><div class="barchart__bar" style="height:71%"></div></div>
-                    <div class="barchart__col"><div class="barchart__bar" style="height:66%"></div></div>
-                    <div class="barchart__col"><div class="barchart__bar" style="height:78%"></div></div>
-                    <div class="barchart__col"><div class="barchart__bar" style="height:84%"></div></div>
-                    <div class="barchart__col"><div class="barchart__bar" style="height:73%"></div></div>
-                    <div class="barchart__col"><div class="barchart__bar" style="height:91%"></div></div>
-                    <div class="barchart__col"><div class="barchart__bar" style="height:100%"></div></div>
-                  </div>
-                  <ol class="barchart__axis">
-                    <li>Jan</li><li>Feb</li><li>Mar</li><li>Apr</li><li>May</li><li>Jun</li>
-                    <li>Jul</li><li>Aug</li><li>Sep</li><li>Oct</li><li>Nov</li><li>Dec</li>
-                  </ol>
-                </div>
-              </div>
-            </section>
-
-            <!-- LINE CHART -->
-            <section class="card" aria-labelledby="line-h">
-              <div class="card__head">
-                <h2 class="card__title" id="line-h">Sessions vs last period</h2>
-                <span class="badge badge--blue">+8.6% WoW</span>
-              </div>
-              <div class="card__body">
-                <div class="linechart">
-                  <svg viewBox="0 0 600 220" preserveAspectRatio="none" role="img" aria-label="Line chart comparing this period and last period sessions over 8 weeks">
-                    <!-- gridlines -->
-                    <g stroke="var(--color-border-subtle)" stroke-width="1.5">
-                      <line x1="0" y1="20" x2="600" y2="20"/>
-                      <line x1="0" y1="70" x2="600" y2="70"/>
-                      <line x1="0" y1="120" x2="600" y2="120"/>
-                      <line x1="0" y1="170" x2="600" y2="170"/>
-                      <line x1="0" y1="200" x2="600" y2="200"/>
-                    </g>
-                    <!-- comparison line (pink) -->
-                    <polyline fill="none" stroke="var(--pink-500)" stroke-width="4" stroke-dasharray="8 6"
-                      points="20,160 100,150 180,158 260,130 340,140 420,118 500,128 580,108"/>
-                    <!-- primary line (blue) -->
-                    <polyline fill="none" stroke="var(--blue-500)" stroke-width="4"
-                      points="20,140 100,120 180,128 260,96 340,104 420,70 500,84 580,44"/>
-                    <!-- primary dots -->
-                    <g fill="var(--color-surface)" stroke="var(--blue-500)" stroke-width="4">
-                      <circle cx="20" cy="140" r="5"/><circle cx="100" cy="120" r="5"/><circle cx="180" cy="128" r="5"/>
-                      <circle cx="260" cy="96" r="5"/><circle cx="340" cy="104" r="5"/><circle cx="420" cy="70" r="5"/>
-                      <circle cx="500" cy="84" r="5"/><circle cx="580" cy="44" r="5"/>
-                    </g>
-                  </svg>
-                </div>
-                <div class="chart-legend">
-                  <span><i style="background:var(--blue-500)"></i> This period</span>
-                  <span><i style="background:var(--pink-500)"></i> Last period</span>
-                  <span style="margin-left:auto">Weeks W23 → W30</span>
-                </div>
-              </div>
-            </section>
-
-            <!-- TRANSACTIONS TABLE -->
-            <section aria-labelledby="tx-h">
-              <div class="cluster" style="justify-content:space-between;margin-bottom:var(--space-3)">
-                <h2 class="card__title" id="tx-h">Recent transactions</h2>
-                <div class="cluster gap-2">
-                  <button class="btn btn--ghost btn--sm">Filter</button>
-                  <a class="btn btn--secondary btn--sm" href="#">View all</a>
-                </div>
-              </div>
-              <div class="table-wrap">
-                <table class="table table--striped">
-                  <thead>
-                    <tr>
-                      <th class="table__check"><input type="checkbox" data-select-all aria-label="Select all rows"></th>
-                      <th data-sort="text" aria-sort="ascending" class="is-sorted-asc">Customer</th>
-                      <th data-sort="text">Date</th>
-                      <th data-sort="number" class="table__num">Amount</th>
-                      <th>Method</th>
-                      <th data-sort="text">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td class="table__check"><input type="checkbox" class="row-check" aria-label="Select row"></td>
-                      <td>Aria Whitfield</td><td>Jun 21, 2026</td><td class="table__num">$1,280.00</td>
-                      <td>Visa ··4821</td><td><span class="table__status table__status--ok">Paid</span></td>
-                    </tr>
-                    <tr>
-                      <td class="table__check"><input type="checkbox" class="row-check" aria-label="Select row"></td>
-                      <td>Devon Park</td><td>Jun 21, 2026</td><td class="table__num">$642.50</td>
-                      <td>Mastercard ··9930</td><td><span class="table__status table__status--pending">Pending</span></td>
-                    </tr>
-                    <tr>
-                      <td class="table__check"><input type="checkbox" class="row-check" aria-label="Select row"></td>
-                      <td>Noor Hassan</td><td>Jun 20, 2026</td><td class="table__num">$3,910.00</td>
-                      <td>ACH Transfer</td><td><span class="table__status table__status--ok">Paid</span></td>
-                    </tr>
-                    <tr>
-                      <td class="table__check"><input type="checkbox" class="row-check" aria-label="Select row"></td>
-                      <td>Sloane Mercer</td><td>Jun 20, 2026</td><td class="table__num">$215.00</td>
-                      <td>PayPal</td><td><span class="table__status table__status--off">Failed</span></td>
-                    </tr>
-                    <tr>
-                      <td class="table__check"><input type="checkbox" class="row-check" aria-label="Select row"></td>
-                      <td>Mateo Rivas</td><td>Jun 19, 2026</td><td class="table__num">$1,054.99</td>
-                      <td>Visa ··1107</td><td><span class="table__status table__status--ok">Paid</span></td>
-                    </tr>
-                    <tr>
-                      <td class="table__check"><input type="checkbox" class="row-check" aria-label="Select row"></td>
-                      <td>Priya Anand</td><td>Jun 19, 2026</td><td class="table__num">$789.00</td>
-                      <td>Amex ··2003</td><td><span class="table__status table__status--pending">Pending</span></td>
-                    </tr>
-                    <tr>
-                      <td class="table__check"><input type="checkbox" class="row-check" aria-label="Select row"></td>
-                      <td>Theo Lindqvist</td><td>Jun 18, 2026</td><td class="table__num">$2,460.00</td>
-                      <td>ACH Transfer</td><td><span class="table__status table__status--ok">Paid</span></td>
-                    </tr>
-                    <tr>
-                      <td class="table__check"><input type="checkbox" class="row-check" aria-label="Select row"></td>
-                      <td>Camila Duarte</td><td>Jun 18, 2026</td><td class="table__num">$148.75</td>
-                      <td>Mastercard ··6612</td><td><span class="table__status table__status--off">Refunded</span></td>
-                    </tr>
-                  </tbody>
-                  <tfoot>
-                    <tr><td colspan="6">
-                      <div class="table__foot">
-                        <span class="table__foot-info">Showing 8 of 1,204</span>
-                        <span class="table__pager">
-                          <button disabled aria-label="Previous page">‹</button>
-                          <button class="is-active" aria-current="page">1</button>
-                          <button>2</button>
-                          <button>3</button>
-                          <button>…</button>
-                          <button>151</button>
-                          <button aria-label="Next page">›</button>
-                        </span>
-                      </div>
-                    </td></tr>
-                  </tfoot>
-                </table>
-              </div>
-            </section>
-
+        <div class="stat kpi-b" data-reveal>
+          <div class="stat__top">
+            <span class="stat__label">주문</span>
+            <span class="stat__icon" aria-hidden="true"><svg width="18" height="18"><use href="#i-cart"/></svg></span>
           </div>
+          <div class="stat__value">926건</div>
+          <div class="stat__delta stat__delta--up">▲ 11.4% 지난주 대비</div>
+        </div>
 
-          <!-- RIGHT COLUMN: activity + timeline -->
-          <aside class="charts-stack" aria-label="Activity">
+        <div class="stat stat--pink kpi-c" data-reveal>
+          <div class="stat__top">
+            <span class="stat__label">결제 실패</span>
+            <span class="stat__icon" aria-hidden="true"><svg width="18" height="18"><use href="#i-warn"/></svg></span>
+          </div>
+          <div class="stat__value">31건</div>
+          <div class="stat__delta stat__delta--down">▼ 8건 급증 — 이상치</div>
+        </div>
 
-            <section class="card" aria-labelledby="act-h">
-              <div class="card__head">
-                <h2 class="card__title" id="act-h">Live activity</h2>
-                <span class="badge badge--pink">12 new</span>
-              </div>
-              <ul class="list list--flush" role="list" style="padding:0 var(--space-4)">
-                <li class="list__row">
-                  <span class="list__lead"><span class="avatar avatar--blue">AW</span></span>
-                  <span class="list__main">
-                    <span class="list__title">Aria Whitfield upgraded to Pro</span>
-                    <span class="list__meta">Subscription · 2 min ago</span>
-                  </span>
-                  <span class="list__trail"><span class="badge badge--lime">+$96</span></span>
-                </li>
-                <li class="list__row">
-                  <span class="list__lead"><span class="avatar avatar--pink">NH</span></span>
-                  <span class="list__main">
-                    <span class="list__title">Noor Hassan paid invoice #4821</span>
-                    <span class="list__meta">Payment · 9 min ago</span>
-                  </span>
-                  <span class="list__trail"><span class="badge badge--ink">$3.9K</span></span>
-                </li>
-                <li class="list__row">
-                  <span class="list__lead">
-                    <span class="list__lead list__lead--icon" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:1.1em;height:1.1em"><path d="M5 7h14l-1.2 11.5a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8Z"/><path d="M8.5 7a3.5 3.5 0 0 1 7 0"/></svg>
-                    </span>
-                  </span>
-                  <span class="list__main">
-                    <span class="list__title">New order from Theo Lindqvist</span>
-                    <span class="list__meta">Order #20418 · 14 min ago</span>
-                  </span>
-                  <span class="list__trail"><span class="badge badge--blue">3 items</span></span>
-                </li>
-                <li class="list__row">
-                  <span class="list__lead"><span class="avatar avatar--lime">SM</span></span>
-                  <span class="list__main">
-                    <span class="list__title">Sloane Mercer payment failed</span>
-                    <span class="list__meta">Payment · 22 min ago</span>
-                  </span>
-                  <span class="list__trail"><span class="badge badge--danger">Retry</span></span>
-                </li>
-                <li class="list__row">
-                  <span class="list__lead"><span class="avatar avatar--ink">PA</span></span>
-                  <span class="list__main">
-                    <span class="list__title">Priya Anand left a 5★ review</span>
-                    <span class="list__meta">Feedback · 41 min ago</span>
-                  </span>
-                  <span class="list__trail"><span class="badge badge--yellow">★ 5.0</span></span>
-                </li>
-              </ul>
-            </section>
+        <div class="stat stat--yellow kpi-d" data-reveal>
+          <div class="stat__top">
+            <span class="stat__label">재구매율</span>
+            <span class="stat__icon" aria-hidden="true"><svg width="18" height="18"><use href="#i-loop"/></svg></span>
+          </div>
+          <div class="stat__value">27.4%</div>
+          <div class="stat__delta stat__delta--flat">▬ 보합</div>
+        </div>
+      </div>
 
-            <section class="card" aria-labelledby="tl-h">
-              <div class="card__head">
-                <h2 class="card__title" id="tl-h">System events</h2>
-              </div>
-              <div class="card__body">
-                <ol class="timeline" role="list">
-                  <li class="timeline__item">
-                    <span class="timeline__node timeline__node--blue" aria-hidden="true"></span>
-                    <div class="timeline__entry">
-                      <span class="timeline__time">14:08 · Today</span>
-                      <h3 class="timeline__title">Deploy v4.2 shipped</h3>
-                      <p class="timeline__body" style="font-size:var(--text-sm);color:var(--color-text-muted)">Checkout API promoted to production with zero downtime.</p>
-                    </div>
-                  </li>
-                  <li class="timeline__item">
-                    <span class="timeline__node timeline__node--lime" aria-hidden="true"></span>
-                    <div class="timeline__entry">
-                      <span class="timeline__time">11:32 · Today</span>
-                      <h3 class="timeline__title">Nightly export complete</h3>
-                      <p class="timeline__body" style="font-size:var(--text-sm);color:var(--color-text-muted)">42,910 rows synced to the warehouse.</p>
-                    </div>
-                  </li>
-                  <li class="timeline__item">
-                    <span class="timeline__node timeline__node--pink" aria-hidden="true"></span>
-                    <div class="timeline__entry">
-                      <span class="timeline__time">09:15 · Today</span>
-                      <h3 class="timeline__title">Spike in EU traffic</h3>
-                      <p class="timeline__body" style="font-size:var(--text-sm);color:var(--color-text-muted)">+38% sessions from Berlin & Paris regions.</p>
-                    </div>
-                  </li>
-                  <li class="timeline__item">
-                    <span class="timeline__node timeline__node--num" aria-hidden="true">0</span>
-                    <div class="timeline__entry">
-                      <span class="timeline__time">02:00 · Today</span>
-                      <h3 class="timeline__title">Backups verified</h3>
-                      <p class="timeline__body" style="font-size:var(--text-sm);color:var(--color-text-muted)">All 6 region snapshots passed integrity check.</p>
-                    </div>
-                  </li>
+      <!-- 이상치의 사연 — 장면 속 사건 -->
+      <div class="alert alert--accent mb-5" data-reveal role="status">
+        <span class="alert__icon" aria-hidden="true">!</span>
+        <div class="alert__body">
+          <div class="alert__title">카카오페이 결제 실패 31건 — 오후 2시대 집중</div>
+          <div class="alert__msg">PG사 정기 점검(오후 2:00–3:00)과 겹쳤습니다. 실패 주문은 자동 재시도 대기열에 있습니다.</div>
+        </div>
+        <a class="btn btn--secondary btn--sm" href="#tx-h">실패 내역 보기</a>
+      </div>
+
+      <!-- ===== 분할: 차트·테이블 | 활동 ===== -->
+      <div class="dash__split">
+
+        <!-- LEFT -->
+        <div class="charts-stack">
+
+          <!-- 막대 차트 -->
+          <section class="card" aria-labelledby="bar-h" data-reveal>
+            <div class="card__head">
+              <h2 class="card__title" id="bar-h">월간 매출 — 최근 12개월</h2>
+              <span class="badge badge--lime">누적 ₩6.37억</span>
+            </div>
+            <div class="card__body">
+              <div class="barchart">
+                <div class="barchart__plot" role="img" aria-label="최근 12개월 매출 막대 차트. 2025년 7월 4,120만 원에서 시작해 추석이 낀 9월과 연말 12월에 오르고, 2026년 2월 3,480만 원까지 내려앉은 뒤 캠페인이 시작된 6월 9,160만 원으로 최고치를 기록.">
+                  <div class="barchart__col"><div class="barchart__bar" style="height:45%"></div></div>
+                  <div class="barchart__col"><div class="barchart__bar" style="height:42%"></div></div>
+                  <div class="barchart__col"><div class="barchart__bar" style="height:58%"></div></div>
+                  <div class="barchart__col"><div class="barchart__bar" style="height:48%"></div></div>
+                  <div class="barchart__col"><div class="barchart__bar" style="height:63%"></div></div>
+                  <div class="barchart__col"><div class="barchart__bar" style="height:78%"></div></div>
+                  <div class="barchart__col"><div class="barchart__bar" style="height:52%"></div></div>
+                  <div class="barchart__col"><div class="barchart__bar" style="height:38%"></div></div>
+                  <div class="barchart__col"><div class="barchart__bar" style="height:49%"></div></div>
+                  <div class="barchart__col"><div class="barchart__bar" style="height:55%"></div></div>
+                  <div class="barchart__col"><div class="barchart__bar" style="height:68%"></div></div>
+                  <div class="barchart__col barchart__col--peak"><div class="barchart__bar" style="height:100%"></div></div>
+                </div>
+                <ol class="barchart__axis" aria-hidden="true">
+                  <li>7월</li><li>8월</li><li>9월</li><li>10월</li><li>11월</li><li>12월</li>
+                  <li>1월</li><li>2월</li><li>3월</li><li>4월</li><li>5월</li><li>6월</li>
                 </ol>
               </div>
-            </section>
+            </div>
+          </section>
 
-          </aside>
+          <!-- 라인 차트 -->
+          <section class="card" aria-labelledby="line-h" data-reveal>
+            <div class="card__head">
+              <h2 class="card__title" id="line-h">방문 세션 — 최근 8주</h2>
+              <span class="badge badge--blue">▲ 21.3% 캠페인 주간</span>
+            </div>
+            <div class="card__body">
+              <div class="linechart">
+                <svg viewBox="0 0 600 220" preserveAspectRatio="none" role="img" aria-label="최근 8주와 직전 8주의 방문 세션 비교 라인 차트. 최근 8주가 매주 앞서고, 캠페인이 시작된 마지막 주에 21.3% 상승.">
+                  <g class="grid-line" stroke-width="1.5">
+                    <line x1="0" y1="20" x2="600" y2="20"/>
+                    <line x1="0" y1="70" x2="600" y2="70"/>
+                    <line x1="0" y1="120" x2="600" y2="120"/>
+                    <line x1="0" y1="170" x2="600" y2="170"/>
+                    <line x1="0" y1="200" x2="600" y2="200"/>
+                  </g>
+                  <polyline class="line--prev" fill="none" stroke-width="4" stroke-dasharray="8 6"
+                    points="20,160 100,150 180,158 260,130 340,140 420,118 500,128 580,108"/>
+                  <polyline class="line--cur" fill="none" stroke-width="4"
+                    points="20,140 100,120 180,128 260,96 340,104 420,70 500,84 580,44"/>
+                  <g class="dot" stroke-width="4">
+                    <circle cx="20" cy="140" r="5"/><circle cx="100" cy="120" r="5"/><circle cx="180" cy="128" r="5"/>
+                    <circle cx="260" cy="96" r="5"/><circle cx="340" cy="104" r="5"/><circle cx="420" cy="70" r="5"/>
+                    <circle cx="500" cy="84" r="5"/><circle cx="580" cy="44" r="5"/>
+                  </g>
+                </svg>
+              </div>
+              <div class="chart-legend">
+                <span><i class="key--blue"></i> 최근 8주</span>
+                <span><i class="key--pink"></i> 직전 8주</span>
+                <span style="margin-left:auto">5월 2주 → 7월 1주</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- 결제 테이블 -->
+          <section aria-labelledby="tx-h" data-reveal>
+            <div class="cluster justify-between mb-3">
+              <h2 class="card__title" id="tx-h">최근 결제</h2>
+              <div class="cluster gap-2">
+                <button class="btn btn--ghost btn--sm" data-toast data-title="필터" data-message="결제 수단·상태별 필터는 곧 열립니다." data-variant="info">필터</button>
+                <a class="btn btn--secondary btn--sm" href="inbox.html">전체 보기</a>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table class="table table--striped">
+                <thead>
+                  <tr>
+                    <th class="table__check"><input type="checkbox" data-select-all aria-label="전체 선택"></th>
+                    <th data-sort="text" aria-sort="ascending" class="is-sorted-asc">고객</th>
+                    <th data-sort="text">일자</th>
+                    <th data-sort="number" class="table__num">금액</th>
+                    <th>결제 수단</th>
+                    <th data-sort="text">상태</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="table__check"><input type="checkbox" class="row-check" aria-label="행 선택"></td>
+                    <td>김하늘</td><td>7월 4일</td><td class="table__num">₩256,000</td>
+                    <td>카카오페이</td><td><span class="table__status table__status--ok">결제 완료</span></td>
+                  </tr>
+                  <tr>
+                    <td class="table__check"><input type="checkbox" class="row-check" aria-label="행 선택"></td>
+                    <td>강다은</td><td>7월 4일</td><td class="table__num">₩128,000</td>
+                    <td>카카오페이</td><td><span class="table__status table__status--off">실패</span></td>
+                  </tr>
+                  <tr>
+                    <td class="table__check"><input type="checkbox" class="row-check" aria-label="행 선택"></td>
+                    <td>박준서</td><td>7월 4일</td><td class="table__num">₩182,000</td>
+                    <td>토스</td><td><span class="table__status table__status--ok">결제 완료</span></td>
+                  </tr>
+                  <tr>
+                    <td class="table__check"><input type="checkbox" class="row-check" aria-label="행 선택"></td>
+                    <td>이서윤</td><td>7월 3일</td><td class="table__num">₩54,000</td>
+                    <td>현대카드 ··4821</td><td><span class="table__status table__status--ok">결제 완료</span></td>
+                  </tr>
+                  <tr>
+                    <td class="table__check"><input type="checkbox" class="row-check" aria-label="행 선택"></td>
+                    <td>정민재</td><td>7월 3일</td><td class="table__num">₩384,000</td>
+                    <td>무통장입금</td><td><span class="table__status table__status--pending">입금 대기</span></td>
+                  </tr>
+                  <tr>
+                    <td class="table__check"><input type="checkbox" class="row-check" aria-label="행 선택"></td>
+                    <td>최유나</td><td>7월 3일</td><td class="table__num">₩92,000</td>
+                    <td>신한카드 ··0293</td><td><span class="table__status table__status--ok">결제 완료</span></td>
+                  </tr>
+                  <tr>
+                    <td class="table__check"><input type="checkbox" class="row-check" aria-label="행 선택"></td>
+                    <td>오세훈</td><td>7월 2일</td><td class="table__num">₩38,000</td>
+                    <td>토스</td><td><span class="table__status table__status--off">환불</span></td>
+                  </tr>
+                  <tr>
+                    <td class="table__check"><input type="checkbox" class="row-check" aria-label="행 선택"></td>
+                    <td>윤지아</td><td>7월 2일</td><td class="table__num">₩166,000</td>
+                    <td>현대카드 ··7702</td><td><span class="table__status table__status--ok">결제 완료</span></td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr><td colspan="6">
+                    <div class="table__foot">
+                      <span class="table__foot-info">926건 중 8건 표시</span>
+                      <span class="table__pager">
+                        <button disabled aria-label="이전 페이지">‹</button>
+                        <button class="is-active" aria-current="page">1</button>
+                        <button>2</button>
+                        <button>3</button>
+                        <button>…</button>
+                        <button>116</button>
+                        <button aria-label="다음 페이지">›</button>
+                      </span>
+                    </div>
+                  </td></tr>
+                </tfoot>
+              </table>
+            </div>
+          </section>
 
         </div>
+
+        <!-- RIGHT: 활동 + 시스템 이벤트 -->
+        <aside class="charts-stack" aria-label="실시간 활동">
+
+          <section class="card" aria-labelledby="act-h" data-reveal>
+            <div class="card__head">
+              <h2 class="card__title" id="act-h">실시간 활동</h2>
+              <span class="badge badge--pink">새 알림 12건</span>
+            </div>
+            <ul class="list list--flush" role="list" style="padding:0 var(--space-4)">
+              <li class="list__row">
+                <span class="list__lead"><span class="avatar avatar--blue">김</span></span>
+                <span class="list__main">
+                  <span class="list__title">김하늘 님, 무접점 키보드 K3 화이트 2대 주문</span>
+                  <span class="list__meta">주문번호 20260704-004821 · 방금 전</span>
+                </span>
+                <span class="list__trail"><span class="badge badge--lime">+₩256,000</span></span>
+              </li>
+              <li class="list__row">
+                <span class="list__lead"><span class="list__lead list__lead--icon" aria-hidden="true"><svg width="18" height="18"><use href="#i-bolt"/></svg></span></span>
+                <span class="list__main">
+                  <span class="list__title">쿠폰 SUMMER-25, 847번째 사용</span>
+                  <span class="list__meta">여름 신규가입 캠페인 · 4분 전</span>
+                </span>
+                <span class="list__trail"><span class="badge badge--yellow">−25%</span></span>
+              </li>
+              <li class="list__row">
+                <span class="list__lead"><span class="avatar avatar--pink">강</span></span>
+                <span class="list__main">
+                  <span class="list__title">강다은 님 카카오페이 결제 실패</span>
+                  <span class="list__meta">PG 점검 시간대 · 12분 전</span>
+                </span>
+                <span class="list__trail"><span class="badge badge--danger">재시도</span></span>
+              </li>
+              <li class="list__row">
+                <span class="list__lead"><span class="avatar avatar--lime">박</span></span>
+                <span class="list__main">
+                  <span class="list__title">박준서 님이 리뷰를 남겼습니다</span>
+                  <span class="list__meta">"소리가 진짜 안 나요" · 26분 전</span>
+                </span>
+                <span class="list__trail"><span class="badge badge--yellow">★ 5.0</span></span>
+              </li>
+              <li class="list__row">
+                <span class="list__lead"><span class="list__lead list__lead--icon" aria-hidden="true"><svg width="18" height="18"><use href="#i-box"/></svg></span></span>
+                <span class="list__main">
+                  <span class="list__title">재고 경고 — 알루미늄 키캡 세트</span>
+                  <span class="list__meta">12개 남음 · 41분 전</span>
+                </span>
+                <span class="list__trail"><span class="badge badge--ink">발주</span></span>
+              </li>
+            </ul>
+          </section>
+
+          <section class="card" aria-labelledby="tl-h" data-reveal>
+            <div class="card__head">
+              <h2 class="card__title" id="tl-h">시스템 이벤트</h2>
+            </div>
+            <div class="card__body">
+              <ol class="timeline" role="list">
+                <li class="timeline__item">
+                  <span class="timeline__node timeline__node--blue" aria-hidden="true"></span>
+                  <div class="timeline__entry">
+                    <span class="timeline__time">오전 9:40 · 오늘</span>
+                    <h3 class="timeline__title">캠페인 배너 v2 배포</h3>
+                    <p class="timeline__body text-sm text-muted">A/B 테스트 승자안 적용 — 전환율 3.1%p 우세.</p>
+                  </div>
+                </li>
+                <li class="timeline__item">
+                  <span class="timeline__node timeline__node--lime" aria-hidden="true"></span>
+                  <div class="timeline__entry">
+                    <span class="timeline__time">오전 8:00 · 오늘</span>
+                    <h3 class="timeline__title">일일 정산 완료</h3>
+                    <p class="timeline__body text-sm text-muted">7월 3일 매출 ₩741만 확정 · 오차 0건.</p>
+                  </div>
+                </li>
+                <li class="timeline__item">
+                  <span class="timeline__node timeline__node--pink" aria-hidden="true"></span>
+                  <div class="timeline__entry">
+                    <span class="timeline__time">오전 6:30 · 오늘</span>
+                    <h3 class="timeline__title">PG 점검 공지 수신</h3>
+                    <p class="timeline__body text-sm text-muted">카카오페이 오후 2:00–3:00 — 실패 건 자동 재시도 예약.</p>
+                  </div>
+                </li>
+                <li class="timeline__item">
+                  <span class="timeline__node timeline__node--num" aria-hidden="true">0</span>
+                  <div class="timeline__entry">
+                    <span class="timeline__time">오전 2:00 · 오늘</span>
+                    <h3 class="timeline__title">백업 검증</h3>
+                    <p class="timeline__body text-sm text-muted">스냅샷 6개 전부 무결성 통과.</p>
+                  </div>
+                </li>
+              </ol>
+            </div>
+          </section>
+
+        </aside>
+
       </div>
+    </div>
 
-      <!-- FOOTER -->
-      <footer class="navbar" style="justify-content:space-between">
-        <span class="mono-label text-muted">© 2026 Neobrut Analytics</span>
-        <nav class="cluster gap-3" aria-label="Footer">
-          <a class="navbar__link" href="#">Status</a>
-          <a class="navbar__link" href="#">Docs</a>
-          <a class="navbar__link" href="#">Privacy</a>
-        </nav>
-      </footer>
-    </main>
+    <!-- FOOTER 명판 -->
+    <footer class="dash-foot" role="contentinfo">
+      <span class="mono-label text-muted">NEO//BRUTAL · 커머스 관제반 · 서울에서 조판 · 2026</span>
+      <nav class="cluster gap-3" aria-label="푸터">
+        <a class="navbar__link" href="../index.html">시스템 홈</a>
+        <a class="navbar__link" href="settings.html">설정</a>
+        <a class="navbar__link" href="profile.html">프로필</a>
+      </nav>
+    </footer>
+  </main>
 
+</div>
+
+<!-- ====================== 모바일 내비 드로어 ====================== -->
+<div class="drawer" data-drawer="mobile-nav" data-side="right" role="dialog" aria-modal="true" aria-label="모바일 메뉴" hidden>
+  <div class="drawer__panel">
+    <div class="drawer__head drawer__head--yellow"><div><p class="drawer__eyebrow">NEO//BRUTAL</p><h3 class="drawer__title">메뉴</h3></div><button class="drawer__close" data-drawer-close aria-label="닫기">&times;</button></div>
+    <div class="drawer__body">
+      <nav class="mobile-nav" aria-label="모바일 메뉴">
+        <!-- ≤1024px에서 워크스페이스 사이드바가 숨으므로, 사이드바 전 경로를 여기 승격 -->
+        <a class="mobile-nav__link" href="../index.html"><span class="mobile-nav__num">00</span>홈</a>
+        <a class="mobile-nav__link" href="dashboard.html" aria-current="page"><span class="mobile-nav__num">01</span>대시보드</a>
+        <a class="mobile-nav__link" href="inbox.html"><span class="mobile-nav__num">02</span>받은편지함</a>
+        <a class="mobile-nav__link" href="kanban.html"><span class="mobile-nav__num">03</span>작업 보드</a>
+        <a class="mobile-nav__link" href="product.html"><span class="mobile-nav__num">04</span>상품</a>
+        <a class="mobile-nav__link" href="pricing.html"><span class="mobile-nav__num">05</span>요금제</a>
+        <a class="mobile-nav__link" href="settings.html"><span class="mobile-nav__num">06</span>설정</a>
+        <a class="mobile-nav__link" href="profile.html"><span class="mobile-nav__num">07</span>프로필</a>
+      </nav>
+    </div>
+    <div class="drawer__foot"><button class="btn btn--secondary btn--block" data-theme-toggle>라이트 / 다크 전환</button></div>
   </div>
+</div>
 
-  <script src="../app.js"></script>
+<!-- ====================== 커맨드 팔레트 ====================== -->
+<div class="cmdk" data-command-palette role="dialog" aria-modal="true" aria-label="커맨드 팔레트" hidden>
+  <div class="cmdk__panel">
+    <div class="cmdk__search"><span class="cmdk__search-icon"><svg width="18" height="18"><use href="#i-search"/></svg></span><input class="cmdk__input" data-command-input placeholder="명령어 입력 또는 검색…" aria-label="명령어"><kbd class="cmdk__hint">ESC</kbd></div>
+    <div class="cmdk__results">
+      <p class="cmdk__group">이동</p>
+      <button class="cmdk__item is-active" data-command-item="받은편지함으로 이동"><span class="cmdk__item-icon"><svg width="16" height="16"><use href="#i-mail"/></svg></span><span class="cmdk__item-label">받은편지함으로 이동</span><kbd class="cmdk__item-kbd">G I</kbd></button>
+      <button class="cmdk__item" data-command-item="작업 보드로 이동"><span class="cmdk__item-icon"><svg width="16" height="16"><use href="#i-board"/></svg></span><span class="cmdk__item-label">작업 보드로 이동</span><kbd class="cmdk__item-kbd">G B</kbd></button>
+      <button class="cmdk__item" data-command-item="설정 열기"><span class="cmdk__item-icon"><svg width="16" height="16"><use href="#i-gear"/></svg></span><span class="cmdk__item-label">설정 열기</span><kbd class="cmdk__item-kbd">G S</kbd></button>
+      <p class="cmdk__group">작업</p>
+      <button class="cmdk__item" data-command-item="주간 리포트 내보내기"><span class="cmdk__item-icon"><svg width="16" height="16"><use href="#i-download"/></svg></span><span class="cmdk__item-label">주간 리포트 내보내기</span><kbd class="cmdk__item-kbd">E</kbd></button>
+      <button class="cmdk__item" data-command-item="다크 모드 전환"><span class="cmdk__item-icon"><svg width="16" height="16"><use href="#i-moon"/></svg></span><span class="cmdk__item-label">다크 모드 전환</span></button>
+      <p class="cmdk__empty" data-command-empty hidden>결과가 없습니다.</p>
+    </div>
+    <div class="cmdk__foot"><span><kbd>↑</kbd><kbd>↓</kbd> 이동</span><span><kbd>↵</kbd> 선택</span></div>
+  </div>
+</div>
+
+<script src="../app.js"></script>
 </body>
 </html>

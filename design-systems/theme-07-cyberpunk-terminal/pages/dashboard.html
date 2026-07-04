@@ -1,9 +1,19 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OPS DASHBOARD // CYBER.TERM</title>
+<!-- FOUC 방지: 저장 테마를 렌더 전에 동기 적용 (키는 app.js Theme.KEY 와 동일) -->
+<script>
+(function () {
+  try {
+    var t = localStorage.getItem("ct-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../semantic.css">
 <link rel="stylesheet" href="../base.css">
@@ -21,25 +31,25 @@
   .ops {
     display: flex;
     align-items: stretch;
-    min-height: calc(100vh - 60px);
+    min-height: calc(100dvh - 60px);
   }
   .ops__sidebar {
     position: sticky;
     top: 60px;
     align-self: flex-start;
-    height: calc(100vh - 60px);
+    height: calc(100dvh - 60px);
   }
+  /* 배경 radial 복붙 제거 — 씬 엔진(.scene-glow + body[data-scene="ops"])이 담당 */
   .ops__main {
     flex: 1 1 auto;
     min-width: 0;
+    position: relative;
     padding: var(--space-6);
     display: flex;
     flex-direction: column;
     gap: var(--space-6);
-    background:
-      radial-gradient(70% 50% at 80% -5%, rgba(var(--rgb-magenta) / .06), transparent 70%),
-      radial-gradient(60% 50% at 0% 0%, rgba(var(--rgb-cyan) / .06), transparent 70%);
   }
+  .ops__main > :not(.scene-glow) { position: relative; z-index: 1; }
 
   /* ---- header bar ---- */
   .ops__header {
@@ -63,12 +73,21 @@
     gap: var(--space-6);
     align-items: start;
   }
+  /* KPI 벤토 — 균등 4칸 스탯 스트립 금지: 주인공 지표 하나를 2×2 히어로 pane 으로 */
   .ops__kpis {
     grid-column: 1 / -1;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
+    grid-template-areas:
+      "hero hero a b"
+      "hero hero c d";
     gap: var(--space-4);
   }
+  .kpi--hero { grid-area: hero; display: flex; flex-direction: column; }
+  .kpi--hero .ct-stat__value { font-size: clamp(var(--text-3xl), 4.5vw, var(--text-5xl)); }
+  .kpi--hero .kpi__spark { height: 92px; margin-top: auto; }
+  .kpi--hero .kpi__note { font-size: var(--text-2xs); color: var(--color-text-subtle); letter-spacing: var(--tracking-wide); margin-top: var(--space-2); }
+  .kpi-a { grid-area: a; } .kpi-b { grid-area: b; } .kpi-c { grid-area: c; } .kpi-d { grid-area: d; }
   .ops__chart  { grid-column: 1 / 2; }
   .ops__rail   { grid-column: 2 / 3; display: flex; flex-direction: column; gap: var(--space-6); }
   .ops__table  { grid-column: 1 / -1; }
@@ -110,7 +129,11 @@
     .ops__chart, .ops__rail, .ops__table, .ops__log { grid-column: 1 / -1; }
     .ops__rail { flex-direction: row; flex-wrap: wrap; }
     .ops__rail > * { flex: 1 1 320px; }
-    .ops__kpis { grid-template-columns: repeat(2, 1fr); }
+    .ops__kpis {
+      grid-template-columns: repeat(2, 1fr);
+      grid-template-areas: "hero hero" "a b" "c d";
+    }
+    .kpi--hero .kpi__spark { height: 72px; }
   }
   @media (max-width: 900px) {
     /* sidebar collapses to a horizontal icon/label rail pinned at the top of main column */
@@ -137,25 +160,27 @@
     .ops__main { padding: var(--space-4); }
   }
   @media (max-width: 560px) {
-    .ops__kpis { grid-template-columns: 1fr; }
+    .ops__kpis { grid-template-columns: 1fr; grid-template-areas: "hero" "a" "b" "c" "d"; }
     .ops__header { align-items: stretch; }
     .ops__controls { width: 100%; }
   }
 </style>
 </head>
-<body>
-<a class="skip-link" href="#main">CONTENT 로 건너뛰기</a>
-<div class="crt-overlay" aria-hidden="true"></div>
+<body data-scene="ops">
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
+<div class="crt-overlay" aria-hidden="true">
+  <span class="crt-overlay__osd">TERM-07 // FEED LIVE · 60Hz · SIGNAL OK</span>
+</div>
 
 <header class="ct-navbar">
   <div class="container flex items-center justify-between" style="height:60px;">
     <a class="ct-navbar__brand" href="../index.html"><span class="t-accent">◢</span> CYBER<span class="t-primary">.</span>TERM</a>
     <nav class="ct-navbar__nav" aria-label="주요">
-      <a class="ct-navbar__link" href="../index.html">HOME</a>
+      <a class="ct-navbar__link" href="../index.html" data-navline>HOME</a>
       <a class="ct-navbar__link is-active" href="dashboard.html" aria-current="page">DASH</a>
-      <a class="ct-navbar__link" href="kanban.html">KANBAN</a>
-      <a class="ct-navbar__link" href="inbox.html">INBOX</a>
-      <a class="ct-navbar__link" href="settings.html">SETTINGS</a>
+      <a class="ct-navbar__link" href="kanban.html" data-navline>KANBAN</a>
+      <a class="ct-navbar__link" href="inbox.html" data-navline>INBOX</a>
+      <a class="ct-navbar__link" href="settings.html" data-navline>SETTINGS</a>
     </nav>
     <div class="ct-navbar__actions flex items-center gap-2">
       <button class="ct-btn ct-btn--secondary ct-btn--sm" data-cmdk-open>SEARCH <span class="ct-kbd">⌘K</span></button>
@@ -166,7 +191,18 @@
 </header>
 
 <main id="main" class="site-main">
-  <div class="ops">
+
+  <!-- tmux 세션 스테이터스라인 — 관제 세션 픽션 (장식, 실시간 시계) -->
+  <div class="ct-statusline" aria-hidden="true">
+    <span class="ct-statusline__seg ct-statusline__seg--session">ops-07</span>
+    <span class="ct-statusline__seg"><span class="ct-statusline__key">deploy</span><span class="ct-statusline__val">api@2.6.3 · canary 12%</span></span>
+    <span class="ct-statusline__seg"><span class="ct-statusline__key">err</span><span class="ct-statusline__val t-success">0.12%</span></span>
+    <span class="ct-statusline__seg hide-sm"><span class="ct-statusline__key">nodes</span><span class="ct-statusline__val">42/45</span></span>
+    <span class="ct-statusline__seg hide-sm"><span class="ct-statusline__key">retry.q</span><span class="ct-statusline__val t-warning">14</span></span>
+    <span class="ct-statusline__seg ct-statusline__seg--end"><span class="ct-statusline__val" data-clock>--:--:--</span><span class="ct-statusline__key">KST</span></span>
+  </div>
+
+  <div class="ops" id="ops">
 
     <!-- ============================ SIDEBAR ============================ -->
     <nav class="ct-sidebar ops__sidebar" aria-label="앱 내비게이션">
@@ -189,14 +225,14 @@
           <span class="ct-sidebar__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg></span>
           <span class="ct-sidebar__label">Logs</span>
         </a>
-        <a class="ct-sidebar__item" href="#billing">
+        <a class="ct-sidebar__item" href="pricing.html">
           <span class="ct-sidebar__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14"/><path d="M2 10h20"/></svg></span>
           <span class="ct-sidebar__label">Billing</span>
         </a>
       </div>
       <div class="ct-sidebar__section">
         <span class="ct-sidebar__section-label ct-sidebar__section-label--path">SYSTEM</span>
-        <a class="ct-sidebar__item" href="#users">
+        <a class="ct-sidebar__item" href="profile.html">
           <span class="ct-sidebar__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2"/><path d="M17 8h4M19 6v4"/></svg></span>
           <span class="ct-sidebar__label">Users</span>
         </a>
@@ -213,12 +249,13 @@
 
     <!-- ============================ MAIN ============================ -->
     <section class="ops__main" aria-label="대시보드 본문">
+      <div class="scene-glow" aria-hidden="true"></div>
 
       <!-- ---- 1. HEADER BAR ---- -->
       <div class="ops__header">
         <div>
           <nav class="ct-breadcrumb" aria-label="경로">
-            <a class="ct-breadcrumb__item ct-breadcrumb__item--root" href="../index.html"></a>
+            <a class="ct-breadcrumb__item ct-breadcrumb__item--root" href="../index.html" aria-label="홈"></a>
             <span class="ct-breadcrumb__sep">/</span>
             <a class="ct-breadcrumb__item" href="#ops">ops</a>
             <span class="ct-breadcrumb__sep">/</span>
@@ -234,7 +271,7 @@
               <option>Last 30d</option>
             </select>
           </div>
-          <button class="ct-btn ct-btn--secondary">
+          <button class="ct-btn ct-btn--secondary" data-toast="metrics_24h.csv 내보내기를 시작했습니다 · 4,318행" data-toast-title="EXPORT" data-toast-variant="info">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>
             EXPORT
           </button>
@@ -242,15 +279,42 @@
                   data-toast="메트릭 스트림을 다시 가져왔습니다 · 12개 노드 갱신" data-toast-title="REFRESHED" data-toast-variant="success">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
           </button>
-          <button class="ct-btn ct-btn--primary">NEW QUERY</button>
+          <button class="ct-btn ct-btn--primary" data-cmdk-open>NEW QUERY</button>
         </div>
       </div>
 
-      <!-- ---- 2. KPI ROW ---- -->
+      <!-- ---- 1b. INCIDENT ALERT — 이 페이지의 사건: webhooks 워커 타임아웃 재발 ---- -->
+      <div class="ct-alert ct-alert--warning" role="status">
+        <span class="ct-alert__icon" aria-hidden="true">▲</span>
+        <div class="ct-alert__title">WARN :: webhooks dispatch worker 타임아웃 재발</div>
+        <div class="ct-alert__body">
+          14:07:15 이후 500 응답 2건 · 재시도 큐 14건 적체 중입니다. <span class="t-accent nowrap">api@2.6.3</span> 카나리는 12%로 유지합니다.
+        </div>
+        <div class="ct-alert__actions">
+          <button class="ct-btn ct-btn--secondary ct-btn--sm" data-toast="런북 RB-2291을 새 pane에서 열었습니다" data-toast-title="RUNBOOK" data-toast-variant="info">런북 열기</button>
+          <button class="ct-btn ct-btn--ghost ct-btn--sm" data-toast="webhooks 경보를 30분간 음소거했습니다 · 14:38에 재개됩니다" data-toast-title="MUTED" data-toast-variant="warning">30분 음소거</button>
+        </div>
+      </div>
+
+      <!-- ---- 2. KPI BENTO — 주인공(REQUESTS) 2×2 히어로 pane + 위성 지표 4 ---- -->
       <section class="ops__kpis" aria-label="핵심 지표">
 
+        <!-- HERO: Requests -->
+        <div class="ct-stat hud kpi--hero" data-pane="pane 1:0" data-reveal>
+          <span class="ct-stat__label">REQUESTS · 24H</span>
+          <span class="ct-stat__value neon">1.24<span class="ct-stat__unit">M</span></span>
+          <span class="ct-stat__delta ct-stat__delta--up">8.1%</span>
+          <span class="kpi__note">피크 18.6K/min · 14:02 — 여름 트래픽 최고치 경신</span>
+          <span class="ct-stat__spark kpi__spark" aria-hidden="true">
+            <svg viewBox="0 0 120 36" preserveAspectRatio="none" fill="none" style="color:var(--color-primary)">
+              <polyline points="0,28 12,26 24,22 36,24 48,18 60,20 72,14 84,15 96,10 108,11 120,5" stroke="currentColor" stroke-width="2"/>
+              <circle cx="120" cy="5" r="2.5" class="fill"/>
+            </svg>
+          </span>
+        </div>
+
         <!-- Uptime -->
-        <div class="ct-stat hud">
+        <div class="ct-stat kpi-a" data-reveal>
           <span class="ct-stat__label">UPTIME</span>
           <span class="ct-stat__value neon">99.98<span class="ct-stat__unit">%</span></span>
           <span class="ct-stat__delta ct-stat__delta--up">0.4%</span>
@@ -262,21 +326,8 @@
           </span>
         </div>
 
-        <!-- Requests -->
-        <div class="ct-stat">
-          <span class="ct-stat__label">REQUESTS</span>
-          <span class="ct-stat__value neon">1.24<span class="ct-stat__unit">M</span></span>
-          <span class="ct-stat__delta ct-stat__delta--up">8.1%</span>
-          <span class="ct-stat__spark kpi__spark" aria-hidden="true">
-            <svg viewBox="0 0 120 36" preserveAspectRatio="none" fill="none" style="color:var(--color-primary)">
-              <polyline points="0,28 12,26 24,22 36,24 48,18 60,20 72,14 84,15 96,10 108,11 120,5" stroke="currentColor" stroke-width="2"/>
-              <circle cx="120" cy="5" r="2.5" class="fill"/>
-            </svg>
-          </span>
-        </div>
-
         <!-- Error Rate (down is GOOD) -->
-        <div class="ct-stat ct-stat--success">
+        <div class="ct-stat ct-stat--success kpi-b" data-reveal>
           <span class="ct-stat__label">ERROR RATE</span>
           <span class="ct-stat__value">0.12<span class="ct-stat__unit">%</span></span>
           <span class="ct-stat__delta ct-stat__delta--down" title="오류율 하락 — 개선">0.03% · 개선</span>
@@ -289,7 +340,7 @@
         </div>
 
         <!-- Active Nodes -->
-        <div class="ct-stat ct-stat--accent">
+        <div class="ct-stat ct-stat--accent kpi-c" data-reveal>
           <span class="ct-stat__label">ACTIVE NODES</span>
           <span class="ct-stat__value">42<span class="ct-stat__unit">/45</span></span>
           <span class="ct-stat__delta ct-stat__delta--flat">3 대기</span>
@@ -300,13 +351,26 @@
             </svg>
           </span>
         </div>
+
+        <!-- Retry Queue — 인시던트와 연결된 이상치 지표 -->
+        <div class="ct-stat ct-stat--warning kpi-d" data-reveal>
+          <span class="ct-stat__label">RETRY QUEUE</span>
+          <span class="ct-stat__value">14<span class="ct-stat__unit">건</span></span>
+          <span class="ct-stat__delta ct-stat__delta--flat">14:07 적체 시작</span>
+          <span class="ct-stat__spark kpi__spark" aria-hidden="true">
+            <svg viewBox="0 0 120 36" preserveAspectRatio="none" fill="none" style="color:var(--color-warning-text)">
+              <polyline points="0,30 12,30 24,29 36,30 48,29 60,30 72,28 84,20 96,14 108,10 120,8" stroke="currentColor" stroke-width="2"/>
+              <circle cx="120" cy="8" r="2.5" class="fill"/>
+            </svg>
+          </span>
+        </div>
       </section>
 
       <!-- ---- 3 + 4. CHART + RIGHT RAIL ---- -->
       <div class="ops__grid">
 
         <!-- 3. MAIN TRAFFIC CHART -->
-        <article class="ct-card ct-card--glow ops__chart" aria-label="트래픽 차트">
+        <article class="ct-card ct-card--glow ops__chart" id="analytics" aria-label="트래픽 차트" data-reveal>
           <div class="ct-card__chrome">
             <div class="ct-card__dots"><span class="ct-card__dot"></span><span class="ct-card__dot"></span><span class="ct-card__dot"></span></div>
             <span class="ct-card__title">traffic.live</span>
@@ -316,7 +380,7 @@
           </div>
           <div class="ct-card__body">
             <figure class="chart-figure">
-              <svg viewBox="0 0 720 260" preserveAspectRatio="none" role="img" aria-label="24시간 트래픽: 요청량(시안)과 오류율(마젠타) 라인 차트">
+              <svg viewBox="0 0 720 260" preserveAspectRatio="none" role="img" aria-label="24시간 트래픽 차트: 분당 요청은 자정 이후 완만히 상승해 14시 2분 피크 18.6K를 기록. 오류율은 14시 7분 webhooks 타임아웃으로 일시 상승 후 회복 추세">
                 <defs>
                   <linearGradient id="area-cyan" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" style="stop-color:var(--color-primary);stop-opacity:.45"/>
@@ -349,10 +413,16 @@
                           style="stroke:var(--color-primary);filter:drop-shadow(0 0 5px rgba(var(--rgb-cyan) / .6))"
                           points="0,180 60,168 120,150 180,162 240,120 300,128 360,92 420,104 480,70 540,84 600,58 660,76 720,48"/>
 
-                <!-- secondary line: error rate (magenta, scaled up for visibility) -->
+                <!-- secondary line: error rate (magenta, scaled up for visibility) — 14:07 스파이크 -->
                 <polyline fill="none" stroke-width="2" stroke-dasharray="2 4"
                           style="stroke:var(--color-accent);filter:drop-shadow(0 0 4px rgba(var(--rgb-magenta) / .55))"
-                          points="0,214 60,210 120,216 180,206 240,212 300,200 360,208 420,198 480,205 540,194 600,202 660,196 720,200"/>
+                          points="0,214 60,210 120,216 180,206 240,212 300,200 360,208 420,186 480,204 540,198 600,202 660,196 720,200"/>
+
+                <!-- incident marker: 14:07 webhooks 타임아웃 (x = 424/720 ≈ 14.1h) -->
+                <g aria-hidden="true">
+                  <line x1="424" y1="10" x2="424" y2="230" stroke-width="1" stroke-dasharray="4 4" style="stroke:var(--color-warning)"/>
+                  <text x="430" y="24" font-size="11" style="fill:var(--color-warning-text)">WARN 14:07</text>
+                </g>
 
                 <!-- live cursor dot on the requests line -->
                 <circle cx="720" cy="48" r="4" style="fill:var(--color-primary);filter:drop-shadow(0 0 6px rgba(var(--rgb-cyan) / .8))"/>
@@ -394,8 +464,8 @@
         </article>
 
         <!-- 4. RIGHT RAIL: system.load -->
-        <aside class="ops__rail" aria-label="시스템 부하">
-          <article class="ct-card">
+        <aside class="ops__rail" id="nodes" aria-label="시스템 부하">
+          <article class="ct-card" data-reveal>
             <div class="ct-card__chrome">
               <div class="ct-card__dots"><span class="ct-card__dot"></span><span class="ct-card__dot"></span><span class="ct-card__dot"></span></div>
               <span class="ct-card__title">system.load</span>
@@ -544,7 +614,7 @@
       </section>
 
       <!-- ---- 6. EVENT STREAM LOG ---- -->
-      <section class="ops__log" aria-label="이벤트 스트림">
+      <section class="ops__log" id="logs" aria-label="이벤트 스트림">
         <article class="ct-card">
           <div class="ct-card__chrome">
             <div class="ct-card__dots"><span class="ct-card__dot"></span><span class="ct-card__dot"></span><span class="ct-card__dot"></span></div>
@@ -574,6 +644,38 @@
     </section>
   </div>
 </main>
+
+<!-- ============================== COMMAND PALETTE ============================== -->
+<div class="ct-cmdk" data-cmdk role="dialog" aria-modal="true" aria-label="명령 팔레트" hidden>
+  <div class="ct-cmdk__overlay"></div>
+  <div class="ct-cmdk__panel">
+    <div class="ct-cmdk__input-row">
+      <span class="ct-cmdk__prompt" aria-hidden="true"></span>
+      <input class="ct-cmdk__input" placeholder="명령 또는 페이지 검색…" aria-label="명령 입력">
+      <span class="ct-cmdk__hint"><span class="ct-kbd">ESC</span></span>
+    </div>
+    <div class="ct-cmdk__list" role="listbox">
+      <div class="ct-cmdk__group">
+        <div class="ct-cmdk__group-label">페이지</div>
+        <button class="ct-cmdk__item is-active" role="option" aria-selected="true" data-cmdk-item data-href="../index.html" data-keywords="home index hub"><span class="ct-cmdk__icon">◢</span><span class="ct-cmdk__label">홈 콘솔</span></button>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-href="kanban.html" data-keywords="kanban board tasks"><span class="ct-cmdk__icon">▦</span><span class="ct-cmdk__label">칸반 보드</span></button>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-href="inbox.html" data-keywords="inbox mail messages"><span class="ct-cmdk__icon">✉</span><span class="ct-cmdk__label">받은편지함</span></button>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-href="settings.html" data-keywords="settings config preferences"><span class="ct-cmdk__icon">⚙</span><span class="ct-cmdk__label">설정</span></button>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-href="profile.html" data-keywords="profile account user whoami"><span class="ct-cmdk__icon">◈</span><span class="ct-cmdk__label">프로필</span></button>
+      </div>
+      <div class="ct-cmdk__group">
+        <div class="ct-cmdk__group-label">작업</div>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-action="theme" data-keywords="theme dark light toggle"><span class="ct-cmdk__icon">◐</span><span class="ct-cmdk__label">테마 전환 (DARK/LIGHT)</span><span class="ct-cmdk__shortcut"><span class="ct-kbd">T</span></span></button>
+      </div>
+      <div class="ct-cmdk__empty" role="status" hidden>NO MATCHES :: 다른 키워드를 입력하세요</div>
+    </div>
+    <div class="ct-cmdk__footer">
+      <span class="ct-cmdk__footer-hint"><span class="ct-kbd">↑</span><span class="ct-kbd">↓</span> 이동</span>
+      <span class="ct-cmdk__footer-hint"><span class="ct-kbd">↵</span> 실행</span>
+      <span class="ct-cmdk__footer-hint"><span class="ct-kbd">ESC</span> 닫기</span>
+    </div>
+  </div>
+</div>
 
 <script src="../app.js"></script>
 </body>

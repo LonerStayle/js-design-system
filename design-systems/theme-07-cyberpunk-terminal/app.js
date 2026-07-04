@@ -14,6 +14,10 @@
 (function () {
   'use strict';
 
+  /* reveal 엔진 가드 — CSS는 html.js 범위에서만 [data-reveal]을 숨긴다
+     (JS 미로드 시 콘텐츠가 opacity:0 으로 남는 사고 방지) */
+  document.documentElement.classList.add('js');
+
   /* ---------------------------------------------------------------- utils */
   const $  = (sel, ctx = document) => ctx.querySelector(sel);
   const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
@@ -275,13 +279,15 @@
       const el = document.createElement('div');
       el.className = `ct-toast ct-toast--${variant}`;
       el.setAttribute('role', variant === 'danger' ? 'alert' : 'status');
+      // 드레인 바는 CSS 애니메이션(ct-toast-drain) 단일 메커니즘 — JS는 지속시간만 공급
+      if (timeout) el.style.setProperty('--ct-toast-duration', `${timeout}ms`);
       el.innerHTML = `
         <span class="ct-toast__icon" aria-hidden="true">${this.ICONS[variant] || '›'}</span>
         <div class="ct-toast__body">
           ${o.title ? `<div class="ct-toast__title">${o.title}</div>` : ''}
           <div class="ct-toast__msg">${o.msg || ''}</div>
         </div>
-        <button class="ct-toast__close" aria-label="Dismiss notification">✕</button>
+        <button class="ct-toast__close" aria-label="알림 닫기">✕</button>
         ${timeout ? '<span class="ct-toast__progress"></span>' : ''}`;
       stack.appendChild(el);
       const remove = () => {
@@ -289,21 +295,13 @@
         setTimeout(() => el.remove(), REDUCED ? 0 : 240);
       };
       on(el.querySelector('.ct-toast__close'), 'click', remove);
-      if (timeout) {
-        const bar = el.querySelector('.ct-toast__progress');
-        if (bar && !REDUCED) {
-          bar.style.transition = `width ${timeout}ms linear`;
-          bar.style.width = '100%';
-          requestAnimationFrame(() => { bar.style.width = '0%'; });
-        }
-        setTimeout(remove, timeout);
-      }
+      if (timeout) setTimeout(remove, timeout);
       return el;
     },
     init() {
       $$('[data-toast]').forEach(btn => on(btn, 'click', () => this.show({
         title: btn.getAttribute('data-toast-title') || '',
-        msg: btn.getAttribute('data-toast') || 'Event logged.',
+        msg: btn.getAttribute('data-toast') || '이벤트가 기록되었습니다',
         variant: btn.getAttribute('data-toast-variant') || 'info'
       })));
     }
@@ -385,9 +383,14 @@
         else if (e.key === 'Enter')     { e.preventDefault(); this.run(); }
       });
       $$('[data-cmdk-item]', this.el).forEach((it, i) => {
+        /* listbox 계약: plain button 의 aria-selected 는 무효 — role="option" 보장 */
+        if (!it.getAttribute('role')) it.setAttribute('role', 'option');
+        if (!it.id) it.id = uid('cmdk-opt');
         on(it, 'click', () => { this.active = this.visible().indexOf(it); this.run(); });
         on(it, 'mousemove', () => { this.active = this.visible().indexOf(it); this.paint(); });
       });
+      if (this.list && this.list.id === '') this.list.id = uid('cmdk-list');
+      if (this.list) this.input.setAttribute('aria-controls', this.list.id);
     },
     toggle() { this.el && (this.el.classList.contains('is-open') ? this.hide() : this.show()); },
     show() {
@@ -421,16 +424,48 @@
         it.classList.toggle('is-active', i === this.active);
         it.setAttribute('aria-selected', String(i === this.active));
       });
-      v[this.active] && v[this.active].scrollIntoView({ block: 'nearest' });
+      const cur = v[this.active];
+      if (this.input) this.input.setAttribute('aria-activedescendant', cur ? cur.id : '');
+      cur && cur.scrollIntoView({ block: 'nearest' });
     },
     run() {
       const it = this.visible()[this.active]; if (!it) return;
       const href = it.getAttribute('data-href');
       const action = it.getAttribute('data-action');
       this.hide();
-      if (href) window.location.href = href;
+      if (href) Navline.go(href);
       else if (action === 'theme') Theme.toggle();
       else if (action) { Toast.show({ title: 'COMMAND', msg: action, variant: 'info' }); }
+    }
+  };
+
+  /* ============================================================== NAVLINE */
+  // 명령행 페이지 전환 — `> cd ~/pages/dashboard` 한 줄이 찍힌 뒤 이동.
+  // REDUCED 는 즉시 이동(연출 스킵). a[data-navline] 클릭에도 위임 적용.
+  const Navline = {
+    go(href) {
+      if (!href) return;
+      if (REDUCED) { window.location.href = href; return; }
+      const path = href.replace(/\.html?$/, '').replace(/^\.\//, '').replace(/^\//, '').replace(/^#/, '');
+      const bar = document.createElement('div');
+      bar.className = 'ct-navline';
+      bar.setAttribute('aria-hidden', 'true');
+      const cmd = document.createElement('span');
+      cmd.className = 'ct-navline__cmd prompt';
+      cmd.textContent = 'cd ~/' + path;
+      bar.appendChild(cmd);
+      document.body.appendChild(bar);
+      setTimeout(() => { window.location.href = href; }, 380);
+    },
+    init() {
+      on(document, 'click', (e) => {
+        const a = e.target.closest && e.target.closest('a[data-navline]');
+        if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button) return;
+        const href = a.getAttribute('href');
+        if (!href || href.startsWith('#')) return;   // 인페이지 앵커는 연출 없음
+        e.preventDefault();
+        this.go(href);
+      });
     }
   };
 
@@ -502,7 +537,7 @@
         try { await navigator.clipboard.writeText(text); } catch (_) {}
         const old = btn.textContent;
         btn.textContent = 'COPIED';
-        Toast.show({ msg: 'Copied to clipboard', variant: 'success', timeout: 1800 });
+        Toast.show({ msg: '클립보드에 복사했습니다', variant: 'success', timeout: 1800 });
         setTimeout(() => { btn.textContent = old; }, 1400);
       }));
     }
@@ -625,7 +660,7 @@
           val = val.trim(); if (!val) return;
           const chip = document.createElement('span');
           chip.className = 'ct-chipinput__chip';
-          chip.innerHTML = `${val} <button type="button" class="ct-chipinput__remove" aria-label="Remove ${val}">✕</button>`;
+          chip.innerHTML = `${val} <button type="button" class="ct-chipinput__remove" aria-label="${val} 제거">✕</button>`;
           box.insertBefore(chip, input);
           on(chip.querySelector('button'), 'click', () => chip.remove());
         };
@@ -701,9 +736,9 @@
           }
           pop.innerHTML = `
             <div class="ct-calendar__head">
-              <button class="ct-btn ct-btn--icon ct-btn--sm" data-cal-prev aria-label="Previous month">‹</button>
+              <button class="ct-btn ct-btn--icon ct-btn--sm" data-cal-prev aria-label="이전 달">‹</button>
               <span class="ct-calendar__title">${this.MONTHS[m]} ${y}</span>
-              <button class="ct-btn ct-btn--icon ct-btn--sm" data-cal-next aria-label="Next month">›</button>
+              <button class="ct-btn ct-btn--icon ct-btn--sm" data-cal-next aria-label="다음 달">›</button>
             </div>
             <div class="ct-calendar__grid">
               ${['S','M','T','W','T','F','S'].map(w => `<span class="ct-calendar__weekday">${w}</span>`).join('')}
@@ -739,12 +774,72 @@
     }
   };
 
+  /* ============================================================== REVEAL */
+  // [data-reveal] — 스크롤 진입 시 CRT 전원 인가(ct-boot-in)로 켜지는 패널.
+  // 같은 부모 안의 형제들끼리 70ms 스태거. REDUCED/미지원 = 즉시 완성 상태.
+  const Reveal = {
+    init() {
+      const els = $$('[data-reveal]');
+      if (!els.length) return;
+      if (REDUCED || !('IntersectionObserver' in window)) {
+        els.forEach(el => el.classList.add('is-in'));
+        return;
+      }
+      const io = new IntersectionObserver((entries) => entries.forEach(en => {
+        if (!en.isIntersecting) return;
+        io.unobserve(en.target);
+        en.target.classList.add('is-in');
+      }), { threshold: 0.15, rootMargin: '0px 0px -5% 0px' });
+      els.forEach(el => {
+        const sibs = el.parentElement ? $$(':scope > [data-reveal]', el.parentElement) : [el];
+        const idx = Math.max(0, sibs.indexOf(el));
+        el.style.setProperty('--reveal-delay', Math.min(idx * 70, 420) + 'ms');
+        io.observe(el);
+      });
+    }
+  };
+
+  /* ============================================================== PRESS GROUP */
+  // .ct-btn-group 안의 [aria-pressed] 단일 선택 동기화 (클래스만 토글 금지 계약)
+  const PressGroup = {
+    init() {
+      $$('.ct-btn-group').forEach(g => {
+        const btns = $$('[aria-pressed]', g);
+        if (!btns.length) return;
+        btns.forEach(b => on(b, 'click', () => {
+          btns.forEach(x => {
+            const onx = x === b;
+            x.setAttribute('aria-pressed', String(onx));
+            x.classList.toggle('is-active', onx);
+          });
+        }));
+      });
+    }
+  };
+
+  /* ============================================================== CLOCK */
+  // [data-clock] — 실시간 HH:MM:SS (1Hz — 광과민 안전). 스테이터스라인용.
+  const Clock = {
+    init() {
+      const els = $$('[data-clock]');
+      if (!els.length) return;
+      const p = (n) => String(n).padStart(2, '0');
+      const paint = () => {
+        const d = new Date();
+        const s = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+        els.forEach(el => { el.textContent = s; });
+      };
+      paint();
+      setInterval(paint, 1000);
+    }
+  };
+
   /* ============================================================== INIT */
   function init() {
     [Theme, Typing, Scramble, Boot, Tabs, Accordion, Modal, Drawer, Toast,
-     Dropdown, ContextMenu, Cmdk, Carousel, Stepper, Slider, Copy, Table,
+     Dropdown, ContextMenu, Cmdk, Navline, Carousel, Stepper, Slider, Copy, Table,
      Spinner, AsciiProgress, Nav, Combobox, ChipInput, Rating, FileUpload,
-     DatePicker, Gallery].forEach(m => { try { m.init(); } catch (e) { /* isolate */ console.warn('[CT] init', m, e); } });
+     DatePicker, Gallery, Reveal, PressGroup, Clock].forEach(m => { try { m.init(); } catch (e) { /* isolate */ console.warn('[CT] init', m, e); } });
   }
   if (document.readyState === 'loading') on(document, 'DOMContentLoaded', init);
   else init();
@@ -758,6 +853,7 @@
     closeDrawer: (s) => Drawer.close(s),
     openCmdk: () => Cmdk.show(),
     toggleTheme: () => Theme.toggle(),
-    asciiProgress: (el, pct) => AsciiProgress.render(el, pct)
+    asciiProgress: (el, pct) => AsciiProgress.render(el, pct),
+    navline: (href) => Navline.go(href)
   };
 })();

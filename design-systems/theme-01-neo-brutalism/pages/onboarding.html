@@ -1,459 +1,489 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Onboarding — Neo-Brutalism</title>
-  <link rel="stylesheet" href="../styles.css">
-  <style>
-    /* page-local layout only — no new component styling */
-    .ob-shell {
-      min-height: 100dvh;
-      display: flex;
-      flex-direction: column;
-    }
-    .ob-main {
-      flex: 1 1 auto;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      padding: var(--space-8) var(--space-4) var(--space-12);
-    }
-    .ob-card {
-      width: 100%;
-      max-width: 760px;
-    }
-    .ob-illus {
-      display: grid;
-      place-items: center;
-      width: 120px;
-      height: 120px;
-      border: var(--border-4) solid var(--color-border);
-      box-shadow: var(--shadow-lg);
-      background: var(--lime-500);
-      color: var(--ink);
-      transform: rotate(var(--tilt-ccw));
-    }
-    .ob-illus svg { width: 64px; height: 64px; }
-    .ob-grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: var(--space-4);
-    }
-    .ob-checks {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: var(--space-2) var(--space-4);
-    }
-    @media (max-width: 640px) {
-      .ob-grid-2, .ob-checks { grid-template-columns: 1fr; }
-    }
-    .ob-foot-nav {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-3);
-      flex-wrap: wrap;
-    }
-    .ob-step-head {
-      display: flex;
-      align-items: center;
-      gap: var(--space-4);
-      flex-wrap: wrap;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>온보딩 · NEO//BRUTAL</title>
+<script>
+/* FOUC guard — 저장된 테마를 첫 페인트 전에 적용 (app.js와 같은 키: nb-theme) */
+(function () {
+  try {
+    var t = localStorage.getItem("nb-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="../styles.css">
+<style>
+  /* page-local layout only — 컴포넌트 스타일은 시스템에 있다 */
+  .ob-shell { min-height: 100dvh; display: flex; flex-direction: column; }
+  .ob-main {
+    flex: 1 1 auto;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: var(--space-8) var(--space-4) var(--space-12);
+  }
+  /* 거대 워터마크 스텝 숫자 — 진행할 때마다 '쾅' 다시 찍힌다 */
+  .ob-num { top: 0.02em; }
+  html.js .ob-num.is-restamp { animation: stamp-in var(--duration-stamp) var(--ease-snap); }
+  @media (prefers-reduced-motion: reduce) {
+    html.js .ob-num.is-restamp { animation: none; }
+  }
+  .ob-card { width: 100%; max-width: 780px; position: relative; z-index: 1; }
+  .ob-illus {
+    display: grid; place-items: center;
+    width: 120px; height: 120px;
+    border: var(--border-4) solid var(--color-border);
+    box-shadow: var(--shadow-lg);
+    background: var(--lime-500); color: var(--ink);
+    rotate: var(--tilt-ccw);
+  }
+  .ob-illus svg { width: 64px; height: 64px; }
+  .ob-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+  .ob-checks { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2) var(--space-4); }
+  @media (max-width: 640px) {
+    .ob-grid-2, .ob-checks { grid-template-columns: 1fr; }
+  }
+  .ob-foot-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--space-3); flex-wrap: wrap;
+  }
+  .ob-step-head { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
+  /* form.css의 .field-error { display:flex }가 hidden 속성을 이겨버리는 것 방지 */
+  .field-error[hidden] { display: none; }
+  .ob-title-line { display: block; }
+</style>
 </head>
 <body>
 <div class="ob-shell">
 
-  <!-- ===================== TOP BAR ===================== -->
-  <header class="navbar navbar--sticky" role="banner">
-    <a class="navbar__brand" href="../index.html" aria-label="Neobrut home">
-      <span class="navbar__logo">N</span>
-      <span class="navbar__brand-text">NEOBRUT</span>
-    </a>
-    <div class="navbar__actions" style="margin-left:auto;">
-      <span class="mono-label text-muted hide-md-down" style="margin-right:var(--space-2);">Setup · Step <span data-current-step>1</span> of 5</span>
-      <button data-theme-toggle class="btn btn--icon btn--secondary" aria-label="Toggle theme">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true">
-          <circle cx="12" cy="12" r="4"></circle>
-          <path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"></path>
-        </svg>
-      </button>
-      <a class="btn btn--ghost btn--sm" href="dashboard.html">Skip setup</a>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
+
+<!-- ====================== ICON SPRITE (페이지 자체 소유) ====================== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-bolt" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="4.5"/><path d="M12 1v3M12 20v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1 12h3M20 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-arrow-l" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M19 12H5M11 18l-6-6 6-6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></symbol>
+</svg>
+
+<!-- ====================== TOP BAR ====================== -->
+<header class="navbar navbar--sticky" role="banner">
+  <a class="navbar__brand" href="../index.html" aria-label="Neo-Brutalism 홈">
+    <span class="navbar__logo fill-blue" aria-hidden="true"><svg width="20" height="20"><use href="#i-bolt"/></svg></span>
+    <span class="navbar__brand-text">NEO//BRUTAL</span>
+  </a>
+  <div class="navbar__actions" style="margin-left:auto;">
+    <span class="mono-label text-muted hide-md-down" style="margin-right:var(--space-2);">SETUP · STEP <span data-current-step>1</span>/5</span>
+    <button data-theme-toggle class="btn btn--icon btn--secondary" aria-label="라이트/다크 테마 전환">
+      <svg width="18" height="18" class="hide-dark"><use href="#i-sun"/></svg>
+      <svg width="18" height="18" class="hide-light"><use href="#i-moon"/></svg>
+    </button>
+    <a class="btn btn--ghost btn--sm" href="dashboard.html">설정 건너뛰기</a>
+  </div>
+</header>
+
+<!-- ====================== MAIN ====================== -->
+<main class="ob-main bg-dots section-numbered" id="main">
+  <span class="section-num ob-num" data-step-num aria-hidden="true">01</span>
+  <article class="card ob-card" aria-labelledby="ob-title">
+
+    <!-- 스텝 헤더 (인라인 스크립트가 위저드와 동기화) -->
+    <div class="card__head" style="border-bottom:var(--border-3) solid var(--color-border);">
+      <ol class="steps steps--sm" role="list" aria-label="온보딩 진행 단계" data-steps>
+        <li class="steps__item is-active" aria-current="step">
+          <span class="steps__marker">1</span>
+          <span class="steps__body"><span class="steps__label">환영</span></span>
+        </li>
+        <li class="steps__item">
+          <span class="steps__marker">2</span>
+          <span class="steps__body"><span class="steps__label">프로필</span></span>
+        </li>
+        <li class="steps__item">
+          <span class="steps__marker">3</span>
+          <span class="steps__body"><span class="steps__label">워크스페이스</span></span>
+        </li>
+        <li class="steps__item">
+          <span class="steps__marker">4</span>
+          <span class="steps__body"><span class="steps__label">초대</span></span>
+        </li>
+        <li class="steps__item">
+          <span class="steps__marker">5</span>
+          <span class="steps__body"><span class="steps__label">완료</span></span>
+        </li>
+      </ol>
     </div>
-  </header>
 
-  <!-- ===================== MAIN ===================== -->
-  <main class="ob-main bg-dots" id="main">
-    <article class="card ob-card" aria-labelledby="ob-title">
+    <!-- ====================== WIZARD ====================== -->
+    <div class="wizard" data-wizard>
 
-      <!-- Steps indicator (static labeled header, synced by inline script) -->
-      <div class="card__head" style="border-bottom:var(--border-3) solid var(--color-border);">
-        <ol class="steps steps--sm" role="list" aria-label="Onboarding progress" data-steps>
-          <li class="steps__item is-active" aria-current="step">
-            <span class="steps__marker">1</span>
-            <span class="steps__body"><span class="steps__label">Welcome</span></span>
-          </li>
-          <li class="steps__item">
-            <span class="steps__marker">2</span>
-            <span class="steps__body"><span class="steps__label">Profile</span></span>
-          </li>
-          <li class="steps__item">
-            <span class="steps__marker">3</span>
-            <span class="steps__body"><span class="steps__label">Workspace</span></span>
-          </li>
-          <li class="steps__item">
-            <span class="steps__marker">4</span>
-            <span class="steps__body"><span class="steps__label">Invite</span></span>
-          </li>
-          <li class="steps__item">
-            <span class="steps__marker">5</span>
-            <span class="steps__body"><span class="steps__label">Finish</span></span>
-          </li>
-        </ol>
+      <!-- 진행 트랙 + 도트 (app.js가 폭·상태 구동) -->
+      <div class="card__body" style="padding-bottom:0;">
+        <div class="wizard__track" aria-hidden="true">
+          <div class="wizard__progress" data-wizard-progress style="width:0%"></div>
+          <span class="wizard__dot is-active" data-wizard-dot>1</span>
+          <span class="wizard__dot" data-wizard-dot>2</span>
+          <span class="wizard__dot" data-wizard-dot>3</span>
+          <span class="wizard__dot" data-wizard-dot>4</span>
+          <span class="wizard__dot" data-wizard-dot>5</span>
+        </div>
       </div>
 
-      <!-- ===================== WIZARD ===================== -->
-      <div class="wizard" data-wizard>
+      <!-- ---------- STEP 1 · 환영 ---------- -->
+      <section class="card__body" data-wizard-step aria-label="환영">
+        <div class="stack gap-6" style="align-items:flex-start;">
+          <div class="ob-step-head">
+            <div class="ob-illus" data-reveal aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6">
+                <path d="M13 2L4.5 13H11l-1 9 8.5-11H12l1-9z"></path>
+              </svg>
+            </div>
+            <div class="stack gap-2">
+              <span class="eyebrow">환영</span>
+              <h1 class="display display-sm" id="ob-title" style="margin:0;">
+                <span class="ob-title-line">2분이면</span>
+                <span class="ob-title-line"><span class="highlight">입주 완료.</span></span>
+              </h1>
+            </div>
+          </div>
+          <p class="text-muted" style="max-width:54ch;font-size:var(--text-lg);">
+            네 단계면 끝난다. 프로필을 만들고, 워크스페이스를 열고, 팀을 부르고,
+            대시보드로 직행. 중간에 멈춰도 저장된다.
+          </p>
+          <ul class="cluster gap-2" style="list-style:none;margin:0;padding:0;" data-stagger>
+            <li data-reveal><span class="badge badge--blue">카드 등록 없음</span></li>
+            <li data-reveal><span class="badge badge--lime">14일 Pro 체험</span></li>
+            <li data-reveal><span class="badge badge--pink">언제든 해지</span></li>
+          </ul>
+        </div>
+        <div class="card__foot" style="margin:var(--space-6) calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad));">
+          <span class="text-muted mono-label">STEP 1 / 5</span>
+          <button type="button" class="btn btn--primary btn--lg" data-wizard-next style="margin-left:auto;">
+            시작
+            <svg width="18" height="18" aria-hidden="true"><use href="#i-arrow"/></svg>
+          </button>
+        </div>
+      </section>
 
-        <!-- live progress track + dots (app.js drives width + dot states) -->
-        <div class="card__body" style="padding-bottom:0;">
-          <div class="wizard__track" aria-hidden="true">
-            <div class="wizard__progress" data-wizard-progress style="width:0%"></div>
-            <span class="wizard__dot is-active" data-wizard-dot>1</span>
-            <span class="wizard__dot" data-wizard-dot>2</span>
-            <span class="wizard__dot" data-wizard-dot>3</span>
-            <span class="wizard__dot" data-wizard-dot>4</span>
-            <span class="wizard__dot" data-wizard-dot>5</span>
+      <!-- ---------- STEP 2 · 프로필 ---------- -->
+      <section class="card__body" data-wizard-step aria-label="프로필 설정" hidden>
+        <div class="stack gap-2" style="margin-bottom:var(--space-6);">
+          <span class="eyebrow">당신부터</span>
+          <h2 class="display display-sm" style="margin:0;">프로필을 만들 것</h2>
+          <p class="text-muted">팀원들이 워크스페이스에서 당신을 알아보는 방법.</p>
+        </div>
+
+        <div class="stack gap-5">
+          <div class="ob-grid-2">
+            <div class="field">
+              <label class="field-label" for="ob-name">이름 <span class="req" aria-hidden="true">*</span></label>
+              <input class="input" id="ob-name" type="text" placeholder="이름 (예: 박하늘)" autocomplete="name" aria-describedby="ob-name-err" data-required-name>
+              <span class="field-error" id="ob-name-err" hidden>
+                <svg width="15" height="15" aria-hidden="true"><use href="#i-warn"/></svg>
+                이름이 비었다. 입력하고 넘어갈 것.
+              </span>
+            </div>
+            <div class="field">
+              <label class="field-label" for="ob-username">사용자명 <span class="req" aria-hidden="true">*</span></label>
+              <div class="input-group">
+                <span class="input-addon">@</span>
+                <input class="input" id="ob-username" type="text" value="haneul" autocomplete="username">
+              </div>
+              <span class="field-help">neo.app/u/haneul</span>
+            </div>
+          </div>
+
+          <div class="ob-grid-2">
+            <div class="field">
+              <label class="field-label" for="ob-role">역할 <span class="req" aria-hidden="true">*</span></label>
+              <select class="select" id="ob-role">
+                <option>대표 / 창업자</option>
+                <option selected>프로덕트 매니저</option>
+                <option>개발 리드</option>
+                <option>디자이너</option>
+                <option>운영</option>
+                <option>마케팅</option>
+                <option>기타</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label" for="ob-tz">시간대</label>
+              <select class="select" id="ob-tz">
+                <option selected>(GMT+09:00) 서울</option>
+                <option>(GMT+09:00) 도쿄</option>
+                <option>(GMT+08:00) 싱가포르</option>
+                <option>(GMT+00:00) 런던</option>
+                <option>(GMT-05:00) 뉴욕</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <span class="field-label">아바타</span>
+            <label class="dropzone" data-file-drop>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true">
+                <path d="M12 16V4M7 9l5-5 5 5"></path><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"></path>
+              </svg>
+              <span class="dropzone__hint"><strong>사진을 끌어다 놓거나</strong> 클릭해서 선택 — PNG/JPG, 4MB까지</span>
+              <input type="file" accept="image/*" hidden>
+            </label>
           </div>
         </div>
 
-        <!-- ---------- STEP 1 · WELCOME ---------- -->
-        <section class="card__body" data-wizard-step aria-label="Welcome">
-          <div class="stack gap-6" style="align-items:flex-start;">
-            <div class="ob-step-head">
-              <div class="ob-illus" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6">
-                  <path d="M13 2L4.5 13H11l-1 9 8.5-11H12l1-9z"></path>
-                </svg>
-              </div>
-              <div class="stack gap-2">
-                <span class="eyebrow">Welcome aboard</span>
-                <h1 class="ob-title" id="ob-title" style="font-family:var(--font-display);font-weight:var(--weight-black);font-size:var(--text-4xl);line-height:1.05;letter-spacing:var(--tracking-tight);margin:0;">
-                  Let's get<br><span class="highlight">Neobrut</span> set up
-                </h1>
-              </div>
-            </div>
-            <p class="text-muted" style="max-width:54ch;font-size:var(--text-lg);">
-              You're four short steps away from a workspace built for fast teams. We'll set up your
-              profile, spin up a workspace, invite your crew, and drop you straight into the dashboard.
-              Takes about two minutes — promise.
-            </p>
-            <ul class="cluster gap-2" style="list-style:none;margin:0;padding:0;">
-              <li><span class="badge badge--blue">No credit card</span></li>
-              <li><span class="badge badge--lime">14-day Pro trial</span></li>
-              <li><span class="badge badge--pink">Cancel anytime</span></li>
-            </ul>
-          </div>
-          <div class="card__foot" style="margin:var(--space-6) calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad));">
-            <span class="text-muted mono-label">Step 1 / 5</span>
-            <button type="button" class="btn btn--primary btn--lg" data-wizard-next style="margin-left:auto;">
-              Let's go
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" aria-hidden="true" style="width:1.1em;height:1.1em;"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
-            </button>
-          </div>
-        </section>
+        <div class="card__foot ob-foot-nav" style="margin:var(--space-6) calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad));">
+          <button type="button" class="btn btn--ghost" data-wizard-prev>
+            <svg width="18" height="18" aria-hidden="true"><use href="#i-arrow-l"/></svg>
+            이전
+          </button>
+          <button type="button" class="btn btn--primary" data-wizard-next data-validate-profile>계속</button>
+        </div>
+      </section>
 
-        <!-- ---------- STEP 2 · PROFILE ---------- -->
-        <section class="card__body" data-wizard-step aria-label="Your profile" hidden>
-          <div class="stack gap-2" style="margin-bottom:var(--space-6);">
-            <span class="eyebrow">About you</span>
-            <h2 style="font-family:var(--font-display);font-weight:var(--weight-extra);font-size:var(--text-3xl);margin:0;letter-spacing:var(--tracking-tight);">Set up your profile</h2>
-            <p class="text-muted">This is how teammates will recognise you across Neobrut.</p>
+      <!-- ---------- STEP 3 · 워크스페이스 ---------- -->
+      <section class="card__body" data-wizard-step aria-label="워크스페이스 만들기" hidden>
+        <div class="stack gap-2" style="margin-bottom:var(--space-6);">
+          <span class="eyebrow">작업장</span>
+          <h2 class="display display-sm" style="margin:0;">워크스페이스에 이름을</h2>
+          <p class="text-muted">프로젝트, 문서, 대화가 모이는 팀의 한 집.</p>
+        </div>
+
+        <div class="stack gap-5">
+          <div class="field">
+            <label class="field-label" for="ob-ws">워크스페이스 이름 <span class="req" aria-hidden="true">*</span></label>
+            <input class="input" id="ob-ws" type="text" value="망치스튜디오">
           </div>
 
-          <div class="stack gap-5">
-            <div class="ob-grid-2">
-              <div class="field">
-                <label class="field-label" for="ob-name">Full name <span class="req">*</span></label>
-                <input class="input" id="ob-name" type="text" value="Marcus Adeyemi" autocomplete="name">
-              </div>
-              <div class="field">
-                <label class="field-label" for="ob-username">Username <span class="req">*</span></label>
-                <div class="input-group">
-                  <span class="input-addon">@</span>
-                  <input class="input" id="ob-username" type="text" value="marcus" autocomplete="username">
-                </div>
-                <span class="field-help">neobrut.app/u/marcus</span>
-              </div>
+          <div class="field">
+            <label class="field-label" for="ob-slug">워크스페이스 URL <span class="req" aria-hidden="true">*</span></label>
+            <div class="input-group">
+              <span class="input-addon">neo.app/</span>
+              <input class="input" id="ob-slug" type="text" value="mangchi">
             </div>
+            <span class="field-help">소문자·숫자·하이픈만.</span>
+          </div>
 
-            <div class="ob-grid-2">
-              <div class="field">
-                <label class="field-label" for="ob-role">Your role <span class="req">*</span></label>
-                <select class="select" id="ob-role">
-                  <option>Founder / CEO</option>
-                  <option selected>Product Manager</option>
-                  <option>Engineering Lead</option>
-                  <option>Designer</option>
-                  <option>Operations</option>
-                  <option>Marketing</option>
-                  <option>Other</option>
-                </select>
-              </div>
-              <div class="field">
-                <label class="field-label" for="ob-tz">Time zone</label>
-                <select class="select" id="ob-tz">
-                  <option>(GMT-08:00) Pacific — Los Angeles</option>
-                  <option selected>(GMT-05:00) Eastern — New York</option>
-                  <option>(GMT+00:00) London</option>
-                  <option>(GMT+01:00) Berlin</option>
-                  <option>(GMT+09:00) Seoul</option>
-                </select>
-              </div>
+          <div class="field">
+            <span class="field-label">팀 규모</span>
+            <div class="segmented" role="radiogroup" aria-label="팀 규모 선택">
+              <label><input type="radio" name="ob-size"><span>혼자</span></label>
+              <label><input type="radio" name="ob-size" checked><span>2–10명</span></label>
+              <label><input type="radio" name="ob-size"><span>11–50명</span></label>
+              <label><input type="radio" name="ob-size"><span>51–200명</span></label>
+              <label><input type="radio" name="ob-size"><span>200명+</span></label>
             </div>
+          </div>
 
+          <div class="field">
+            <span class="field-label">어디에 쓸 건가?</span>
+            <div class="ob-checks">
+              <label class="check"><input type="checkbox" checked><span class="check__box"></span> 제품 로드맵</label>
+              <label class="check"><input type="checkbox" checked><span class="check__box"></span> 개발 스프린트</label>
+              <label class="check"><input type="checkbox"><span class="check__box"></span> 디자인 리뷰</label>
+              <label class="check"><input type="checkbox" checked><span class="check__box"></span> 문서·위키</label>
+              <label class="check"><input type="checkbox"><span class="check__box"></span> 고객 지원</label>
+              <label class="check"><input type="checkbox"><span class="check__box"></span> 마케팅 캠페인</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="card__foot ob-foot-nav" style="margin:var(--space-6) calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad));">
+          <button type="button" class="btn btn--ghost" data-wizard-prev>
+            <svg width="18" height="18" aria-hidden="true"><use href="#i-arrow-l"/></svg>
+            이전
+          </button>
+          <button type="button" class="btn btn--primary" data-wizard-next>계속</button>
+        </div>
+      </section>
+
+      <!-- ---------- STEP 4 · 초대 ---------- -->
+      <section class="card__body" data-wizard-step aria-label="팀원 초대" hidden>
+        <div class="stack gap-2" style="margin-bottom:var(--space-6);">
+          <span class="eyebrow">팀 소집</span>
+          <h2 class="display display-sm" style="margin:0;">팀을 부를 것</h2>
+          <p class="text-muted">혼자 쓰기엔 아까운 물건이다. 이메일만 넣으면 초대장은 우리가 보낸다.</p>
+        </div>
+
+        <div class="stack gap-5">
+          <div class="ob-grid-2">
             <div class="field">
-              <span class="field-label">Avatar</span>
-              <label class="dropzone" data-file-drop>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" aria-hidden="true">
-                  <path d="M12 16V4M7 9l5-5 5 5"></path><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"></path>
-                </svg>
-                <span class="dropzone__hint"><strong>Drop a photo</strong> or click to browse — PNG / JPG, up to 4MB</span>
-                <input type="file" accept="image/*" hidden>
-              </label>
+              <label class="field-label" for="ob-invite">팀원 이메일</label>
+              <div class="chip-input" data-chip-input>
+                <span class="chip">seoyeon@mangchi.studio <button class="chip__x" aria-label="seoyeon@mangchi.studio 제거">&times;</button></span>
+                <span class="chip">sehun@mangchi.studio <button class="chip__x" aria-label="sehun@mangchi.studio 제거">&times;</button></span>
+                <input class="chip-input__field" id="ob-invite" placeholder="이메일 입력 후 Enter…" aria-label="팀원 이메일 추가">
+              </div>
+              <span class="field-help">Enter 또는 쉼표로 구분.</span>
             </div>
-          </div>
-
-          <div class="card__foot ob-foot-nav" style="margin:var(--space-6) calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad));">
-            <button type="button" class="btn btn--ghost" data-wizard-prev>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" aria-hidden="true" style="width:1.1em;height:1.1em;"><path d="M19 12H5M11 18l-6-6 6-6"></path></svg>
-              Back
-            </button>
-            <button type="button" class="btn btn--primary" data-wizard-next>Continue</button>
-          </div>
-        </section>
-
-        <!-- ---------- STEP 3 · WORKSPACE ---------- -->
-        <section class="card__body" data-wizard-step aria-label="Create a workspace" hidden>
-          <div class="stack gap-2" style="margin-bottom:var(--space-6);">
-            <span class="eyebrow">Your workspace</span>
-            <h2 style="font-family:var(--font-display);font-weight:var(--weight-extra);font-size:var(--text-3xl);margin:0;letter-spacing:var(--tracking-tight);">Name your workspace</h2>
-            <p class="text-muted">One home for your team's projects, docs and chatter.</p>
-          </div>
-
-          <div class="stack gap-5">
             <div class="field">
-              <label class="field-label" for="ob-ws">Workspace name <span class="req">*</span></label>
-              <input class="input" id="ob-ws" type="text" value="Northwind Studio">
-            </div>
-
-            <div class="field">
-              <label class="field-label" for="ob-slug">Workspace URL <span class="req">*</span></label>
-              <div class="input-group">
-                <span class="input-addon">neo.app/</span>
-                <input class="input" id="ob-slug" type="text" value="northwind">
-              </div>
-              <span class="field-help">Lowercase letters, numbers and dashes only.</span>
-            </div>
-
-            <div class="field">
-              <span class="field-label">Team size</span>
-              <div class="segmented" role="radiogroup" aria-label="Team size">
-                <label><input type="radio" name="ob-size"><span>Just me</span></label>
-                <label><input type="radio" name="ob-size" checked><span>2–10</span></label>
-                <label><input type="radio" name="ob-size"><span>11–50</span></label>
-                <label><input type="radio" name="ob-size"><span>51–200</span></label>
-                <label><input type="radio" name="ob-size"><span>200+</span></label>
-              </div>
-            </div>
-
-            <div class="field">
-              <span class="field-label">What will you use Neobrut for?</span>
-              <div class="ob-checks">
-                <label class="check"><input type="checkbox" checked><span class="check__box"></span> Product roadmaps</label>
-                <label class="check"><input type="checkbox" checked><span class="check__box"></span> Engineering sprints</label>
-                <label class="check"><input type="checkbox"><span class="check__box"></span> Design reviews</label>
-                <label class="check"><input type="checkbox" checked><span class="check__box"></span> Docs &amp; wikis</label>
-                <label class="check"><input type="checkbox"><span class="check__box"></span> Customer support</label>
-                <label class="check"><input type="checkbox"><span class="check__box"></span> Marketing campaigns</label>
-              </div>
+              <label class="field-label" for="ob-invite-role">새 초대의 기본 역할</label>
+              <select class="select" id="ob-invite-role">
+                <option selected>멤버 — 편집 가능</option>
+                <option>관리자 — 전체 권한</option>
+                <option>게스트 — 보기 전용</option>
+              </select>
+              <span class="field-help">역할은 나중에 설정에서 바꿀 수 있다.</span>
             </div>
           </div>
 
-          <div class="card__foot ob-foot-nav" style="margin:var(--space-6) calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad));">
-            <button type="button" class="btn btn--ghost" data-wizard-prev>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" aria-hidden="true" style="width:1.1em;height:1.1em;"><path d="M19 12H5M11 18l-6-6 6-6"></path></svg>
-              Back
-            </button>
-            <button type="button" class="btn btn--primary" data-wizard-next>Continue</button>
-          </div>
-        </section>
-
-        <!-- ---------- STEP 4 · INVITE ---------- -->
-        <section class="card__body" data-wizard-step aria-label="Invite teammates" hidden>
-          <div class="stack gap-2" style="margin-bottom:var(--space-6);">
-            <span class="eyebrow">Build your team</span>
-            <h2 style="font-family:var(--font-display);font-weight:var(--weight-extra);font-size:var(--text-3xl);margin:0;letter-spacing:var(--tracking-tight);">Invite your teammates</h2>
-            <p class="text-muted">Workspaces are better with people. Add emails — we'll send the invites.</p>
-          </div>
-
-          <div class="stack gap-5">
-            <div class="ob-grid-2">
-              <div class="field">
-                <label class="field-label" for="ob-invite">Teammate emails</label>
-                <div class="chip-input" data-chip-input>
-                  <span class="chip">priya@northwind.co <button class="chip__x" aria-label="Remove priya@northwind.co">&times;</button></span>
-                  <span class="chip">dev.kim@northwind.co <button class="chip__x" aria-label="Remove dev.kim@northwind.co">&times;</button></span>
-                  <input class="chip-input__field" id="ob-invite" placeholder="Add email + Enter…" aria-label="Add teammate email">
-                </div>
-                <span class="field-help">Separate with Enter or comma.</span>
-              </div>
-              <div class="field">
-                <label class="field-label" for="ob-invite-role">Default role for new invites</label>
-                <select class="select" id="ob-invite-role">
-                  <option selected>Member — can edit</option>
-                  <option>Admin — full access</option>
-                  <option>Guest — view only</option>
-                </select>
-                <span class="field-help">You can change roles later in settings.</span>
-              </div>
-            </div>
-
-            <div class="stack gap-2">
-              <span class="mono-label text-muted">Pending invites · 3</span>
-              <ul class="list" aria-label="Pending invites">
-                <li class="list__row">
-                  <span class="list__lead avatar avatar--sm avatar--blue" aria-hidden="true">PR</span>
-                  <span class="list__main">
-                    <span class="list__title">priya@northwind.co</span>
-                    <span class="list__meta">Invited just now</span>
-                  </span>
-                  <span class="list__trail">
-                    <span class="badge badge--lime">Admin</span>
-                    <span class="badge">Pending</span>
-                  </span>
-                </li>
-                <li class="list__row">
-                  <span class="list__lead avatar avatar--sm avatar--pink" aria-hidden="true">DK</span>
-                  <span class="list__main">
-                    <span class="list__title">dev.kim@northwind.co</span>
-                    <span class="list__meta">Invited just now</span>
-                  </span>
-                  <span class="list__trail">
-                    <span class="badge">Member</span>
-                    <span class="badge">Pending</span>
-                  </span>
-                </li>
-                <li class="list__row">
-                  <span class="list__lead avatar avatar--sm avatar--ink" aria-hidden="true">SO</span>
-                  <span class="list__main">
-                    <span class="list__title">sofia.ortiz@northwind.co</span>
-                    <span class="list__meta">Invited 1 min ago</span>
-                  </span>
-                  <span class="list__trail">
-                    <span class="badge">Guest</span>
-                    <span class="badge">Pending</span>
-                  </span>
-                </li>
-              </ul>
-            </div>
-
-            <div class="alert alert--info" role="note">
-              <span>Prefer to do this later? Skip ahead — you can invite from the dashboard anytime.</span>
-            </div>
-          </div>
-
-          <div class="card__foot ob-foot-nav" style="margin:var(--space-6) calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad));">
-            <button type="button" class="btn btn--ghost" data-wizard-prev>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" aria-hidden="true" style="width:1.1em;height:1.1em;"><path d="M19 12H5M11 18l-6-6 6-6"></path></svg>
-              Back
-            </button>
-            <div class="cluster gap-2">
-              <button type="button" class="btn btn--secondary" data-wizard-next>Skip for now</button>
-              <button type="button" class="btn btn--primary" data-wizard-next>Send &amp; continue</button>
-            </div>
-          </div>
-        </section>
-
-        <!-- ---------- STEP 5 · FINISH ---------- -->
-        <section class="card__body" data-wizard-step aria-label="All set" hidden>
-          <div class="empty empty--success" data-finish>
-            <span class="sticker sticker--lime" style="margin-bottom:var(--space-2);">You're in!</span>
-            <div class="empty__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"></path></svg>
-            </div>
-            <span class="empty__eyebrow">Setup complete</span>
-            <h2 class="empty__title">Northwind Studio is ready</h2>
-            <p class="empty__msg">Your workspace is live and your invites are on their way. Time to ship something.</p>
-          </div>
-
-          <div class="stack gap-2" style="max-width:520px;margin-inline:auto;margin-top:var(--space-4);">
-            <span class="mono-label text-muted">What you set up</span>
-            <ul class="list" aria-label="Setup summary">
+          <div class="stack gap-2">
+            <span class="mono-label text-muted">대기 중인 초대 · 3건</span>
+            <ul class="list" aria-label="대기 중인 초대">
               <li class="list__row">
-                <span class="list__lead list__lead--icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" style="width:20px;height:20px;"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4 4-6 8-6s8 2 8 6"></path></svg>
-                </span>
+                <span class="list__lead avatar avatar--sm avatar--blue" aria-hidden="true">서</span>
                 <span class="list__main">
-                  <span class="list__title">Profile created</span>
-                  <span class="list__meta">Marcus Adeyemi · @marcus · Product Manager</span>
+                  <span class="list__title">김서연 · seoyeon@mangchi.studio</span>
+                  <span class="list__meta">방금 초대함</span>
                 </span>
-                <span class="list__trail"><span class="badge badge--success">Done</span></span>
+                <span class="list__trail">
+                  <span class="badge badge--lime">관리자</span>
+                  <span class="badge">대기</span>
+                </span>
               </li>
               <li class="list__row">
-                <span class="list__lead list__lead--icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" style="width:20px;height:20px;"><rect x="3" y="4" width="18" height="16" rx="1"></rect><path d="M3 9h18"></path></svg>
-                </span>
+                <span class="list__lead avatar avatar--sm avatar--pink" aria-hidden="true">세</span>
                 <span class="list__main">
-                  <span class="list__title">Workspace live</span>
-                  <span class="list__meta">neo.app/northwind · Team of 2–10</span>
+                  <span class="list__title">오세훈 · sehun@mangchi.studio</span>
+                  <span class="list__meta">방금 초대함</span>
                 </span>
-                <span class="list__trail"><span class="badge badge--success">Done</span></span>
+                <span class="list__trail">
+                  <span class="badge">멤버</span>
+                  <span class="badge">대기</span>
+                </span>
               </li>
               <li class="list__row">
-                <span class="list__lead list__lead--icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" style="width:20px;height:20px;"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 00-3-3.87"></path></svg>
-                </span>
+                <span class="list__lead avatar avatar--sm avatar--ink" aria-hidden="true">예</span>
                 <span class="list__main">
-                  <span class="list__title">3 teammates invited</span>
-                  <span class="list__meta">priya, dev.kim &amp; sofia.ortiz</span>
+                  <span class="list__title">한예리 · yeri@mangchi.studio</span>
+                  <span class="list__meta">1분 전 초대함</span>
                 </span>
-                <span class="list__trail"><span class="badge badge--success">Sent</span></span>
+                <span class="list__trail">
+                  <span class="badge">게스트</span>
+                  <span class="badge">대기</span>
+                </span>
               </li>
             </ul>
           </div>
 
-          <div class="card__foot ob-foot-nav" style="margin:var(--space-6) calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad));">
-            <button type="button" class="btn btn--ghost" data-wizard-prev>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" aria-hidden="true" style="width:1.1em;height:1.1em;"><path d="M19 12H5M11 18l-6-6 6-6"></path></svg>
-              Back
-            </button>
-            <a class="btn btn--primary btn--lg" href="dashboard.html" style="margin-left:auto;">
-              Go to dashboard
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" aria-hidden="true" style="width:1.1em;height:1.1em;"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
-            </a>
+          <div class="alert alert--info" role="note">
+            <span>나중에 해도 된다. 초대는 대시보드에서 언제든 가능.</span>
           </div>
-        </section>
+        </div>
 
-      </div><!-- /.wizard -->
-    </article>
-  </main>
+        <div class="card__foot ob-foot-nav" style="margin:var(--space-6) calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad));">
+          <button type="button" class="btn btn--ghost" data-wizard-prev>
+            <svg width="18" height="18" aria-hidden="true"><use href="#i-arrow-l"/></svg>
+            이전
+          </button>
+          <div class="cluster gap-2">
+            <button type="button" class="btn btn--secondary" data-wizard-next>건너뛰기</button>
+            <button type="button" class="btn btn--primary" data-wizard-next>보내고 계속</button>
+          </div>
+        </div>
+      </section>
 
-  <footer class="section" style="text-align:center;padding-block:var(--space-6);">
-    <p class="text-muted mono-label">Need a hand? <a class="underline-bold" href="../index.html">Talk to support</a></p>
-  </footer>
+      <!-- ---------- STEP 5 · 완료 — 시그니처 모먼트 ---------- -->
+      <section class="card__body" data-wizard-step aria-label="설정 완료" hidden>
+        <div class="empty empty--success" data-finish>
+          <span class="sticker sticker--lime tilt-loud" data-reveal style="margin-bottom:var(--space-2);font-size:var(--text-lg);">입주 완료!</span>
+          <div class="empty__icon" data-reveal aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"></path></svg>
+          </div>
+          <span class="empty__eyebrow">SETUP COMPLETE</span>
+          <h2 class="empty__title">망치스튜디오, 개장.</h2>
+          <p class="empty__msg">초대장은 날아갔고 워크스페이스는 켜졌다. 이제 만들 차례.</p>
+        </div>
+
+        <div class="stack gap-2" style="max-width:540px;margin-inline:auto;margin-top:var(--space-4);">
+          <span class="mono-label text-muted">설정 내역</span>
+          <ul class="list" aria-label="설정 요약">
+            <li class="list__row">
+              <span class="list__lead list__lead--icon" aria-hidden="true">
+                <svg width="20" height="20"><use href="#i-user"/></svg>
+              </span>
+              <span class="list__main">
+                <span class="list__title">프로필 생성</span>
+                <span class="list__meta">박하늘 · @haneul · 프로덕트 매니저</span>
+              </span>
+              <span class="list__trail"><span class="badge badge--success">완료</span></span>
+            </li>
+            <li class="list__row">
+              <span class="list__lead list__lead--icon" aria-hidden="true">
+                <svg width="20" height="20"><use href="#i-grid"/></svg>
+              </span>
+              <span class="list__main">
+                <span class="list__title">워크스페이스 개설</span>
+                <span class="list__meta">neo.app/mangchi · 2–10명 팀</span>
+              </span>
+              <span class="list__trail"><span class="badge badge--success">완료</span></span>
+            </li>
+            <li class="list__row">
+              <span class="list__lead list__lead--icon" aria-hidden="true">
+                <svg width="20" height="20"><use href="#i-users"/></svg>
+              </span>
+              <span class="list__main">
+                <span class="list__title">팀원 3명 초대</span>
+                <span class="list__meta">서연 · 세훈 · 예리</span>
+              </span>
+              <span class="list__trail"><span class="badge badge--success">발송</span></span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="card__foot ob-foot-nav" style="margin:var(--space-6) calc(-1 * var(--card-pad)) calc(-1 * var(--card-pad));">
+          <button type="button" class="btn btn--ghost" data-wizard-prev>
+            <svg width="18" height="18" aria-hidden="true"><use href="#i-arrow-l"/></svg>
+            이전
+          </button>
+          <a class="btn btn--primary btn--lg" href="dashboard.html" style="margin-left:auto;">
+            대시보드로 가기
+            <svg width="18" height="18" aria-hidden="true"><use href="#i-arrow"/></svg>
+          </a>
+        </div>
+      </section>
+
+    </div><!-- /.wizard -->
+  </article>
+</main>
+
+<!-- 시그니처 마퀴 — 옐로 판 (설치 선언) -->
+<div class="marquee marquee--yellow marquee--fast" aria-hidden="true">
+  <div class="marquee__track">
+    <span class="marquee__item">카드 등록 없음</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">2분 설치</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">14일 Pro 체험</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">언제든 해지</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">쾅</span><span class="marquee__item">✶</span>
+  </div>
+  <div class="marquee__track">
+    <span class="marquee__item">카드 등록 없음</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">2분 설치</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">14일 Pro 체험</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">언제든 해지</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">쾅</span><span class="marquee__item">✶</span>
+  </div>
+</div>
+
+<footer style="text-align:center;padding-block:var(--space-6);">
+  <p class="text-muted mono-label">막히면 → <a class="underline-bold" href="../index.html">여기로</a></p>
+</footer>
 </div>
 
 <script src="../app.js"></script>
 <script>
-  /* Sync the labeled .steps header to the wizard's current step, and toast on finish. */
+  /* 스텝 헤더·워터마크 숫자를 위저드와 동기화 + 프로필 필수값 검증 + 완료 토스트 */
   (function () {
     var wz = document.querySelector("[data-wizard]");
     if (!wz) return;
     var stepItems = Array.prototype.slice.call(document.querySelectorAll("[data-steps] .steps__item"));
     var counters = Array.prototype.slice.call(document.querySelectorAll("[data-current-step]"));
+    var bigNum = document.querySelector("[data-step-num]");
     var lastStep = stepItems.length - 1;
     var finished = false;
 
@@ -481,12 +511,23 @@
       });
       counters.forEach(function (c) { c.textContent = String(cur + 1); });
 
+      /* 워터마크 숫자 — '쾅' 다시 찍기 */
+      if (bigNum) {
+        var label = "0" + (cur + 1);
+        if (bigNum.textContent !== label) {
+          bigNum.textContent = label;
+          bigNum.classList.remove("is-restamp");
+          void bigNum.offsetWidth;
+          bigNum.classList.add("is-restamp");
+        }
+      }
+
       if (cur === lastStep && !finished) {
         finished = true;
         if (window.NB && window.NB.toast) {
           window.NB.toast({
-            title: "Workspace ready",
-            message: "Northwind Studio is live — let's go to your dashboard.",
+            title: "쾅! 개장했습니다",
+            message: "망치스튜디오가 열렸습니다. 대시보드에서 시작하세요.",
             variant: "success"
           });
         }
@@ -495,10 +536,37 @@
       }
     }
 
-    // app.js handles the actual step transitions on click; run our sync just after.
+    /* 프로필 필수값 검증 — 이름이 비면 위저드 진행을 막는다 (장면 속 invalid 시연) */
+    var nameInput = document.getElementById("ob-name");
+    var nameErr = document.getElementById("ob-name-err");
+    var validateBtn = document.querySelector("[data-validate-profile]");
+    function setInvalid(on) {
+      if (!nameInput || !nameErr) return;
+      nameInput.classList.toggle("is-invalid", on);
+      nameInput.setAttribute("aria-invalid", on ? "true" : "false");
+      nameErr.hidden = !on;
+    }
+    if (validateBtn) {
+      validateBtn.addEventListener("click", function (e) {
+        if (nameInput && !nameInput.value.trim()) {
+          e.stopPropagation(); /* app.js 위저드 핸들러 차단 — 진행 금지 */
+          setInvalid(true);
+          nameInput.focus();
+          if (window.NB && window.NB.announce) window.NB.announce("이름이 비어 있습니다. 입력 후 진행하세요.");
+        }
+      });
+    }
+    if (nameInput) {
+      nameInput.addEventListener("input", function () {
+        if (nameInput.value.trim()) setInvalid(false);
+      });
+    }
+
+    /* app.js가 스텝 전환을 처리한 직후 동기화
+       (rAF는 백그라운드 탭에서 멎으므로 setTimeout 사용) */
     wz.addEventListener("click", function (e) {
       if (e.target.closest("[data-wizard-next],[data-wizard-prev],[data-wizard-goto]")) {
-        requestAnimationFrame(syncSteps);
+        setTimeout(syncSteps, 0);
       }
     });
     syncSteps();

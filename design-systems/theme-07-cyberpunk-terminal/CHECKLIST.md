@@ -3,10 +3,10 @@
 구현·접근성 자가점검 결과. 측정값은 실제 검증 스크립트/계산 기준.
 
 ```
-SCALE      CSS 7,413 lines · JS 763 lines · HTML 10 files
-TOKENS     380 token definitions  ·  14 @keyframes
-CLASSES    478 distinct .ct-* component classes  ·  7 component files
-STATUS     ████████████████████  BUILD COMPLETE
+SCALE      CSS 7,759 lines · JS 859 lines · HTML 10 files
+TOKENS     405 token definitions  ·  16 @keyframes (전부 소비처 확인)
+CLASSES    489 distinct .ct-* component classes  ·  7 component files
+STATUS     ████████████████████  BUILD COMPLETE (재고도화 2차 §7 반영)
 ```
 
 ---
@@ -53,7 +53,7 @@ STATUS     ████████████████████  BUILD C
 ### 2.2 광과민(Photosensitivity) 안전
 - ✅ 초당 3회↑ 점멸 **없음**. 커서 깜빡임 `ct-cursor-blink` = ~1Hz(1.06s). 위험 영역 모달 등 강조도 점멸 아님.
 - ✅ 글리치(`ct-glitch`/`ct-glitch-shadow`)는 **호버 시 짧은 1회**(steps 2~3, ~0.3s) — 무한 스트로브 아님.
-- ✅ 플리커(`ct-flicker`)는 느리고 진폭 낮음(±1.5%), 스캔라인 드리프트는 6s 선형.
+- ✅ 플리커(`ct-flicker`)는 `.crt-overlay`(CRT 유리층 전체)에 8s linear infinite로 적용 — 진폭 ≤4%(opacity 1→.96) 저강도 딥 2회/주기 ≈ 0.25Hz, 스캔라인 드리프트는 6s 선형. reduced-motion 시 전역 킬스위치 + 명시 가드로 정지.
 
 ### 2.3 `prefers-reduced-motion: reduce`
 - ✅ base.css 전역 킬스위치: 모든 애니메이션/트랜지션 ~0, 스캔라인 정지, 커서 솔리드, 글리치/타이핑 정지.
@@ -107,3 +107,78 @@ STATUS     ████████████████████  BUILD C
 ---
 
 _점검 완료. 모든 강제 규칙(대비 4.5:1↑ · 점멸 안전 · reduced-motion 정지 · 네온 포커스 · 색+라벨 병행) 충족._
+
+---
+
+## 6. 재고도화 1차 — 시스템 레이어 (2026-07-04, fable-upgrade)
+
+### 6.1 P0/P1 결함 해소 (검증 명령 포함)
+| 항목 | 조치 | 검증 |
+|------|------|------|
+| 미사용 Noto Serif KR @import | tokens.css에서 제거 + base.css @import를 tokens.css 단일 파이프라인으로 통합 | `grep -rn 'Serif' *.css components/*.css` → 주석 1건뿐 |
+| FOUC | index.html `<head>` 동기 스니펫(키 `ct-theme`) + `data-theme` 하드코딩 제거 | 다크 저장 후 재로드 실렌더 확인(스크린샷) |
+| 전역 `:focus{outline:none}` | `:focus:not(:focus-visible)` 패턴으로 축소 (base.css) | 코드 리뷰 |
+| 별점 4.5 불투명도 눈속임 | `.ct-rating__item--half` 클립 오버레이 신설 (forms.css) — 페이지 마크업 교체는 페이지 에이전트 몫 | CSS 정의 확인 |
+| 스크린리더 영문 문구 | app.js: 알림 닫기 / 이전·다음 달 / 이벤트 기록 / 클립보드 복사 / 칩 제거 전부 한국어화 | `grep -n 'aria-label' app.js` |
+| cmdk 무효 ARIA | 항목 `role="option"`(마크업+JS 이중 보장) + `aria-activedescendant` + empty `role="status"` | 코드 리뷰 |
+| `.ct-btn-group [aria-pressed]` JS 동기화 부재 | PressGroup 모듈 신설 (단일 선택) | 코드 리뷰 |
+| `href="#"` 더미(브레드크럼 데모) | 실앵커로 교체 | grep 0건 |
+| 죽은 토큰 | `--noise-opacity`(grain 점화) · `ct-type`+`--ease-step`(navline 타이핑) · `--corner-cut-sm`(.clip-corner-sm) · `--ring-danger`(danger 포커스 링) · `--leading-display-ko`(.display-ko) 전부 점화 | §7-1 #8 대조 |
+
+### 6.2 자동 검증 결과 (시스템 레이어 스코프)
+- SVG presentation 속성 var(): index.html 0건
+- components/*.css 하드코딩 hex(비 intentional): 0건
+- 인라인 grid-template-columns: 0건 / 서구권 filler: 0건 / raw .md 링크: 0건
+- CSS 중괄호 균형 10파일 전부 일치 · `node --check app.js` OK · HTML 태그 균형/중복 속성 파서 검사 통과
+- keep-all: base.css Hangul refinement layer 신설(`:lang(ko)`)
+
+### 6.3 실렌더 확인 (Playwright, 공유 인스턴스 틈새 확보분)
+- 1440 라이트: 히어로 오버랩 구도 · statusline(실시간 시계) · scene-glow · 워터마크 정상
+- 1440 다크(localStorage 저장 후 재로드 = FOUC 스니펫 경유): 틸링 pane 그리드 · pane 라벨 · 베젤 · grain 정상
+- 360 다크: 스택 낙하 정상, 가로 스크롤 없음. OSD는 768 이하 축소 처리
+- 미확인(페이지 에이전트/후속 검증에 위임): pages/* 9종 재검, reduced-motion OS 설정 실측, 신규 대비쌍 수치 실측
+
+### 6.4 신규 대비 메모
+- 신규 장식 레이어(grain·베젤·워터마크·scene-glow)는 전부 저알파 배경/전경 장식으로 텍스트 위에 직접 얹히지 않음(grain은 콘텐츠 z-1 아래). 본문 대비쌍 변경 없음.
+
+---
+
+## 7. 재고도화 2차 — 페이지 레이어 + 마감 수리 (2026-07-04, fable-upgrade)
+
+### 7.1 페이지 레이어 롤아웃 (grep 실측, 10개 HTML 전수)
+| 항목 | 실측 | 비고 |
+|------|------|------|
+| FOUC 스니펫(키 `ct-theme`) + `data-theme` 하드코딩 제거 | **10/10** · 하드코딩 0건 | `<head>` 동기 스니펫 |
+| CRT 베젤 OSD 라벨(`.crt-overlay__osd`) | **10/10** | 페이지 픽션별 변주(404 `SIGNAL LOST` 등) |
+| 스킵 링크 "본문으로 건너뛰기" | **10/10** | |
+| 씬 엔진 `data-scene` + `.scene-glow` | 8/10 (+무속성 기본 hub 2) | 페이지별 radial 복붙 레시피 삭제 |
+| `data-navline` 명령행 전환 | **10/10** | |
+| `[data-reveal]` CRT 전원 인가 리빌 | 9/10 | 섹션당 한 무리 원칙 |
+| `.ct-statusline` tmux 세션 바 | 8/10 | |
+| 별점 half: `.ct-rating__item--half` 실렌더 교체 | product.html 2건 (`opacity:.55` 눈속임 0건) | |
+| product.html P2 잔여 | SVG `stroke="rgb(...)"` 리터럴 0건 · `#0a0e14` 하드코딩 0건 | |
+| SVG presentation 속성 `var()` 누수 (pages 포함) | **0건** | |
+| 페이지 `<style>` 내 하드코딩 hex | **0건** | |
+
+### 7.2 table.css 파서 버그 (P0 수정)
+- **버그**: table.css 헤더 주석 문구 `--cyan-*/--ink-*` 속 `*/` 시퀀스가 블록 주석을 조기 종결 → 파서가 다음 `{`까지 무효 프렐류드로 소비 → 첫 규칙 `.ct-table-wrap`(터미널 프레임 + `overflow-x:auto`) 전체 드롭. 360px에서 dashboard/product/settings 와이드 테이블이 페이지 가로 스크롤 유발.
+- **수정**: 주석 문구를 `--cyan-* / --ink-*`로 교체(`*/` 시퀀스 제거). 페이지 에이전트가 pricing.html에 임시 로컬 복원했던 `.pr-matrix .ct-table-wrap` 블록은 원본 수정으로 중복이 되어 제거.
+- **검증**: 주석 스트립 시뮬레이션으로 `.ct-table-wrap { … overflow-x:auto … }` 규칙 생존 확인 + 전 CSS 파일 조기 종결/중괄호 균형 검사 통과.
+
+### 7.3 죽은 자산 정리 (FOUNDATION §7-3 / §4-2)
+| 자산 | 조치 |
+|------|------|
+| `ct-flicker` 키프레임 (소비 0건) | **점화** — `.crt-overlay`에 8s linear infinite (§2.2 갱신). reduced-motion 명시 가드 추가 |
+| `ct-boot-fill` 키프레임 (소비 0건) | **삭제** — `ct-type`(width 스윕)과 중복, boot 시퀀스는 텍스트 라인 방식이라 소비처 없음 |
+| `--ct-toast-duration` 유령 토큰 | **점화** — app.js Toast.show가 `setProperty`로 공급, JS 인라인 width 트랜지션(이중 드레인 메커니즘) 제거 → CSS `ct-toast-drain` 단일화. 커스텀 timeout 시 바 소진과 토스트 제거 시점 일치 |
+| `.display-ko` 유틸 (사용 0건) | **점화** — profile.html 프로필명 h1 + pricing.html CTA h2. 셀렉터를 `:is(h1,h2,h3).display-ko` 병기로 보강(`:lang(ko)` 헤딩 행간 1.3을 이기도록) |
+| `.clip-corner-sm` 유틸 (사용 0건) | **점화** — 404 PANIC 배지 + pricing ACTIVE PANE 리본 (`clip-corner clip-corner-sm` 페어 사용) |
+| `body { min-height:100vh }` · toast stack `100vh` | **100dvh 교체** (FOUNDATION §4-6-3, inbox 페이지 레이어와 일치) |
+
+### 7.4 자동 검증 (수리 후 전수 재실행)
+- 주석 스트립 + 중괄호 균형: tokens/semantic/base/components 10파일 **전부 통과**
+- `node --check app.js` OK (859 lines)
+- 16개 `@keyframes` 전부 소비처 1건 이상 (grep 실측) — 죽은 키프레임 0
+- `100vh` 잔존 0건 · SVG `var()` 누수 0건 (pages 포함)
+- 헤더 스탯 갱신: CSS 7,759줄 · 405 토큰 · 489 `.ct-*` 클래스
+- 후속 위임: dashboard/product/settings 360px 테이블 가로 스크롤 실렌더 육안 확인(정적 검증으로는 `.ct-table-wrap` 규칙 생존 확인 완료), reduced-motion OS 실측

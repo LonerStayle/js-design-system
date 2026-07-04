@@ -20,24 +20,65 @@
   /* THEME TOGGLE — dark (canonical) ↔ light (aged parchment)         */
   /* ---------------------------------------------------------------- */
   const THEME_KEY = 'theme-24-mode';
+  const REDUCED = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   function applyTheme(mode) {
     document.documentElement.setAttribute('data-theme', mode);
     $$('[data-theme-toggle]').forEach(btn => {
       btn.setAttribute('aria-pressed', String(mode === 'light'));
       const lab = btn.querySelector('[data-theme-label]');
-      if (lab) lab.textContent = mode === 'light' ? 'Candlelight' : 'Parchment';
+      if (lab) lab.textContent = mode === 'light' ? '촛불' : '양피지';   /* 라벨 = 전환될 판본 */
+    });
+  }
+  /* 테마 전환 연출 — 라이트로: 채광 플래시 / 다크로: 성냥 점화 (1회성, reduced-motion 스킵) */
+  function themeVeil(next) {
+    if (REDUCED()) return;
+    const v = document.createElement('div');
+    v.className = 'theme-veil ' + (next === 'dark' ? 'theme-veil--kindle' : 'theme-veil--daylight');
+    v.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(v);
+    setTimeout(() => v.remove(), 720);
+  }
+  function switchTheme(next) {
+    applyTheme(next);
+    themeVeil(next);
+    try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
+    toast({
+      title: next === 'light' ? '양피지를 폈습니다' : '촛불을 밝혔습니다',
+      body: next === 'light' ? '낮의 판본으로 전환되었습니다.' : '밤의 판본으로 전환되었습니다.',
+      variant: 'success'
     });
   }
   function initTheme() {
     let saved;
     try { saved = localStorage.getItem(THEME_KEY); } catch (e) {}
-    applyTheme(saved || 'dark');
+    applyTheme(saved || document.documentElement.getAttribute('data-theme') || 'dark');
     $$('[data-theme-toggle]').forEach(btn => on(btn, 'click', () => {
-      const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-      applyTheme(next);
-      try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
-      toast({ title: next === 'light' ? 'Aged parchment' : 'Candlelit hall', body: 'Theme changed.', variant: 'success' });
+      switchTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
     }));
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* CANDLE CURSOR — 커서를 따라오는 촛불 광원 (다크 전용 시그니처)     */
+  /* 터치 기기·reduced-motion에서는 생성 자체를 스킵 (고정 비네트 유지) */
+  /* ---------------------------------------------------------------- */
+  function initCandleCursor() {
+    if (REDUCED()) return;
+    if (window.matchMedia && matchMedia('(hover: none)').matches) return;
+    const el = document.createElement('div');
+    el.className = 'candle-pool';
+    el.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(el);
+    let tx = innerWidth / 2, ty = innerHeight * 0.3, x = tx, y = ty, raf = null;
+    function step() {
+      x += (tx - x) * 0.09; y += (ty - y) * 0.09;   /* 촛불이 한 박자 늦게 따라온다 */
+      el.style.setProperty('--mx', x.toFixed(1) + 'px');
+      el.style.setProperty('--my', y.toFixed(1) + 'px');
+      raf = (Math.abs(tx - x) + Math.abs(ty - y) > 0.6) ? requestAnimationFrame(step) : null;
+    }
+    on(document, 'pointermove', e => {
+      tx = e.clientX; ty = e.clientY;
+      if (!raf) raf = requestAnimationFrame(step);
+    }, { passive: true });
   }
 
   /* ---------------------------------------------------------------- */
@@ -172,16 +213,16 @@
     return r;
   }
   function toast(opts) {
-    const o = Object.assign({ title: 'Notice', body: '', variant: 'success', timeout: 4200 }, opts || {});
+    const o = Object.assign({ title: '알림', body: '', variant: 'success', timeout: 4200 }, opts || {});
     const r = ensureToastRegion();
     const el = document.createElement('div');
     el.className = 'toast toast--' + o.variant;
-    el.setAttribute('role', 'status');
+    el.setAttribute('role', o.variant === 'danger' ? 'alert' : 'status');
     el.innerHTML =
       '<span class="toast__icon" aria-hidden="true">' + (ICONS[o.variant] || ICONS.info) + '</span>' +
       '<div><div class="toast__title">' + esc(o.title) + '</div>' +
       (o.body ? '<div class="toast__body">' + esc(o.body) + '</div>' : '') + '</div>' +
-      '<button class="toast__close" aria-label="Dismiss">&times;</button>';
+      '<button class="toast__close" aria-label="알림 닫기">&times;</button>';
     r.appendChild(el);
     const remove = () => { el.classList.add('leaving'); setTimeout(() => el.remove(), 280); };
     on(el.querySelector('.toast__close'), 'click', remove);
@@ -190,7 +231,7 @@
   window.gothicToast = toast;
   function initToastButtons() {
     $$('[data-toast]').forEach(btn => on(btn, 'click', () => {
-      toast({ title: btn.dataset.toastTitle || 'Inscribed', body: btn.dataset.toast || btn.dataset.toastBody || '', variant: btn.dataset.toastVariant || 'success' });
+      toast({ title: btn.dataset.toastTitle || '기록 완료', body: btn.dataset.toast || btn.dataset.toastBody || '', variant: btn.dataset.toastVariant || 'success' });
     }));
   }
 
@@ -201,14 +242,29 @@
     const ov = $('#cmdk'); if (!ov) return;
     const input = $('.cmdk__input', ov);
     const list = $('.cmdk__list', ov);
+    /* combobox + listbox ARIA 배선 (마크업 부담 없이 JS가 표준화) */
+    if (!list.id) list.id = 'cmdk-list';
+    list.setAttribute('role', 'listbox');
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-expanded', 'true');
+    input.setAttribute('aria-controls', list.id);
+    input.setAttribute('aria-autocomplete', 'list');
+    $$('.cmdk__group-label', list).forEach(g => g.setAttribute('role', 'presentation'));
+    $$('.cmdk__item', list).forEach((it, k) => { if (!it.id) it.id = 'cmdk-opt-' + k; it.setAttribute('aria-selected', 'false'); });
+    const emptyEl = $('.cmdk__empty', list);
+    if (emptyEl) { emptyEl.setAttribute('role', 'status'); emptyEl.setAttribute('aria-live', 'polite'); }
     const items = () => $$('.cmdk__item', list).filter(i => i.style.display !== 'none');
     let active = 0;
     function open() { ov.classList.add('is-open'); ov.setAttribute('aria-hidden', 'false'); document.body.style.overflow = 'hidden'; input.value = ''; filter(''); setTimeout(() => input.focus(), 50); }
     function close() { ov.classList.remove('is-open'); ov.setAttribute('aria-hidden', 'true'); document.body.style.overflow = ''; }
     function setActive(i) {
-      const it = items(); if (!it.length) return;
+      const it = items(); if (!it.length) { input.removeAttribute('aria-activedescendant'); return; }
       active = (i + it.length) % it.length;
-      it.forEach((el, k) => el.classList.toggle('is-active', k === active));
+      it.forEach((el, k) => {
+        el.classList.toggle('is-active', k === active);
+        el.setAttribute('aria-selected', String(k === active));
+      });
+      input.setAttribute('aria-activedescendant', it[active].id);
       it[active].scrollIntoView({ block: 'nearest' });
     }
     function filter(q) {
@@ -244,9 +300,13 @@
     $$('.cmdk__item', list).forEach(it => on(it, 'click', () => {
       close();
       const act = it.dataset.action;
-      if (act === 'toggle-theme') { const t = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light'; applyTheme(t); try { localStorage.setItem(THEME_KEY, t); } catch (e) {} }
+      if (act === 'toggle-theme') { switchTheme(document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light'); }
       else if (it.dataset.href) { window.location.href = it.dataset.href; }
-      else toast({ title: 'Command', body: it.textContent.trim() + ' invoked.', variant: 'info' });
+      else {
+        const c = it.cloneNode(true);
+        $$('.cmdk__hint', c).forEach(h => h.remove());
+        toast({ title: it.dataset.toastTitle || '명령 실행', body: it.dataset.toast || ('「' + c.textContent.trim() + '」 명령을 실행했습니다.'), variant: 'info' });
+      }
     }));
   }
 
@@ -262,7 +322,7 @@
         const open = menu.classList.toggle('is-open');
         trig.setAttribute('aria-expanded', String(open));
       });
-      $$('.menu__item', menu).forEach(it => on(it, 'click', () => { close(); if (!it.dataset.keepOpen) toast({ title: 'Selected', body: it.textContent.trim(), variant: 'info' }); }));
+      $$('.menu__item', menu).forEach(it => on(it, 'click', () => { close(); if (!it.dataset.keepOpen) toast({ title: '선택 완료', body: '「' + it.textContent.trim() + '」 항목을 선택했습니다.', variant: 'info' }); }));
       on(menu, 'keydown', e => { if (e.key === 'Escape') { close(); trig && trig.focus(); } });
     });
     $$('[data-popover]').forEach(pop => {
@@ -285,7 +345,7 @@
         cm.style.left = x + 'px'; cm.style.top = y + 'px';
       }));
       on(document, 'click', () => { cm.hidden = true; });
-      $$('.menu__item', cm).forEach(it => on(it, 'click', () => toast({ title: 'Action', body: it.textContent.trim(), variant: 'info' })));
+      $$('.menu__item', cm).forEach(it => on(it, 'click', () => toast({ title: '동작 실행', body: '「' + it.textContent.trim() + '」을(를) 실행했습니다.', variant: 'info' })));
     }
   }
 
@@ -311,8 +371,10 @@
   function initSliders() {
     $$('input[type="range"][data-output]').forEach(sl => {
       const out = document.getElementById(sl.dataset.output);
+      /* data-thousands가 있으면 ₩1,850,000식 천단위 구분 표기 */
+      const fmt = v => sl.dataset.thousands != null ? Number(v).toLocaleString('ko-KR') : v;
       const upd = () => {
-        if (out) out.textContent = (sl.dataset.prefix || '') + sl.value + (sl.dataset.suffix || '');
+        if (out) out.textContent = (sl.dataset.prefix || '') + fmt(sl.value) + (sl.dataset.suffix || '');
         const pct = ((sl.value - sl.min) / (sl.max - sl.min)) * 100;
         sl.style.background = 'linear-gradient(90deg, var(--color-primary) ' + pct + '%, var(--color-surface-inset) ' + pct + '%)';
       };
@@ -330,7 +392,7 @@
         text = text.trim(); if (!text) return;
         const chip = document.createElement('span');
         chip.className = 'chip';
-        chip.innerHTML = esc(text) + ' <button type="button" aria-label="Remove ' + esc(text) + '">&times;</button>';
+        chip.innerHTML = esc(text) + ' <button type="button" aria-label="' + esc(text) + ' 삭제">&times;</button>';
         on(chip.querySelector('button'), 'click', () => chip.remove());
         box.insertBefore(chip, input);
       }
@@ -370,24 +432,35 @@
   /* ---------------------------------------------------------------- */
   function initTables() {
     $$('table[data-sortable]').forEach(table => {
-      $$('th.sortable', table).forEach((th, col) => on(th, 'click', () => {
-        const tbody = $('tbody', table);
-        const rows = $$('tr', tbody);
-        const dir = th.getAttribute('aria-sort') === 'ascending' ? 'descending' : 'ascending';
-        $$('th', table).forEach(h => h.removeAttribute('aria-sort'));
-        th.setAttribute('aria-sort', dir);
-        const idx = Array.from(th.parentNode.children).indexOf(th);
-        rows.sort((a, b) => {
-          let x = a.children[idx].dataset.sort || a.children[idx].textContent.trim();
-          let y = b.children[idx].dataset.sort || b.children[idx].textContent.trim();
-          const nx = parseFloat(x.replace(/[^0-9.-]/g, '')), ny = parseFloat(y.replace(/[^0-9.-]/g, ''));
-          let cmp = (!isNaN(nx) && !isNaN(ny)) ? nx - ny : x.localeCompare(y);
-          return dir === 'ascending' ? cmp : -cmp;
+      $$('th.sortable', table).forEach(th => {
+        /* 키보드 접근 — th 내용을 .th-sort 버튼으로 자동 승격 (마우스 전용 금지) */
+        let btn = th.querySelector('.th-sort');
+        if (!btn) {
+          btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'th-sort';
+          while (th.firstChild) btn.appendChild(th.firstChild);
+          th.appendChild(btn);
+        }
+        on(btn, 'click', () => {
+          const tbody = $('tbody', table);
+          const rows = $$('tr', tbody);
+          const dir = th.getAttribute('aria-sort') === 'ascending' ? 'descending' : 'ascending';
+          $$('th', table).forEach(h => h.removeAttribute('aria-sort'));
+          th.setAttribute('aria-sort', dir);
+          const idx = Array.from(th.parentNode.children).indexOf(th);
+          rows.sort((a, b) => {
+            let x = a.children[idx].dataset.sort || a.children[idx].textContent.trim();
+            let y = b.children[idx].dataset.sort || b.children[idx].textContent.trim();
+            const nx = parseFloat(x.replace(/[^0-9.-]/g, '')), ny = parseFloat(y.replace(/[^0-9.-]/g, ''));
+            let cmp = (!isNaN(nx) && !isNaN(ny)) ? nx - ny : x.localeCompare(y);
+            return dir === 'ascending' ? cmp : -cmp;
+          });
+          rows.forEach(r => tbody.appendChild(r));
+          $$('.sort-ind', table).forEach(s => s.textContent = '');
+          const ind = th.querySelector('.sort-ind'); if (ind) ind.textContent = dir === 'ascending' ? '▲' : '▼';
         });
-        rows.forEach(r => tbody.appendChild(r));
-        $$('.sort-ind', table).forEach(s => s.textContent = '');
-        const ind = th.querySelector('.sort-ind'); if (ind) ind.textContent = dir === 'ascending' ? '▲' : '▼';
-      }));
+      });
       const selectAll = $('[data-select-all]', table);
       if (selectAll) on(selectAll, 'change', () => {
         $$('tbody [data-row-select]', table).forEach(cb => { cb.checked = selectAll.checked; cb.closest('tr').setAttribute('aria-selected', String(cb.checked)); });
@@ -412,9 +485,12 @@
       function go(n) {
         i = Math.max(0, Math.min(slides.length - 1, n));
         slides[i].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-        if (dotsWrap) $$('button', dotsWrap).forEach((d, k) => d.classList.toggle('is-active', k === i));
+        if (dotsWrap) $$('button', dotsWrap).forEach((d, k) => {
+          d.classList.toggle('is-active', k === i);
+          if (k === i) d.setAttribute('aria-current', 'true'); else d.removeAttribute('aria-current');
+        });
       }
-      if (dotsWrap) { dotsWrap.innerHTML = ''; slides.forEach((_, k) => { const b = document.createElement('button'); b.setAttribute('aria-label', 'Slide ' + (k + 1)); on(b, 'click', () => go(k)); dotsWrap.appendChild(b); }); }
+      if (dotsWrap) { dotsWrap.innerHTML = ''; slides.forEach((_, k) => { const b = document.createElement('button'); b.setAttribute('aria-label', (k + 1) + '번째 도판으로 이동'); on(b, 'click', () => go(k)); dotsWrap.appendChild(b); }); }
       on($('.carousel__nav--prev', car), 'click', () => go(i - 1));
       on($('.carousel__nav--next', car), 'click', () => go(i + 1));
       go(0);
@@ -432,15 +508,49 @@
   }
 
   /* ---------------------------------------------------------------- */
-  /* MOBILE NAV toggle                                               */
+  /* MOBILE NAV toggle — 클래스 기반 (.navbar__nav.is-open, CSS 소관)  */
   /* ---------------------------------------------------------------- */
   function initMobileNav() {
     $$('[data-nav-toggle]').forEach(btn => on(btn, 'click', () => {
       const nav = $('.navbar__nav'); if (!nav) return;
-      const open = nav.style.display === 'flex';
-      nav.style.display = open ? '' : 'flex';
-      if (!open) { nav.style.position = 'absolute'; nav.style.top = '100%'; nav.style.left = '0'; nav.style.right = '0'; nav.style.flexDirection = 'column'; nav.style.background = 'var(--color-surface)'; nav.style.padding = 'var(--space-3)'; nav.style.borderBottom = '1px solid var(--color-border)'; }
+      const open = nav.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded', String(open));
     }));
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* SEGMENTED — role="radiogroup"/"radio" + 방향키 (data-segmented)   */
+  /* ---------------------------------------------------------------- */
+  function initSegmented() {
+    $$('[data-segmented]').forEach(seg => {
+      const btns = $$('[role="radio"]', seg);
+      if (!btns.length) return;
+      function set(i) {
+        btns.forEach((b, k) => { b.setAttribute('aria-checked', String(k === i)); b.tabIndex = k === i ? 0 : -1; });
+      }
+      btns.forEach((b, i) => {
+        on(b, 'click', () => set(i));
+        on(b, 'keydown', e => {
+          let n = null;
+          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') n = (i + 1) % btns.length;
+          if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   n = (i - 1 + btns.length) % btns.length;
+          if (n !== null) { e.preventDefault(); set(n); btns[n].focus(); }
+        });
+      });
+      const init = btns.findIndex(b => b.getAttribute('aria-checked') === 'true');
+      set(init < 0 ? 0 : init);
+    });
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* TOGGLE BUTTON GROUP — aria-pressed 단일 선택 (data-toggle-group)  */
+  /* ---------------------------------------------------------------- */
+  function initToggleGroups() {
+    $$('[data-toggle-group]').forEach(g => {
+      $$('.btn', g).forEach(b => on(b, 'click', () => {
+        $$('.btn', g).forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+      }));
+    });
   }
 
   /* ---------------------------------------------------------------- */
@@ -451,7 +561,7 @@
       const sel = btn.dataset.copy;
       const src = sel ? document.querySelector(sel) : btn.closest('.code-block') && btn.closest('.code-block').querySelector('code');
       const text = src ? src.textContent : '';
-      const done = () => toast({ title: 'Copied', body: 'Inscribed to clipboard.', variant: 'success', timeout: 2000 });
+      const done = () => toast({ title: '복사 완료', body: '클립보드에 옮겨 적었습니다.', variant: 'success', timeout: 2000 });
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done).catch(done);
       else done();
     }));
@@ -464,7 +574,7 @@
     $$('[data-pricing-toggle]').forEach(t => on(t, 'change', () => {
       const annual = t.checked;
       $$('[data-price]').forEach(p => { p.textContent = annual ? p.dataset.priceAnnual : p.dataset.price; });
-      $$('[data-price-period]').forEach(p => p.textContent = annual ? '/ year' : '/ month');
+      $$('[data-price-period]').forEach(p => p.textContent = annual ? '/ 년' : '/ 월');
       $$('[data-annual-note]').forEach(n => n.hidden = !annual);
     }));
   }
@@ -478,15 +588,18 @@
       const panels = $$('[data-wizard-panel]', wiz);
       const next = $('[data-wizard-next]', wiz), prev = $('[data-wizard-prev]', wiz);
       const bar = $('[data-wizard-progress]', wiz);
+      /* 라벨은 페이지가 data 속성으로 재정의 가능 — 기본값은 한국어 */
+      const labelNext = wiz.dataset.labelNext || '계속';
+      const labelDone = wiz.dataset.labelComplete || '완료';
       let i = 0;
       function render() {
         steps.forEach((s, k) => { s.classList.toggle('is-active', k === i); s.classList.toggle('is-complete', k < i); });
         panels.forEach((p, k) => p.hidden = k !== i);
         if (prev) prev.disabled = i === 0;
-        if (next) next.textContent = i === panels.length - 1 ? 'Complete' : 'Continue';
+        if (next) next.textContent = i === panels.length - 1 ? labelDone : labelNext;
         if (bar) bar.style.width = ((i) / (panels.length - 1) * 100) + '%';
       }
-      on(next, 'click', () => { if (i < panels.length - 1) { i++; render(); } else toast({ title: 'Enrolled', body: 'Your matriculation is complete.', variant: 'success' }); });
+      on(next, 'click', () => { if (i < panels.length - 1) { i++; render(); } else toast({ title: wiz.dataset.completeTitle || '입학 허가', body: wiz.dataset.completeBody || '모든 절차가 끝났습니다. 밀랍 인장으로 봉인되었습니다.', variant: 'success' }); });
       on(prev, 'click', () => { if (i > 0) { i--; render(); } });
       render();
     });
@@ -559,7 +672,8 @@
     initSliders(); initChipInputs(); initDropzones(); initTables();
     initCarousels(); initSidebar(); initMobileNav(); initCopy();
     initPricing(); initWizard(); initPasswordReveal(); initFilters();
-    initReveal(); initRadioCards();
+    initReveal(); initRadioCards(); initSegmented(); initToggleGroups();
+    initCandleCursor();
     document.documentElement.classList.add('js-ready');
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

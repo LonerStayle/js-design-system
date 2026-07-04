@@ -6,8 +6,7 @@
    Depends on the variables defined in the two files above.
    ============================================================================ */
 
-/* ---------- Optional web fonts (graceful fallback to system mono offline) --- */
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&family=Share+Tech+Mono&display=swap');
+/* ---------- Web fonts: tokens.css 의 단일 @import 로 통합됨 (직렬 로딩 방지) --- */
 
 /* ============================================================================
    1. RESET
@@ -24,7 +23,7 @@ html {
 }
 
 body {
-  min-height: 100vh;
+  min-height: 100dvh;   /* dvh — 모바일 주소창 수축 시 유령 여백 방지 (FOUNDATION §4-6-3) */
   font-family: var(--font-mono);
   font-size: var(--text-base);
   line-height: var(--leading-normal);
@@ -46,7 +45,8 @@ a:hover { text-decoration: underline; text-underline-offset: 3px; }
 ul, ol { list-style: none; }
 table { border-collapse: collapse; width: 100%; }
 p, h1, h2, h3, h4, h5, h6 { overflow-wrap: break-word; }
-:focus { outline: none; }   /* replaced by neon ring below */
+:focus:not(:focus-visible) { outline: none; }   /* 키보드 포커스는 네온 링(§4)이 담당 —
+   :focus-visible 시 :where() 목록 밖 요소도 UA 기본 링을 유지(전역 제거 금지) */
 hr { border: none; border-top: var(--border-1) solid var(--color-divider); }
 code, kbd, samp, pre { font-family: var(--font-mono); }
 
@@ -171,14 +171,47 @@ mark { background: var(--color-warning-weak); color: var(--color-warning-text); 
 }
 
 /* ============================================================================
-   3. CRT ATMOSPHERE — scanline grid, vignette, faint HUD grid, noise.
+   3. CRT ATMOSPHERE — scanline grid, vignette, faint HUD grid, noise, bezel.
       All rendered in fixed full-screen overlays with pointer-events:none.
    ============================================================================ */
+/* .crt-overlay 자체 = CRT 하드웨어 베젤: 유리 모서리 라운딩 + 가장자리 인광 블룸.
+   전 페이지 공통 시그니처 — 화면이 '웹페이지 위 필터'가 아니라 모니터가 된다. */
 .crt-overlay {
   position: fixed;
   inset: 0;
   z-index: var(--z-scanline);
   pointer-events: none;
+  border-radius: var(--bezel-radius);
+  box-shadow:
+    inset 0 0 0 1px var(--bezel-line),
+    inset 0 0 2px  var(--bezel-line),
+    inset 0 0 26px var(--bezel-bloom);
+  /* phosphor flicker — 유리층(스캔라인+비네팅+베젤+OSD) 전체가 가끔 미세하게
+     떨린다. 진폭 ≤4% 감쇠(op 1→.96), 8s 주기 저강도 딥 2회 — 3Hz 규칙 안전.
+     reduced-motion: §7 전역 킬스위치 + 명시 가드로 정지. */
+  animation: ct-flicker 8s linear infinite;
+}
+/* OSD 라벨 — 모니터 온스크린 디스플레이 픽션. 부모가 aria-hidden(장식 전용). */
+.crt-overlay__osd {
+  position: absolute;
+  bottom: var(--space-3);
+  right: var(--space-5);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--osd-ink);
+  text-shadow: 0 0 6px var(--bezel-bloom);
+  user-select: none;
+}
+/* 좁은 뷰포트: 콘텐츠가 전폭이라 상시 겹침 — 숨기지 않고 속삭임 수준으로 축소 */
+@media (max-width: 768px) {
+  .crt-overlay__osd {
+    font-size: 0.5625rem;   /* 9px — OSD 축소 전용 */
+    opacity: .6;
+    right: var(--space-3);
+    bottom: var(--space-2);
+  }
 }
 /* scanlines */
 .crt-overlay::before {
@@ -219,6 +252,32 @@ body::before {
   opacity: .6;
 }
 
+/* phosphor grain — 죽어 있던 --noise-opacity 점화. 콘텐츠(z1) 아래에 깔려
+   보이드 배경에만 입자가 앉으므로 텍스트 대비를 깎지 않는다. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--noise-texture);
+  background-size: 140px 140px;
+  opacity: var(--noise-opacity);
+  mix-blend-mode: var(--noise-blend, screen);
+}
+
+/* scene glow — data-scene(semantic.css) 채널을 소비하는 공용 분위기 레이어.
+   페이지마다 radial 레시피를 복붙하지 말고 이 클래스 + data-scene 으로. */
+.scene-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(60% 60% at var(--scene-pos-1), rgba(var(--scene-rgb-1) / var(--scene-glow-a)), transparent 70%),
+    radial-gradient(50% 50% at var(--scene-pos-2), rgba(var(--scene-rgb-2) / var(--scene-glow-b)), transparent 70%);
+}
+
 /* page content must sit above the grid */
 .page-shell, .app-shell, main, .site-main { position: relative; z-index: 1; }
 
@@ -249,6 +308,7 @@ body::before {
   );
 }
 .clip-corner-lg { --corner-cut: var(--corner-cut-lg); }
+.clip-corner-sm { --corner-cut: var(--corner-cut-sm); }   /* 배지·칩 등 소형 노치 */
 .clip-corner-tr {       /* only top-right cut */
   clip-path: polygon(0 0, calc(100% - var(--corner-cut)) 0, 100% var(--corner-cut), 100% 100%, 0 100%);
 }
@@ -334,6 +394,47 @@ body::before {
 .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-6); }
 .grid-auto { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-6); }
 
+/* ---- tiling window-manager grid (tmux/i3) — 균질 카드그리드 대체 ----------
+   12-col 트랙 위에 pane 스팬이 제각각인 타일. data-pane 으로 좌표 라벨. */
+.tile-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--space-5);
+  grid-auto-flow: dense;
+}
+.tile-3 { grid-column: span 3; }
+.tile-4 { grid-column: span 4; }
+.tile-5 { grid-column: span 5; }
+.tile-6 { grid-column: span 6; }
+.tile-7 { grid-column: span 7; }
+.tile-8 { grid-column: span 8; }
+.tile-9 { grid-column: span 9; }
+.tile-12 { grid-column: span 12; }
+.tile-tall { grid-row: span 2; }
+@media (max-width: 1180px) {
+  .tile-3, .tile-4, .tile-5 { grid-column: span 6; }
+  .tile-7, .tile-8, .tile-9 { grid-column: span 12; }
+}
+@media (max-width: 768px) {
+  .tile-grid { grid-template-columns: 1fr; gap: var(--space-4); }
+  .tile-3, .tile-4, .tile-5, .tile-6, .tile-7, .tile-8, .tile-9, .tile-12 { grid-column: auto; }
+  .tile-tall { grid-row: auto; }
+}
+/* pane 좌표 라벨 — 타일 우상단에 `pane 0:1` 스탬프 (장식, attr 소비) */
+[data-pane] { position: relative; }
+[data-pane]::after {
+  content: attr(data-pane);
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wider);
+  color: var(--color-text-subtle);
+  opacity: .7;
+  pointer-events: none;
+}
+
 .w-full { width: 100%; }
 .h-full { height: 100%; }
 .max-w-prose { max-width: 68ch; }
@@ -355,6 +456,22 @@ body::before {
 .section {
   padding-block: var(--space-12);
   position: relative;
+}
+/* 초대형 워터마크 섹션 넘버 — 균질 섹션 리듬 파괴용. main(z1) 컨텍스트 안에서
+   z-index:-1 → 콘텐츠 뒤, 페이지 배경 위. */
+.section[data-watermark]::before {
+  content: attr(data-watermark);
+  position: absolute;
+  top: 0;
+  right: var(--space-2);
+  z-index: -1;
+  font-family: var(--font-display);
+  font-size: clamp(5rem, 15vw, 11rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--watermark-ink);
+  pointer-events: none;
+  user-select: none;
 }
 .section-head {
   display: flex;
@@ -425,6 +542,19 @@ body::before {
 }
 
 /* ============================================================================
+   6b. REVEAL — 스크롤 진입 시 패널이 'CRT 전원 인가'로 켜진다 (ct-boot-in).
+       app.js Reveal 모듈이 [data-reveal]에 .is-in 부여 + --reveal-delay 스태거.
+       html.js 가드: JS 실패 시 콘텐츠가 opacity:0 으로 남지 않는다.
+   ============================================================================ */
+html.js [data-reveal] { opacity: 0; }
+html.js [data-reveal].is-in {
+  animation: ct-boot-in var(--duration-slow) var(--ease-out) var(--reveal-delay, 0ms) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  html.js [data-reveal] { opacity: 1 !important; animation: none !important; }
+}
+
+/* ============================================================================
    7. REDUCED MOTION — global kill switch (photosensitivity + vestibular).
       Freezes glitch, blink, scan, flicker, sweep, float. Static fallback.
    ============================================================================ */
@@ -436,8 +566,43 @@ body::before {
     scroll-behavior: auto !important;
   }
   html { scroll-behavior: auto; }
+  .crt-overlay { animation: none; }               /* phosphor flicker off */
   .crt-overlay::before { animation: none; }       /* scanlines static */
   .cursor::after, .cursor-blink { animation: none; opacity: 1; }  /* solid cursor */
   .glitch:hover, .glitch:focus-visible { animation: none !important; }
   [data-typing] { width: auto !important; border-right: none !important; }
 }
+
+/* ============================================================================
+   8. HANGUL REFINEMENT LAYER — 전제: <html lang="ko"> (FOUNDATION §5-A)
+      기저값이며 테마 DNA(영문 대문자 시스템 라벨의 광폭 자간)는 그대로 둔다.
+   ============================================================================ */
+:lang(ko) {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-break: strict;
+}
+:lang(ko) :is(h1, h2, h3) { line-height: var(--leading-heading-ko); }
+:lang(ko) p { text-wrap: pretty; }
+/* 한글에 이탤릭 없음 — faux-oblique 왜곡 대신 굵기로 강조 */
+:lang(ko) :is(em, i, cite) { font-style: normal; font-weight: var(--weight-bold); }
+/* 데이터 숫자: 라틴 모노가 선점하므로 tabular 정렬 보장 */
+:lang(ko) :is(td, .ct-stat__value) { font-variant-numeric: tabular-nums lining-nums; }
+/* 한글이 섞인 캡스 라벨용 — 라틴 광폭 자간(0.22em)은 한글에 과함.
+   영문 시스템 라벨(.label)은 DNA이므로 손대지 않고 별도 변형만 제공. */
+.label--ko {
+  letter-spacing: var(--tracking-caps-ko);
+  text-transform: none;
+}
+/* 한글 초대형 디스플레이 — 라틴 행간(0.98)·광폭 자간 직행 금지, 전용 유틸 사용.
+   h1~h3 에 직접 붙여도 위 :lang(ko) 헤딩 행간(1.3)을 이기도록 요소+클래스 셀렉터 병기.
+   소비처: profile.html 프로필명 h1 · pricing.html CTA 타이틀 h2 */
+.display-ko,
+:is(h1, h2, h3).display-ko {
+  font-family: var(--font-display);
+  line-height: var(--leading-display-ko);
+  letter-spacing: 0;
+}
+/* 좁은 셀·칩은 keep-all 오버플로 대신 말줄임 */
+.ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nowrap { white-space: nowrap; }

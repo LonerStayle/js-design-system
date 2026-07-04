@@ -1,539 +1,709 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Settings — Neo-Brutalism</title>
-  <link rel="stylesheet" href="../styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>설정 — NEO//BRUTAL</title>
+<script>
+/* FOUC guard — 저장된 테마를 첫 페인트 전에 적용 (app.js와 같은 키: nb-theme) */
+(function () {
+  try {
+    var t = localStorage.getItem("nb-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="../styles.css">
+<style>
+  /* ---- 페이지 헤더 ------------------------------------------------------ */
+  .settings-head { position: relative; margin-block: var(--space-4) var(--space-8); }
+  .settings-head__title {
+    font-size: clamp(var(--text-4xl), 7vw, var(--text-6xl));
+  }
+  .settings-head__sticker {
+    position: absolute; top: 0; right: 0;
+    font-size: var(--text-sm);
+  }
+  @media (max-width: 720px) {
+    .settings-head__sticker { position: static; display: inline-block; margin-top: var(--space-4); }
+  }
+
+  /* 반복 행 (라벨+설명 | 컨트롤) — 인라인 스타일 3회 이상 반복 → 클래스 승격 */
+  .setrow {
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: var(--space-3);
+  }
+  .setrow__text { display: flex; flex-direction: column; gap: var(--space-1); max-width: 48ch; }
+  .setrow__desc { font-size: var(--text-sm); color: var(--color-text-muted); }
+
+  /* 패널 공통 폭 */
+  .panel-col { display: flex; flex-direction: column; gap: var(--space-6); max-width: 760px; }
+
+  /* 강조색 스와치 */
+  .swatch {
+    width: 22px; height: 22px; flex: none;
+    border: var(--border-3) solid var(--color-border);
+    display: inline-block;
+  }
+  .swatch--blue   { background: var(--blue-500); }
+  .swatch--pink   { background: var(--pink-500); }
+  .swatch--lime   { background: var(--lime-500); }
+  .swatch--yellow { background: var(--yellow-500); }
+
+  /* ---- 위험 구역 — 핑크 색면 침수 (다크 계약의 섬) ----------------------- */
+  .danger-wrap {
+    border: var(--border-4) solid var(--color-border);
+    box-shadow: var(--shadow-lg);
+    max-width: 760px;
+  }
+  .danger-flood {
+    border-block: none;             /* 박스형 flood — 상하 6px 룰 대신 wrap 보더 사용 */
+    padding: var(--space-8) var(--space-6);
+    position: relative;
+  }
+  .danger-flood__sticker {
+    position: absolute; top: var(--space-5); right: var(--space-5);
+    font-size: var(--text-xs);
+  }
+  @media (max-width: 720px) {
+    .danger-flood { padding: var(--space-6) var(--space-4); }
+    .danger-flood__sticker { position: static; display: inline-block; margin-bottom: var(--space-3); }
+  }
+
+  .site-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: var(--space-3);
+    border-top: var(--border-3) solid var(--color-border);
+    padding: var(--space-5) var(--space-6);
+  }
+</style>
 </head>
 <body>
 
-  <!-- ====================== STICKY NAVBAR ====================== -->
-  <header class="navbar navbar--sticky">
-    <a class="navbar__brand" href="../index.html">
-      <span class="navbar__logo">N</span>
-      <span class="navbar__brand-text">NeoBrut</span>
-    </a>
-    <nav class="navbar__nav" aria-label="Primary">
-      <a class="navbar__link" href="../index.html">Dashboard</a>
-      <a class="navbar__link" href="#" aria-current="page">Settings</a>
-    </nav>
-    <div class="navbar__actions cluster">
-      <button class="btn btn--icon btn--secondary" data-theme-toggle aria-label="Toggle theme">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-          <circle cx="12" cy="12" r="4"></circle>
-          <path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"></path>
-        </svg>
-      </button>
-      <button class="btn btn--primary" id="save-changes" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-          <path d="M5 12l5 5L20 7"></path>
-        </svg>
-        Save changes
-      </button>
-    </div>
-  </header>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
 
-  <main class="container section">
+<!-- ====================== ICON SPRITE ====================== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-bolt" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h7l-1 8 10-12h-7z"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 6h18M3 12h18M3 18h18"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="4.5"/><path d="M12 1v3M12 20v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1 12h3M20 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="10" width="16" height="11"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></symbol>
+  <symbol id="i-screen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18Z"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="6" width="18" height="13"/><path d="M3 10h18"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 10v5M12 18h.01"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></symbol>
+</svg>
 
-    <!-- ====================== PAGE HEADER ====================== -->
-    <nav class="breadcrumb breadcrumb--chevron" aria-label="Breadcrumb">
-      <ol class="breadcrumb__list" role="list">
-        <li class="breadcrumb__item"><a class="breadcrumb__link" href="../index.html">Home</a></li>
-        <li class="breadcrumb__item"><a class="breadcrumb__link" href="#">Account</a></li>
-        <li class="breadcrumb__item"><span class="breadcrumb__current" aria-current="page">Settings</span></li>
-      </ol>
-    </nav>
+<!-- ====================== NAVBAR ====================== -->
+<header class="navbar navbar--sticky" role="banner">
+  <a class="navbar__brand" href="../index.html" aria-label="Neo-Brutalism 홈">
+    <span class="navbar__logo fill-blue" aria-hidden="true"><svg width="20" height="20"><use href="#i-bolt"/></svg></span>
+    <span class="navbar__brand-text">NEO//BRUTAL</span>
+  </a>
+  <nav class="navbar__nav" aria-label="주요 메뉴">
+    <a class="navbar__link" href="dashboard.html">대시보드</a>
+    <a class="navbar__link" href="settings.html" aria-current="page">설정</a>
+    <a class="navbar__link" href="profile.html">프로필</a>
+  </nav>
+  <div class="navbar__actions">
+    <button class="btn btn--icon btn--secondary" data-theme-toggle aria-label="라이트/다크 테마 전환">
+      <svg width="18" height="18" class="hide-dark"><use href="#i-sun"/></svg>
+      <svg width="18" height="18" class="hide-light"><use href="#i-moon"/></svg>
+    </button>
+    <button class="btn btn--primary" id="save-changes" type="button">
+      <svg width="16" height="16"><use href="#i-check"/></svg>
+      변경사항 저장
+    </button>
+    <button class="navbar__burger" data-drawer-open="mobile-nav" aria-expanded="false" aria-label="메뉴 열기">
+      <svg width="20" height="20"><use href="#i-menu"/></svg>
+    </button>
+  </div>
+</header>
 
-    <div class="stack gap-2" style="margin-block: var(--space-4) var(--space-6);">
-      <span class="eyebrow">Workspace · Acme Studio</span>
-      <h1 style="font-family:var(--font-display);font-size:var(--text-5xl);font-weight:var(--weight-black);letter-spacing:var(--tracking-tight);line-height:1;">Settings</h1>
-      <p class="text-muted" style="max-width:60ch;">Manage your profile, account security, notifications, appearance and billing. Changes save to your workspace and take effect immediately.</p>
-    </div>
+<main class="container section" id="main">
 
-    <!-- ====================== TABS (vertical) ====================== -->
-    <div class="tabs tabs--vertical tabs--accent-blue" data-tabs>
-      <div class="tabs__list" role="tablist" aria-label="Settings sections">
-        <button class="tabs__tab is-active" role="tab" data-tab="profile" aria-selected="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c0-4 4-6 8-6s8 2 8 6"></path></svg>
-          Profile
-        </button>
-        <button class="tabs__tab" role="tab" data-tab="account" aria-selected="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="1"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>
-          Account
-        </button>
-        <button class="tabs__tab" role="tab" data-tab="notifications" aria-selected="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 7 2 7H4s2-2 2-7Z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg>
-          Notifications
-        </button>
-        <button class="tabs__tab" role="tab" data-tab="appearance" aria-selected="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 3v18M3 12h18"></path></svg>
-          Appearance
-        </button>
-        <button class="tabs__tab" role="tab" data-tab="billing" aria-selected="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="1"></rect><path d="M3 10h18"></path></svg>
-          Billing
-        </button>
-        <button class="tabs__tab" role="tab" data-tab="danger" aria-selected="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 3 2 20h20L12 3Z"></path><path d="M12 10v5M12 18h.01"></path></svg>
-          Danger Zone
-        </button>
-      </div>
+  <nav class="breadcrumb breadcrumb--chevron" aria-label="브레드크럼">
+    <ol class="breadcrumb__list" role="list">
+      <li class="breadcrumb__item"><a class="breadcrumb__link" href="../index.html">홈</a></li>
+      <li class="breadcrumb__item"><a class="breadcrumb__link" href="profile.html">계정</a></li>
+      <li class="breadcrumb__item"><span class="breadcrumb__current" aria-current="page">설정</span></li>
+    </ol>
+  </nav>
 
-      <div class="tabs__panels">
-
-        <!-- ============ PROFILE PANEL ============ -->
-        <div class="tabs__panel" role="tabpanel" data-tab-panel="profile" aria-label="Profile">
-          <div class="stack gap-6" style="max-width:720px;">
-
-            <div class="card">
-              <div class="card__head"><h2 class="card__title">Public profile</h2><span class="badge badge--blue">Visible to team</span></div>
-              <div class="card__body stack gap-5">
-
-                <div class="cluster gap-4" style="align-items:flex-start;flex-wrap:wrap;">
-                  <span class="avatar avatar--xl avatar--blue" aria-hidden="true">JP</span>
-                  <div class="stack gap-2" style="flex:1;min-width:240px;">
-                    <span class="mono-label">Avatar</span>
-                    <label class="dropzone" data-file-drop>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"></path><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"></path></svg>
-                      <span>Drop an image or <span class="underline-bold">browse</span></span>
-                      <span class="dropzone__hint">PNG, JPG or GIF · up to 4MB · square recommended</span>
-                      <input type="file" accept="image/*" hidden>
-                    </label>
-                  </div>
-                </div>
-
-                <div class="grid-2 gap-4">
-                  <div class="field">
-                    <label class="field-label" for="pf-name">Full name</label>
-                    <input class="input" id="pf-name" type="text" value="Jin Park" autocomplete="name">
-                  </div>
-                  <div class="field">
-                    <label class="field-label" for="pf-username">Username</label>
-                    <div class="input-group">
-                      <span class="input-addon">acme.app/</span>
-                      <input class="input" id="pf-username" type="text" value="jinpark" autocomplete="username">
-                    </div>
-                    <span class="field-help">Your public handle. Lowercase letters and dashes only.</span>
-                  </div>
-                </div>
-
-                <div class="field">
-                  <label class="field-label" for="pf-email">Contact email</label>
-                  <input class="input" id="pf-email" type="email" value="jin.park@acme.studio" autocomplete="email">
-                </div>
-
-                <div class="field">
-                  <label class="field-label" for="pf-bio">Bio</label>
-                  <textarea class="textarea" id="pf-bio" maxlength="280">Product designer leading the design systems guild at Acme. I build calm, accessible interfaces and obsess over typography and motion.</textarea>
-                  <span class="field-help">Brief description for your profile. Max 280 characters.</span>
-                </div>
-
-                <div class="field">
-                  <label class="field-label" for="pf-skills">Skills</label>
-                  <div class="chip-input" data-chip-input>
-                    <span class="chip">Design Systems <button type="button" class="chip__x" aria-label="Remove Design Systems">&times;</button></span>
-                    <span class="chip">Figma <button type="button" class="chip__x" aria-label="Remove Figma">&times;</button></span>
-                    <span class="chip">Accessibility <button type="button" class="chip__x" aria-label="Remove Accessibility">&times;</button></span>
-                    <span class="chip">Prototyping <button type="button" class="chip__x" aria-label="Remove Prototyping">&times;</button></span>
-                    <input class="chip-input__field" id="pf-skills" placeholder="Add a skill…">
-                  </div>
-                  <span class="field-help">Press Enter to add. These show on your profile card.</span>
-                </div>
-
-              </div>
-              <div class="card__foot" style="justify-content:flex-end;">
-                <button class="btn btn--ghost" type="button">Reset</button>
-                <button class="btn btn--primary" type="button" data-save-section>Save profile</button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <!-- ============ ACCOUNT PANEL ============ -->
-        <div class="tabs__panel" role="tabpanel" data-tab-panel="account" aria-label="Account" hidden>
-          <div class="stack gap-6" style="max-width:720px;">
-
-            <div class="card">
-              <div class="card__head"><h2 class="card__title">Sign-in email</h2></div>
-              <div class="card__body stack gap-4">
-                <div class="field">
-                  <label class="field-label" for="ac-email">Email address</label>
-                  <div class="input-group">
-                    <input class="input" id="ac-email" type="email" value="jin.park@acme.studio" autocomplete="email">
-                    <button class="btn btn--secondary" type="button">Verify</button>
-                  </div>
-                  <span class="field-help">Verified on Mar 14, 2026. We'll email a confirmation link if you change this.</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="card">
-              <div class="card__head"><h2 class="card__title">Change password</h2></div>
-              <div class="card__body stack gap-4">
-                <div class="field">
-                  <label class="field-label" for="ac-cur-pw">Current password</label>
-                  <div class="input-group">
-                    <input class="input" id="ac-cur-pw" type="password" value="supersecret" autocomplete="current-password">
-                    <button class="btn btn--secondary btn--icon" type="button" data-toggle-password="#ac-cur-pw" aria-label="Show password" aria-pressed="false">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                    </button>
-                  </div>
-                </div>
-                <div class="field">
-                  <label class="field-label" for="ac-new-pw">New password</label>
-                  <div class="input-group">
-                    <input class="input" id="ac-new-pw" type="password" placeholder="At least 12 characters" autocomplete="new-password">
-                    <button class="btn btn--secondary btn--icon" type="button" data-toggle-password="#ac-new-pw" aria-label="Show password" aria-pressed="false">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                    </button>
-                  </div>
-                  <span class="field-help">Use 12+ characters with a mix of letters, numbers and symbols.</span>
-                </div>
-              </div>
-              <div class="card__foot" style="justify-content:flex-end;">
-                <button class="btn btn--primary" type="button" data-save-section>Update password</button>
-              </div>
-            </div>
-
-            <div class="card">
-              <div class="card__head"><h2 class="card__title">Security &amp; locale</h2></div>
-              <div class="card__body stack gap-5">
-                <div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-3);">
-                  <div class="stack gap-1" style="max-width:46ch;">
-                    <strong>Two-factor authentication</strong>
-                    <span class="text-muted" style="font-size:var(--text-sm);">Require a one-time code from your authenticator app at every sign-in.</span>
-                  </div>
-                  <label class="switch">
-                    <input type="checkbox" checked aria-label="Two-factor authentication">
-                    <span class="switch__track"></span>
-                  </label>
-                </div>
-
-                <div class="grid-2 gap-4">
-                  <div class="field">
-                    <label class="field-label" for="ac-lang">Language</label>
-                    <select class="select" id="ac-lang">
-                      <option selected>English (United States)</option>
-                      <option>English (United Kingdom)</option>
-                      <option>Español</option>
-                      <option>Français</option>
-                      <option>Deutsch</option>
-                      <option>한국어</option>
-                      <option>日本語</option>
-                    </select>
-                  </div>
-                  <div class="field">
-                    <label class="field-label" for="ac-tz">Timezone</label>
-                    <select class="select" id="ac-tz">
-                      <option>(UTC-08:00) Pacific Time</option>
-                      <option selected>(UTC-05:00) Eastern Time</option>
-                      <option>(UTC+00:00) London</option>
-                      <option>(UTC+01:00) Berlin</option>
-                      <option>(UTC+09:00) Seoul</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <!-- ============ NOTIFICATIONS PANEL ============ -->
-        <div class="tabs__panel" role="tabpanel" data-tab-panel="notifications" aria-label="Notifications" hidden>
-          <div class="stack gap-5" style="max-width:760px;">
-            <div class="card">
-              <div class="card__head"><h2 class="card__title">Email notifications</h2><span class="badge badge--ink">5 channels</span></div>
-              <ul class="list" role="list">
-
-                <li class="list__row" style="align-items:center;">
-                  <span class="list__main">
-                    <span class="list__title">Product updates</span>
-                    <span class="list__meta">New features, improvements and changelog highlights — about once a month.</span>
-                  </span>
-                  <span class="list__trail">
-                    <label class="switch"><input type="checkbox" checked aria-label="Product updates"><span class="switch__track"></span></label>
-                  </span>
-                </li>
-
-                <li class="list__row" style="align-items:center;">
-                  <span class="list__main">
-                    <span class="list__title">Security alerts</span>
-                    <span class="list__meta">New sign-ins, password changes and suspicious activity. Strongly recommended.</span>
-                  </span>
-                  <span class="list__trail">
-                    <label class="switch"><input type="checkbox" checked aria-label="Security alerts"><span class="switch__track"></span></label>
-                  </span>
-                </li>
-
-                <li class="list__row" style="align-items:center;">
-                  <span class="list__main">
-                    <span class="list__title">Marketing &amp; offers</span>
-                    <span class="list__meta">Promotions, events and partner deals. We keep these rare.</span>
-                  </span>
-                  <span class="list__trail">
-                    <label class="switch"><input type="checkbox" aria-label="Marketing and offers"><span class="switch__track"></span></label>
-                  </span>
-                </li>
-
-                <li class="list__row" style="align-items:center;">
-                  <span class="list__main">
-                    <span class="list__title">Weekly digest</span>
-                    <span class="list__meta">A Monday summary of your team's activity, mentions and pending tasks.</span>
-                  </span>
-                  <span class="list__trail">
-                    <label class="switch"><input type="checkbox" checked aria-label="Weekly digest"><span class="switch__track"></span></label>
-                  </span>
-                </li>
-
-                <li class="list__row" style="align-items:center;">
-                  <span class="list__main">
-                    <span class="list__title">Mentions &amp; replies</span>
-                    <span class="list__meta">Get notified the moment someone @mentions you or replies to your comments.</span>
-                  </span>
-                  <span class="list__trail">
-                    <label class="switch"><input type="checkbox" checked aria-label="Mentions and replies"><span class="switch__track"></span></label>
-                  </span>
-                </li>
-
-              </ul>
-              <div class="card__foot" style="justify-content:space-between;">
-                <span class="text-muted" style="font-size:var(--text-sm);">Security alerts can't be fully disabled for your protection.</span>
-                <button class="btn btn--primary" type="button" data-save-section>Save preferences</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ============ APPEARANCE PANEL ============ -->
-        <div class="tabs__panel" role="tabpanel" data-tab-panel="appearance" aria-label="Appearance" hidden>
-          <div class="stack gap-6" style="max-width:720px;">
-
-            <div class="card">
-              <div class="card__head"><h2 class="card__title">Theme</h2></div>
-              <div class="card__body stack gap-5">
-
-                <div class="field">
-                  <span class="field-label">Color mode</span>
-                  <div class="segmented" role="radiogroup" aria-label="Color mode" id="theme-mode">
-                    <label><input type="radio" name="thememode" value="light" checked><span>Light</span></label>
-                    <label><input type="radio" name="thememode" value="dark"><span>Dark</span></label>
-                    <label><input type="radio" name="thememode" value="system"><span>System</span></label>
-                  </div>
-                  <span class="field-help">"System" follows your operating system setting.</span>
-                </div>
-
-                <div class="field">
-                  <span class="field-label">Density</span>
-                  <div class="segmented" role="radiogroup" aria-label="Density">
-                    <label><input type="radio" name="density" value="comfortable" checked><span>Comfortable</span></label>
-                    <label><input type="radio" name="density" value="cozy"><span>Cozy</span></label>
-                    <label><input type="radio" name="density" value="compact"><span>Compact</span></label>
-                  </div>
-                </div>
-
-                <div class="field">
-                  <span class="field-label">Accent color</span>
-                  <div class="cluster gap-4" role="radiogroup" aria-label="Accent color" style="flex-wrap:wrap;">
-                    <label class="radio">
-                      <input type="radio" name="accent" value="blue" checked>
-                      <span class="radio__box"></span>
-                      <span class="cluster gap-2" style="align-items:center;"><span aria-hidden="true" style="width:22px;height:22px;border:var(--border-3) solid var(--ink);background:var(--blue-500);"></span> Blue</span>
-                    </label>
-                    <label class="radio">
-                      <input type="radio" name="accent" value="pink">
-                      <span class="radio__box"></span>
-                      <span class="cluster gap-2" style="align-items:center;"><span aria-hidden="true" style="width:22px;height:22px;border:var(--border-3) solid var(--ink);background:var(--pink-500);"></span> Pink</span>
-                    </label>
-                    <label class="radio">
-                      <input type="radio" name="accent" value="lime">
-                      <span class="radio__box"></span>
-                      <span class="cluster gap-2" style="align-items:center;"><span aria-hidden="true" style="width:22px;height:22px;border:var(--border-3) solid var(--ink);background:var(--lime-500);"></span> Lime</span>
-                    </label>
-                    <label class="radio">
-                      <input type="radio" name="accent" value="yellow">
-                      <span class="radio__box"></span>
-                      <span class="cluster gap-2" style="align-items:center;"><span aria-hidden="true" style="width:22px;height:22px;border:var(--border-3) solid var(--ink);background:var(--yellow-500);"></span> Yellow</span>
-                    </label>
-                  </div>
-                  <span class="field-help">Sets the primary accent used across buttons, links and highlights.</span>
-                </div>
-
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <!-- ============ BILLING PANEL ============ -->
-        <div class="tabs__panel" role="tabpanel" data-tab-panel="billing" aria-label="Billing" hidden>
-          <div class="stack gap-6" style="max-width:820px;">
-
-            <div class="card card--accent-blue">
-              <div class="card__head"><h2 class="card__title">Current plan</h2><span class="badge badge--blue">Active</span></div>
-              <div class="card__body">
-                <div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:var(--space-4);">
-                  <div class="stack gap-2">
-                    <span class="eyebrow">Team · Annual</span>
-                    <div style="font-family:var(--font-display);font-size:var(--text-3xl);font-weight:var(--weight-black);">Pro <span class="text-muted" style="font-size:var(--text-lg);font-weight:var(--weight-bold);">— $192 / seat / yr</span></div>
-                    <span class="text-muted" style="font-size:var(--text-sm);">8 of 12 seats used · renews Jan 14, 2027</span>
-                  </div>
-                  <div class="cluster gap-2">
-                    <button class="btn btn--secondary" type="button">Change plan</button>
-                    <button class="btn btn--ghost" type="button">Cancel</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="card">
-              <div class="card__head"><h2 class="card__title">Payment method</h2></div>
-              <div class="card__body">
-                <div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-3);">
-                  <div class="cluster gap-3" style="align-items:center;">
-                    <span class="fill-ink" aria-hidden="true" style="display:inline-flex;align-items:center;justify-content:center;width:48px;height:32px;border:var(--border-3) solid var(--ink);font-family:var(--font-mono);font-weight:var(--weight-black);font-size:var(--text-xs);color:var(--paper);">VISA</span>
-                    <div class="stack" style="gap:2px;">
-                      <strong>Visa ending in 4242</strong>
-                      <span class="text-muted" style="font-size:var(--text-sm);">Expires 08 / 2028 · billing to jin.park@acme.studio</span>
-                    </div>
-                  </div>
-                  <button class="btn btn--secondary btn--sm" type="button">Update card</button>
-                </div>
-              </div>
-            </div>
-
-            <div class="card">
-              <div class="card__head"><h2 class="card__title">Invoices</h2><a class="btn btn--ghost btn--sm" href="#">Download all</a></div>
-              <div class="card__body card--flush" style="padding:0;">
-                <div class="table-wrap">
-                  <table class="table table--striped">
-                    <thead><tr>
-                      <th data-sort="text">Invoice</th>
-                      <th data-sort="text">Date</th>
-                      <th data-sort="number" class="table__num">Amount</th>
-                      <th>Status</th>
-                      <th><span class="hide-md-down">Receipt</span></th>
-                    </tr></thead>
-                    <tbody>
-                      <tr><td>INV-2026-0142</td><td>Jan 14, 2026</td><td class="table__num">$2,304.00</td><td><span class="badge badge--success">Paid</span></td><td><a href="#">PDF</a></td></tr>
-                      <tr><td>INV-2025-0131</td><td>Jan 14, 2025</td><td class="table__num">$1,920.00</td><td><span class="badge badge--success">Paid</span></td><td><a href="#">PDF</a></td></tr>
-                      <tr><td>INV-2024-0099</td><td>Dec 02, 2024</td><td class="table__num">$160.00</td><td><span class="badge badge--warning">Refunded</span></td><td><a href="#">PDF</a></td></tr>
-                      <tr><td>INV-2024-0088</td><td>Jan 14, 2024</td><td class="table__num">$1,536.00</td><td><span class="badge badge--success">Paid</span></td><td><a href="#">PDF</a></td></tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <!-- ============ DANGER ZONE PANEL ============ -->
-        <div class="tabs__panel" role="tabpanel" data-tab-panel="danger" aria-label="Danger Zone" hidden>
-          <div class="stack gap-6" style="max-width:720px;">
-
-            <div class="card card--accent-pink">
-              <div class="card__head"><h2 class="card__title" style="color:var(--color-danger);">Danger zone</h2><span class="badge badge--danger">Irreversible</span></div>
-              <div class="card__body stack gap-5">
-
-                <div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-3);">
-                  <div class="stack gap-1" style="max-width:48ch;">
-                    <strong>Export your data</strong>
-                    <span class="text-muted" style="font-size:var(--text-sm);">Download a full archive of your profile, projects and activity as a ZIP. Ready within 24 hours.</span>
-                  </div>
-                  <button class="btn btn--secondary" type="button">Export data</button>
-                </div>
-
-                <hr style="border:none;border-top:var(--border-3) solid var(--color-border);">
-
-                <div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-3);">
-                  <div class="stack gap-1" style="max-width:48ch;">
-                    <strong style="color:var(--color-danger);">Delete account</strong>
-                    <span class="text-muted" style="font-size:var(--text-sm);">Permanently remove your account, workspace and all associated data. This cannot be undone.</span>
-                  </div>
-                  <button class="btn btn--danger" type="button" data-modal-open="del">Delete account</button>
-                </div>
-
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </main>
-
-  <footer class="container section text-muted" style="font-size:var(--text-sm);border-top:var(--border-3) solid var(--color-border);">
-    Acme Studio · Settings · Need help? <a href="#" class="underline-bold">Contact support</a>
-  </footer>
-
-  <!-- ====================== DELETE CONFIRM MODAL ====================== -->
-  <div class="modal" data-modal="del" hidden aria-hidden="true">
-    <div class="modal__panel modal__panel--sm" role="dialog" aria-modal="true" aria-labelledby="del-title">
-      <header class="modal__head modal__head--pink">
-        <span class="modal__eyebrow">Permanent</span>
-        <h2 class="modal__title" id="del-title">Delete account?</h2>
-        <button class="modal__close" data-modal-close aria-label="Close">&times;</button>
-      </header>
-      <div class="modal__body stack gap-4">
-        <p>This will permanently delete <strong>jinpark</strong>, the Acme Studio workspace, and all of its projects, files and history. <strong>This action cannot be undone.</strong></p>
-        <div class="field">
-          <label class="field-label" for="del-confirm">Type <span class="highlight">DELETE</span> to confirm</label>
-          <input class="input" id="del-confirm" type="text" placeholder="DELETE" autocomplete="off" spellcheck="false" aria-describedby="del-help">
-          <span class="field-help" id="del-help">The delete button stays disabled until the text matches exactly.</span>
-        </div>
-      </div>
-      <footer class="modal__foot modal__foot--split">
-        <button class="btn btn--secondary" type="button" data-modal-close>Cancel</button>
-        <button class="btn btn--danger" id="del-btn" type="button" disabled>Delete account</button>
-      </footer>
-    </div>
+  <div class="settings-head">
+    <span class="settings-head__sticker sticker sticker--pink tilt-loud" data-reveal aria-hidden="true">카드 만료 D-27</span>
+    <span class="eyebrow">워크스페이스 · 부수공방 · 7월 4일 (금)</span>
+    <h1 class="display settings-head__title mt-3">당신의 <span class="highlight">규칙.</span></h1>
+    <p class="text-muted mt-4" style="max-width:56ch;">프로필, 보안, 알림, 화면, 결제. 저장하는 즉시 전부 반영된다. 맨 아래엔 위험 구역 — 조심할 것.</p>
   </div>
 
-  <script src="../app.js"></script>
-  <script>
-    (function () {
-      // --- Save changes toast (navbar + per-section buttons) ---
-      function fireSave() {
-        if (window.NB && NB.toast) NB.toast({ title: "Saved", message: "Settings saved", variant: "success" });
-      }
-      var saveBtn = document.getElementById("save-changes");
-      if (saveBtn) saveBtn.addEventListener("click", fireSave);
-      document.querySelectorAll("[data-save-section]").forEach(function (b) {
-        b.addEventListener("click", fireSave);
-      });
+  <!-- ====================== TABS (세로) ====================== -->
+  <div class="tabs tabs--vertical tabs--accent-blue" data-tabs>
+    <div class="tabs__list" role="tablist" aria-label="설정 섹션">
+      <button class="tabs__tab is-active" role="tab" data-tab="profile" aria-selected="true">
+        <svg width="18" height="18"><use href="#i-user"/></svg>
+        프로필
+      </button>
+      <button class="tabs__tab" role="tab" data-tab="account" aria-selected="false">
+        <svg width="18" height="18"><use href="#i-lock"/></svg>
+        계정
+      </button>
+      <button class="tabs__tab" role="tab" data-tab="notifications" aria-selected="false">
+        <svg width="18" height="18"><use href="#i-bell"/></svg>
+        알림
+      </button>
+      <button class="tabs__tab" role="tab" data-tab="appearance" aria-selected="false">
+        <svg width="18" height="18"><use href="#i-screen"/></svg>
+        화면
+      </button>
+      <button class="tabs__tab" role="tab" data-tab="billing" aria-selected="false">
+        <svg width="18" height="18"><use href="#i-card"/></svg>
+        결제
+      </button>
+      <button class="tabs__tab" role="tab" data-tab="danger" aria-selected="false">
+        <svg width="18" height="18"><use href="#i-warn"/></svg>
+        위험 구역
+      </button>
+    </div>
 
-      // --- Appearance: Light/Dark buttons actually set data-theme ---
-      var modeGroup = document.getElementById("theme-mode");
-      if (modeGroup) {
-        modeGroup.addEventListener("change", function (e) {
-          var v = e.target.value;
-          if (v === "light" || v === "dark") {
-            document.documentElement.setAttribute("data-theme", v);
-          } else if (v === "system") {
-            var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-            document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
-          }
-        });
-      }
+    <div class="tabs__panels">
 
-      // --- Delete: enable danger button only when input === DELETE ---
-      var delInput = document.getElementById("del-confirm");
-      var delBtn = document.getElementById("del-btn");
-      if (delInput && delBtn) {
-        delInput.addEventListener("input", function () {
-          delBtn.disabled = delInput.value.trim() !== "DELETE";
-        });
-        delBtn.addEventListener("click", function () {
-          if (delBtn.disabled) return;
-          if (window.NB) { if (NB.closeOverlay) NB.closeOverlay(document.querySelector('[data-modal="del"]')); NB.toast && NB.toast({ title: "Account", message: "Deletion scheduled", variant: "danger" }); }
-          delInput.value = ""; delBtn.disabled = true;
-        });
+      <!-- ============ 프로필 ============ -->
+      <div class="tabs__panel" role="tabpanel" data-tab-panel="profile" aria-label="프로필">
+        <div class="panel-col">
+
+          <div class="card" data-reveal>
+            <div class="card__head"><h2 class="card__title">공개 프로필</h2><span class="badge badge--blue">팀에게 공개</span></div>
+            <div class="card__body stack" style="--stack-gap:var(--space-5);">
+
+              <div class="cluster gap-4" style="align-items:flex-start;flex-wrap:wrap;">
+                <span class="avatar avatar--xl avatar--blue" aria-hidden="true">서</span>
+                <div class="stack gap-2" style="flex:1;min-width:240px;">
+                  <span class="mono-label">아바타</span>
+                  <label class="dropzone" data-file-drop>
+                    <svg width="30" height="30"><use href="#i-upload"/></svg>
+                    <span>이미지를 끌어다 놓거나 <span class="underline-bold">클릭해서 찾기</span></span>
+                    <span class="dropzone__hint">PNG · JPG · GIF, 최대 4MB, 정사각 권장</span>
+                    <span class="dropzone__file"></span>
+                    <input type="file" accept="image/*" hidden>
+                  </label>
+                </div>
+              </div>
+
+              <div class="grid-2 gap-4">
+                <div class="field">
+                  <label class="field-label" for="pf-name">이름</label>
+                  <input class="input" id="pf-name" type="text" value="김서연" autocomplete="name">
+                </div>
+                <div class="field">
+                  <label class="field-label" for="pf-username">사용자명</label>
+                  <div class="input-group">
+                    <span class="input-addon">busu.studio/</span>
+                    <input class="input is-invalid" id="pf-username" type="text" value="seoyeon!!" autocomplete="username" aria-invalid="true" aria-describedby="pf-username-err">
+                  </div>
+                  <span class="field-error" id="pf-username-err">특수문자는 쓸 수 없습니다. 영문 소문자·숫자·하이픈만 가능합니다.</span>
+                </div>
+              </div>
+
+              <div class="field">
+                <label class="field-label" for="pf-email">연락 이메일</label>
+                <input class="input" id="pf-email" type="email" value="seoyeon@busu.studio" autocomplete="email">
+              </div>
+
+              <div class="field">
+                <label class="field-label" for="pf-bio">소개</label>
+                <textarea class="textarea" id="pf-bio" maxlength="280">부수공방의 디자인시스템 길드를 이끕니다. 단단하고 접근성 있는 인터페이스를 만들고, 타이포그래피와 모션에 집착하는 프로덕트 디자이너.</textarea>
+                <span class="field-help">프로필 카드에 표시되는 짧은 소개. 최대 280자.</span>
+              </div>
+
+              <div class="field">
+                <label class="field-label" for="pf-skills">스킬</label>
+                <div class="chip-input" data-chip-input>
+                  <span class="chip">디자인시스템 <button type="button" class="chip__x" aria-label="디자인시스템 삭제">&times;</button></span>
+                  <span class="chip">피그마 <button type="button" class="chip__x" aria-label="피그마 삭제">&times;</button></span>
+                  <span class="chip">접근성 <button type="button" class="chip__x" aria-label="접근성 삭제">&times;</button></span>
+                  <span class="chip">프로토타이핑 <button type="button" class="chip__x" aria-label="프로토타이핑 삭제">&times;</button></span>
+                  <input class="chip-input__field" id="pf-skills" placeholder="스킬 추가…">
+                </div>
+                <span class="field-help">Enter로 추가. 프로필 카드에 표시됩니다.</span>
+              </div>
+
+            </div>
+            <div class="card__foot justify-end">
+              <button class="btn btn--ghost" type="button">초기화</button>
+              <button class="btn btn--primary" type="button" id="save-profile">프로필 저장</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ============ 계정 ============ -->
+      <div class="tabs__panel" role="tabpanel" data-tab-panel="account" aria-label="계정" hidden>
+        <div class="panel-col">
+
+          <div class="card">
+            <div class="card__head"><h2 class="card__title">로그인 이메일</h2></div>
+            <div class="card__body stack gap-4">
+              <div class="field">
+                <label class="field-label" for="ac-email">이메일 주소</label>
+                <div class="input-group">
+                  <input class="input" id="ac-email" type="email" value="seoyeon@busu.studio" autocomplete="email">
+                  <button class="btn btn--secondary" type="button" data-save-section>재인증</button>
+                </div>
+                <span class="field-help">2026년 3월 14일 인증됨. 주소를 바꾸면 확인 메일을 보냅니다.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card__head"><h2 class="card__title">비밀번호 변경</h2></div>
+            <div class="card__body stack gap-4">
+              <div class="field">
+                <label class="field-label" for="ac-cur-pw">현재 비밀번호</label>
+                <div class="input-group">
+                  <input class="input" id="ac-cur-pw" type="password" value="brutalism-4ever" autocomplete="current-password">
+                  <button class="btn btn--secondary btn--icon" type="button" data-toggle-password="#ac-cur-pw" aria-label="비밀번호 표시" aria-pressed="false">
+                    <svg width="18" height="18"><use href="#i-eye"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="field">
+                <label class="field-label" for="ac-new-pw">새 비밀번호</label>
+                <div class="input-group">
+                  <input class="input" id="ac-new-pw" type="password" placeholder="12자 이상" autocomplete="new-password">
+                  <button class="btn btn--secondary btn--icon" type="button" data-toggle-password="#ac-new-pw" aria-label="비밀번호 표시" aria-pressed="false">
+                    <svg width="18" height="18"><use href="#i-eye"/></svg>
+                  </button>
+                </div>
+                <span class="field-help">12자 이상, 문자·숫자·기호를 섞어서.</span>
+              </div>
+            </div>
+            <div class="card__foot justify-end">
+              <button class="btn btn--primary" type="button" data-save-section>비밀번호 변경</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card__head"><h2 class="card__title">보안 · 언어</h2></div>
+            <div class="card__body stack" style="--stack-gap:var(--space-5);">
+              <div class="setrow">
+                <div class="setrow__text">
+                  <strong>2단계 인증</strong>
+                  <span class="setrow__desc">로그인할 때마다 인증 앱의 일회용 코드를 요구합니다.</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" checked aria-label="2단계 인증">
+                  <span class="switch__track"></span>
+                </label>
+              </div>
+
+              <div class="grid-2 gap-4">
+                <div class="field">
+                  <label class="field-label" for="ac-lang">언어</label>
+                  <select class="select" id="ac-lang">
+                    <option selected>한국어</option>
+                    <option>English (US)</option>
+                    <option>日本語</option>
+                    <option>Deutsch</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label class="field-label" for="ac-tz">시간대</label>
+                  <select class="select" id="ac-tz">
+                    <option selected>(UTC+09:00) 서울</option>
+                    <option>(UTC+09:00) 도쿄</option>
+                    <option>(UTC+00:00) 런던</option>
+                    <option>(UTC−05:00) 뉴욕</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ============ 알림 ============ -->
+      <div class="tabs__panel" role="tabpanel" data-tab-panel="notifications" aria-label="알림" hidden>
+        <div class="panel-col">
+          <div class="card">
+            <div class="card__head"><h2 class="card__title">이메일 알림</h2><span class="badge badge--ink">채널 5개</span></div>
+            <ul class="list" role="list">
+
+              <li class="list__row items-center">
+                <span class="list__main">
+                  <span class="list__title">제품 소식</span>
+                  <span class="list__meta">새 기능·개선 사항·체인지로그 하이라이트 — 월 1회 안팎.</span>
+                </span>
+                <span class="list__trail">
+                  <label class="switch"><input type="checkbox" checked aria-label="제품 소식"><span class="switch__track"></span></label>
+                </span>
+              </li>
+
+              <li class="list__row items-center">
+                <span class="list__main">
+                  <span class="list__title">보안 알림</span>
+                  <span class="list__meta">새 로그인, 비밀번호 변경, 수상한 활동. 끄지 않기를 권장합니다.</span>
+                </span>
+                <span class="list__trail">
+                  <label class="switch"><input type="checkbox" checked aria-label="보안 알림"><span class="switch__track"></span></label>
+                </span>
+              </li>
+
+              <li class="list__row items-center">
+                <span class="list__main">
+                  <span class="list__title">마케팅 · 혜택</span>
+                  <span class="list__meta">프로모션과 제휴 소식. 드물게만 보냅니다.</span>
+                </span>
+                <span class="list__trail">
+                  <label class="switch"><input type="checkbox" aria-label="마케팅 및 혜택"><span class="switch__track"></span></label>
+                </span>
+              </li>
+
+              <li class="list__row items-center">
+                <span class="list__main">
+                  <span class="list__title">주간 요약</span>
+                  <span class="list__meta">월요일 아침, 팀 활동·멘션·대기 작업을 한 통으로.</span>
+                </span>
+                <span class="list__trail">
+                  <label class="switch"><input type="checkbox" checked aria-label="주간 요약"><span class="switch__track"></span></label>
+                </span>
+              </li>
+
+              <li class="list__row items-center">
+                <span class="list__main">
+                  <span class="list__title">멘션 · 답글</span>
+                  <span class="list__meta">누군가 @멘션하거나 답글을 다는 순간 바로.</span>
+                </span>
+                <span class="list__trail">
+                  <label class="switch"><input type="checkbox" checked aria-label="멘션 및 답글"><span class="switch__track"></span></label>
+                </span>
+              </li>
+
+            </ul>
+            <div class="card__foot justify-between">
+              <span class="text-muted text-sm">보안 알림은 완전히 끌 수 없습니다. 당신을 지키는 최소한의 장치.</span>
+              <button class="btn btn--primary" type="button" data-save-section>알림 저장</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 화면 ============ -->
+      <div class="tabs__panel" role="tabpanel" data-tab-panel="appearance" aria-label="화면" hidden>
+        <div class="panel-col">
+
+          <div class="card">
+            <div class="card__head"><h2 class="card__title">테마</h2><span class="badge badge--yellow">즉시 반영</span></div>
+            <div class="card__body stack" style="--stack-gap:var(--space-5);">
+
+              <div class="field">
+                <span class="field-label">컬러 모드</span>
+                <div class="segmented" role="radiogroup" aria-label="컬러 모드" id="theme-mode">
+                  <label><input type="radio" name="thememode" value="light"><span>라이트</span></label>
+                  <label><input type="radio" name="thememode" value="dark"><span>다크</span></label>
+                  <label><input type="radio" name="thememode" value="system"><span>시스템</span></label>
+                </div>
+                <span class="field-help">'시스템'은 운영체제 설정을 따라갑니다. 고르는 순간 바로 바뀝니다.</span>
+              </div>
+
+              <div class="field">
+                <span class="field-label">강조색</span>
+                <div class="cluster gap-4 wrap" role="radiogroup" aria-label="강조색" id="accent-group">
+                  <label class="radio">
+                    <input type="radio" name="accent" value="blue" checked>
+                    <span class="radio__box"></span>
+                    <span class="cluster gap-2 items-center"><span class="swatch swatch--blue" aria-hidden="true"></span> 블루</span>
+                  </label>
+                  <label class="radio">
+                    <input type="radio" name="accent" value="pink">
+                    <span class="radio__box"></span>
+                    <span class="cluster gap-2 items-center"><span class="swatch swatch--pink" aria-hidden="true"></span> 핑크</span>
+                  </label>
+                  <label class="radio">
+                    <input type="radio" name="accent" value="lime">
+                    <span class="radio__box"></span>
+                    <span class="cluster gap-2 items-center"><span class="swatch swatch--lime" aria-hidden="true"></span> 라임</span>
+                  </label>
+                  <label class="radio">
+                    <input type="radio" name="accent" value="yellow">
+                    <span class="radio__box"></span>
+                    <span class="cluster gap-2 items-center"><span class="swatch swatch--yellow" aria-hidden="true"></span> 옐로</span>
+                  </label>
+                </div>
+                <span class="field-help">기본 버튼·링크·하이라이트의 강조색이 바뀝니다. 위의 저장 버튼으로 확인해 보세요.</span>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ============ 결제 ============ -->
+      <div class="tabs__panel" role="tabpanel" data-tab-panel="billing" aria-label="결제" hidden>
+        <div class="panel-col" style="max-width:820px;">
+
+          <div class="alert alert--warning" role="status">
+            <span class="alert__icon" aria-hidden="true">!</span>
+            <div class="alert__body">
+              <div class="alert__title">현대카드 ··4821, 8월에 만료</div>
+              <div class="alert__msg">다음 갱신 결제(2027년 1월 14일) 전에 카드를 바꿔두세요. 지금이 제일 편합니다.</div>
+            </div>
+            <button class="btn btn--secondary btn--sm" type="button" data-save-section>카드 변경</button>
+          </div>
+
+          <div class="card card--accent-blue">
+            <div class="card__head"><h2 class="card__title">현재 플랜</h2><span class="badge badge--blue">사용 중</span></div>
+            <div class="card__body">
+              <div class="setrow" style="align-items:flex-start;">
+                <div class="stack gap-2">
+                  <span class="eyebrow">팀 · 연간 결제</span>
+                  <div style="font-family:var(--font-display);font-size:var(--text-3xl);font-weight:var(--weight-black);font-synthesis-weight:none;">프로 <span class="text-muted" style="font-size:var(--text-lg);font-weight:var(--weight-bold);">— 인당 월 ₩19,000</span></div>
+                  <span class="text-muted text-sm">12석 중 8석 사용 · 연 ₩1,824,000 · 2027년 1월 14일 갱신</span>
+                </div>
+                <div class="cluster gap-2">
+                  <a class="btn btn--secondary" href="pricing.html">플랜 변경</a>
+                  <button class="btn btn--ghost" type="button">해지</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card__head"><h2 class="card__title">결제 수단</h2></div>
+            <div class="card__body">
+              <div class="setrow">
+                <div class="cluster gap-3 items-center">
+                  <span class="fill-ink" aria-hidden="true" style="display:inline-flex;align-items:center;justify-content:center;width:48px;height:32px;border:var(--border-3) solid var(--color-border);font-family:var(--font-mono);font-weight:var(--weight-black);font-size:var(--text-2xs);">CARD</span>
+                  <div class="stack" style="gap:2px;">
+                    <strong>현대카드 끝자리 4821 <span class="badge badge--warning">만료 임박</span></strong>
+                    <span class="text-muted text-sm">2026년 8월 만료 · 청구서는 seoyeon@busu.studio로</span>
+                  </div>
+                </div>
+                <button class="btn btn--secondary btn--sm" type="button" data-save-section>카드 변경</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card__head"><h2 class="card__title">청구서</h2><button class="btn btn--ghost btn--sm" type="button" data-toast data-title="내려받기" data-message="청구서 4건을 ZIP으로 준비하고 있습니다." data-variant="info">전부 내려받기</button></div>
+            <div class="card__body" style="padding:0;">
+              <div class="table-wrap">
+                <table class="table table--striped">
+                  <thead><tr>
+                    <th data-sort="text">청구서</th>
+                    <th data-sort="text">일자</th>
+                    <th data-sort="number" class="table__num">금액</th>
+                    <th>상태</th>
+                    <th><span class="hide-md-down">영수증</span></th>
+                  </tr></thead>
+                  <tbody>
+                    <tr><td>2026-0142</td><td>2026년 1월 14일</td><td class="table__num">₩1,824,000</td><td><span class="badge badge--success">결제 완료</span></td><td><button class="btn btn--ghost btn--sm" type="button" data-toast data-title="다운로드" data-message="청구서 2026-0142.pdf를 내려받는 중." data-variant="info">PDF</button></td></tr>
+                    <tr><td>2025-0131</td><td>2025년 1월 14일</td><td class="table__num">₩1,152,000</td><td><span class="badge badge--success">결제 완료</span></td><td><button class="btn btn--ghost btn--sm" type="button" data-toast data-title="다운로드" data-message="청구서 2025-0131.pdf를 내려받는 중." data-variant="info">PDF</button></td></tr>
+                    <tr><td>2024-0117</td><td>2024년 12월 2일</td><td class="table__num">₩38,000</td><td><span class="badge badge--warning">환불</span></td><td><button class="btn btn--ghost btn--sm" type="button" data-toast data-title="다운로드" data-message="청구서 2024-0117.pdf를 내려받는 중." data-variant="info">PDF</button></td></tr>
+                    <tr><td>2024-0088</td><td>2024년 1월 14일</td><td class="table__num">₩1,152,000</td><td><span class="badge badge--success">결제 완료</span></td><td><button class="btn btn--ghost btn--sm" type="button" data-toast data-title="다운로드" data-message="청구서 2024-0088.pdf를 내려받는 중." data-variant="info">PDF</button></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ============ 위험 구역 — 핑크 색면 침수 ============ -->
+      <div class="tabs__panel" role="tabpanel" data-tab-panel="danger" aria-label="위험 구역" hidden>
+        <div class="danger-wrap">
+          <section class="flood flood--pink danger-flood">
+            <span class="danger-flood__sticker sticker tilt-loud" aria-hidden="true">되돌릴 수 없음</span>
+            <h2 class="display display-sm">여기서부터는<br>되돌릴 수 없다.</h2>
+            <p class="mt-3" style="max-width:52ch;">내보내기는 안전하다. 삭제는 영원하다. 버튼을 누르기 전에 한 번 더 생각할 것.</p>
+
+            <div class="stack mt-6" style="--stack-gap:var(--space-5);">
+              <div class="card">
+                <div class="card__body setrow">
+                  <div class="setrow__text">
+                    <strong>내 데이터 내보내기</strong>
+                    <span class="setrow__desc">프로필·프로젝트·활동 전체를 ZIP 아카이브로. 24시간 안에 준비됩니다.</span>
+                  </div>
+                  <button class="btn btn--secondary" type="button" data-toast data-title="내보내기 예약" data-message="준비되면 seoyeon@busu.studio로 링크를 보냅니다." data-variant="success">내보내기 시작</button>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card__body setrow">
+                  <div class="setrow__text">
+                    <strong style="color:var(--color-danger);">계정 삭제</strong>
+                    <span class="setrow__desc">계정과 부수공방 워크스페이스, 모든 데이터가 영구 삭제됩니다. 복구 불가.</span>
+                  </div>
+                  <button class="btn btn--danger" type="button" data-modal-open="del">계정 삭제</button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<!-- 마퀴 변주 — 핑크 판 -->
+<div class="marquee marquee--pink marquee--slow" aria-hidden="true">
+  <div class="marquee__track">
+    <span class="marquee__item">당신의 규칙</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">저장 즉시 반영</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">위험 구역 주의</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">NO BLUR</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">되돌릴 수 없음</span><span class="marquee__item">✶</span>
+  </div>
+  <div class="marquee__track">
+    <span class="marquee__item">당신의 규칙</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">저장 즉시 반영</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">위험 구역 주의</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">NO BLUR</span><span class="marquee__item">✶</span>
+    <span class="marquee__item">되돌릴 수 없음</span><span class="marquee__item">✶</span>
+  </div>
+</div>
+
+<!-- FOOTER 명판 -->
+<footer class="site-foot" role="contentinfo">
+  <span class="mono-label text-muted">NEO//BRUTAL · 설정 · 부수공방 워크스페이스 · 2026</span>
+  <nav class="cluster gap-3" aria-label="푸터">
+    <a class="navbar__link" href="../index.html">시스템 홈</a>
+    <a class="navbar__link" href="dashboard.html">대시보드</a>
+  </nav>
+</footer>
+
+<!-- ====================== 삭제 확인 모달 ====================== -->
+<div class="modal" data-modal="del" hidden aria-hidden="true">
+  <div class="modal__panel modal__panel--sm" role="dialog" aria-modal="true" aria-labelledby="del-title">
+    <header class="modal__head modal__head--pink">
+      <div>
+        <p class="modal__eyebrow">영구 삭제</p>
+        <h2 class="modal__title" id="del-title">마지막 확인</h2>
+      </div>
+      <button class="modal__close" data-modal-close aria-label="닫기">&times;</button>
+    </header>
+    <div class="modal__body stack gap-4">
+      <p><strong>seoyeon</strong> 계정과 부수공방 워크스페이스, 그 안의 프로젝트·파일·기록 전부가 영구 삭제됩니다. <strong>이 작업은 되돌릴 수 없습니다.</strong></p>
+      <div class="field">
+        <label class="field-label" for="del-confirm">확인을 위해 <span class="highlight">삭제</span>라고 입력</label>
+        <input class="input" id="del-confirm" type="text" placeholder="삭제" autocomplete="off" spellcheck="false" aria-describedby="del-help">
+        <span class="field-help" id="del-help">입력이 정확히 일치할 때까지 삭제 버튼은 잠겨 있습니다.</span>
+      </div>
+    </div>
+    <footer class="modal__foot modal__foot--split">
+      <button class="btn btn--secondary" type="button" data-modal-close>남겨두기</button>
+      <button class="btn btn--danger" id="del-btn" type="button" disabled>영구 삭제</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ====================== 모바일 내비 드로어 ====================== -->
+<div class="drawer" data-drawer="mobile-nav" data-side="right" role="dialog" aria-modal="true" aria-label="모바일 메뉴" hidden>
+  <div class="drawer__panel">
+    <div class="drawer__head drawer__head--yellow"><div><p class="drawer__eyebrow">NEO//BRUTAL</p><h3 class="drawer__title">메뉴</h3></div><button class="drawer__close" data-drawer-close aria-label="닫기">&times;</button></div>
+    <div class="drawer__body">
+      <nav class="mobile-nav" aria-label="모바일 메뉴">
+        <a class="mobile-nav__link" href="../index.html"><span class="mobile-nav__num">00</span>홈</a>
+        <a class="mobile-nav__link" href="dashboard.html"><span class="mobile-nav__num">01</span>대시보드</a>
+        <a class="mobile-nav__link" href="settings.html" aria-current="page"><span class="mobile-nav__num">02</span>설정</a>
+        <a class="mobile-nav__link" href="profile.html"><span class="mobile-nav__num">03</span>프로필</a>
+      </nav>
+    </div>
+    <div class="drawer__foot"><button class="btn btn--secondary btn--block" data-theme-toggle>라이트 / 다크 전환</button></div>
+  </div>
+</div>
+
+<script src="../app.js"></script>
+<script>
+(function () {
+  /* --- 저장 플로우 — 장면 속 상태 시연 ------------------------------------
+     · 프로필 저장: 사용자명이 invalid 상태 → 실패 토스트 + 필드로 포커스
+     · 나머지 저장: 성공 토스트                                              */
+  function ok(msg) {
+    if (window.NB && NB.toast) NB.toast({ title: "저장 완료", message: msg || "전부 반영됐습니다.", variant: "success" });
+  }
+  var saveBtn = document.getElementById("save-changes");
+  if (saveBtn) saveBtn.addEventListener("click", function () { ok("워크스페이스 설정이 저장됐습니다."); });
+  document.querySelectorAll("[data-save-section]").forEach(function (b) {
+    b.addEventListener("click", function () { ok(); });
+  });
+  var profileSave = document.getElementById("save-profile");
+  var invalidField = document.getElementById("pf-username");
+  if (profileSave && invalidField) {
+    profileSave.addEventListener("click", function () {
+      if (window.NB && NB.toast) NB.toast({ title: "저장 실패", message: "사용자명의 특수문자를 지워주세요.", variant: "danger" });
+      invalidField.focus();
+    });
+  }
+
+  /* --- 컬러 모드 — 실제 data-theme + nb-theme 저장(app.js와 같은 키) ----- */
+  var modeGroup = document.getElementById("theme-mode");
+  if (modeGroup) {
+    // 현재 테마를 라디오에 반영
+    var cur = document.documentElement.getAttribute("data-theme") || "light";
+    var init = modeGroup.querySelector('input[value="' + cur + '"]');
+    if (init) init.checked = true;
+
+    modeGroup.addEventListener("change", function (e) {
+      var v = e.target.value;
+      var next = v;
+      if (v === "system") {
+        next = (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
       }
-    })();
-  </script>
+      document.documentElement.setAttribute("data-theme", next);
+      try { localStorage.setItem("nb-theme", next); } catch (err) {}
+    });
+  }
+
+  /* --- 강조색 — 시맨틱 토큰 재지정(원시 램프 참조는 semantic 계층의 일) --- */
+  var ACCENTS = {
+    blue:   { base: "--blue-500",   hover: "--blue-600",   active: "--blue-700",   fg: "--paper", label: "블루" },
+    pink:   { base: "--pink-500",   hover: "--pink-600",   active: "--pink-700",   fg: "--paper", label: "핑크" },
+    lime:   { base: "--lime-500",   hover: "--lime-600",   active: "--lime-700",   fg: "--ink",   label: "라임" },
+    yellow: { base: "--yellow-500", hover: "--yellow-600", active: "--yellow-700", fg: "--ink",   label: "옐로" }
+  };
+  var accentGroup = document.getElementById("accent-group");
+  if (accentGroup) {
+    accentGroup.addEventListener("change", function (e) {
+      var a = ACCENTS[e.target.value];
+      if (!a) return;
+      var root = document.documentElement.style;
+      root.setProperty("--color-primary", "var(" + a.base + ")");
+      root.setProperty("--color-primary-hover", "var(" + a.hover + ")");
+      root.setProperty("--color-primary-active", "var(" + a.active + ")");
+      root.setProperty("--color-primary-fg", "var(" + a.fg + ")");
+      if (window.NB && NB.toast) NB.toast({ title: "강조색 변경", message: a.label + " 색면으로 바꿨습니다. 기본 버튼을 확인해 보세요.", variant: "info" });
+    });
+  }
+
+  /* --- 계정 삭제 — '삭제' 입력이 일치할 때만 버튼 해제 ------------------- */
+  var delInput = document.getElementById("del-confirm");
+  var delBtn = document.getElementById("del-btn");
+  if (delInput && delBtn) {
+    delInput.addEventListener("input", function () {
+      delBtn.disabled = delInput.value.trim() !== "삭제";
+    });
+    delBtn.addEventListener("click", function () {
+      if (delBtn.disabled) return;
+      if (window.NB) {
+        if (NB.closeOverlay) NB.closeOverlay(document.querySelector('[data-modal="del"]'));
+        if (NB.toast) NB.toast({ title: "삭제 예약됨", message: "30일 안에 다시 로그인하면 취소할 수 있습니다.", variant: "danger" });
+      }
+      delInput.value = ""; delBtn.disabled = true;
+    });
+  }
+})();
+</script>
 </body>
 </html>

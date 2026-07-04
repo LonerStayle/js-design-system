@@ -1,9 +1,21 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
+<script>
+/* FOUC 방지 — 저장된 판본을 페인트 전에 적용 (다크 = 캐노니컬 기본) */
+(function () {
+  try {
+    var t = localStorage.getItem('theme-24-mode') || 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) { document.documentElement.setAttribute('data-theme', 'dark'); }
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Correspondence · Folio 24</title>
+<title>서신함 — 장서각 왕복 서간 · Folio 24</title>
+<meta name="description" content="장서각 수석 사서의 서신함. 감정 의뢰와 기증 문의, 밀랍으로 봉인된 서간이 촛불 아래 도착합니다.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="../base.css">
 <link rel="stylesheet" href="../components/buttons.css">
 <link rel="stylesheet" href="../components/forms.css">
@@ -11,743 +23,589 @@
 <link rel="stylesheet" href="../components/feedback.css">
 <link rel="stylesheet" href="../components/navigation.css">
 <style>
-  /* Page-scoped layout — 3-panel inbox */
-  .inbox-shell {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
-  }
-
+  /* ---- 3-패널 서신함 셸 --------------------------------------------- */
+  .inbox-page { height: 100dvh; display: flex; flex-direction: column; overflow: clip; }
+  .inbox-shell { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .inbox-body {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
+    display: flex; flex: 1; min-height: 0;
     border-top: 1px solid var(--color-border-subtle);
   }
 
-  /* LEFT PANEL — folders */
+  /* ---- 왼쪽: 서가(폴더) ---------------------------------------------- */
   .panel-folders {
-    width: 220px;
-    flex: none;
-    display: flex;
-    flex-direction: column;
+    width: 224px; flex: none;
+    display: flex; flex-direction: column;
     border-right: 1px solid var(--color-border-subtle);
     overflow-y: auto;
-    background: var(--color-surface-1);
+    background: var(--sidebar-bg);
     padding: var(--space-4) 0;
-    gap: 0;
   }
-
-  .panel-folders__compose {
-    padding: 0 var(--space-3) var(--space-4);
-  }
-
+  .panel-folders__compose { padding: 0 var(--space-3) var(--space-4); }
   .panel-folders__section-label {
     font-family: var(--font-display);
     font-size: var(--text-2xs);
-    letter-spacing: var(--tracking-widest);
-    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps-ko);
     color: var(--color-text-subtle);
     padding: var(--space-3) var(--space-4) var(--space-1);
   }
-
   .folder-link {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
+    display: flex; align-items: center; gap: var(--space-3);
+    width: 100%; text-align: left;
     padding: var(--space-2) var(--space-4);
     border-left: 2px solid transparent;
     color: var(--color-text-muted);
-    font-size: var(--text-sm);
-    font-family: var(--font-serif);
+    font-size: var(--text-sm); font-family: var(--font-serif);
     transition: background var(--duration-fast), color var(--duration-fast), border-color var(--duration-fast);
-    cursor: pointer;
-    text-decoration: none;
+    cursor: pointer; text-decoration: none;
   }
-
-  .folder-link:hover {
-    background: color-mix(in srgb, var(--gold-500) 8%, transparent);
-    color: var(--color-text);
-  }
-
+  .folder-link:hover { background: color-mix(in srgb, var(--gold-500) 8%, transparent); color: var(--color-text); }
   .folder-link.is-active {
     background: var(--sidebar-active);
     color: var(--color-text-strong);
     border-left-color: var(--color-accent);
   }
+  .folder-link svg { width: 1rem; height: 1rem; flex: none; color: var(--color-text-subtle); }
+  .folder-link.is-active svg { color: var(--color-accent); }
+  .folder-link .badge { margin-left: auto; }
+  .label-dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; flex: none; }
+  .label-dot--gold    { background: var(--gold-500); }
+  .label-dot--forest  { background: var(--forest-400); }
+  .label-dot--info    { background: var(--info-500); }
+  .label-dot--danger  { background: var(--burgundy-400); }
 
-  .folder-link svg {
-    width: 1rem;
-    height: 1rem;
-    flex: none;
-    color: var(--color-text-subtle);
-  }
-
-  .folder-link.is-active svg {
-    color: var(--color-accent);
-  }
-
-  .folder-link .badge {
-    margin-left: auto;
-  }
-
-  .label-dot {
-    width: 0.55rem;
-    height: 0.55rem;
-    border-radius: 50%;
-    flex: none;
-  }
-
-  /* MIDDLE PANEL — letter list */
+  /* ---- 가운데: 서신 목록 --------------------------------------------- */
   .panel-list {
-    width: 340px;
-    flex: none;
-    display: flex;
-    flex-direction: column;
+    width: 344px; flex: none;
+    display: flex; flex-direction: column;
     border-right: 1px solid var(--color-border-subtle);
-    overflow: hidden;
-    background: var(--color-bg);
+    overflow: hidden; background: var(--color-bg);
   }
-
-  .panel-list__search {
-    padding: var(--space-3);
-    border-bottom: 1px solid var(--color-border-subtle);
-    flex: none;
-  }
-
-  .panel-list__scroll {
-    flex: 1;
-    overflow-y: auto;
-  }
+  .panel-list__search { padding: var(--space-3); border-bottom: 1px solid var(--color-border-subtle); flex: none; }
+  .panel-list__scroll { flex: 1; overflow-y: auto; }
 
   .letter-item {
-    display: flex;
-    gap: var(--space-3);
+    display: flex; gap: var(--space-3);
     padding: var(--space-3) var(--space-4);
     border-bottom: 1px solid var(--color-border-subtle);
-    cursor: pointer;
-    position: relative;
+    border-left: 2px solid transparent;
+    cursor: pointer; position: relative; align-items: flex-start;
     transition: background var(--duration-fast);
-    align-items: flex-start;
   }
-
-  .letter-item:hover {
-    background: color-mix(in srgb, var(--gold-500) 6%, transparent);
-  }
-
+  .letter-item:hover { background: color-mix(in srgb, var(--gold-500) 6%, transparent); }
   .letter-item.is-active {
-    background: color-mix(in srgb, var(--burgundy-700) 14%, transparent);
-    border-left: 2px solid var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+    border-left-color: var(--color-primary);
   }
-
-  .letter-item__body {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .letter-item__header {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    margin-bottom: var(--space-1);
-  }
-
+  .letter-item__body { flex: 1; min-width: 0; }
+  .letter-item__header { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-1); }
   .letter-item__sender {
-    font-family: var(--font-display);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-semibold);
-    color: var(--color-text-strong);
-    flex: 1;
-    min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-family: var(--font-display); font-size: var(--text-sm);
+    font-weight: var(--weight-semibold); color: var(--color-text-strong);
+    flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-
-  .letter-item__time {
-    font-size: var(--text-xs);
-    color: var(--color-text-subtle);
-    flex: none;
-    white-space: nowrap;
-  }
-
+  .letter-item__time { font-size: var(--text-xs); color: var(--color-text-subtle); flex: none; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .letter-item__subject {
-    font-size: var(--text-sm);
-    color: var(--color-text);
-    font-weight: var(--weight-medium);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: var(--space-1);
+    font-size: var(--text-sm); color: var(--color-text); font-weight: var(--weight-medium);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: var(--space-1);
   }
-
   .letter-item__snippet {
-    font-size: var(--text-xs);
-    color: var(--color-text-subtle);
-    font-style: italic;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: var(--text-xs); color: var(--color-text-subtle); font-style: italic;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
+  .letter-item__meta { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); }
+  .unread-dot { width: 0.45rem; height: 0.45rem; border-radius: 50%; background: var(--color-accent); flex: none; box-shadow: var(--glow-candle-sm); }
+  .letter-item__star { position: absolute; top: var(--space-3); right: var(--space-3); color: var(--gold-400); line-height: 1; }
 
-  .letter-item__meta {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    margin-top: var(--space-2);
-  }
+  /* 아바타 잉크 틴트 — 전부 시맨틱 토큰 경유 */
+  .avatar--tint-primary { background: var(--color-primary-soft); color: var(--color-primary-soft-fg); }
+  .avatar--tint-gold    { background: var(--color-accent-soft);  color: var(--color-accent-soft-fg); }
+  .avatar--tint-forest  { background: var(--color-success-bg);   color: var(--color-success-fg); }
+  .avatar--tint-info    { background: var(--color-info-bg);      color: var(--color-info-fg); }
+  .avatar--tint-danger  { background: var(--color-danger-bg);    color: var(--color-danger-fg); }
 
-  .unread-dot {
-    width: 0.45rem;
-    height: 0.45rem;
-    border-radius: 50%;
-    background: var(--color-accent);
-    flex: none;
-  }
-
-  .letter-item__star {
-    position: absolute;
-    top: var(--space-3);
-    right: var(--space-3);
-    color: var(--color-text-subtle);
-    line-height: 1;
-  }
-
-  .letter-item__star.is-starred {
-    color: var(--gold-400);
-  }
-
-  /* RIGHT PANEL — reading pane */
-  .panel-reading {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    background: var(--color-bg);
-  }
-
+  /* ---- 오른쪽: 읽기 서안(書案) --------------------------------------- */
+  .panel-reading { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--color-bg); }
   .reading-header {
     padding: var(--space-5) var(--space-6) var(--space-4);
-    border-bottom: 1px solid var(--color-border-subtle);
-    flex: none;
+    border-bottom: 1px solid var(--color-border-subtle); flex: none;
   }
-
-  .reading-header__top {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--space-4);
-    margin-bottom: var(--space-3);
-  }
-
-  .reading-header__info {
-    flex: 1;
-    min-width: 0;
-  }
-
+  .reading-header__top { display: flex; align-items: flex-start; gap: var(--space-4); }
+  .reading-header__info { flex: 1; min-width: 0; }
   .reading-header__subject {
-    font-family: var(--font-display);
-    font-size: var(--text-xl);
-    color: var(--color-text-strong);
-    letter-spacing: var(--tracking-wide);
+    font-family: var(--font-display); font-size: var(--text-xl);
+    color: var(--color-text-strong); letter-spacing: var(--tracking-wide);
+    line-height: var(--leading-heading-ko);
     margin-bottom: var(--space-1);
   }
+  .reading-header__from { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--text-sm); color: var(--color-text-muted); }
+  .reading-header__from strong { color: var(--color-text); }
+  .reading-header__date { font-size: var(--text-xs); color: var(--color-text-subtle); font-style: italic; margin-top: var(--space-1); }
+  .reading-header__actions { display: flex; gap: var(--space-2); align-items: flex-start; flex: none; }
 
-  .reading-header__from {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    font-size: var(--text-sm);
-    color: var(--color-text-muted);
+  .reading-body { flex: 1; overflow-y: auto; padding: var(--space-7) var(--space-6) var(--space-8); }
+
+  /* ---- 시그니처: 어두운 서안 위에 놓인 양피지 낱장 --------------------
+     편지지는 판본(다크/라이트)과 무관한 실물 종이 — 콘텐츠 색이므로
+     시트 스코프 토큰으로 고정한다.                                        */
+  .letter-sheet {
+    --sheet-ink: var(--neutral-900);
+    --sheet-ink-muted: var(--neutral-600);
+    --ink-annotation: var(--burgundy-700);   /* 방주 잉크 — 시트 위에서는 진한 주묵 */
+    position: relative;
+    max-width: 66ch; margin-inline: auto;
+    background: var(--neutral-100);
+    background-image: var(--aged-paper-texture), var(--paper-grain);
+    color: var(--sheet-ink);
+    border: 1px solid var(--gold-700);
+    outline: 1px solid color-mix(in srgb, var(--gold-700) 35%, transparent);
+    outline-offset: 4px;
+    padding: var(--space-8) clamp(var(--space-5), 6vw, var(--space-9)) var(--space-7);
+    box-shadow: var(--shadow-lg);
+    rotate: -0.35deg;
   }
-
-  .reading-header__from strong {
-    color: var(--color-text);
+  .letter-sheet p { color: var(--sheet-ink); margin-bottom: var(--space-5); line-height: var(--leading-relaxed); font-size: var(--text-md); }
+  .letter-sheet .has-dropcap::first-letter {
+    color: var(--burgundy-700);
+    text-shadow: 1px 1px 0 color-mix(in srgb, var(--gold-500) 35%, transparent);
   }
-
-  .reading-header__date {
-    font-size: var(--text-xs);
-    color: var(--color-text-subtle);
-    font-style: italic;
-    margin-top: var(--space-1);
+  .letter-sheet .closing { font-style: italic; color: var(--sheet-ink-muted); margin-top: var(--space-6); }
+  .letter-sheet .signature {
+    display: flex; align-items: center; gap: var(--space-4);
+    font-family: var(--font-display); font-size: var(--text-md);
+    letter-spacing: var(--tracking-wide); color: var(--burgundy-700);
+    margin-top: var(--space-3); margin-bottom: 0;
   }
-
-  .reading-header__actions {
-    display: flex;
-    gap: var(--space-2);
-    align-items: flex-start;
-    flex: none;
-  }
-
-  .reading-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: var(--space-6) var(--space-8);
-  }
-
-  .reading-body .letter-prose {
-    max-width: 64ch;
-  }
-
-  .letter-prose p {
-    margin-bottom: var(--space-5);
-    line-height: var(--leading-relaxed);
-    font-size: var(--text-md);
-    color: var(--color-text);
-  }
-
-  .letter-prose .closing {
-    margin-top: var(--space-6);
-    font-style: italic;
-    color: var(--color-text-muted);
-  }
-
-  .letter-prose .signature {
-    font-family: var(--font-display);
-    font-size: var(--text-md);
-    letter-spacing: var(--tracking-wide);
-    color: var(--color-accent);
-    margin-top: var(--space-2);
-  }
-
-  .letter-prose .postscript {
-    margin-top: var(--space-4);
-    font-size: var(--text-sm);
-    color: var(--color-text-subtle);
-    font-style: italic;
+  .letter-sheet .signature small { display: block; font-family: var(--font-serif); font-style: italic; color: var(--sheet-ink-muted); letter-spacing: 0; }
+  .letter-sheet .postscript {
+    margin-top: var(--space-5); margin-bottom: 0;
+    font-size: var(--text-sm); color: var(--sheet-ink-muted); font-style: italic;
     padding-left: var(--space-4);
-    border-left: 2px solid var(--color-border);
+    border-left: 2px solid color-mix(in srgb, var(--gold-700) 45%, transparent);
   }
+  .letter-sheet .margin-note {
+    display: block; margin: calc(var(--space-2) * -1) 0 var(--space-4) auto;
+    text-align: right; padding-left: 0; padding-right: var(--space-4);
+  }
+  .letter-sheet .margin-note::before { left: auto; right: 0; }
+  /* 접수인 — 장서각 수신 스탬프 */
+  .letter-sheet__receipt {
+    position: absolute; top: var(--space-4); right: var(--space-4);
+    rotate: 7deg; pointer-events: none; user-select: none;
+    border: 2px solid color-mix(in srgb, var(--burgundy-600) 70%, transparent);
+    color: color-mix(in srgb, var(--burgundy-600) 85%, transparent);
+    font-family: var(--font-display); font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-caps-ko);
+    padding: 0.32em 0.6em; border-radius: var(--radius-sm);
+    text-align: center; line-height: 1.5;
+  }
+  .letter-sheet .reading-ornament { display: flex; justify-content: center; margin: var(--space-2) 0 var(--space-5); color: var(--burgundy-600); opacity: 0.6; }
+  .letter-sheet .seal-row { display: flex; justify-content: flex-end; margin-top: var(--space-4); }
 
+  /* ---- 빠른 답신 ------------------------------------------------------ */
   .quick-reply {
     border-top: 1px solid var(--color-border-subtle);
     padding: var(--space-4) var(--space-6);
-    flex: none;
-    background: var(--color-surface-1);
+    flex: none; background: var(--color-surface);
   }
-
   .quick-reply__label {
-    font-family: var(--font-display);
-    font-size: var(--text-xs);
-    letter-spacing: var(--tracking-widest);
-    text-transform: uppercase;
-    color: var(--color-text-subtle);
-    margin-bottom: var(--space-2);
+    font-family: var(--font-display); font-size: var(--text-xs);
+    letter-spacing: var(--tracking-caps-ko);
+    color: var(--color-text-subtle); margin-bottom: var(--space-2);
+  }
+  .quick-reply__row { display: flex; gap: var(--space-3); align-items: flex-end; }
+  .quick-reply__textarea { flex: 1; }
+  .quick-reply .textarea { min-height: 4rem; resize: none; }
+
+  /* ---- 빈 서가 -------------------------------------------------------- */
+  .panel-list .empty { padding-block: var(--space-10); }
+
+  /* ---- 모바일: 목록 ↔ 읽기 전환 -------------------------------------- */
+  .mobile-back-btn {
+    display: none; align-items: center; gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-border-subtle);
+    font-size: var(--text-sm); color: var(--color-accent);
+    cursor: pointer; width: 100%; text-align: left;
   }
 
-  .quick-reply__row {
-    display: flex;
-    gap: var(--space-3);
-    align-items: flex-end;
-  }
-
-  .quick-reply__textarea {
-    flex: 1;
-  }
-
-  /* Responsive breakpoints */
   @media (max-width: 1024px) {
-    .panel-folders {
-      width: 60px;
-      overflow: hidden;
-    }
+    .panel-folders { width: 60px; overflow: hidden; }
     .folder-link span,
     .folder-link .badge,
     .panel-folders__section-label,
-    .panel-folders__compose .btn span {
-      display: none;
-    }
-    .panel-folders__compose .btn {
-      padding: 0.55rem;
-      aspect-ratio: 1;
-      justify-content: center;
-    }
-    .folder-link {
-      justify-content: center;
-      padding: var(--space-3);
-    }
-    .panel-list {
-      width: 280px;
-    }
+    .panel-folders__compose .btn span { display: none; }
+    .panel-folders__compose .btn { padding: 0.55rem; aspect-ratio: 1; justify-content: center; }
+    .folder-link { justify-content: center; padding: var(--space-3); }
+    .panel-list { width: 292px; }
   }
-
   @media (max-width: 768px) {
-    .panel-folders {
-      display: none;
-    }
+    .panel-folders { display: none; }
+    .panel-list { width: 100%; flex: 1; }
     .panel-reading {
       display: none;
-    }
-    .panel-list {
-      width: 100%;
-      flex: 1;
-    }
-    .letter-item.is-active + .panel-reading {
-      display: flex;
-    }
-    .mobile-back-btn {
-      display: flex !important;
-    }
-    .panel-reading {
-      position: fixed;
-      inset: 0;
-      z-index: var(--z-drawer);
+      position: fixed; inset: 0; z-index: var(--z-drawer);
       background: var(--color-bg);
     }
-    .panel-reading.is-open {
-      display: flex;
-    }
-  }
-
-  .mobile-back-btn {
-    display: none;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-3) var(--space-4);
-    border-bottom: 1px solid var(--color-border-subtle);
-    font-size: var(--text-sm);
-    color: var(--color-accent);
-    cursor: pointer;
-    background: none;
-    border: none;
-    border-bottom: 1px solid var(--color-border-subtle);
-    width: 100%;
-    text-align: left;
-  }
-
-  .ornate-separator {
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
-    margin: var(--space-5) 0;
-    opacity: 0.4;
-  }
-
-  .reading-ornament {
-    display: flex;
-    justify-content: center;
-    margin: var(--space-4) 0;
-    color: var(--color-accent);
-    opacity: 0.5;
+    .panel-reading.is-open { display: flex; }
+    .mobile-back-btn { display: flex; }
+    .reading-body { padding: var(--space-5) var(--space-4) var(--space-7); }
+    .letter-sheet { rotate: 0deg; padding-top: var(--space-9); }
   }
 </style>
 </head>
-<body>
-<a class="skip-link" href="#main">Skip to content</a>
+<body class="inbox-page">
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
 
-<!-- NAVBAR -->
-<nav class="navbar" aria-label="Primary">
+<!-- ===================== NAVBAR ===================== -->
+<nav class="navbar" aria-label="주요 내비게이션">
   <a class="navbar__brand" href="../index.html">
     <span class="mark" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 5a2 2 0 0 1 2-2h6v18H5a2 2 0 0 1-2-2zM21 5a2 2 0 0 0-2-2h-6v18h6a2 2 0 0 0 2-2z"/></svg></span>
     <span>Folio<span class="text-accent">·</span>24</span>
   </a>
   <div class="navbar__nav">
-    <a class="nav-link" href="dashboard.html">Dashboard</a>
-    <a class="nav-link" href="kanban.html">Board</a>
-    <a class="nav-link" aria-current="page" href="inbox.html">Letters</a>
-    <a class="nav-link" href="article.html">Reading Room</a>
+    <a class="nav-link" href="dashboard.html">대시보드</a>
+    <a class="nav-link" href="kanban.html">필사실</a>
+    <a class="nav-link" aria-current="page" href="inbox.html">서신함</a>
+    <a class="nav-link" href="article.html">열람실</a>
   </div>
   <span class="navbar__spacer"></span>
   <div class="navbar__actions">
-    <button class="btn btn--ghost btn--sm" data-cmdk-open aria-label="Open command palette">
+    <button class="btn btn--ghost btn--sm" data-cmdk-open aria-label="명령 팔레트 열기">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <kbd>⌘K</kbd>
+      <span class="hide-mobile">검색</span> <kbd>⌘K</kbd>
     </button>
     <button class="btn btn--secondary btn--sm" data-theme-toggle aria-pressed="false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-      <span data-theme-label>Parchment</span>
+      <span data-theme-label>양피지</span>
+    </button>
+    <button class="btn btn--icon btn--ghost nav-toggle" data-nav-toggle aria-label="내비게이션 열기" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
     </button>
   </div>
 </nav>
 
-<!-- INBOX SHELL -->
+<!-- ===================== 서신함 셸 ===================== -->
 <div class="inbox-shell" id="main">
   <div class="inbox-body">
 
-    <!-- LEFT PANEL: Folders -->
-    <aside class="panel-folders" aria-label="Folders">
+    <!-- 왼쪽: 서가(폴더) -->
+    <nav class="panel-folders" aria-label="서신 서가">
       <div class="panel-folders__compose">
-        <button class="btn btn--primary btn--block" aria-label="Compose new letter">
+        <button class="btn btn--primary btn--block" data-modal-open="compose-modal" aria-label="새 서신 쓰기">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-          <span>Compose Letter</span>
+          <span>새 서신 쓰기</span>
         </button>
       </div>
 
-      <div class="panel-folders__section-label">Postboxes</div>
+      <div class="panel-folders__section-label">서가</div>
 
-      <a href="#" class="folder-link is-active" aria-current="page" aria-label="Inbox — 7 unread">
+      <button type="button" class="folder-link is-active" data-folder="inbox" aria-current="true" aria-label="받은 서신함 — 안읽음 3건">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="16" height="16" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
-        <span>Inbox</span>
-        <span class="badge badge--primary badge--pill">7</span>
-      </a>
+        <span>받은 서신함</span>
+        <span class="badge badge--primary badge--pill">3</span>
+      </button>
 
-      <a href="#" class="folder-link" aria-label="Sent — 23 letters">
+      <button type="button" class="folder-link" data-folder="sent" aria-label="보낸 서신함 — 2건">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="16" height="16" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>
-        <span>Sent</span>
-        <span class="badge badge--pill" style="font-size:var(--text-2xs);opacity:0.7">23</span>
-      </a>
+        <span>보낸 서신함</span>
+        <span class="badge badge--pill">2</span>
+      </button>
 
-      <a href="#" class="folder-link" aria-label="Drafts — 2 drafts">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="16" height="16" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
-        <span>Drafts</span>
-        <span class="badge badge--warning badge--pill">2</span>
-      </a>
-
-      <a href="#" class="folder-link" aria-label="Archive">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="16" height="16" aria-hidden="true"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
-        <span>Archive</span>
-      </a>
-
-      <a href="#" class="folder-link" aria-label="Sealed — 3 unopened">
+      <button type="button" class="folder-link" data-folder="sealed" aria-label="봉인 서신 — 미개봉 3건">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="16" height="16" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-        <span>Sealed</span>
-        <span class="badge badge--danger badge--pill">3</span>
-      </a>
+        <span>봉인 서신</span>
+        <span class="badge badge--wax">3</span>
+      </button>
 
-      <div class="panel-folders__section-label" style="margin-top:var(--space-3)">Labels</div>
+      <button type="button" class="folder-link" data-folder="archive" aria-label="묵은 서신함 — 비어 있음">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="16" height="16" aria-hidden="true"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+        <span>묵은 서신</span>
+      </button>
 
-      <a href="#" class="folder-link" aria-label="Label: Manuscripts">
-        <span class="label-dot" style="background:#a6843c;" aria-hidden="true"></span>
-        <span>Manuscripts</span>
-      </a>
-      <a href="#" class="folder-link" aria-label="Label: Society">
-        <span class="label-dot" style="background:#5a7c5a;" aria-hidden="true"></span>
-        <span>Society</span>
-      </a>
-      <a href="#" class="folder-link" aria-label="Label: Enquiries">
-        <span class="label-dot" style="background:#7b4f6e;" aria-hidden="true"></span>
-        <span>Enquiries</span>
-      </a>
-      <a href="#" class="folder-link" aria-label="Label: Urgent">
-        <span class="label-dot" style="background:#8b2020;" aria-hidden="true"></span>
-        <span>Urgent</span>
-      </a>
-    </aside>
+      <div class="panel-folders__section-label" style="margin-top:var(--space-3)">분류</div>
 
-    <!-- MIDDLE PANEL: Letter list -->
-    <section class="panel-list" aria-label="Letters">
+      <button type="button" class="folder-link" data-label-filter="감정 의뢰" aria-label="감정 의뢰 서신만 찾아보기">
+        <span class="label-dot label-dot--gold" aria-hidden="true"></span>
+        <span>감정 의뢰</span>
+      </button>
+      <button type="button" class="folder-link" data-label-filter="기증" aria-label="기증·유증 서신만 찾아보기">
+        <span class="label-dot label-dot--forest" aria-hidden="true"></span>
+        <span>기증·유증</span>
+      </button>
+      <button type="button" class="folder-link" data-label-filter="학회" aria-label="학회 서신만 찾아보기">
+        <span class="label-dot label-dot--info" aria-hidden="true"></span>
+        <span>학회</span>
+      </button>
+      <button type="button" class="folder-link" data-label-filter="긴급" aria-label="긴급 서신만 찾아보기">
+        <span class="label-dot label-dot--danger" aria-hidden="true"></span>
+        <span>긴급</span>
+      </button>
+    </nav>
+
+    <!-- 가운데: 서신 목록 -->
+    <section class="panel-list" aria-label="서신 목록">
       <div class="panel-list__search">
         <div class="searchbar" role="search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-          <input
-            type="search"
-            placeholder="Search correspondence…"
-            aria-label="Search letters"
-            data-filter="#letter-list"
-          >
+          <input type="search" id="letter-search" placeholder="서신을 검색하십시오…" aria-label="서신 검색">
         </div>
       </div>
 
       <div class="panel-list__scroll" id="letter-list" role="list">
 
-        <!-- Letter 1 — ACTIVE/SELECTED -->
-        <article class="letter-item is-active" role="listitem" tabindex="0" aria-label="Letter from Professor Edmund Ashworth, selected" data-filter-item>
-          <div class="avatar avatar--sm" aria-hidden="true" style="background: var(--color-primary-soft); color: var(--color-primary-soft-fg); flex: none;">EA</div>
+        <!-- 받은 서신 1 — 열람 중 -->
+        <article class="letter-item is-active" role="listitem" tabindex="0" data-folders="inbox" aria-label="한서월 교수의 서신 — 청구영언 홍씨본 지질 감정 소견, 열람 중, 서표 있음">
+          <div class="avatar avatar--sm avatar--tint-primary" aria-hidden="true">한</div>
           <div class="letter-item__body">
             <div class="letter-item__header">
-              <span class="letter-item__sender">Prof. Edmund Ashworth</span>
-              <span class="letter-item__time">XIV Nov</span>
+              <span class="letter-item__sender">한서월 교수</span>
+              <span class="letter-item__time">오전 9:12</span>
             </div>
-            <div class="letter-item__subject">Re: The Aldine Virgil — Authentication</div>
-            <div class="letter-item__snippet">I have examined the colophon most carefully, and I confess the doubts…</div>
+            <div class="letter-item__subject">回: 『청구영언』 홍씨본 — 지질 감정 소견</div>
+            <div class="letter-item__snippet">말씀하신 홍씨본의 지질을 사흘에 걸쳐 살폈습니다. 판심의 어미가 문제입니다…</div>
             <div class="letter-item__meta">
-              <span class="unread-dot" aria-label="Unread"></span>
-              <span class="badge badge--pill" style="font-size:var(--text-2xs)">Manuscripts</span>
+              <span class="badge badge--pill" style="font-size:var(--text-2xs)">감정 의뢰</span>
             </div>
           </div>
-          <span class="letter-item__star is-starred" aria-label="Starred" aria-hidden="true">
+          <span class="letter-item__star" aria-hidden="true">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
           </span>
         </article>
 
-        <!-- Letter 2 -->
-        <article class="letter-item" role="listitem" tabindex="0" aria-label="Letter from Lady Constance Fairweather" data-filter-item>
-          <div class="avatar avatar--sm" aria-hidden="true" style="background: color-mix(in srgb, #7b4f6e 25%, var(--color-surface-2)); color: #c9a0c9; flex: none;">CF</div>
+        <!-- 받은 서신 2 -->
+        <article class="letter-item" role="listitem" tabindex="0" data-folders="inbox" aria-label="백문호 관장의 서신 — 위창 문고 기증 목록, 안읽음">
+          <div class="avatar avatar--sm avatar--tint-forest" aria-hidden="true">백</div>
           <div class="letter-item__body">
             <div class="letter-item__header">
-              <span class="letter-item__sender">Lady Constance Fairweather</span>
-              <span class="letter-item__time">XII Nov</span>
+              <span class="letter-item__sender">백문호 관장</span>
+              <span class="letter-item__time">어제</span>
             </div>
-            <div class="letter-item__subject">The Westbrook Bequest — A Grievous Error</div>
-            <div class="letter-item__snippet">My late uncle's library was promised in its entirety to the college…</div>
+            <div class="letter-item__subject">위창 문고 기증 목록 — 정오표 별첨</div>
+            <div class="letter-item__snippet">선친께서 평생 모으신 1,204책의 목록을 다시 훑어, 잘못 옮긴 서명 여덟을…</div>
             <div class="letter-item__meta">
-              <span class="unread-dot" aria-label="Unread"></span>
-              <span class="badge badge--pill" style="font-size:var(--text-2xs)">Enquiries</span>
+              <span class="unread-dot" aria-hidden="true"></span>
+              <span class="badge badge--pill" style="font-size:var(--text-2xs)">기증·유증</span>
             </div>
           </div>
         </article>
 
-        <!-- Letter 3 -->
-        <article class="letter-item" role="listitem" tabindex="0" aria-label="Letter from Dr. Hieronymus Vane" data-filter-item>
-          <div class="avatar avatar--sm" aria-hidden="true" style="background: color-mix(in srgb, #5a7c5a 25%, var(--color-surface-2)); color: #8fb98f; flex: none;">HV</div>
+        <!-- 받은 서신 3 -->
+        <article class="letter-item" role="listitem" tabindex="0" data-folders="inbox" aria-label="서지헌 학예사의 서신 — 동계 학술 강연 논평 요청">
+          <div class="avatar avatar--sm avatar--tint-info" aria-hidden="true">서</div>
           <div class="letter-item__body">
             <div class="letter-item__header">
-              <span class="letter-item__sender">Dr. Hieronymus Vane</span>
-              <span class="letter-item__time">X Nov</span>
+              <span class="letter-item__sender">서지헌 학예사</span>
+              <span class="letter-item__time">어제</span>
             </div>
-            <div class="letter-item__subject">Michaelmas Lecture — Request for Commentary</div>
-            <div class="letter-item__snippet">Your discourse upon the Neoplatonists of the Florentine Academy…</div>
+            <div class="letter-item__subject">동계 학술 강연 — 논평 요청의 말씀</div>
+            <div class="letter-item__snippet">지난번 발표하신 「능화판 문양의 계보」에 대한 논평을 감히 청합니다…</div>
             <div class="letter-item__meta">
-              <span class="badge badge--pill" style="font-size:var(--text-2xs)">Society</span>
+              <span class="badge badge--pill" style="font-size:var(--text-2xs)">학회</span>
             </div>
           </div>
-          <span class="letter-item__star is-starred" aria-label="Starred" aria-hidden="true">
+        </article>
+
+        <!-- 받은 서신 4 -->
+        <article class="letter-item" role="listitem" tabindex="0" data-folders="inbox" aria-label="국립중앙도서관 고문헌실의 서신 — 대출 연장 안내">
+          <div class="avatar avatar--sm avatar--square avatar--tint-gold" aria-hidden="true">국</div>
+          <div class="letter-item__body">
+            <div class="letter-item__header">
+              <span class="letter-item__sender">국립중앙도서관 고문헌실</span>
+              <span class="letter-item__time">7월 1일</span>
+            </div>
+            <div class="letter-item__subject">대출 연장 안내 — 古3648-62 『동패락송』</div>
+            <div class="letter-item__snippet">상기 자료의 관외 대출 기간이 7월 18일 (토)로 만료됨을 알려드립니다…</div>
+          </div>
+        </article>
+
+        <!-- 받은 서신 5 — 봉인 · 긴급 -->
+        <article class="letter-item" role="listitem" tabindex="0" data-folders="inbox sealed" aria-label="남주해 박사의 봉인 서신 — 지하 서고 습해, 긴급, 안읽음">
+          <div class="avatar avatar--sm avatar--tint-danger" aria-hidden="true">남</div>
+          <div class="letter-item__body">
+            <div class="letter-item__header">
+              <span class="letter-item__sender">남주해 박사</span>
+              <span class="letter-item__time">6월 30일</span>
+            </div>
+            <div class="letter-item__subject">지하 서고 습해 — 긴급 소견을 구합니다</div>
+            <div class="letter-item__snippet">장마가 들기 전에 반드시 살펴야 할 일이 생겼습니다. 서고 북벽의…</div>
+            <div class="letter-item__meta">
+              <span class="unread-dot" aria-hidden="true"></span>
+              <span class="badge badge--danger badge--pill" style="font-size:var(--text-2xs)">긴급</span>
+              <span class="badge badge--wax" style="font-size:var(--text-2xs)">봉인</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- 받은 서신 6 -->
+        <article class="letter-item" role="listitem" tabindex="0" data-folders="inbox" aria-label="오하린 연구원의 서신 — 두시언해 초간 낙장 보사 건">
+          <div class="avatar avatar--sm avatar--tint-gold" aria-hidden="true">오</div>
+          <div class="letter-item__body">
+            <div class="letter-item__header">
+              <span class="letter-item__sender">오하린 연구원</span>
+              <span class="letter-item__time">6월 28일</span>
+            </div>
+            <div class="letter-item__subject">『두시언해』 초간 낙장 보사(補寫) 건</div>
+            <div class="letter-item__snippet">권10 제3장의 결락 부분을 채울 저본으로 세 이본을 견주어 보았습니다…</div>
+            <div class="letter-item__meta">
+              <span class="badge badge--pill" style="font-size:var(--text-2xs)">감정 의뢰</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- 받은 서신 7 — 봉인 -->
+        <article class="letter-item" role="listitem" tabindex="0" data-folders="inbox sealed" aria-label="문겸재 대표의 봉인 서신 — 규합총서 필사본 위탁 보관 문의, 서표 있음">
+          <div class="avatar avatar--sm avatar--tint-primary" aria-hidden="true">문</div>
+          <div class="letter-item__body">
+            <div class="letter-item__header">
+              <span class="letter-item__sender">문겸재 대표 · 통문관</span>
+              <span class="letter-item__time">6월 26일</span>
+            </div>
+            <div class="letter-item__subject">『규합총서』 필사본 — 위탁 보관 문의</div>
+            <div class="letter-item__snippet">사려는 사람이 아니라 맡기려는 사람으로서 붓을 들었습니다. 이 책은…</div>
+            <div class="letter-item__meta">
+              <span class="badge badge--wax" style="font-size:var(--text-2xs)">봉인</span>
+            </div>
+          </div>
+          <span class="letter-item__star" aria-hidden="true">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
           </span>
         </article>
 
-        <!-- Letter 4 -->
-        <article class="letter-item" role="listitem" tabindex="0" aria-label="Letter from The Bodleian Library" data-filter-item>
-          <div class="avatar avatar--sm" aria-hidden="true" style="background: color-mix(in srgb, #a6843c 25%, var(--color-surface-2)); color: #d4aa55; flex: none;">BL</div>
+        <!-- 받은 서신 8 -->
+        <article class="letter-item" role="listitem" tabindex="0" data-folders="inbox" aria-label="한국고서협회 사무국의 서신 — 정기 총회 초청장">
+          <div class="avatar avatar--sm avatar--square avatar--tint-forest" aria-hidden="true">협</div>
           <div class="letter-item__body">
             <div class="letter-item__header">
-              <span class="letter-item__sender">The Bodleian Library</span>
-              <span class="letter-item__time">VII Nov</span>
+              <span class="letter-item__sender">한국고서협회 사무국</span>
+              <span class="letter-item__time">6월 24일</span>
             </div>
-            <div class="letter-item__subject">Loan Renewal — MS. Rawl. D. 864</div>
-            <div class="letter-item__snippet">We write to advise that the loan period for the above-referenced…</div>
-          </div>
-        </article>
-
-        <!-- Letter 5 -->
-        <article class="letter-item" role="listitem" tabindex="0" aria-label="Letter from Reverend Octavius Greele" data-filter-item>
-          <div class="avatar avatar--sm" aria-hidden="true" style="background: color-mix(in srgb, #8b2020 22%, var(--color-surface-2)); color: #c97070; flex: none;">OG</div>
-          <div class="letter-item__body">
-            <div class="letter-item__header">
-              <span class="letter-item__sender">Rev. Octavius Greele</span>
-              <span class="letter-item__time">V Nov</span>
-            </div>
-            <div class="letter-item__subject">A Most Alarming Discovery in the Crypt Archives</div>
-            <div class="letter-item__snippet">I must implore your counsel with the utmost urgency, for what…</div>
+            <div class="letter-item__subject">제61차 정기 총회 및 기념 강연 초청</div>
+            <div class="letter-item__snippet">올해 기념 강연의 연사로 귀하를 모시고자 하오니, 수락 여부를…</div>
             <div class="letter-item__meta">
-              <span class="unread-dot" aria-label="Unread"></span>
-              <span class="badge badge--danger badge--pill" style="font-size:var(--text-2xs)">Urgent</span>
+              <span class="badge badge--pill" style="font-size:var(--text-2xs)">학회</span>
             </div>
           </div>
         </article>
 
-        <!-- Letter 6 -->
-        <article class="letter-item" role="listitem" tabindex="0" aria-label="Letter from Miss Agatha Penrose" data-filter-item>
-          <div class="avatar avatar--sm" aria-hidden="true" style="background: color-mix(in srgb, var(--gold-700) 20%, var(--color-surface-2)); color: var(--gold-400); flex: none;">AP</div>
+        <!-- 받은 서신 9 — 봉인 -->
+        <article class="letter-item" role="listitem" tabindex="0" data-folders="inbox sealed" aria-label="채유정 보존처리사의 봉인 서신 — 배접지 산성도 측정 결과, 안읽음">
+          <div class="avatar avatar--sm avatar--tint-info" aria-hidden="true">채</div>
           <div class="letter-item__body">
             <div class="letter-item__header">
-              <span class="letter-item__sender">Miss Agatha Penrose</span>
-              <span class="letter-item__time">III Nov</span>
+              <span class="letter-item__sender">채유정 보존처리사</span>
+              <span class="letter-item__time">6월 21일</span>
             </div>
-            <div class="letter-item__subject">Translation of the Thuringian Chronicle</div>
-            <div class="letter-item__snippet">I have completed the first quatrain of the Thuringian text, though…</div>
+            <div class="letter-item__subject">배접지 산성도 측정 결과 — pH 4.2</div>
+            <div class="letter-item__snippet">우려하신 대로 산성화가 진행 중입니다. 탈산 처리 견적서를 함께…</div>
             <div class="letter-item__meta">
-              <span class="badge badge--pill" style="font-size:var(--text-2xs)">Manuscripts</span>
+              <span class="unread-dot" aria-hidden="true"></span>
+              <span class="badge badge--wax" style="font-size:var(--text-2xs)">봉인</span>
             </div>
           </div>
         </article>
 
-        <!-- Letter 7 -->
-        <article class="letter-item" role="listitem" tabindex="0" aria-label="Letter from Professor Aldric Munn" data-filter-item>
-          <div class="avatar avatar--sm" aria-hidden="true" style="background: color-mix(in srgb, var(--color-info-bg) 60%, transparent); color: var(--color-info-fg); flex: none;">AM</div>
+        <!-- 받은 서신 10 -->
+        <article class="letter-item" role="listitem" tabindex="0" data-folders="inbox" aria-label="강임호 명예사서의 서신 — 장서인 대조첩 열람 회신">
+          <div class="avatar avatar--sm avatar--tint-gold" aria-hidden="true">강</div>
           <div class="letter-item__body">
             <div class="letter-item__header">
-              <span class="letter-item__sender">Prof. Aldric Munn</span>
-              <span class="letter-item__time">XXIX Oct</span>
+              <span class="letter-item__sender">강임호 명예사서</span>
+              <span class="letter-item__time">6월 19일</span>
             </div>
-            <div class="letter-item__subject">The Frankfurt Fair — Acquisitions Report</div>
-            <div class="letter-item__snippet">I am pleased to report that the Frankfurt book fair yielded three…</div>
+            <div class="letter-item__subject">장서인(藏書印) 대조첩 — 열람 회신</div>
+            <div class="letter-item__snippet">노안이라 돋보기를 두 개 겹쳐 보았습니다만, 인영 열둘 중 아홉은…</div>
           </div>
         </article>
 
-        <!-- Letter 8 -->
-        <article class="letter-item" role="listitem" tabindex="0" aria-label="Letter from The Antiquarian Society of London" data-filter-item>
-          <div class="avatar avatar--sm avatar--square" aria-hidden="true" style="background: color-mix(in srgb, #5a7c5a 25%, var(--color-surface-2)); color: #8fb98f; flex: none;">AS</div>
+        <!-- 보낸 서신 1 -->
+        <article class="letter-item" role="listitem" tabindex="0" data-folders="sent" style="display:none" aria-label="보낸 서신 — 한서월 교수께 홍씨본 재감정 요청">
+          <div class="avatar avatar--sm avatar--tint-primary" aria-hidden="true">유</div>
           <div class="letter-item__body">
             <div class="letter-item__header">
-              <span class="letter-item__sender">Antiquarian Society, London</span>
-              <span class="letter-item__time">XXVII Oct</span>
+              <span class="letter-item__sender">받는이: 한서월 교수</span>
+              <span class="letter-item__time">7월 2일</span>
             </div>
-            <div class="letter-item__subject">Annual Symposium — Invitation &amp; Programme</div>
-            <div class="letter-item__snippet">The Society cordially invites you to deliver the Cavendish Memorial…</div>
+            <div class="letter-item__subject">『청구영언』 홍씨본 — 재감정을 청합니다</div>
+            <div class="letter-item__snippet">지난달 입수한 홍씨본의 어미 양식이 아무래도 마음에 걸립니다…</div>
             <div class="letter-item__meta">
-              <span class="badge badge--pill" style="font-size:var(--text-2xs)">Society</span>
+              <span class="badge badge--pill" style="font-size:var(--text-2xs)">감정 의뢰</span>
             </div>
           </div>
         </article>
 
-        <!-- Letter 9 -->
-        <article class="letter-item" role="listitem" tabindex="0" aria-label="Letter from Mr. Cornelius Blackwood" data-filter-item>
-          <div class="avatar avatar--sm" aria-hidden="true" style="background: color-mix(in srgb, #a6843c 20%, var(--color-surface-2)); color: var(--gold-300); flex: none;">CB</div>
+        <!-- 보낸 서신 2 -->
+        <article class="letter-item" role="listitem" tabindex="0" data-folders="sent" style="display:none" aria-label="보낸 서신 — 열람 회원 전체에게 하계 열람 시간 안내">
+          <div class="avatar avatar--sm avatar--tint-gold" aria-hidden="true">유</div>
           <div class="letter-item__body">
             <div class="letter-item__header">
-              <span class="letter-item__sender">Mr. Cornelius Blackwood</span>
-              <span class="letter-item__time">XXIV Oct</span>
+              <span class="letter-item__sender">받는이: 열람 회원 일동</span>
+              <span class="letter-item__time">6월 20일</span>
             </div>
-            <div class="letter-item__subject">Regarding the Grimoire of Paracelsus</div>
-            <div class="letter-item__snippet">I come to you not as a buyer but as a custodian; the volume requires…</div>
+            <div class="letter-item__subject">하계 열람 시간 안내 — 촛불 대신 부채를</div>
+            <div class="letter-item__snippet">7월과 8월의 열람 시간은 오전 9시부터 오후 5시까지로 당겨집니다…</div>
           </div>
-          <span class="letter-item__star is-starred" aria-label="Starred" aria-hidden="true">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
-          </span>
         </article>
 
-        <!-- Letter 10 -->
-        <article class="letter-item" role="listitem" tabindex="0" aria-label="Letter from Dean Hartley-Browne" data-filter-item>
-          <div class="avatar avatar--sm" aria-hidden="true" style="background: color-mix(in srgb, var(--color-text-subtle) 20%, var(--color-surface-2)); color: var(--color-text-subtle); flex: none;">HB</div>
-          <div class="letter-item__body">
-            <div class="letter-item__header">
-              <span class="letter-item__sender">Dean Hartley-Browne</span>
-              <span class="letter-item__time">XX Oct</span>
-            </div>
-            <div class="letter-item__subject">Trinity Term — Fellowship Renewal Notice</div>
-            <div class="letter-item__snippet">The Governing Body met in camera on Tuesday last to consider…</div>
-          </div>
-        </article>
+        <!-- 빈 서가 -->
+        <div class="empty" id="folder-empty" hidden>
+          <svg class="empty__art" viewBox="0 0 80 80" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="10" y="18" width="60" height="44" rx="2"/>
+            <path d="M10 22 40 44 70 22"/>
+            <path d="M18 70h44M24 66h32" opacity="0.5"/>
+          </svg>
+          <p class="empty__title" id="folder-empty-title">이 서가는 비어 있습니다</p>
+          <p class="empty__desc" id="folder-empty-desc">갈무리한 서신이 아직 없습니다. 읽기 화면의 보관 단추로 서신을 이 서가에 꽂을 수 있습니다.</p>
+        </div>
 
       </div><!-- /panel-list__scroll -->
     </section>
 
-    <!-- RIGHT PANEL: Reading pane -->
-    <main class="panel-reading" id="reading-pane" aria-label="Open letter">
+    <!-- 오른쪽: 읽기 서안 -->
+    <main class="panel-reading" id="reading-pane" aria-label="펼친 서신">
 
-      <button class="mobile-back-btn" id="back-to-list" aria-label="Back to letter list">
+      <button type="button" class="mobile-back-btn" id="back-to-list" aria-label="서신 목록으로 돌아가기">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" aria-hidden="true"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-        Back to Inbox
+        서신 목록으로
       </button>
 
       <div class="reading-header">
         <div class="reading-header__top">
-          <div class="avatar avatar--ring" aria-hidden="true" style="background: var(--color-primary-soft); color: var(--color-primary-soft-fg);">EA</div>
+          <div class="avatar avatar--ring avatar--tint-primary" aria-hidden="true">한</div>
           <div class="reading-header__info">
-            <div class="reading-header__subject">Re: The Aldine Virgil — Authentication &amp; Provenance</div>
+            <h1 class="reading-header__subject">回: 『청구영언』 홍씨본 — 지질 감정 소견</h1>
             <div class="reading-header__from">
-              <strong>Professor Edmund Ashworth</strong>
+              <strong>한서월 교수</strong>
               <span class="text-subtle">·</span>
-              <span>e.ashworth@magdalen.ox.ac.uk</span>
+              <span>seowol@kyujanggak.re.kr</span>
             </div>
             <div class="reading-header__date">
-              <span class="text-subtle">To:</span> Dr. R. Blackthorn &nbsp;·&nbsp;
-              <em>14th November, Anno Domini MDCCCXCII &nbsp;·&nbsp; Magdalen College, Oxford</em>
+              <span class="text-subtle">받는이:</span> 유겸 수석 사서 &nbsp;·&nbsp;
+              <em>2026년 7월 4일 (금) 오전 9:12 · 규장각 한국학연구원</em>
             </div>
           </div>
           <div class="reading-header__actions">
-            <span class="tooltip" data-tip="Reply">
-              <button class="btn btn--ghost btn--icon" aria-label="Reply">
+            <span class="tooltip" data-tip="답신">
+              <button class="btn btn--ghost btn--icon" aria-label="답신 쓰기">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="m9 17-5-5 5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
               </button>
             </span>
-            <span class="tooltip" data-tip="Forward">
-              <button class="btn btn--ghost btn--icon" aria-label="Forward">
+            <span class="tooltip" data-tip="전달">
+              <button class="btn btn--ghost btn--icon" aria-label="서신 전달">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="m15 17 5-5-5-5"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg>
               </button>
             </span>
-            <span class="tooltip" data-tip="Archive">
-              <button class="btn btn--ghost btn--icon" aria-label="Archive letter"
-                data-toast="Letter consigned to the archive."
-                data-toast-title="Archived"
+            <span class="tooltip" data-tip="보관">
+              <button class="btn btn--ghost btn--icon" aria-label="서신 보관"
+                data-toast="묵은 서신함에 꽂아 두었습니다. 언제든 다시 꺼내 볼 수 있습니다."
+                data-toast-title="보관 완료"
                 data-toast-variant="success">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
               </button>
             </span>
-            <span class="tooltip" data-tip="Delete">
-              <button class="btn btn--ghost btn--icon" aria-label="Delete letter"
-                data-toast="Letter committed to the flames."
-                data-toast-title="Destroyed"
+            <span class="tooltip" data-tip="소각">
+              <button class="btn btn--ghost btn--icon" aria-label="서신 소각"
+                data-toast="서신을 난로에 던졌습니다. 재는 남지 않습니다."
+                data-toast-title="소각"
                 data-toast-variant="danger">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
               </button>
@@ -757,67 +615,52 @@
       </div>
 
       <div class="reading-body">
-        <div class="letter-prose reveal" data-delay="1">
+        <!-- 시그니처 — 어두운 서안 위에 놓인 양피지 낱장 -->
+        <div class="letter-sheet reveal" data-delay="1">
+          <span class="letter-sheet__receipt" aria-hidden="true">장서각 수신<br>2026.07.04 · 檢</span>
 
           <div class="reading-ornament" aria-hidden="true">
             <svg width="120" height="12" viewBox="0 0 120 12"><line x1="0" y1="6" x2="50" y2="6" stroke="currentColor" stroke-width="0.8"/><circle cx="60" cy="6" r="3" fill="none" stroke="currentColor" stroke-width="0.8"/><path d="M56 6 Q60 2 64 6 Q60 10 56 6Z" fill="currentColor" opacity="0.5"/><line x1="70" y1="6" x2="120" y2="6" stroke="currentColor" stroke-width="0.8"/></svg>
           </div>
 
-          <p class="has-dropcap">I have examined the colophon most carefully, as you requested, and I confess the doubts which you raised in your previous communication have only deepened upon closer scrutiny. The Aldine device — that handsome anchor and dolphin, <em>festina lente</em>, which old Aldus set upon his title pages with such proud economy — presents certain irregularities in the present specimen that give me considerable pause. The ink itself is consistent with a late fifteenth-century Venetian printing house, yet the quiring speaks against it. Allow me to elaborate at some length, for this matter touches upon the very authenticity of what may be the finest acquisition your institution has made in living memory, or alternatively, its most costly embarrassment.</p>
+          <p class="has-dropcap">말씀하신 홍씨본(洪氏本)의 지질을 사흘에 걸쳐 살폈습니다. 겉장을 열기 전에는 저 역시 반신반의했습니다만, 촛불 아래에서 판심을 들여다본 지금은 선생의 의심이 근거 없는 것이 아니었음을 인정할 수밖에 없습니다. 종이는 분명 닥섬유에 죽지를 섞은 조선 후기의 것이고, 발끈 자국의 간격도 18세기 물건과 어긋나지 않습니다. 그러나 판심의 어미(魚尾)가 문제입니다.</p>
 
-          <p>The watermark in gathering C — a crowned eagle rampant, bearing a shield charged with a cross of St. George — is, I am reliably informed, peculiar to the Treviso paper-mills of Bartolomeo Moranzone, whose output was extensively documented by the late Professor Kuchenbecker in his monumental <em>Papiergeschichte des Veneto</em> of 1871. This watermark, crucially, does not appear in any documented Aldine imprint before the year 1501, whereas the colophon before us claims a date of MCCCCXCVIII. The discrepancy is not merely a curiosity; it is, if I am not greatly mistaken, a damnation. Forgeries of the Aldine press were, I need not remind you, a considerable industry in the seventeenth century, particularly in Lyon, where a certain master printer whose name historians continue to dispute produced some fifty simulacra of considerable virtuosity.</p>
+          <p>권4와 권7의 어미는 상하내향 삼엽화문(三葉花紋)인데, 이 양식은 제가 아는 한 영조 연간의 방각본에서는 보이지 않고 순조 이후 판본에서야 나타납니다. 게다가 배접지 한 겹에서 근대 양지(洋紙) 섬유가 검출되었습니다. 후대의 서투른 보수인지, 아니면 애초에 판을 새로 새겨 낡게 꾸민 것인지 — 이 대목이 감정의 갈림길입니다.</p>
 
-          <p>And yet — and here I must urge you to resist the temptation of premature despair — there remains one possibility which the forger hypothesis cannot easily accommodate. The marginalia in the hand that appears throughout gathering A–D are, beyond any reasonable doubt, authentic to the period. I have compared them at length with three holograph specimens in the Ashmolean, and the formation of the Greek minuscules, particularly the characteristic sigma and the peculiar elongation of the descenders in phi and psi, correspond precisely to the hand of one Giacomo Contarini, patrician of Venice, known to have numbered among Aldus's inner circle. If Contarini wrote in this book, it is exceedingly difficult to account for his presence in a forgery. Men of his station did not annotate fraudulent editions, even excellent ones.</p>
+          <span class="margin-note margin-note--sm">어미 사진, 감정첩 12면과 대조할 것 — 유겸</span>
 
-          <p>I propose, therefore, that we arrange a meeting at your earliest convenience, at which time I shall bring both the specimens from the Ashmolean and a typed transcript of Kuchenbecker's relevant chapter, which my research assistant Miss Penrose has most obligingly rendered into English for our purposes. The matter is urgent: I understand from Dr. Munn that a certain party in Frankfurt has expressed interest in the same volume, and that the original vendor — I shall not name him in writing — is not above conducting parallel negotiations. The field, my dear Blackthorn, does not reward the contemplative disposition in matters of acquisition.</p>
+          <p>다만 성급한 낙담은 이릅니다. 권말의 '완산이씨(完山李氏)' 장서인은 인주의 침전과 번짐이 오래 묵은 인영의 그것입니다. 무엇보다 인영이 본문 먹빛 아래에 눌려 있습니다. 도장이 먼저 찍히고 글이 나중에 쓰였다는 뜻이니, 위작이라면 설명이 궁색해지는 대목입니다.</p>
 
-          <div class="ornate-separator" aria-hidden="true"></div>
+          <p>하여 다음 주 화요일, 감정서 초안과 현미경 사진을 들고 장서각으로 찾아뵙겠습니다. 서두르는 데에는 까닭이 있습니다. 통문관 문겸재 대표가 같은 이본에 값을 물었다는 이야기를 들었습니다. 이 바닥에서 느긋함은 미덕이 아니라는 것을, 선생께서 더 잘 아실 것입니다.</p>
 
-          <p class="closing">
-            I remain, with the highest esteem and the sincerest apprehension for our shared endeavour,
-          </p>
+          <p class="closing">삼가 살펴 주시기를 바라며, 촛불이 다한 시각에 붓을 놓습니다.</p>
           <p class="signature">
-            Edmund Ashworth, F.B.A.<br>
-            <small class="text-subtle italic" style="font-family:var(--font-serif)">Fellow &amp; Librarian, Magdalen College, Oxford</small>
+            <span>한서월 拜<small>규장각 한국학연구원 책임연구원</small></span>
           </p>
-
-          <p class="postscript">
-            <em>P.S.</em> — I enclose a tracing of the watermark, which my wife executed with admirable precision by candlelight last Thursday evening. The original is too fragile for postal transit, but you will find the tracing sufficient for comparison with the Kuchenbecker plates.
-          </p>
-
-          <div class="reading-ornament" aria-hidden="true" style="margin-top: var(--space-6);">
-            <svg width="60" height="20" viewBox="0 0 60 20">
-              <path d="M30 4 L34 10 L30 16 L26 10 Z" fill="none" stroke="currentColor" stroke-width="0.8"/>
-              <path d="M30 1 L30 4 M30 16 L30 19" stroke="currentColor" stroke-width="0.8"/>
-              <circle cx="30" cy="10" r="2.5" fill="currentColor" opacity="0.3"/>
-            </svg>
+          <div class="seal-row">
+            <span class="wax-seal stamp-in" aria-hidden="true">韓</span>
           </div>
 
+          <p class="postscript"><em>추신</em> — 어미 확대 사진 두 장을 동봉합니다. 원본 인장첩은 우송이 조심스러워, 오하린 연구원이 밤새 촛불 아래에서 사진으로 떠 두었습니다. 대조에는 부족함이 없을 것입니다.</p>
         </div>
       </div><!-- /reading-body -->
 
-      <!-- Quick Reply -->
+      <!-- 빠른 답신 -->
       <div class="quick-reply">
-        <div class="quick-reply__label">Reply to Prof. Ashworth</div>
+        <div class="quick-reply__label">한서월 교수께 답신</div>
         <div class="quick-reply__row">
           <div class="quick-reply__textarea field">
-            <textarea
-              class="textarea"
-              rows="3"
-              placeholder="Compose your reply in the antiquarian spirit… (Shift+Enter for newline)"
-              aria-label="Quick reply to Professor Ashworth"
-              style="min-height: 4rem; resize: none;"
-            ></textarea>
+            <textarea class="textarea" rows="3"
+              placeholder="답신을 이곳에 적으십시오. 보내기 전 밀랍으로 봉인됩니다."
+              aria-label="한서월 교수에게 보낼 답신"></textarea>
           </div>
-          <button
-            class="btn btn--primary"
-            data-toast="Your letter has been dispatched by the college messenger."
-            data-toast-title="Letter Sent"
+          <button class="btn btn--primary"
+            data-toast="밀랍으로 봉인해 인편에 부쳤습니다. 규장각에는 내일 오전 당도할 예정입니다."
+            data-toast-title="서신 발송"
             data-toast-variant="success"
-            aria-label="Send reply"
-          >
+            aria-label="답신 봉인 후 발송">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>
-            Dispatch
+            봉인 발송
           </button>
         </div>
       </div>
@@ -827,32 +670,129 @@
   </div><!-- /inbox-body -->
 </div><!-- /inbox-shell -->
 
-<!-- Mobile reading pane open/close wiring -->
-<script>
-  (function () {
-    var items = document.querySelectorAll('.letter-item');
-    var readingPane = document.getElementById('reading-pane');
-    var backBtn = document.getElementById('back-to-list');
-    items.forEach(function (item) {
-      item.addEventListener('click', function () {
-        items.forEach(function (i) { i.classList.remove('is-active'); });
-        item.classList.add('is-active');
-        if (window.innerWidth <= 768) {
-          readingPane.classList.add('is-open');
-        }
-      });
-      item.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.click(); }
-      });
-    });
-    if (backBtn) {
-      backBtn.addEventListener('click', function () {
-        readingPane.classList.remove('is-open');
-      });
-    }
-  })();
-</script>
+<!-- ===================== 새 서신 모달 ===================== -->
+<div class="overlay" id="compose-modal" role="dialog" aria-modal="true" aria-labelledby="compose-title" aria-hidden="true">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 class="modal__title" id="compose-title"><span class="fleur" aria-hidden="true"></span> 새 서신</h2>
+      <button class="modal__close" data-modal-close aria-label="닫기">&times;</button>
+    </div>
+    <div class="modal__body stack">
+      <div class="field field--error">
+        <label class="label" for="compose-to">받는이 <span class="req">*</span></label>
+        <input class="input" id="compose-to" value="민유당" aria-invalid="true" aria-describedby="compose-to-err">
+        <p class="hint" id="compose-to-err">주소록에 없는 이름입니다. 성함 전체 또는 서신 주소를 적어 주십시오. (예: 민유당 조율사 &lt;yudang@mukhyang.kr&gt;)</p>
+      </div>
+      <div class="field">
+        <label class="label" for="compose-subject">제목</label>
+        <input class="input" id="compose-subject" placeholder="예: 『청구영언』 열람 일정 문의">
+      </div>
+      <div class="field">
+        <label class="label" for="compose-body">본문</label>
+        <textarea class="textarea" id="compose-body" rows="5" placeholder="서면체로 정중히 적으십시오. 마지막 줄은 저희가 밀랍으로 봉인해 드립니다."></textarea>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn--ghost" data-modal-close data-toast data-toast-title="초안 보관" data-toast="쓰다 만 서신을 서랍에 넣어 두었습니다." data-toast-variant="info">초안 보관</button>
+      <button class="btn btn--primary" data-modal-close data-toast data-toast-title="서신 발송" data-toast="밀랍으로 봉인해 인편에 부쳤습니다.">봉인 발송</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 명령 팔레트 ===================== -->
+<div class="cmdk-overlay" id="cmdk" role="dialog" aria-modal="true" aria-label="명령 팔레트" aria-hidden="true">
+  <div class="cmdk">
+    <div class="cmdk__search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input class="cmdk__input" placeholder="명령을 입력하거나 검색하세요…" aria-label="명령 팔레트 검색" />
+      <kbd>ESC</kbd>
+    </div>
+    <div class="cmdk__list">
+      <div class="cmdk__group-label">이동</div>
+      <div class="cmdk__item" role="option" data-href="../index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5a2 2 0 0 1 2-2h6v18H5a2 2 0 0 1-2-2zM21 5a2 2 0 0 0-2-2h-6v18h6a2 2 0 0 0 2-2z"/></svg> 색인으로 돌아가기</div>
+      <div class="cmdk__item" role="option" data-href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg> 대시보드로 이동</div>
+      <div class="cmdk__item" role="option" data-href="kanban.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="18" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg> 필사실 보드로 이동</div>
+      <div class="cmdk__group-label">동작</div>
+      <div class="cmdk__item" role="option" data-action="toggle-theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg> 테마 전환 (양피지 / 촛불)</div>
+      <div class="cmdk__item" role="option" data-toast-title="읽음 처리" data-toast="안읽은 서신 3건을 읽음으로 표시했습니다."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg> 모든 서신 읽음 처리</div>
+      <div class="cmdk__item" role="option" data-toast-title="서표 끼움" data-toast="이 서신에 서표를 끼워 두었습니다. 언제든 다시 펼칠 수 있습니다."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> 읽던 서신에 서표 끼우기</div>
+      <div class="cmdk__empty" hidden>이 폴리오에서 명령을 찾을 수 없습니다.</div>
+    </div>
+  </div>
+</div>
 
 <script src="../app.js"></script>
+<script>
+/* 서신함 페이지 배선 — 폴더 전환 · 분류 검색 · 모바일 목록↔읽기 */
+(function () {
+  'use strict';
+  var letters = Array.prototype.slice.call(document.querySelectorAll('.letter-item'));
+  var folderBtns = Array.prototype.slice.call(document.querySelectorAll('[data-folder]'));
+  var labelBtns = Array.prototype.slice.call(document.querySelectorAll('[data-label-filter]'));
+  var search = document.getElementById('letter-search');
+  var empty = document.getElementById('folder-empty');
+  var emptyTitle = document.getElementById('folder-empty-title');
+  var emptyDesc = document.getElementById('folder-empty-desc');
+  var readingPane = document.getElementById('reading-pane');
+  var backBtn = document.getElementById('back-to-list');
+  var folder = 'inbox';
+
+  function refresh() {
+    var q = (search.value || '').trim().toLowerCase();
+    var count = 0;
+    letters.forEach(function (l) {
+      var inFolder = (l.getAttribute('data-folders') || '').split(' ').indexOf(folder) > -1;
+      var match = !q || l.textContent.toLowerCase().indexOf(q) > -1;
+      var show = inFolder && match;
+      l.style.display = show ? '' : 'none';
+      if (show) count++;
+    });
+    empty.hidden = count !== 0;
+    if (q) {
+      emptyTitle.textContent = '맞는 서신이 없습니다';
+      emptyDesc.textContent = '다른 말로 다시 찾아보시거나, 왼쪽 분류로 범위를 좁혀 보십시오.';
+    } else {
+      emptyTitle.textContent = '이 서가는 비어 있습니다';
+      emptyDesc.textContent = '갈무리한 서신이 아직 없습니다. 읽기 화면의 보관 단추로 서신을 이 서가에 꽂을 수 있습니다.';
+    }
+  }
+
+  folderBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      folder = btn.getAttribute('data-folder');
+      folderBtns.forEach(function (b) {
+        var active = b === btn;
+        b.classList.toggle('is-active', active);
+        if (active) b.setAttribute('aria-current', 'true');
+        else b.removeAttribute('aria-current');
+      });
+      search.value = '';
+      refresh();
+    });
+  });
+
+  labelBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      search.value = btn.getAttribute('data-label-filter');
+      refresh();
+    });
+  });
+
+  search.addEventListener('input', refresh);
+
+  letters.forEach(function (item) {
+    item.addEventListener('click', function () {
+      letters.forEach(function (i) { i.classList.remove('is-active'); });
+      item.classList.add('is-active');
+      if (window.innerWidth <= 768) readingPane.classList.add('is-open');
+    });
+    item.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.click(); }
+    });
+  });
+
+  if (backBtn) backBtn.addEventListener('click', function () { readingPane.classList.remove('is-open'); });
+})();
+</script>
 </body>
 </html>

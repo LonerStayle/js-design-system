@@ -1,12 +1,11 @@
 /* ============================================================================
    THEME-01 · NEO-BRUTALISM — base.css
-   Font imports · reset · base typography · layout utilities ·
-   signature brutalist utilities · focus rings · reduced-motion
+   Reset · base typography · layout utilities ·
+   signature brutalist utilities · focus rings · reduced-motion · Hangul layer
    ----------------------------------------------------------------------------
    Import order in HTML:  tokens.css → semantic.css → base.css → components/*
+   Fonts are imported ONCE in tokens.css (no second render-blocking @import).
    ============================================================================ */
-
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Archivo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap");
 
 /* ------------------------------------------------------------------ *
  * RESET                                                               *
@@ -26,7 +25,8 @@ html {
 }
 
 body {
-  min-height: 100vh;
+  min-height: 100vh;  /* fallback */
+  min-height: 100dvh;
   font-family: var(--font-sans);
   font-size: var(--text-base);
   line-height: var(--leading-normal);
@@ -85,6 +85,9 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: var(--tracking-tight);
   color: var(--color-text);
   text-wrap: balance;
+  /* Black Han Sans ships a single weight (400) — never fake-bold it.
+     Latin falls back to the heaviest real weight instead of a synthetic one. */
+  font-synthesis-weight: none;
 }
 h1 { font-size: var(--text-5xl); }
 h2 { font-size: var(--text-4xl); }
@@ -182,6 +185,10 @@ blockquote {
 .text-muted   { color: var(--color-text-muted); }
 .text-subtle  { color: var(--color-text-subtle); }
 .text-primary { color: var(--color-primary); }
+/* accent text — 인라인 반복 패턴 승격용 (§2-4). 배경 색면용 500이 아니라
+   텍스트 전용 시맨틱 토큰을 소비 (라이트/다크 AA 실측치는 semantic.css 주석) */
+.text-blue    { color: var(--color-text-blue); }
+.text-pink    { color: var(--color-text-pink); }
 .text-center  { text-align: center; }
 .text-right   { text-align: right; }
 
@@ -266,6 +273,7 @@ blockquote {
 }
 
 /* Gap utilities */
+.gap-0 { gap: 0; }
 .gap-1 { gap: var(--space-1); } .gap-2 { gap: var(--space-2); }
 .gap-3 { gap: var(--space-3); } .gap-4 { gap: var(--space-4); }
 .gap-5 { gap: var(--space-5); } .gap-6 { gap: var(--space-6); }
@@ -291,12 +299,52 @@ blockquote {
 .w-full { width: 100%; }
 .section { padding-block: var(--space-12); }
 
-/* Display heading helpers (used by hero/landing/404 type) */
-.display { font-family: var(--font-display); font-weight: var(--weight-black); line-height: 0.95; letter-spacing: var(--tracking-tight); }
+/* Display heading helpers (used by hero/landing/404 type)
+   NB: 0.95 leading is a LATIN value — the Hangul layer below rebases it for ko. */
+.display { font-family: var(--font-display); font-weight: var(--weight-black); line-height: 0.95; letter-spacing: var(--tracking-tight); font-synthesis-weight: none; }
 .display-sm { font-size: clamp(1.75rem, 4vw, var(--text-4xl)); }
 .display-md { font-size: clamp(2rem, 5vw, var(--text-5xl)); }
 .display-lg { font-size: clamp(2.5rem, 7vw, var(--text-6xl)); }
 .display-xl { font-size: clamp(3rem, 10vw, var(--text-7xl)); }
+/* Poster scale — viewport-filling type for typographic hero/404 posters */
+.display-mega { font-size: var(--text-mega); }
+
+/* Outline (stroked) display type — poster ingredient. Falls back to solid ink
+   where text-stroke is unsupported (text must never go invisible). */
+.text-outline { color: var(--color-text); }
+@supports (-webkit-text-stroke: 2px black) {
+  .text-outline {
+    -webkit-text-stroke: 0.045em var(--color-text);
+    color: transparent;
+  }
+}
+
+/* Giant watermark section numeral — structure exposed as ornament.
+   <section class="section-numbered"><span class="section-num" aria-hidden="true">02</span>…</section> */
+.section-numbered { position: relative; overflow: clip; }
+.section-num {
+  position: absolute;
+  top: -0.12em;
+  right: -0.06em;
+  z-index: 0;
+  font-family: var(--font-display);
+  font-weight: var(--weight-black);
+  font-synthesis-weight: none;
+  font-size: clamp(6rem, 22vw, 18rem);
+  line-height: 1;
+  letter-spacing: var(--tracking-tighter);
+  color: var(--color-surface-3);
+  user-select: none;
+  pointer-events: none;
+}
+.section-num--outline { color: var(--color-bg); }
+@supports (-webkit-text-stroke: 2px black) {
+  .section-num--outline {
+    -webkit-text-stroke: 3px var(--color-border-subtle);
+    color: transparent;
+  }
+}
+.section-numbered > .container { position: relative; z-index: 1; }
 
 /* Theme-aware icon visibility — supports both naming conventions used across
    pages. Shows the icon of the CURRENT theme, hides the other. */
@@ -323,6 +371,7 @@ blockquote {
   border: var(--surface-border-width) solid var(--color-border);
   border-radius: var(--surface-radius);
 }
+.panel--raised { box-shadow: var(--surface-shadow); }
 .bordered { border: var(--border-3) solid var(--color-border); }
 .bordered-4 { border: var(--border-4) solid var(--color-border); }
 
@@ -334,9 +383,11 @@ blockquote {
 .shadow-xl { box-shadow: var(--shadow-xl); }
 .shadow-none { box-shadow: none; }
 
-/* Sticker tilt */
+/* Sticker tilt — base ±2°, loud ±6° */
 .tilt    { transform: rotate(var(--tilt-cw)); }
 .tilt-ccw{ transform: rotate(var(--tilt-ccw)); }
+.tilt-loud     { transform: rotate(var(--tilt-cw-loud)); }
+.tilt-ccw-loud { transform: rotate(var(--tilt-ccw-loud)); }
 
 /* Interactive "press" — lifts on hover, slams down on active */
 .pressable {
@@ -364,6 +415,74 @@ blockquote {
 .accent-bar-lime   { border-top: var(--border-6) solid var(--lime-500); }
 .accent-bar-yellow { border-top: var(--border-6) solid var(--yellow-500); }
 
+/* ------------------------------------------------------------------ *
+ * FLOOD — full-section flat color plane (색면 침수)                    *
+ * A whole section drowned in one accent plane, cut by 6px rules.      *
+ * Dark-accent floods (blue/pink/ink) locally apply the DARK contract  *
+ * — paper borders + paper hard shadows — in the middle of light mode. *
+ * Everything inside keeps consuming semantic tokens, so components    *
+ * invert automatically. Identical in light & dark (accent planes      *
+ * don't flip).                                                        *
+ * ------------------------------------------------------------------ */
+.flood {
+  border-block: var(--border-6) solid var(--color-border);
+  overflow: clip;
+}
+.flood--blue, .flood--pink, .flood--ink {
+  color: var(--paper);
+  --color-text:        var(--paper);
+  --color-text-muted:  var(--paper);
+  --color-text-subtle: var(--paper);
+  --color-text-invert: var(--ink);
+  --color-border:      var(--paper);
+  --shadow-color:      var(--paper);
+  --color-ring:        var(--paper);
+}
+.flood--yellow, .flood--lime {
+  color: var(--ink);
+  --color-text:        var(--ink);
+  --color-text-muted:  var(--ink);
+  --color-text-subtle: var(--ink);
+  --color-text-invert: var(--paper);
+  --color-border:      var(--ink);
+  --shadow-color:      var(--ink);
+  --color-ring:        var(--ink);
+}
+.flood--blue   { background: var(--blue-500); }
+.flood--pink   { background: var(--pink-600); }
+.flood--ink    { background: var(--ink); }
+.flood--yellow { background: var(--yellow-500); }
+.flood--lime   { background: var(--lime-500); }
+
+/* Cards/panels floating on a dark-accent flood are pinned to the "light
+   island" contract in BOTH themes: paper plate + ink border + paper hard
+   shadow. (The flood is a fixed-physics island — it doesn't flip in dark.) */
+:is(.flood--blue, .flood--pink, .flood--ink) :is(.card, .panel, .stat) {
+  background: var(--paper);
+  --color-text:        var(--ink);
+  --color-text-muted:  var(--neutral-600);
+  --color-text-subtle: var(--neutral-500);
+  --color-border:      var(--ink);
+  --card-bg:           var(--paper);
+  --card-border-color: var(--ink);
+}
+/* Buttons sitting directly on a dark-accent flood */
+:is(.flood--blue, .flood--pink, .flood--ink) .btn--secondary {
+  --_bg: var(--paper);
+  --_fg: var(--ink);
+  --_bd: var(--ink);
+}
+/* Watermark numeral over a flood */
+:is(.flood--blue, .flood--pink, .flood--ink) .section-num { color: var(--paper); opacity: 0.16; -webkit-text-stroke: 0; }
+:is(.flood--yellow, .flood--lime) .section-num { color: var(--ink); opacity: 0.08; -webkit-text-stroke: 0; }
+
+/* Hover shadow swap — ink shadow flips to an accent plane on hover.
+   Works on anything consuming --shadow-* (cards, panels, buttons). */
+.hover-shadow-blue:hover   { --shadow-color: var(--blue-500); }
+.hover-shadow-pink:hover   { --shadow-color: var(--pink-500); }
+.hover-shadow-lime:hover   { --shadow-color: var(--lime-600); }
+.hover-shadow-yellow:hover { --shadow-color: var(--yellow-500); }
+
 /* Hatched / dotted decorative backgrounds (flat, no gradient) */
 .bg-dots {
   background-image: radial-gradient(var(--color-border) 1.5px, transparent 1.5px);
@@ -385,6 +504,28 @@ blockquote {
 }
 /* Components that draw their own ring opt out via .focus-self */
 .focus-self:focus-visible { outline: none; }
+
+/* Skip link — hidden until focused, then slams in as an ink plate */
+.skip-link {
+  position: fixed;
+  top: var(--space-3);
+  left: var(--space-3);
+  z-index: var(--z-max);
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  background: var(--color-text);
+  color: var(--color-text-invert);
+  border: var(--border-3) solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(calc(-100% - var(--space-6)));
+}
+.skip-link:focus-visible {
+  transform: translateY(0);
+  outline: var(--ring-width) solid var(--color-ring);
+  outline-offset: var(--ring-offset);
+}
 
 /* ------------------------------------------------------------------ *
  * MOTION PREFERENCE                                                   *
@@ -418,3 +559,30 @@ blockquote {
   .hide-sm-down { display: none !important; }
   .stack-sm { flex-direction: column; align-items: stretch; }
 }
+
+/* ------------------------------------------------------------------ *
+ * HANGUL REFINEMENT LAYER — 전제: <html lang="ko">                     *
+ * 한글은 어절 단위로 줄바꿈하고, 라틴용 행간·자간을 이월하지 않는다.       *
+ * ------------------------------------------------------------------ */
+:lang(ko) {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-break: strict;
+}
+:lang(ko) p { text-wrap: pretty; line-height: var(--leading-body-ko); }
+:lang(ko) :is(h1, h2, h3) { line-height: var(--leading-heading-ko); }
+:lang(ko) :is(.display, .display-sm, .display-md, .display-lg, .display-xl, .display-mega) {
+  line-height: var(--leading-display-ko);
+  letter-spacing: 0; /* Black Han Sans is dense — negative tracking clips it */
+}
+:lang(ko) :is(.eyebrow, .mono-label, .badge, .sticker) {
+  letter-spacing: var(--tracking-caps-ko);
+}
+/* 한글엔 이탤릭이 없다 — faux-oblique 왜곡 대신 웨이트로 목소리를 바꾼다 */
+:lang(ko) :is(em, i, cite) { font-style: normal; font-weight: var(--weight-bold); }
+/* 데이터 숫자는 라틴 폰트 tabular로 정렬 (스택 순서가 보장) */
+:lang(ko) :is(.table td, .stat__value, .price, .table__num) {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+/* 좁은 셀·칩·배지는 keep-all 오버플로 대신 말줄임 */
+:lang(ko) :is(.chip, .badge, .tag) { white-space: nowrap; }

@@ -1,9 +1,19 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SPRINT BOARD // CYBER.TERM</title>
+<!-- FOUC 방지: 저장 테마를 렌더 전에 동기 적용 (키는 app.js Theme.KEY 와 동일) -->
+<script>
+(function () {
+  try {
+    var t = localStorage.getItem("ct-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../semantic.css">
 <link rel="stylesheet" href="../base.css">
@@ -18,15 +28,8 @@
   /* ---- kanban-only layout — tokens only ---- */
   .kb-head {
     position: relative;
-    padding: var(--space-7) 0 var(--space-5);
-    border-bottom: var(--border-1) solid var(--color-divider);
+    padding: var(--space-7) 0 var(--space-6);
     overflow: hidden;
-  }
-  .kb-head__glow {
-    position: absolute; inset: 0; pointer-events: none; z-index: 0;
-    background:
-      radial-gradient(50% 70% at 12% 0%, rgba(var(--rgb-cyan) / .12), transparent 70%),
-      radial-gradient(40% 60% at 88% 0%, rgba(var(--rgb-magenta) / .10), transparent 72%);
   }
   .kb-head__inner { position: relative; z-index: 1; }
   .kb-head h1 {
@@ -34,17 +37,12 @@
     line-height: 1.05; margin: var(--space-2) 0 var(--space-3);
   }
   .kb-head h1 .accent { color: var(--color-accent); text-shadow: var(--glow-accent); }
-  .kb-meta {
-    display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5);
-    font-size: var(--text-xs); color: var(--color-text-muted);
-  }
-  .kb-meta b { color: var(--color-primary-bright); font-weight: var(--weight-bold); }
-  .kb-meta .sep { color: var(--color-text-subtle); }
+  .kb-head__note { color: var(--color-text-muted); }
 
   /* controls row */
   .kb-controls {
     display: flex; flex-wrap: wrap; align-items: center;
-    gap: var(--space-3); margin-top: var(--space-5);
+    gap: var(--space-3); margin-top: var(--space-6);
   }
   .kb-controls .ct-searchbar { flex: 1 1 240px; max-width: 360px; }
   .kb-controls__spacer { flex: 1 1 auto; }
@@ -55,9 +53,11 @@
     font-size: var(--text-2xs); letter-spacing: var(--tracking-widest);
     text-transform: uppercase; color: var(--color-text-subtle);
   }
-  .kb-filter-ava { cursor: pointer; }
-  .kb-filter-ava .ct-avatar { transition: transform var(--duration-fast) var(--ease-out); }
-  .kb-filter-ava:hover .ct-avatar { transform: translateY(-2px); }
+  .kb-filter-ava .ct-avatar { transition: transform var(--duration-fast) var(--ease-out); cursor: pointer; }
+  .kb-filter-ava .ct-avatar:hover { transform: translateY(-2px); }
+  .kb-filter-ava .ct-avatar[aria-pressed="true"] {
+    box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-primary), var(--glow-primary);
+  }
 
   /* board: horizontal scroll row of columns */
   .kb-board {
@@ -98,17 +98,32 @@
   .kb-col--progress .kb-col__title { color: var(--color-primary); text-shadow: var(--glow-primary); }
   .kb-col--review .kb-col__title { color: var(--color-warning); }
   .kb-col--done .kb-col__title { color: var(--color-success); }
-  .kb-col__add {
-    margin-left: auto;
-  }
+  .kb-col__add { margin-left: auto; }
   .kb-col__body {
     display: flex; flex-direction: column; gap: var(--space-3);
     padding: var(--space-3);
     overflow-y: auto;
     flex: 1 1 auto;
+    min-height: 90px;
+  }
+  /* drop target highlight (HTML5 DnD) */
+  .kb-col__body.is-drop {
+    outline: var(--border-1) dashed var(--color-warning);
+    outline-offset: -4px;
+    background: rgba(var(--rgb-amber) / .05);
+  }
+  /* 필터로 칼럼이 비었을 때 */
+  .kb-col__empty {
+    margin: 0;
+    padding: var(--space-4);
+    border: var(--border-1) dashed var(--color-border-muted);
+    font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wide);
+    color: var(--color-text-subtle);
+    text-align: center;
   }
 
-  /* grip affordance on each card */
+  /* grip affordance on each card (실제 드래그 가능 — HTML5 DnD 구현됨) */
   .ct-kanban-card { cursor: grab; }
   .ct-kanban-card::after {
     content: "⠿⠿";
@@ -118,10 +133,57 @@
     cursor: grab; pointer-events: none;
   }
   .ct-kanban-card:hover::after { opacity: .9; color: var(--color-primary); }
+  .ct-kanban-card:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+  /* 이동/드롭 순간 = CRT 전원 인가 (1회성) */
+  .ct-kanban-card.is-swap { animation: ct-boot-in var(--duration-slow) var(--ease-out) both; }
+  @media (prefers-reduced-motion: reduce) {
+    .ct-kanban-card.is-swap { animation: none; }
+  }
+
+  /* blocked task — 경고등 상태 */
+  .ct-kanban-card.is-blocked {
+    border-color: rgba(var(--rgb-red) / .45);
+    box-shadow: inset 0 0 18px rgba(var(--rgb-red) / .08);
+  }
+  .ct-kanban-card__tag--blocked {
+    color: var(--color-danger-text);
+    background: var(--color-danger-weak);
+    border-color: rgba(var(--rgb-red) / .4);
+  }
+  .kb-block-reason {
+    display: flex; align-items: center; gap: var(--space-2);
+    margin-top: var(--space-2);
+    font-size: var(--text-2xs);
+    color: var(--color-danger-text);
+  }
+
+  /* 키보드 열 이동 컨트롤 (DnD 대안 — 마우스 전용 기능 제로) */
+  .kb-move { display: inline-flex; gap: 2px; margin-left: auto; margin-right: var(--space-2); }
+  .kb-move__btn {
+    width: 22px; height: 18px; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: none;
+    border: var(--border-1) solid var(--color-border-muted);
+    color: var(--color-text-subtle);
+    font-size: 9px; line-height: 1;
+    cursor: pointer;
+    transition: color var(--duration-fast) var(--ease-standard),
+                border-color var(--duration-fast) var(--ease-standard),
+                background var(--duration-fast) var(--ease-standard);
+  }
+  .kb-move__btn:hover:not(:disabled) {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    background: var(--color-primary-weak);
+  }
+  .kb-move__btn:active:not(:disabled) { transform: translateY(1px); }
+  .kb-move__btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+  .kb-move__btn:disabled { opacity: .3; cursor: default; }
 
   /* done column cards dimmer */
   .kb-col--done .ct-kanban-card { opacity: .72; }
-  .kb-col--done .ct-kanban-card:hover { opacity: 1; }
+  .kb-col--done .ct-kanban-card:hover,
+  .kb-col--done .ct-kanban-card:focus-visible { opacity: 1; }
   .ct-kanban-card__tag--done {
     color: var(--color-success-text);
     background: var(--color-success-weak);
@@ -149,19 +211,21 @@
   }
 </style>
 </head>
-<body>
-<a class="skip-link" href="#main">CONTENT 로 건너뛰기</a>
-<div class="crt-overlay" aria-hidden="true"></div>
+<body data-scene="amber">
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
+<div class="crt-overlay" aria-hidden="true">
+  <span class="crt-overlay__osd">TERM-07 // P3 AMBER · 60Hz · SPRINT LIVE</span>
+</div>
 
 <header class="ct-navbar">
   <div class="container flex items-center justify-between" style="height:60px;">
     <a class="ct-navbar__brand" href="../index.html"><span class="t-accent">◢</span> CYBER<span class="t-primary">.</span>TERM</a>
     <nav class="ct-navbar__nav" aria-label="주요">
-      <a class="ct-navbar__link" href="../index.html">HOME</a>
-      <a class="ct-navbar__link" href="dashboard.html">DASH</a>
+      <a class="ct-navbar__link" href="../index.html" data-navline>HOME</a>
+      <a class="ct-navbar__link" href="dashboard.html" data-navline>DASH</a>
       <a class="ct-navbar__link is-active" href="kanban.html" aria-current="page">KANBAN</a>
-      <a class="ct-navbar__link" href="inbox.html">INBOX</a>
-      <a class="ct-navbar__link" href="settings.html">SETTINGS</a>
+      <a class="ct-navbar__link" href="inbox.html" data-navline>INBOX</a>
+      <a class="ct-navbar__link" href="settings.html" data-navline>SETTINGS</a>
     </nav>
     <div class="ct-navbar__actions flex items-center gap-2">
       <button class="ct-btn ct-btn--secondary ct-btn--sm" data-cmdk-open>SEARCH <span class="ct-kbd">⌘K</span></button>
@@ -175,7 +239,7 @@
 
   <!-- ============================== HEADER ============================== -->
   <section class="kb-head" aria-label="스프린트 헤더">
-    <div class="kb-head__glow" aria-hidden="true"></div>
+    <div class="scene-glow" aria-hidden="true"></div>
     <div class="container kb-head__inner">
       <nav class="ct-breadcrumb" aria-label="경로">
         <a class="ct-breadcrumb__item ct-breadcrumb__item--root" href="../index.html">~</a>
@@ -186,65 +250,63 @@
       </nav>
 
       <h1 class="t-display">SPRINT <span class="accent">// NEON-42</span></h1>
-
-      <div class="kb-meta">
-        <span><span class="t-subtle">SPRINT</span> <b>2026.06.15 → 06.26</b></span>
-        <span class="sep">·</span>
-        <span><span class="t-subtle">D-DAY</span> <b>D-5</b></span>
-        <span class="sep">·</span>
-        <span><span class="t-subtle">VELOCITY</span> <b>34 / 42 SP</b></span>
-        <span class="sep">·</span>
-        <span><span class="t-subtle">COMMITTED</span> <b>15 TASKS</b></span>
-        <span class="sep">·</span>
-        <span class="ct-badge ct-badge--danger ct-badge--dot">2 BLOCKED</span>
-      </div>
-
-      <!-- controls row -->
-      <div class="kb-controls">
-        <div class="ct-searchbar" role="search">
-          <span class="ct-searchbar__prompt" aria-hidden="true">&gt;_</span>
-          <input class="ct-searchbar__input" type="search" placeholder="filter tasks…" aria-label="태스크 필터">
-          <span class="ct-searchbar__hint"><span class="ct-kbd">/</span></span>
-        </div>
-
-        <div class="kb-controls__group">
-          <span class="kb-controls__group-label">ASSIGNEE</span>
-          <div class="ct-avatar-group kb-filter-ava" role="group" aria-label="담당자 필터">
-            <button class="ct-avatar ct-avatar--sm" aria-label="필터: JIN" title="진섭 (JS)"><span class="ct-avatar__initials">JS</span></button>
-            <button class="ct-avatar ct-avatar--sm" aria-label="필터: MIRA" title="미라 (MR)"><span class="ct-avatar__initials">MR</span></button>
-            <button class="ct-avatar ct-avatar--sm" aria-label="필터: KAI" title="카이 (KA)"><span class="ct-avatar__initials">KA</span></button>
-            <button class="ct-avatar ct-avatar--sm" aria-label="필터: YOON" title="윤 (YN)"><span class="ct-avatar__initials">YN</span></button>
-            <span class="ct-avatar ct-avatar--sm ct-avatar-group__more" aria-hidden="true">+3</span>
-          </div>
-        </div>
-
-        <div class="kb-controls__spacer"></div>
-
-        <div class="ct-segmented" role="group" aria-label="태스크 범위">
-          <label class="ct-segmented__option"><input class="ct-segmented__input" type="radio" name="kb-scope" checked> ALL</label>
-          <label class="ct-segmented__option"><input class="ct-segmented__input" type="radio" name="kb-scope"> MINE</label>
-          <label class="ct-segmented__option"><input class="ct-segmented__input" type="radio" name="kb-scope"> BLOCKED</label>
-        </div>
-
-        <button class="ct-btn ct-btn--primary ct-btn--clip" data-modal-open="#new-task">+ NEW TASK</button>
-      </div>
+      <p class="label--ko kb-head__note">// 스탠드업 직후 :: 오늘 목표 — 리뷰 적체 해소 · 블로커 2건 이동</p>
     </div>
   </section>
 
+  <!-- tmux 세션 스테이터스라인 — 스프린트 계기판 (풀블리드, 장식 픽션) -->
+  <div class="ct-statusline" aria-hidden="true">
+    <span class="ct-statusline__seg ct-statusline__seg--session">neon-42</span>
+    <span class="ct-statusline__seg"><span class="ct-statusline__key">sprint</span><span class="ct-statusline__val">06.15 → 06.26</span></span>
+    <span class="ct-statusline__seg"><span class="ct-statusline__key">d-day</span><span class="ct-statusline__val t-warning">D-5</span></span>
+    <span class="ct-statusline__seg hide-sm"><span class="ct-statusline__key">sp</span><span class="ct-statusline__val">▰▰▰▰▰▰▰▰▱▱ 34/42</span></span>
+    <span class="ct-statusline__seg"><span class="ct-statusline__key">blocked</span><span class="ct-statusline__val t-danger" data-sl-blocked>2</span></span>
+    <span class="ct-statusline__seg ct-statusline__seg--end"><span class="ct-statusline__val" data-clock>--:--:--</span><span class="ct-statusline__key">KST</span></span>
+  </div>
+
   <!-- ============================== BOARD ============================== -->
   <div class="container">
+    <!-- controls row -->
+    <div class="kb-controls">
+      <div class="ct-searchbar" role="search">
+        <span class="ct-searchbar__prompt" aria-hidden="true"></span>
+        <input class="ct-searchbar__input" type="search" data-kb-search placeholder="filter tasks…" aria-label="태스크 필터">
+        <span class="ct-searchbar__hint"><span class="ct-kbd">/</span></span>
+      </div>
+
+      <div class="kb-controls__group">
+        <span class="kb-controls__group-label">ASSIGNEE</span>
+        <div class="ct-avatar-group kb-filter-ava" role="group" aria-label="담당자 필터">
+          <button class="ct-avatar ct-avatar--sm" data-ava-filter="JS" aria-pressed="false" aria-label="담당자 필터: 진섭" title="진섭 (JS)"><span class="ct-avatar__initials">JS</span></button>
+          <button class="ct-avatar ct-avatar--sm" data-ava-filter="MR" aria-pressed="false" aria-label="담당자 필터: 미라" title="미라 (MR)"><span class="ct-avatar__initials">MR</span></button>
+          <button class="ct-avatar ct-avatar--sm" data-ava-filter="KA" aria-pressed="false" aria-label="담당자 필터: 카이" title="카이 (KA)"><span class="ct-avatar__initials">KA</span></button>
+          <button class="ct-avatar ct-avatar--sm" data-ava-filter="YN" aria-pressed="false" aria-label="담당자 필터: 윤" title="윤 (YN)"><span class="ct-avatar__initials">YN</span></button>
+        </div>
+      </div>
+
+      <div class="kb-controls__spacer"></div>
+
+      <div class="ct-segmented" role="group" aria-label="태스크 범위">
+        <label class="ct-segmented__option"><input class="ct-segmented__input" type="radio" name="kb-scope" value="all" checked> ALL</label>
+        <label class="ct-segmented__option"><input class="ct-segmented__input" type="radio" name="kb-scope" value="mine"> MINE</label>
+        <label class="ct-segmented__option"><input class="ct-segmented__input" type="radio" name="kb-scope" value="blocked"> BLOCKED</label>
+      </div>
+
+      <button class="ct-btn ct-btn--primary ct-btn--clip" data-modal-open="#new-task">+ NEW TASK</button>
+    </div>
+
     <div class="kb-board" role="list" aria-label="스프린트 보드 칼럼">
 
       <!-- ===== COLUMN: BACKLOG ===== -->
-      <section class="kb-col kb-col--backlog" role="listitem" aria-label="백로그">
+      <section class="kb-col kb-col--backlog" role="listitem" aria-label="백로그" data-col="BACKLOG" data-reveal>
         <header class="kb-col__head">
           <span class="kb-col__title">BACKLOG</span>
-          <span class="ct-badge ct-badge--count">4</span>
-          <button class="ct-btn ct-btn--icon ct-btn--sm kb-col__add" data-modal-open="#new-task" aria-label="백로그에 태스크 추가">+</button>
+          <span class="ct-badge ct-badge--count" data-count>4</span>
+          <button class="ct-btn ct-btn--icon ct-btn--sm kb-col__add" data-modal-open="#new-task" data-col-target="backlog" aria-label="백로그에 태스크 추가">+</button>
         </header>
-        <div class="kb-col__body">
+        <div class="kb-col__body" data-col-body="backlog">
 
-          <article class="ct-kanban-card ct-kanban-card--low" tabindex="0">
+          <article class="ct-kanban-card ct-kanban-card--low" tabindex="0" draggable="true" data-assignee="JS">
             <div class="ct-kanban-card__tags">
               <span class="ct-kanban-card__tag">FE</span>
               <span class="ct-kanban-card__tag ct-kanban-card__tag--accent">DESIGN</span>
@@ -253,11 +315,15 @@
             <p class="ct-kanban-card__desc">--glow-* 토큰이 컴포넌트마다 제각각. 시맨틱 레이어로 통합하고 대비비 4.5:1 회귀 점검.</p>
             <div class="ct-kanban-card__meta">
               <span class="ct-kanban-card__id">TASK-201</span>
+              <span class="kb-move" role="group" aria-label="TASK-201 열 이동">
+                <button type="button" class="kb-move__btn" data-move="prev" aria-label="이전 열로 이동">◀</button>
+                <button type="button" class="kb-move__btn" data-move="next" aria-label="다음 열로 이동">▶</button>
+              </span>
               <span class="ct-kanban-card__avatar">JS</span>
             </div>
           </article>
 
-          <article class="ct-kanban-card ct-kanban-card--med" tabindex="0">
+          <article class="ct-kanban-card ct-kanban-card--med" tabindex="0" draggable="true" data-assignee="MR">
             <div class="ct-kanban-card__tags">
               <span class="ct-kanban-card__tag">BE</span>
               <span class="ct-kanban-card__tag">API</span>
@@ -266,11 +332,15 @@
             <p class="ct-kanban-card__desc">하드코딩 문자열을 AST 스캔으로 추출해 ko/en 카탈로그 자동 생성. CI 누락 키 검출 게이트.</p>
             <div class="ct-kanban-card__meta">
               <span class="ct-kanban-card__id">TASK-204</span>
+              <span class="kb-move" role="group" aria-label="TASK-204 열 이동">
+                <button type="button" class="kb-move__btn" data-move="prev" aria-label="이전 열로 이동">◀</button>
+                <button type="button" class="kb-move__btn" data-move="next" aria-label="다음 열로 이동">▶</button>
+              </span>
               <span class="ct-kanban-card__avatar">MR</span>
             </div>
           </article>
 
-          <article class="ct-kanban-card ct-kanban-card--low" tabindex="0">
+          <article class="ct-kanban-card ct-kanban-card--low" tabindex="0" draggable="true" data-assignee="KA">
             <div class="ct-kanban-card__tags">
               <span class="ct-kanban-card__tag">INFRA</span>
             </div>
@@ -278,11 +348,15 @@
             <p class="ct-kanban-card__desc">PR 프리뷰 환경이 머지 후에도 남음. 72h TTL cron 으로 정리하고 Slack 알림.</p>
             <div class="ct-kanban-card__meta">
               <span class="ct-kanban-card__id">TASK-207</span>
+              <span class="kb-move" role="group" aria-label="TASK-207 열 이동">
+                <button type="button" class="kb-move__btn" data-move="prev" aria-label="이전 열로 이동">◀</button>
+                <button type="button" class="kb-move__btn" data-move="next" aria-label="다음 열로 이동">▶</button>
+              </span>
               <span class="ct-kanban-card__avatar">KA</span>
             </div>
           </article>
 
-          <article class="ct-kanban-card ct-kanban-card--low" tabindex="0">
+          <article class="ct-kanban-card ct-kanban-card--low" tabindex="0" draggable="true" data-assignee="YN">
             <div class="ct-kanban-card__tags">
               <span class="ct-kanban-card__tag ct-kanban-card__tag--accent">DOCS</span>
             </div>
@@ -290,36 +364,47 @@
             <p class="ct-kanban-card__desc">정적 갤러리를 MDX 라이브 프리뷰로 전환. props 표 자동 생성 PoC.</p>
             <div class="ct-kanban-card__meta">
               <span class="ct-kanban-card__id">TASK-210</span>
+              <span class="kb-move" role="group" aria-label="TASK-210 열 이동">
+                <button type="button" class="kb-move__btn" data-move="prev" aria-label="이전 열로 이동">◀</button>
+                <button type="button" class="kb-move__btn" data-move="next" aria-label="다음 열로 이동">▶</button>
+              </span>
               <span class="ct-kanban-card__avatar">YN</span>
             </div>
           </article>
 
+          <p class="kb-col__empty" hidden>ERR::NO_TASKS — 조건에 맞는 태스크 없음</p>
         </div>
       </section>
 
-      <!-- ===== COLUMN: IN PROGRESS ===== -->
-      <section class="kb-col kb-col--progress" role="listitem" aria-label="진행 중">
+      <!-- ===== COLUMN: IN PROGRESS (WIP 한도 4) ===== -->
+      <section class="kb-col kb-col--progress" role="listitem" aria-label="진행 중" data-col="IN PROGRESS" data-wip="4" data-reveal>
         <header class="kb-col__head">
           <span class="kb-col__title">IN PROGRESS</span>
-          <span class="ct-badge ct-badge--count">4</span>
-          <button class="ct-btn ct-btn--icon ct-btn--sm kb-col__add" data-modal-open="#new-task" aria-label="진행 중에 태스크 추가">+</button>
+          <span class="ct-badge ct-badge--count ct-badge--warning" data-count title="WIP 한도 4">4/4</span>
+          <button class="ct-btn ct-btn--icon ct-btn--sm kb-col__add" data-modal-open="#new-task" data-col-target="progress" aria-label="진행 중에 태스크 추가">+</button>
         </header>
-        <div class="kb-col__body">
+        <div class="kb-col__body" data-col-body="progress">
 
-          <article class="ct-kanban-card ct-kanban-card--high" tabindex="0">
+          <article class="ct-kanban-card ct-kanban-card--high is-blocked" tabindex="0" draggable="true" data-assignee="KA" data-blocked>
             <div class="ct-kanban-card__tags">
+              <span class="ct-kanban-card__tag ct-kanban-card__tag--blocked">■ BLOCKED</span>
               <span class="ct-kanban-card__tag">BE</span>
               <span class="ct-kanban-card__tag ct-kanban-card__tag--accent">BUG</span>
             </div>
             <h3 class="ct-kanban-card__title">WS 재연결 백오프</h3>
             <p class="ct-kanban-card__desc">소켓 끊김 시 즉시 재시도로 서버 부하 폭주. 지수 백오프 + 지터 + 최대 캡 적용 중.</p>
+            <p class="kb-block-reason"><span aria-hidden="true">⊘</span> 부하테스트 환경 대기 — 인프라 슬롯 07.01 배정</p>
             <div class="ct-kanban-card__meta">
               <span class="ct-kanban-card__id">TASK-188</span>
+              <span class="kb-move" role="group" aria-label="TASK-188 열 이동">
+                <button type="button" class="kb-move__btn" data-move="prev" aria-label="이전 열로 이동">◀</button>
+                <button type="button" class="kb-move__btn" data-move="next" aria-label="다음 열로 이동">▶</button>
+              </span>
               <span class="ct-kanban-card__avatar">KA</span>
             </div>
           </article>
 
-          <article class="ct-kanban-card ct-kanban-card--high" tabindex="0">
+          <article class="ct-kanban-card ct-kanban-card--high" tabindex="0" draggable="true" data-assignee="JS">
             <div class="ct-kanban-card__tags">
               <span class="ct-kanban-card__tag">BE</span>
               <span class="ct-kanban-card__tag">SECURITY</span>
@@ -328,11 +413,15 @@
             <p class="ct-kanban-card__desc">테넌트 격리 누락 테이블 점검. row-level security 정책을 전수 작성하고 회귀 테스트 추가.</p>
             <div class="ct-kanban-card__meta">
               <span class="ct-kanban-card__id">TASK-192</span>
+              <span class="kb-move" role="group" aria-label="TASK-192 열 이동">
+                <button type="button" class="kb-move__btn" data-move="prev" aria-label="이전 열로 이동">◀</button>
+                <button type="button" class="kb-move__btn" data-move="next" aria-label="다음 열로 이동">▶</button>
+              </span>
               <span class="ct-kanban-card__avatar">JS</span>
             </div>
           </article>
 
-          <article class="ct-kanban-card ct-kanban-card--med" tabindex="0">
+          <article class="ct-kanban-card ct-kanban-card--med" tabindex="0" draggable="true" data-assignee="MR">
             <div class="ct-kanban-card__tags">
               <span class="ct-kanban-card__tag">FE</span>
               <span class="ct-kanban-card__tag">PERF</span>
@@ -341,11 +430,15 @@
             <p class="ct-kanban-card__desc">.crt-overlay 가 저사양 기기에서 페인트 비용 과다. will-change + transform 레이어 분리.</p>
             <div class="ct-kanban-card__meta">
               <span class="ct-kanban-card__id">TASK-195</span>
+              <span class="kb-move" role="group" aria-label="TASK-195 열 이동">
+                <button type="button" class="kb-move__btn" data-move="prev" aria-label="이전 열로 이동">◀</button>
+                <button type="button" class="kb-move__btn" data-move="next" aria-label="다음 열로 이동">▶</button>
+              </span>
               <span class="ct-kanban-card__avatar">MR</span>
             </div>
           </article>
 
-          <article class="ct-kanban-card ct-kanban-card--med" tabindex="0">
+          <article class="ct-kanban-card ct-kanban-card--med" tabindex="0" draggable="true" data-assignee="YN">
             <div class="ct-kanban-card__tags">
               <span class="ct-kanban-card__tag">FE</span>
             </div>
@@ -353,23 +446,28 @@
             <p class="ct-kanban-card__desc">⌘K 검색이 접두사 매칭만. 가중치 기반 퍼지 스코어링으로 교체하고 최근 항목 부스트.</p>
             <div class="ct-kanban-card__meta">
               <span class="ct-kanban-card__id">TASK-198</span>
+              <span class="kb-move" role="group" aria-label="TASK-198 열 이동">
+                <button type="button" class="kb-move__btn" data-move="prev" aria-label="이전 열로 이동">◀</button>
+                <button type="button" class="kb-move__btn" data-move="next" aria-label="다음 열로 이동">▶</button>
+              </span>
               <span class="ct-kanban-card__avatar">YN</span>
             </div>
           </article>
 
+          <p class="kb-col__empty" hidden>ERR::NO_TASKS — 조건에 맞는 태스크 없음</p>
         </div>
       </section>
 
       <!-- ===== COLUMN: REVIEW ===== -->
-      <section class="kb-col kb-col--review" role="listitem" aria-label="리뷰">
+      <section class="kb-col kb-col--review" role="listitem" aria-label="리뷰" data-col="REVIEW" data-reveal>
         <header class="kb-col__head">
           <span class="kb-col__title">REVIEW</span>
-          <span class="ct-badge ct-badge--count">3</span>
-          <button class="ct-btn ct-btn--icon ct-btn--sm kb-col__add" data-modal-open="#new-task" aria-label="리뷰에 태스크 추가">+</button>
+          <span class="ct-badge ct-badge--count" data-count>3</span>
+          <button class="ct-btn ct-btn--icon ct-btn--sm kb-col__add" data-modal-open="#new-task" data-col-target="review" aria-label="리뷰에 태스크 추가">+</button>
         </header>
-        <div class="kb-col__body">
+        <div class="kb-col__body" data-col-body="review">
 
-          <article class="ct-kanban-card ct-kanban-card--high" tabindex="0">
+          <article class="ct-kanban-card ct-kanban-card--high" tabindex="0" draggable="true" data-assignee="YN">
             <div class="ct-kanban-card__tags">
               <span class="ct-kanban-card__tag ct-kanban-card__tag--accent">BUG</span>
               <span class="ct-kanban-card__tag">FE</span>
@@ -378,24 +476,34 @@
             <p class="ct-kanban-card__desc">ESC 닫힘 후 포커스가 body 로 빠짐. 트리거로 포커스 복원 + Tab 순환 가드 수정. PR #421.</p>
             <div class="ct-kanban-card__meta">
               <span class="ct-kanban-card__id">TASK-176</span>
+              <span class="kb-move" role="group" aria-label="TASK-176 열 이동">
+                <button type="button" class="kb-move__btn" data-move="prev" aria-label="이전 열로 이동">◀</button>
+                <button type="button" class="kb-move__btn" data-move="next" aria-label="다음 열로 이동">▶</button>
+              </span>
               <span class="ct-kanban-card__avatar">YN</span>
             </div>
           </article>
 
-          <article class="ct-kanban-card ct-kanban-card--med" tabindex="0">
+          <article class="ct-kanban-card ct-kanban-card--med is-blocked" tabindex="0" draggable="true" data-assignee="JS" data-blocked>
             <div class="ct-kanban-card__tags">
+              <span class="ct-kanban-card__tag ct-kanban-card__tag--blocked">■ BLOCKED</span>
               <span class="ct-kanban-card__tag">BE</span>
               <span class="ct-kanban-card__tag">API</span>
             </div>
             <h3 class="ct-kanban-card__title">커서 페이지네이션 v2</h3>
             <p class="ct-kanban-card__desc">offset 방식 폐기, opaque 커서 토큰 도입. 정렬키 안정성 + 역방향 페이징 리뷰 대기.</p>
+            <p class="kb-block-reason"><span aria-hidden="true">⊘</span> 정렬키 스키마 결정 대기 — 06.24 아키텍처 회의</p>
             <div class="ct-kanban-card__meta">
               <span class="ct-kanban-card__id">TASK-181</span>
+              <span class="kb-move" role="group" aria-label="TASK-181 열 이동">
+                <button type="button" class="kb-move__btn" data-move="prev" aria-label="이전 열로 이동">◀</button>
+                <button type="button" class="kb-move__btn" data-move="next" aria-label="다음 열로 이동">▶</button>
+              </span>
               <span class="ct-kanban-card__avatar">JS</span>
             </div>
           </article>
 
-          <article class="ct-kanban-card ct-kanban-card--low" tabindex="0">
+          <article class="ct-kanban-card ct-kanban-card--low" tabindex="0" draggable="true" data-assignee="KA">
             <div class="ct-kanban-card__tags">
               <span class="ct-kanban-card__tag">INFRA</span>
             </div>
@@ -403,23 +511,28 @@
             <p class="ct-kanban-card__desc">lockfile 해시 미반영으로 stale 캐시 적중. 키에 해시 포함 + 복원 폴백 체인 리뷰 중.</p>
             <div class="ct-kanban-card__meta">
               <span class="ct-kanban-card__id">TASK-185</span>
+              <span class="kb-move" role="group" aria-label="TASK-185 열 이동">
+                <button type="button" class="kb-move__btn" data-move="prev" aria-label="이전 열로 이동">◀</button>
+                <button type="button" class="kb-move__btn" data-move="next" aria-label="다음 열로 이동">▶</button>
+              </span>
               <span class="ct-kanban-card__avatar">KA</span>
             </div>
           </article>
 
+          <p class="kb-col__empty" hidden>ERR::NO_TASKS — 조건에 맞는 태스크 없음</p>
         </div>
       </section>
 
       <!-- ===== COLUMN: DONE ===== -->
-      <section class="kb-col kb-col--done" role="listitem" aria-label="완료">
+      <section class="kb-col kb-col--done" role="listitem" aria-label="완료" data-col="DONE" data-reveal>
         <header class="kb-col__head">
           <span class="kb-col__title">DONE</span>
-          <span class="ct-badge ct-badge--count ct-badge--success">4</span>
-          <button class="ct-btn ct-btn--icon ct-btn--sm kb-col__add" data-modal-open="#new-task" aria-label="완료에 태스크 추가">+</button>
+          <span class="ct-badge ct-badge--count ct-badge--success" data-count>4</span>
+          <button class="ct-btn ct-btn--icon ct-btn--sm kb-col__add" data-modal-open="#new-task" data-col-target="done" aria-label="완료에 태스크 추가">+</button>
         </header>
-        <div class="kb-col__body">
+        <div class="kb-col__body" data-col-body="done">
 
-          <article class="ct-kanban-card ct-kanban-card--low" tabindex="0">
+          <article class="ct-kanban-card ct-kanban-card--low" tabindex="0" draggable="true" data-assignee="MR">
             <div class="ct-kanban-card__tags">
               <span class="ct-kanban-card__tag ct-kanban-card__tag--done">✓ DONE</span>
               <span class="ct-kanban-card__tag">FE</span>
@@ -428,11 +541,15 @@
             <p class="ct-kanban-card__desc">초기 로드 시 라이트→다크 FOUC. inline 부트 스크립트로 data-theme 선반영 처리 완료.</p>
             <div class="ct-kanban-card__meta">
               <span class="ct-kanban-card__id">TASK-160</span>
+              <span class="kb-move" role="group" aria-label="TASK-160 열 이동">
+                <button type="button" class="kb-move__btn" data-move="prev" aria-label="이전 열로 이동">◀</button>
+                <button type="button" class="kb-move__btn" data-move="next" aria-label="다음 열로 이동">▶</button>
+              </span>
               <span class="ct-kanban-card__avatar">MR</span>
             </div>
           </article>
 
-          <article class="ct-kanban-card ct-kanban-card--low" tabindex="0">
+          <article class="ct-kanban-card ct-kanban-card--low" tabindex="0" draggable="true" data-assignee="JS">
             <div class="ct-kanban-card__tags">
               <span class="ct-kanban-card__tag ct-kanban-card__tag--done">✓ DONE</span>
               <span class="ct-kanban-card__tag">BE</span>
@@ -441,11 +558,15 @@
             <p class="ct-kanban-card__desc">동기 INSERT 가 응답 지연. 이벤트를 큐로 오프로드하고 배치 플러시. p95 -180ms 확인.</p>
             <div class="ct-kanban-card__meta">
               <span class="ct-kanban-card__id">TASK-164</span>
+              <span class="kb-move" role="group" aria-label="TASK-164 열 이동">
+                <button type="button" class="kb-move__btn" data-move="prev" aria-label="이전 열로 이동">◀</button>
+                <button type="button" class="kb-move__btn" data-move="next" aria-label="다음 열로 이동">▶</button>
+              </span>
               <span class="ct-kanban-card__avatar">JS</span>
             </div>
           </article>
 
-          <article class="ct-kanban-card ct-kanban-card--low" tabindex="0">
+          <article class="ct-kanban-card ct-kanban-card--low" tabindex="0" draggable="true" data-assignee="KA">
             <div class="ct-kanban-card__tags">
               <span class="ct-kanban-card__tag ct-kanban-card__tag--done">✓ DONE</span>
               <span class="ct-kanban-card__tag">INFRA</span>
@@ -454,11 +575,15 @@
             <p class="ct-kanban-card__desc">DB 자격증명 수동 교체 폐기. Vault 동적 시크릿 + 무중단 롤링 적용 배포 완료.</p>
             <div class="ct-kanban-card__meta">
               <span class="ct-kanban-card__id">TASK-168</span>
+              <span class="kb-move" role="group" aria-label="TASK-168 열 이동">
+                <button type="button" class="kb-move__btn" data-move="prev" aria-label="이전 열로 이동">◀</button>
+                <button type="button" class="kb-move__btn" data-move="next" aria-label="다음 열로 이동">▶</button>
+              </span>
               <span class="ct-kanban-card__avatar">KA</span>
             </div>
           </article>
 
-          <article class="ct-kanban-card ct-kanban-card--low" tabindex="0">
+          <article class="ct-kanban-card ct-kanban-card--low" tabindex="0" draggable="true" data-assignee="YN">
             <div class="ct-kanban-card__tags">
               <span class="ct-kanban-card__tag ct-kanban-card__tag--done">✓ DONE</span>
               <span class="ct-kanban-card__tag">FE</span>
@@ -467,10 +592,15 @@
             <p class="ct-kanban-card__desc">목록/카드 로딩 상태 제각각. .ct-skeleton 유틸로 통일하고 레이아웃 시프트 제거.</p>
             <div class="ct-kanban-card__meta">
               <span class="ct-kanban-card__id">TASK-172</span>
+              <span class="kb-move" role="group" aria-label="TASK-172 열 이동">
+                <button type="button" class="kb-move__btn" data-move="prev" aria-label="이전 열로 이동">◀</button>
+                <button type="button" class="kb-move__btn" data-move="next" aria-label="다음 열로 이동">▶</button>
+              </span>
               <span class="ct-kanban-card__avatar">YN</span>
             </div>
           </article>
 
+          <p class="kb-col__empty" hidden>ERR::NO_TASKS — 조건에 맞는 태스크 없음</p>
         </div>
       </section>
 
@@ -492,6 +622,9 @@
 
 </main>
 
+<!-- 스크린리더용 보드 상태 안내 (카드 이동/필터/생성) -->
+<div class="sr-only" role="status" data-board-status></div>
+
 <!-- ============================== NEW TASK MODAL ============================== -->
 <div class="ct-modal ct-modal--md" id="new-task" data-modal role="dialog" aria-modal="true" aria-labelledby="nt-title" hidden>
   <div class="ct-modal__dialog">
@@ -501,13 +634,14 @@
       <button class="ct-modal__close" data-modal-close aria-label="닫기">✕</button>
     </div>
     <div class="ct-modal__body">
-      <form class="kb-form-grid" id="nt-form" onsubmit="return false">
+      <form class="kb-form-grid" id="nt-form">
 
-        <div class="ct-field">
+        <div class="ct-field" data-nt-title-field>
           <label class="ct-field__label" for="nt-name">TITLE <span class="ct-field__req">*</span></label>
           <div class="ct-input-wrap ct-input-wrap--prompt">
-            <input id="nt-name" class="ct-input ct-input--prompt" placeholder="예: 토스트 큐 오버플로 처리" required>
+            <input id="nt-name" class="ct-input ct-input--prompt" placeholder="예: 토스트 큐 오버플로 처리" required aria-describedby="nt-name-err">
           </div>
+          <span class="ct-field__error" id="nt-name-err" hidden>ERR :: 제목은 필수 항목입니다</span>
           <span class="ct-field__hint">짧고 명령형으로</span>
         </div>
 
@@ -519,9 +653,9 @@
         <div class="ct-field">
           <span class="ct-field__label">PRIORITY</span>
           <div class="ct-segmented" role="group" aria-label="우선순위">
-            <label class="ct-segmented__option"><input class="ct-segmented__input" type="radio" name="nt-prio"> LOW</label>
-            <label class="ct-segmented__option"><input class="ct-segmented__input" type="radio" name="nt-prio" checked> MED</label>
-            <label class="ct-segmented__option"><input class="ct-segmented__input" type="radio" name="nt-prio"> HIGH</label>
+            <label class="ct-segmented__option"><input class="ct-segmented__input" type="radio" name="nt-prio" value="low"> LOW</label>
+            <label class="ct-segmented__option"><input class="ct-segmented__input" type="radio" name="nt-prio" value="med" checked> MED</label>
+            <label class="ct-segmented__option"><input class="ct-segmented__input" type="radio" name="nt-prio" value="high"> HIGH</label>
           </div>
         </div>
 
@@ -530,11 +664,11 @@
             <label class="ct-field__label" for="nt-assignee">ASSIGNEE</label>
             <div class="ct-select-wrap">
               <select id="nt-assignee" class="ct-select">
-                <option value="js">진섭 · JS</option>
-                <option value="mr">미라 · MR</option>
-                <option value="ka">카이 · KA</option>
-                <option value="yn">윤 · YN</option>
-                <option value="">미할당</option>
+                <option value="JS">진섭 · JS</option>
+                <option value="MR">미라 · MR</option>
+                <option value="KA">카이 · KA</option>
+                <option value="YN">윤 · YN</option>
+                <option value="--">미할당</option>
               </select>
             </div>
           </div>
@@ -565,11 +699,301 @@
     </div>
     <div class="ct-modal__footer ct-modal__footer--between">
       <button class="ct-btn ct-btn--ghost" data-modal-close>CANCEL</button>
-      <button class="ct-btn ct-btn--primary" data-modal-close>CREATE TASK</button>
+      <button class="ct-btn ct-btn--primary" data-nt-create>CREATE TASK</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== COMMAND PALETTE ============================== -->
+<div class="ct-cmdk" data-cmdk role="dialog" aria-modal="true" aria-label="명령 팔레트" hidden>
+  <div class="ct-cmdk__overlay"></div>
+  <div class="ct-cmdk__panel">
+    <div class="ct-cmdk__input-row">
+      <span class="ct-cmdk__prompt" aria-hidden="true"></span>
+      <input class="ct-cmdk__input" placeholder="명령 또는 페이지 검색…" aria-label="명령 입력">
+      <span class="ct-cmdk__hint"><span class="ct-kbd">ESC</span></span>
+    </div>
+    <div class="ct-cmdk__list" role="listbox">
+      <div class="ct-cmdk__group">
+        <div class="ct-cmdk__group-label">페이지</div>
+        <button class="ct-cmdk__item is-active" role="option" aria-selected="true" data-cmdk-item data-href="dashboard.html" data-keywords="dashboard analytics hud"><span class="ct-cmdk__icon">▤</span><span class="ct-cmdk__label">분석 대시보드</span></button>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-href="inbox.html" data-keywords="inbox mail messages"><span class="ct-cmdk__icon">✉</span><span class="ct-cmdk__label">받은편지함</span></button>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-href="product.html" data-keywords="product store shop uplink"><span class="ct-cmdk__icon">◈</span><span class="ct-cmdk__label">상품 상세</span></button>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-href="pricing.html" data-keywords="pricing plans billing"><span class="ct-cmdk__icon">$</span><span class="ct-cmdk__label">가격</span></button>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-href="settings.html" data-keywords="settings config preferences"><span class="ct-cmdk__icon">⚙</span><span class="ct-cmdk__label">설정</span></button>
+      </div>
+      <div class="ct-cmdk__group">
+        <div class="ct-cmdk__group-label">작업</div>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-action="theme" data-keywords="theme dark light toggle"><span class="ct-cmdk__icon">◐</span><span class="ct-cmdk__label">테마 전환 (DARK/LIGHT)</span><span class="ct-cmdk__shortcut"><span class="ct-kbd">T</span></span></button>
+      </div>
+      <div class="ct-cmdk__empty" role="status" hidden>NO MATCHES :: 다른 키워드를 입력하세요</div>
+    </div>
+    <div class="ct-cmdk__footer">
+      <span class="ct-cmdk__footer-hint"><span class="ct-kbd">↑</span><span class="ct-kbd">↓</span> 이동</span>
+      <span class="ct-cmdk__footer-hint"><span class="ct-kbd">↵</span> 실행</span>
+      <span class="ct-cmdk__footer-hint"><span class="ct-kbd">ESC</span> 닫기</span>
     </div>
   </div>
 </div>
 
 <script src="../app.js"></script>
+<script>
+/* ============================================================
+   KANBAN page behaviour — 실제 동작하는 보드.
+   · HTML5 DnD + 키보드 열 이동 버튼(◀ ▶) + 라이브 리전 안내
+   · 담당자/범위/텍스트 필터 (칼럼별 empty state)
+   · NEW TASK 실제 생성 (필수값 invalid 시연 포함)
+   전부 위임 바인딩, 인라인 핸들러 없음.
+   ============================================================ */
+(function () {
+  'use strict';
+  const $  = (s, c) => (c || document).querySelector(s);
+  const $$ = (s, c) => Array.from((c || document).querySelectorAll(s));
+
+  const board   = $('.kb-board');
+  const cols    = $$('.kb-col');
+  const bodies  = $$('[data-col-body]');
+  const status  = $('[data-board-status]');
+  const search  = $('[data-kb-search]');
+  const MINE    = 'JS';               /* operator = 진섭 */
+  let nextId    = 213;
+
+  const cardId   = (card) => ($('.ct-kanban-card__id', card) || {}).textContent || 'TASK';
+  const colOf    = (card) => card.closest('.kb-col');
+  const colName  = (col)  => col.dataset.col;
+
+  /* ---- 카운트/WIP/이동버튼 상태 동기화 ---- */
+  function sync() {
+    cols.forEach((col, i) => {
+      const body  = $('.kb-col__body', col);
+      const cards = $$('.ct-kanban-card', body).filter(c => !c.hidden);
+      const badge = $('[data-count]', col);
+      const wip   = parseInt(col.dataset.wip || '0', 10);
+      if (wip) {
+        badge.textContent = cards.length + '/' + wip;
+        badge.classList.toggle('ct-badge--warning', cards.length === wip);
+        badge.classList.toggle('ct-badge--danger', cards.length > wip);
+      } else {
+        badge.textContent = String(cards.length);
+      }
+      $('.kb-col__empty', body).hidden = cards.length > 0;
+      /* 첫/끝 칼럼의 이동 버튼 비활성 */
+      $$('.ct-kanban-card', body).forEach(card => {
+        const prev = $('[data-move="prev"]', card);
+        const next = $('[data-move="next"]', card);
+        if (prev) prev.disabled = i === 0;
+        if (next) next.disabled = i === cols.length - 1;
+      });
+    });
+    const blocked = $$('.ct-kanban-card[data-blocked]').length;
+    const sl = $('[data-sl-blocked]');
+    if (sl) sl.textContent = String(blocked);
+  }
+
+  /* ---- 카드 이동 (버튼/DnD 공용) ---- */
+  function flash(card) {
+    card.classList.remove('is-swap');
+    void card.offsetWidth;
+    card.classList.add('is-swap');
+  }
+  function moveCard(card, toCol) {
+    const from = colName(colOf(card));
+    $('.kb-col__body', toCol).appendChild(card);
+    flash(card);
+    sync();
+    const to = colName(toCol);
+    status.textContent = `${cardId(card)} 을(를) ${from} 에서 ${to} 로 이동했습니다`;
+    const wip = parseInt(toCol.dataset.wip || '0', 10);
+    const n = $$('.ct-kanban-card', toCol).length;
+    if (wip && n > wip && window.CT) {
+      CT.toast({ title: 'WIP LIMIT', msg: `IN PROGRESS 한도 초과 — ${n}/${wip}. 리뷰 적체를 먼저 해소하세요.`, variant: 'warning' });
+    }
+  }
+
+  /* 키보드 대안: ◀ ▶ 버튼 */
+  board.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-move]');
+    if (!btn || btn.disabled) return;
+    const card = btn.closest('.ct-kanban-card');
+    const i = cols.indexOf(colOf(card));
+    const target = cols[i + (btn.dataset.move === 'next' ? 1 : -1)];
+    if (!target) return;
+    moveCard(card, target);
+    /* 이동한 카드의 같은 방향 버튼에 포커스 유지 */
+    const again = $(`[data-move="${btn.dataset.move}"]`, card);
+    if (again && !again.disabled) again.focus(); else card.focus();
+  });
+
+  /* HTML5 DnD */
+  let dragCard = null;
+  board.addEventListener('dragstart', (e) => {
+    const card = e.target.closest('.ct-kanban-card');
+    if (!card) return;
+    dragCard = card;
+    card.classList.add('is-dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', cardId(card)); } catch (_) {}
+  });
+  board.addEventListener('dragend', () => {
+    if (dragCard) dragCard.classList.remove('is-dragging');
+    dragCard = null;
+    bodies.forEach(b => b.classList.remove('is-drop'));
+  });
+  bodies.forEach(body => {
+    body.addEventListener('dragover', (e) => {
+      if (!dragCard) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      body.classList.add('is-drop');
+    });
+    body.addEventListener('dragleave', (e) => {
+      if (!body.contains(e.relatedTarget)) body.classList.remove('is-drop');
+    });
+    body.addEventListener('drop', (e) => {
+      e.preventDefault();
+      body.classList.remove('is-drop');
+      if (dragCard) moveCard(dragCard, body.closest('.kb-col'));
+    });
+  });
+
+  /* ---- 필터: 담당자(토글) × 범위(세그먼트) × 텍스트 ---- */
+  function scope() {
+    const r = $('input[name="kb-scope"]:checked');
+    return r ? r.value : 'all';
+  }
+  function activeAvas() {
+    return $$('[data-ava-filter][aria-pressed="true"]').map(b => b.dataset.avaFilter);
+  }
+  function applyFilters(announce) {
+    const q = (search.value || '').trim().toLowerCase();
+    const avas = activeAvas();
+    const sc = scope();
+    let shown = 0;
+    $$('.ct-kanban-card', board).forEach(card => {
+      let ok = true;
+      if (sc === 'mine' && card.dataset.assignee !== MINE) ok = false;
+      if (sc === 'blocked' && !card.hasAttribute('data-blocked')) ok = false;
+      if (ok && avas.length && !avas.includes(card.dataset.assignee)) ok = false;
+      if (ok && q && !card.textContent.toLowerCase().includes(q)) ok = false;
+      card.hidden = !ok;
+      if (ok) shown++;
+    });
+    sync();
+    if (announce) status.textContent = `필터 적용 — 태스크 ${shown}건 표시`;
+  }
+  $$('[data-ava-filter]').forEach(btn => btn.addEventListener('click', () => {
+    btn.setAttribute('aria-pressed', String(btn.getAttribute('aria-pressed') !== 'true'));
+    applyFilters(true);
+  }));
+  $$('input[name="kb-scope"]').forEach(r => r.addEventListener('change', () => applyFilters(true)));
+  search.addEventListener('input', () => applyFilters(false));
+  /* `/` 로 필터 포커스 (입력 중엔 무시) */
+  document.addEventListener('keydown', (e) => {
+    if (e.key === '/' && !e.target.closest('input, textarea, select, [contenteditable]')) {
+      e.preventDefault(); search.focus();
+    }
+  });
+
+  /* ---- NEW TASK — 실제 생성 + 필수값 invalid 시연 ---- */
+  const modal    = $('#new-task');
+  const form     = $('#nt-form');
+  const nameIn   = $('#nt-name');
+  const nameErr  = $('#nt-name-err');
+  const nameFld  = $('[data-nt-title-field]');
+  const colSel   = $('#nt-col');
+
+  /* 칼럼별 + 버튼 → 대상 칼럼 프리셋 */
+  $$('[data-col-target]').forEach(btn => btn.addEventListener('click', () => {
+    colSel.value = btn.dataset.colTarget;
+  }));
+
+  function clearInvalid() {
+    nameIn.classList.remove('is-invalid');
+    nameIn.removeAttribute('aria-invalid');
+    nameErr.hidden = true;
+  }
+  nameIn.addEventListener('input', clearInvalid);
+
+  function buildCard(title, desc, prio, assignee, tags) {
+    const card = document.createElement('article');
+    card.className = 'ct-kanban-card ct-kanban-card--' + prio;
+    card.tabIndex = 0;
+    card.draggable = true;
+    card.dataset.assignee = assignee;
+    const id = 'TASK-' + (nextId++);
+
+    const tagWrap = document.createElement('div');
+    tagWrap.className = 'ct-kanban-card__tags';
+    tags.forEach(t => {
+      const el = document.createElement('span');
+      el.className = 'ct-kanban-card__tag';
+      el.textContent = t;
+      tagWrap.appendChild(el);
+    });
+    const h = document.createElement('h3');
+    h.className = 'ct-kanban-card__title';
+    h.textContent = title;
+    const p = document.createElement('p');
+    p.className = 'ct-kanban-card__desc';
+    p.textContent = desc || '// 상세 설명 없음';
+    const meta = document.createElement('div');
+    meta.className = 'ct-kanban-card__meta';
+    const idEl = document.createElement('span');
+    idEl.className = 'ct-kanban-card__id';
+    idEl.textContent = id;
+    const mv = document.createElement('span');
+    mv.className = 'kb-move';
+    mv.setAttribute('role', 'group');
+    mv.setAttribute('aria-label', id + ' 열 이동');
+    [['prev', '이전 열로 이동', '◀'], ['next', '다음 열로 이동', '▶']].forEach(([dir, label, glyph]) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'kb-move__btn';
+      b.dataset.move = dir;
+      b.setAttribute('aria-label', label);
+      b.textContent = glyph;
+      mv.appendChild(b);
+    });
+    const ava = document.createElement('span');
+    ava.className = 'ct-kanban-card__avatar';
+    ava.textContent = assignee === '--' ? '·' : assignee;
+    meta.append(idEl, mv, ava);
+    card.append(tagWrap, h, p, meta);
+    return { card, id };
+  }
+
+  function createTask() {
+    const title = nameIn.value.trim();
+    if (!title) {
+      nameIn.classList.add('is-invalid');
+      nameIn.setAttribute('aria-invalid', 'true');
+      nameErr.hidden = false;
+      nameIn.focus();
+      return;
+    }
+    const prio = ($('input[name="nt-prio"]:checked') || {}).value || 'med';
+    const assignee = $('#nt-assignee').value;
+    const tags = $$('.ct-chipinput__chip', form).map(c => (c.firstChild ? c.firstChild.textContent : '').trim()).filter(Boolean);
+    const targetBody = $(`[data-col-body="${colSel.value}"]`);
+    const { card, id } = buildCard(title, $('#nt-desc').value.trim(), prio, assignee, tags);
+    targetBody.insertBefore(card, targetBody.firstElementChild);
+    flash(card);
+    applyFilters(false);
+    const target = targetBody.closest('.kb-col');
+    status.textContent = `${id} 이(가) ${colName(target)} 에 생성되었습니다`;
+    if (window.CT) {
+      CT.toast({ title: 'TASK CREATED', msg: `${id} 등록 — ${colName(target)} · 담당 ${assignee}`, variant: 'success' });
+      CT.closeModal('#new-task');
+    }
+    nameIn.value = '';
+    $('#nt-desc').value = '';
+    clearInvalid();
+  }
+  $('[data-nt-create]').addEventListener('click', createTask);
+  form.addEventListener('submit', (e) => { e.preventDefault(); createTask(); });
+
+  sync();
+})();
+</script>
 </body>
 </html>

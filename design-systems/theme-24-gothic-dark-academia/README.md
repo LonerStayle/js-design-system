@@ -83,6 +83,10 @@ Convenience swatches: `--oxblood`, `--parchment`, `--charcoal`, `--brass`, `--in
 | `--aged-paper-texture` / `--aged-vellum-texture` | Layered warm stains for light / dark |
 | `--paper-grain` | Tiled fractal-noise grain overlay |
 | `--blackletter` | Decorative blackletter stack (large ornament only) |
+| `--font-hand` | 방주(marginalia) 손글씨 — Nanum Pen Script |
+| `--candle-pool` (+ `--candle-pool-opacity`) | 커서를 따라오는 촛불 광원 — `.candle-pool`, dark only |
+| `--chart-line-1…4` / `--chart-grid` / `--chart-axis` | 동판화 차트 팔레트 — SVG 차트는 이 토큰만 소비 |
+| `--ink-annotation` | 방주 잉크 (burgundy, theme-aware) |
 
 ### Scales
 
@@ -139,7 +143,9 @@ shows the gold focus ring.
 Pure vanilla JS, no dependencies, progressive enhancement. Behaviours wire up
 from `data-*` hooks at load:
 
-`data-theme-toggle` · `data-tabs` (+ `role=tab`/`aria-controls`, arrow keys) ·
+`data-theme-toggle` (+ 점화/채광 베일 연출) · 커서 촛불 광원(자동, dark 전용, reduced-motion/터치 스킵) ·
+`data-segmented` (radiogroup + 방향키) · `data-toggle-group` (aria-pressed 단일 선택) ·
+`data-tabs` (+ `role=tab`/`aria-controls`, arrow keys) ·
 `data-accordion[-single]` · `data-modal-open/-close` (focus trap, ESC) ·
 `data-drawer-open/-close` + `data-drawer-overlay` · `data-toast` (+ title /
 variant) · `data-cmdk-open` (⌘K / Ctrl-K) · `data-menu`/`-trigger` ·

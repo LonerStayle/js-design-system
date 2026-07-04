@@ -1,9 +1,19 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>INBOX // CYBER.TERM</title>
+<!-- FOUC 방지: 저장 테마를 렌더 전에 동기 적용 (키는 app.js Theme.KEY 와 동일) -->
+<script>
+(function () {
+  try {
+    var t = localStorage.getItem("ct-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../semantic.css">
 <link rel="stylesheet" href="../base.css">
@@ -16,13 +26,14 @@
 <link rel="stylesheet" href="../components/nav.css">
 <style>
   /* ============================================================
-     INBOX — page-only layout (tokens only). 3-pane mail client.
+     INBOX — page-only layout (tokens only). tmux 스타일 3-pane
+     메일 클라이언트. 하단 고정 tmux 스테이터스라인(30px) 포함.
      ============================================================ */
   .mail {
     display: grid;
     grid-template-columns: 220px 360px 1fr;
-    /* fill viewport under the 60px navbar */
-    height: calc(100dvh - 60px);
+    /* fill viewport under the 60px navbar + 30px fixed statusline */
+    height: calc(100dvh - 60px - 30px);
     min-height: 0;
     border-top: var(--border-1) solid var(--color-divider);
     background: var(--color-bg-2);
@@ -49,7 +60,12 @@
     text-transform: uppercase;
     color: var(--color-text-subtle);
   }
-  .mail__section-label::before { content: ""; }
+  /* 폴더 항목은 진짜 컨트롤(button) — href="#" 더미 링크 금지 */
+  button.ct-list__item {
+    width: 100%;
+    background: none; border: 0; font: inherit;
+    text-align: left; cursor: pointer; color: inherit;
+  }
   .mail__folders .ct-list__item { padding-block: var(--space-2); }
   .mail__folder-glyph {
     width: 1.1em; flex-shrink: 0; text-align: center;
@@ -88,6 +104,7 @@
     transition: background var(--duration-fast) var(--ease-standard);
   }
   .mail-row:hover { background: var(--color-surface-2); }
+  .mail-row:focus-visible { outline: none; box-shadow: var(--focus-ring); z-index: var(--z-raised); }
   .mail-row.is-selected { background: var(--color-surface); }
   .mail-row.is-selected::after {
     content: ""; position: absolute; inset: 0; pointer-events: none;
@@ -147,22 +164,32 @@
     width: 7px; height: 7px; display: inline-block; flex-shrink: 0;
     box-shadow: 0 0 6px currentColor;
   }
+  /* 빈 폴더 / 검색 0건 — 장면 속 empty state */
+  .mail__empty { padding: var(--space-5); }
 
   /* ---------- PANE 3 · reading pane ---------- */
-  .mail__reader { background: var(--color-bg); }
+  .mail__reader { background: var(--color-bg); position: relative; overflow: hidden; }
   .mail__reader-inner {
     flex: 1 1 auto; min-height: 0;
     padding: var(--space-5);
     overflow-y: auto;
+    position: relative; z-index: 1;
   }
-  .mail__reader .ct-card { height: 100%; display: flex; flex-direction: column; }
+  .mail__reader .ct-card { min-height: 100%; display: flex; flex-direction: column; }
+  /* 메시지 전환 = CRT 전원 인가 (ct-boot-in 재사용, 1회성) */
+  .mail__reader .ct-card.is-swap {
+    animation: ct-boot-in var(--duration-slow) var(--ease-out) both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mail__reader .ct-card.is-swap { animation: none; }
+  }
   .reader__head {
     padding: var(--space-5) var(--space-5) var(--space-4);
     border-bottom: var(--border-1) solid var(--color-divider);
   }
   .reader__title {
     font-size: var(--text-xl);
-    line-height: 1.2;
+    line-height: 1.3;
     color: var(--color-text);
     margin: 0 0 var(--space-3);
   }
@@ -175,7 +202,9 @@
   .reader__meta b { color: var(--color-text-muted); font-weight: var(--weight-medium); }
   .reader__actions {
     display: flex; align-items: center; gap: var(--space-2);
-    margin-top: var(--space-4);
+    padding: var(--space-3) var(--space-5);
+    border-bottom: var(--border-1) solid var(--color-divider);
+    background: var(--color-bg-2);
   }
   .reader__actions .ct-dropdown { margin-left: auto; }
   .reader__body {
@@ -187,6 +216,8 @@
   }
   .reader__body p { margin: 0 0 var(--space-4); }
   .reader__body p strong { color: var(--color-text); }
+  .reader__body ul { margin: 0 0 var(--space-4); padding-left: var(--space-5); }
+  .reader__body li { margin-bottom: var(--space-1); }
   .reader__quote {
     border-left: var(--border-2) solid var(--color-border);
     padding: var(--space-1) var(--space-4);
@@ -205,19 +236,17 @@
     margin-top: var(--space-3);
   }
 
-  /* mobile-only "back to list" affordance label */
-  .mail__mobile-tabbar { display: none; }
-
   /* ============================================================
      RESPONSIVE — stack panes vertically. List + reader scroll
      within the page; folders become a horizontal scroll row.
      ============================================================ */
   @media (max-width: 960px) {
+    body { padding-bottom: 30px; }   /* 하단 고정 스테이터스라인 자리 */
     .mail {
       grid-template-columns: 1fr;
       grid-template-rows: auto auto 1fr;
       height: auto;
-      min-height: calc(100dvh - 60px);
+      min-height: calc(100dvh - 60px - 30px);
     }
     .mail__pane {
       border-right: none;
@@ -246,6 +275,7 @@
       white-space: nowrap;
       border: var(--border-1) solid var(--color-border-muted);
       padding: var(--space-2) var(--space-3);
+      width: auto;
     }
     /* list capped, reader flows below */
     .mail__list-pane { max-height: 46vh; }
@@ -260,19 +290,21 @@
   }
 </style>
 </head>
-<body>
-<a class="skip-link" href="#main">CONTENT 로 건너뛰기</a>
-<div class="crt-overlay" aria-hidden="true"></div>
+<body data-scene="grid">
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
+<div class="crt-overlay" aria-hidden="true">
+  <span class="crt-overlay__osd">TERM-07 // P31 GREEN · 60Hz · MAIL FEED SYNC</span>
+</div>
 
 <header class="ct-navbar">
   <div class="container flex items-center justify-between" style="height:60px;">
     <a class="ct-navbar__brand" href="../index.html"><span class="t-accent">◢</span> CYBER<span class="t-primary">.</span>TERM</a>
     <nav class="ct-navbar__nav" aria-label="주요">
-      <a class="ct-navbar__link" href="../index.html">HOME</a>
-      <a class="ct-navbar__link" href="dashboard.html">DASH</a>
-      <a class="ct-navbar__link" href="kanban.html">KANBAN</a>
+      <a class="ct-navbar__link" href="../index.html" data-navline>HOME</a>
+      <a class="ct-navbar__link" href="dashboard.html" data-navline>DASH</a>
+      <a class="ct-navbar__link" href="kanban.html" data-navline>KANBAN</a>
       <a class="ct-navbar__link is-active" href="inbox.html" aria-current="page">INBOX</a>
-      <a class="ct-navbar__link" href="settings.html">SETTINGS</a>
+      <a class="ct-navbar__link" href="settings.html" data-navline>SETTINGS</a>
     </nav>
     <div class="ct-navbar__actions flex items-center gap-2">
       <button class="ct-btn ct-btn--secondary ct-btn--sm" data-cmdk-open>SEARCH <span class="ct-kbd">⌘K</span></button>
@@ -291,57 +323,58 @@
   <section class="mail__pane mail__folders" aria-label="폴더 및 라벨">
     <div class="mail__compose-wrap">
       <button class="ct-btn ct-btn--primary ct-btn--block" data-drawer-open="#compose">
-        ✉ COMPOSE
+        + COMPOSE
       </button>
     </div>
     <div class="mail__scroll">
+      <div class="mail__section-label">~/MAILBOX</div>
       <nav class="ct-list ct-list--interactive" aria-label="메일함">
-        <a class="ct-list__item is-active" href="#" aria-current="page">
+        <button type="button" class="ct-list__item is-active" data-folder="inbox" aria-current="true">
           <span class="mail__folder-glyph" aria-hidden="true">▤</span>
           <span class="ct-list__content"><span class="ct-list__title">INBOX</span></span>
-          <span class="ct-badge ct-badge--count" aria-label="안 읽음 12">12</span>
-        </a>
-        <a class="ct-list__item" href="#">
+          <span class="ct-badge ct-badge--count" data-unread-badge aria-label="안 읽음 12">12</span>
+        </button>
+        <button type="button" class="ct-list__item" data-folder="starred">
           <span class="mail__folder-glyph" aria-hidden="true">★</span>
           <span class="ct-list__content"><span class="ct-list__title">STARRED</span></span>
-          <span class="ct-badge ct-badge--count">3</span>
-        </a>
-        <a class="ct-list__item" href="#">
+          <span class="ct-badge ct-badge--count" data-star-badge>2</span>
+        </button>
+        <button type="button" class="ct-list__item" data-folder="sent">
           <span class="mail__folder-glyph" aria-hidden="true">↗</span>
           <span class="ct-list__content"><span class="ct-list__title">SENT</span></span>
-        </a>
-        <a class="ct-list__item" href="#">
+        </button>
+        <button type="button" class="ct-list__item" data-folder="archive">
           <span class="mail__folder-glyph" aria-hidden="true">▣</span>
           <span class="ct-list__content"><span class="ct-list__title">ARCHIVE</span></span>
-        </a>
-        <a class="ct-list__item" href="#">
+        </button>
+        <button type="button" class="ct-list__item" data-folder="trash">
           <span class="mail__folder-glyph" aria-hidden="true">⌫</span>
           <span class="ct-list__content"><span class="ct-list__title">TRASH</span></span>
-        </a>
+        </button>
       </nav>
 
       <div class="mail__section-label">~/LABELS</div>
       <nav class="ct-list ct-list--interactive" aria-label="라벨">
-        <a class="ct-list__item" href="#">
+        <button type="button" class="ct-list__item" data-folder="alerts">
           <span class="mail__dot mail__dot--danger" aria-hidden="true"></span>
           <span class="ct-list__content"><span class="ct-list__title">ALERTS</span></span>
           <span class="ct-badge ct-badge--count">5</span>
-        </a>
-        <a class="ct-list__item" href="#">
+        </button>
+        <button type="button" class="ct-list__item" data-folder="deploys">
           <span class="mail__dot mail__dot--success" aria-hidden="true"></span>
           <span class="ct-list__content"><span class="ct-list__title">DEPLOYS</span></span>
           <span class="ct-badge ct-badge--count">8</span>
-        </a>
-        <a class="ct-list__item" href="#">
+        </button>
+        <button type="button" class="ct-list__item" data-folder="team">
           <span class="mail__dot mail__dot--info" aria-hidden="true"></span>
           <span class="ct-list__content"><span class="ct-list__title">TEAM</span></span>
           <span class="ct-badge ct-badge--count">14</span>
-        </a>
-        <a class="ct-list__item" href="#">
+        </button>
+        <button type="button" class="ct-list__item" data-folder="billing">
           <span class="mail__dot mail__dot--warning" aria-hidden="true"></span>
           <span class="ct-list__content"><span class="ct-list__title">BILLING</span></span>
           <span class="ct-badge ct-badge--count">2</span>
-        </a>
+        </button>
       </nav>
     </div>
   </section>
@@ -352,12 +385,12 @@
   <section class="mail__pane mail__list-pane" aria-label="메시지 목록">
     <div class="mail__toolbar">
       <label class="ct-checkbox" title="모두 선택">
-        <input class="ct-checkbox__box" type="checkbox" data-select-all aria-label="모두 선택">
-        <span class="ct-checkbox__label" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">모두 선택</span>
+        <input class="ct-checkbox__box" type="checkbox" data-select-all-mail aria-label="모두 선택">
+        <span class="ct-checkbox__label sr-only">모두 선택</span>
       </label>
       <div class="ct-searchbar">
         <span class="ct-searchbar__prompt" aria-hidden="true"></span>
-        <input class="ct-searchbar__input" placeholder="search mail" aria-label="메일 검색">
+        <input class="ct-searchbar__input" data-mail-search placeholder="search mail" aria-label="메일 검색">
       </div>
       <button class="ct-btn ct-btn--icon ct-btn--sm" data-toast="메일함을 새로고침했습니다" data-toast-title="REFRESH" data-toast-variant="info" aria-label="새로고침" title="새로고침">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.5 9a9 9 0 0 1 14.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0 0 20.5 15"/></svg>
@@ -368,7 +401,8 @@
       <div class="mail__list" role="list">
 
         <!-- 1 · selected + unread · CI failure -->
-        <article class="mail-row is-unread is-selected" role="listitem" aria-current="true">
+        <article class="mail-row is-unread is-selected" role="listitem" tabindex="0" aria-current="true"
+                 data-msg="m1" data-label="alerts" data-log="message :: build-4821.log">
           <input class="ct-checkbox__box mail-row__check" type="checkbox" data-row-check aria-label="선택: CI 실패">
           <span class="ct-avatar ct-avatar--sm"><span class="ct-avatar__initials">CI</span><span class="ct-avatar__status ct-avatar__status--busy"></span></span>
           <div class="mail-row__main">
@@ -387,7 +421,8 @@
         </article>
 
         <!-- 2 · unread · deploy -->
-        <article class="mail-row is-unread" role="listitem">
+        <article class="mail-row is-unread" role="listitem" tabindex="0"
+                 data-msg="m2" data-label="deploys" data-log="message :: deploy-v2.6.1.log">
           <input class="ct-checkbox__box mail-row__check" type="checkbox" data-row-check aria-label="선택: 배포 알림">
           <span class="ct-avatar ct-avatar--sm"><span class="ct-avatar__initials">DP</span><span class="ct-avatar__status ct-avatar__status--online"></span></span>
           <div class="mail-row__main">
@@ -406,7 +441,8 @@
         </article>
 
         <!-- 3 · PR review request -->
-        <article class="mail-row" role="listitem">
+        <article class="mail-row" role="listitem" tabindex="0"
+                 data-msg="m3" data-label="team" data-log="message :: pr-1284.log">
           <input class="ct-checkbox__box mail-row__check" type="checkbox" data-row-check aria-label="선택: PR 리뷰 요청">
           <span class="ct-avatar ct-avatar--sm"><span class="ct-avatar__initials">JH</span><span class="ct-avatar__status ct-avatar__status--online"></span></span>
           <div class="mail-row__main">
@@ -424,7 +460,8 @@
         </article>
 
         <!-- 4 · unread · on-call page -->
-        <article class="mail-row is-unread" role="listitem">
+        <article class="mail-row is-unread" role="listitem" tabindex="0"
+                 data-msg="m4" data-label="alerts" data-log="message :: pd-incident-3391.log">
           <input class="ct-checkbox__box mail-row__check" type="checkbox" data-row-check aria-label="선택: 온콜 호출">
           <span class="ct-avatar ct-avatar--sm"><span class="ct-avatar__initials">PD</span><span class="ct-avatar__status ct-avatar__status--busy"></span></span>
           <div class="mail-row__main">
@@ -443,7 +480,8 @@
         </article>
 
         <!-- 5 · billing -->
-        <article class="mail-row" role="listitem">
+        <article class="mail-row" role="listitem" tabindex="0"
+                 data-msg="m5" data-label="billing" data-log="message :: invoice-2026-06.log">
           <input class="ct-checkbox__box mail-row__check" type="checkbox" data-row-check aria-label="선택: 청구서">
           <span class="ct-avatar ct-avatar--sm"><span class="ct-avatar__initials">$</span><span class="ct-avatar__status ct-avatar__status--away"></span></span>
           <div class="mail-row__main">
@@ -461,7 +499,8 @@
         </article>
 
         <!-- 6 · team standup notes -->
-        <article class="mail-row" role="listitem">
+        <article class="mail-row" role="listitem" tabindex="0"
+                 data-msg="m6" data-label="team" data-log="message :: standup-0620.log">
           <input class="ct-checkbox__box mail-row__check" type="checkbox" data-row-check aria-label="선택: 스탠드업 노트">
           <span class="ct-avatar ct-avatar--sm"><span class="ct-avatar__initials">SY</span><span class="ct-avatar__status ct-avatar__status--away"></span></span>
           <div class="mail-row__main">
@@ -479,7 +518,8 @@
         </article>
 
         <!-- 7 · unread · security advisory -->
-        <article class="mail-row is-unread" role="listitem">
+        <article class="mail-row is-unread" role="listitem" tabindex="0"
+                 data-msg="m7" data-label="alerts" data-log="message :: cve-openssl.log">
           <input class="ct-checkbox__box mail-row__check" type="checkbox" data-row-check aria-label="선택: 보안 권고">
           <span class="ct-avatar ct-avatar--sm"><span class="ct-avatar__initials">SE</span><span class="ct-avatar__status ct-avatar__status--busy"></span></span>
           <div class="mail-row__main">
@@ -492,13 +532,14 @@
               <span class="ct-badge ct-badge--danger ct-badge--sm">HIGH</span>
               취약점 경보: openssl 1.1.1k → 3.0.13
             </div>
-            <div class="mail-row__snippet">CVE-2024-XXXX · 3개 저장소 영향 · 자동 PR 생성됨</div>
+            <div class="mail-row__snippet">CVE-2026-2841 · 3개 저장소 영향 · 자동 PR 생성됨</div>
           </div>
           <button class="mail-row__star" aria-label="별표" aria-pressed="false">☆</button>
         </article>
 
         <!-- 8 · cron job report -->
-        <article class="mail-row" role="listitem">
+        <article class="mail-row" role="listitem" tabindex="0"
+                 data-msg="m8" data-label="deploys" data-log="message :: backup-0619.log">
           <input class="ct-checkbox__box mail-row__check" type="checkbox" data-row-check aria-label="선택: 백업 리포트">
           <span class="ct-avatar ct-avatar--sm"><span class="ct-avatar__initials">CR</span><span class="ct-avatar__status ct-avatar__status--online"></span></span>
           <div class="mail-row__main">
@@ -516,7 +557,8 @@
         </article>
 
         <!-- 9 · welcome / onboarding -->
-        <article class="mail-row" role="listitem">
+        <article class="mail-row" role="listitem" tabindex="0"
+                 data-msg="m9" data-label="team" data-log="message :: welcome-minrae.log">
           <input class="ct-checkbox__box mail-row__check" type="checkbox" data-row-check aria-label="선택: 환영 메일">
           <span class="ct-avatar ct-avatar--sm"><span class="ct-avatar__initials">MR</span><span class="ct-avatar__status ct-avatar__status--offline"></span></span>
           <div class="mail-row__main">
@@ -534,6 +576,19 @@
         </article>
 
       </div>
+
+      <!-- 빈 폴더 / 검색 0건 empty state (장면 속 시연) -->
+      <div class="mail__empty" data-mail-empty role="status" hidden>
+        <div class="ct-empty ct-empty--search">
+          <div class="ct-empty__art ct-empty__art--glyph" aria-hidden="true">⊘</div>
+          <span class="ct-empty__code" data-empty-code>MBOX::EMPTY</span>
+          <p class="ct-empty__title" data-empty-title>폴더가 비어 있습니다</p>
+          <p class="ct-empty__desc" data-empty-desc>이 폴더에 표시할 메시지가 없습니다.</p>
+          <div class="ct-empty__action">
+            <button class="ct-btn ct-btn--secondary ct-btn--sm" data-empty-reset>받은편지함으로</button>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -541,79 +596,84 @@
        PANE 3 — READING PANE
        ============================================================ -->
   <section class="mail__pane mail__reader" aria-label="메시지 보기">
+    <div class="scene-glow" aria-hidden="true"></div>
     <div class="mail__reader-inner">
-      <div class="ct-card ct-card--glow">
+      <div class="ct-card ct-card--glow" data-reader-card>
         <div class="ct-card__chrome">
           <div class="ct-card__dots"><span class="ct-card__dot"></span><span class="ct-card__dot"></span><span class="ct-card__dot"></span></div>
-          <span class="ct-card__title">message :: build-4821.log</span>
+          <span class="ct-card__title" data-reader-chrome>message :: build-4821.log</span>
+          <span class="label" style="margin-left:auto">pane 1:2</span>
         </div>
 
-        <header class="reader__head">
-          <h1 class="reader__title">build #4821 실패 — auth-service test suite</h1>
-          <div class="reader__meta">
-            <span><b>FROM</b> ci-bot@pipeline.internal</span>
-            <span><b>TO</b> operator@cyber.term</span>
-            <span><b>LABEL</b> <span class="ct-badge ct-badge--danger ct-badge--sm">ALERTS</span></span>
-            <span><b>AT</b> 2026-06-21 09:42:07 KST</span>
+        <div class="reader__actions">
+          <button class="ct-btn ct-btn--secondary ct-btn--sm" aria-label="답장">↩ REPLY</button>
+          <button class="ct-btn ct-btn--ghost ct-btn--icon ct-btn--sm" aria-label="전달" title="전달">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 4l6 6-6 6"/><path d="M21 10H8a5 5 0 0 0-5 5v3"/></svg>
+          </button>
+          <button class="ct-btn ct-btn--ghost ct-btn--icon ct-btn--sm" data-toast="메시지를 보관함으로 이동했습니다" data-toast-title="ARCHIVED" data-toast-variant="success" aria-label="보관" title="보관">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="4"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg>
+          </button>
+          <button class="ct-btn ct-btn--ghost ct-btn--icon ct-btn--sm" aria-label="별표" title="별표" style="color:var(--color-warning)">★</button>
+          <button class="ct-btn ct-btn--ghost ct-btn--icon ct-btn--sm" data-toast="메시지를 휴지통으로 이동했습니다" data-toast-title="DELETED" data-toast-variant="danger" aria-label="삭제" title="삭제">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+          </button>
+          <div class="ct-dropdown" data-dropdown>
+            <button class="ct-btn ct-btn--ghost ct-btn--icon ct-btn--sm" data-dropdown-trigger aria-haspopup="menu" aria-expanded="false" aria-label="더보기">⋯</button>
+            <div class="ct-menu ct-menu--end" role="menu">
+              <button class="ct-menu__item" role="menuitem"><span class="ct-menu__text">읽지 않음으로 표시</span><span class="ct-menu__shortcut"><span class="ct-kbd">U</span></span></button>
+              <button class="ct-menu__item" role="menuitem"><span class="ct-menu__text">스누즈</span><span class="ct-menu__shortcut"><span class="ct-kbd">Z</span></span></button>
+              <button class="ct-menu__item" role="menuitem"><span class="ct-menu__text">라벨 적용…</span></button>
+              <div class="ct-menu__sep"></div>
+              <button class="ct-menu__item ct-menu__item--danger" role="menuitem"><span class="ct-menu__text">발신자 차단</span></button>
+            </div>
           </div>
-          <div class="reader__actions">
-            <button class="ct-btn ct-btn--secondary ct-btn--sm" aria-label="답장">↩ REPLY</button>
-            <button class="ct-btn ct-btn--ghost ct-btn--icon ct-btn--sm" aria-label="전달" title="전달">
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 4l6 6-6 6"/><path d="M21 10H8a5 5 0 0 0-5 5v3"/></svg>
-            </button>
-            <button class="ct-btn ct-btn--ghost ct-btn--icon ct-btn--sm" data-toast="메시지를 보관함으로 이동했습니다" data-toast-title="ARCHIVED" data-toast-variant="success" aria-label="보관" title="보관">
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="4"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg>
-            </button>
-            <button class="ct-btn ct-btn--ghost ct-btn--icon ct-btn--sm" aria-label="별표" title="별표" style="color:var(--color-warning)">★</button>
-            <button class="ct-btn ct-btn--ghost ct-btn--icon ct-btn--sm" data-toast="메시지를 휴지통으로 이동했습니다" data-toast-title="DELETED" data-toast-variant="danger" aria-label="삭제" title="삭제">
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
-            </button>
-            <div class="ct-dropdown" data-dropdown>
-              <button class="ct-btn ct-btn--ghost ct-btn--icon ct-btn--sm" data-dropdown-trigger aria-haspopup="menu" aria-expanded="false" aria-label="더보기">⋯</button>
-              <div class="ct-menu ct-menu--end" role="menu">
-                <button class="ct-menu__item" role="menuitem"><span class="ct-menu__text">읽지 않음으로 표시</span><span class="ct-menu__shortcut"><span class="ct-kbd">U</span></span></button>
-                <button class="ct-menu__item" role="menuitem"><span class="ct-menu__text">스누즈</span><span class="ct-menu__shortcut"><span class="ct-kbd">Z</span></span></button>
-                <button class="ct-menu__item" role="menuitem"><span class="ct-menu__text">라벨 적용…</span></button>
-                <div class="ct-menu__sep"></div>
-                <button class="ct-menu__item ct-menu__item--danger" role="menuitem"><span class="ct-menu__text">발신자 차단</span></button>
+        </div>
+
+        <div data-reader-slot>
+          <header class="reader__head">
+            <h1 class="reader__title">build #4821 실패 — auth-service test suite</h1>
+            <div class="reader__meta">
+              <span><b>FROM</b> ci-bot@pipeline.internal</span>
+              <span><b>TO</b> operator@cyber.term</span>
+              <span><b>LABEL</b> <span class="ct-badge ct-badge--danger ct-badge--sm">ALERTS</span></span>
+              <span><b>AT</b> 2026-06-21 09:42:07 KST</span>
+            </div>
+          </header>
+
+          <div class="reader__body">
+            <p><strong>파이프라인 빌드 #4821 이 실패했습니다.</strong> <code class="ct-code-inline">auth-service</code> 의 테스트 단계에서 2개 테스트가 깨졌습니다. 직전 커밋 <code class="ct-code-inline">a3f9c1d</code> (세션 토큰 만료 로직 변경) 이후 처음 발생한 회귀입니다.</p>
+
+            <p>실패 지점은 세션 만료 경계값 계산 — 만료까지 남은 시간이 0 이하일 때 <code class="ct-code-inline">refresh()</code> 가 호출되지 않고 그대로 통과합니다.</p>
+
+            <div class="ct-code">
+              <div class="ct-code__header">
+                <span class="ct-code__filename">tests/auth/test_session.py</span>
+                <span class="ct-code__lang">PYTEST</span>
+                <button class="ct-code__copy" data-copy aria-label="복사">COPY</button>
               </div>
-            </div>
-          </div>
-        </header>
-
-        <div class="reader__body">
-          <p><strong>파이프라인 빌드 #4821 이 실패했습니다.</strong> <code class="ct-code-inline">auth-service</code> 의 테스트 단계에서 2개 테스트가 깨졌습니다. 직전 커밋 <code class="ct-code-inline">a3f9c1d</code> (세션 토큰 만료 로직 변경) 이후 처음 발생한 회귀입니다.</p>
-
-          <p>실패 지점은 세션 만료 경계값 계산 — 만료까지 남은 시간이 0 이하일 때 <code class="ct-code-inline">refresh()</code> 가 호출되지 않고 그대로 통과합니다.</p>
-
-          <div class="ct-code">
-            <div class="ct-code__header">
-              <span class="ct-code__filename">tests/auth/test_session.py</span>
-              <span class="ct-code__lang">PYTEST</span>
-              <button class="ct-code__copy" data-copy aria-label="복사">COPY</button>
-            </div>
-            <pre class="ct-code__body"><code><span class="tok-com"># FAILED tests/auth/test_session.py::test_expired_token_refresh</span>
+              <pre class="ct-code__body"><code><span class="tok-com"># FAILED tests/auth/test_session.py::test_expired_token_refresh</span>
 <span class="tok-key">assert</span> session.<span class="tok-fn">is_expired</span>(<span class="tok-num">0</span>) <span class="tok-key">is</span> <span class="tok-num">True</span>
 <span class="tok-com">&gt;       E   assert False is True</span>
 <span class="tok-com"># FAILED tests/auth/test_session.py::test_grace_window</span>
 <span class="tok-key">assert</span> session.<span class="tok-fn">grace_left</span>() <span class="tok-punct">==</span> <span class="tok-num">30</span>  <span class="tok-com"># got -1</span></code></pre>
+            </div>
+
+            <div class="ct-inline-note ct-inline-note--danger">
+              <span class="ct-inline-note__icon" aria-hidden="true">✕</span>
+              <span class="ct-inline-note__text"><strong>경계 조건 버그.</strong> <code class="ct-code-inline">is_expired</code> 가 <code class="ct-code-inline">&gt;</code> 대신 <code class="ct-code-inline">&gt;=</code> 를 써야 합니다. 머지 전 핫픽스 필요.</span>
+            </div>
+
+            <p>로그 전문과 아티팩트는 CI 콘솔에서 확인할 수 있습니다. 재현 명령은 아래와 같습니다.</p>
+
+            <div class="reader__quote">
+              $ pytest tests/auth/test_session.py -k "expired or grace" -x<br>
+              $ git log --oneline a3f9c1d -1
+            </div>
+
+            <p>이 빌드는 <strong>main</strong> 브랜치로의 머지를 차단합니다. 수정 후 <code class="ct-code-inline">/retry</code> 로 재실행하거나, 담당자가 직접 핫픽스 PR 을 올려주세요.</p>
+
+            <p class="t-xs t-subtle">— ci-bot · pipeline runner v4 · ap-northeast-2</p>
           </div>
-
-          <div class="ct-inline-note ct-inline-note--danger">
-            <span class="ct-inline-note__icon" aria-hidden="true">✕</span>
-            <span class="ct-inline-note__text"><strong>경계 조건 버그.</strong> <code class="ct-code-inline">is_expired</code> 가 <code class="ct-code-inline">&gt;</code> 대신 <code class="ct-code-inline">&gt;=</code> 를 써야 합니다. 머지 전 핫픽스 필요.</span>
-          </div>
-
-          <p>로그 전문과 아티팩트는 CI 콘솔에서 확인할 수 있습니다. 재현 명령은 아래와 같습니다.</p>
-
-          <div class="reader__quote">
-            $ pytest tests/auth/test_session.py -k "expired or grace" -x<br>
-            $ git log --oneline a3f9c1d -1
-          </div>
-
-          <p>이 빌드는 <strong>main</strong> 브랜치로의 머지를 차단합니다. 수정 후 <code class="ct-code-inline">/retry</code> 로 재실행하거나, 담당자가 직접 핫픽스 PR 을 올려주세요.</p>
-
-          <p class="t-xs t-subtle">— ci-bot · pipeline runner v4 · ap-northeast-2</p>
         </div>
 
         <div class="reader__reply">
@@ -621,7 +681,10 @@
           <textarea id="quick-reply" class="ct-textarea" rows="2" placeholder="ci-bot@pipeline 에게 답장… (핫픽스 PR 링크 첨부)"></textarea>
           <div class="reader__reply-actions">
             <button class="ct-btn ct-btn--primary" data-toast="답장을 전송했습니다" data-toast-title="SENT" data-toast-variant="success">↩ SEND</button>
-            <button class="ct-btn ct-btn--ghost ct-btn--sm" aria-label="첨부">📎 첨부</button>
+            <button class="ct-btn ct-btn--ghost ct-btn--sm" aria-label="파일 첨부">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.4 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              첨부
+            </button>
             <span class="t-2xs t-subtle" style="margin-left:auto">⌘↵ 로 전송</span>
           </div>
         </div>
@@ -631,6 +694,209 @@
 
 </div>
 </main>
+
+<!-- 스크린리더용 상태 안내 (메시지 열람/필터 변경) -->
+<div class="sr-only" role="status" data-mail-status></div>
+
+<!-- tmux 스테이터스라인 — 하단 고정 세션 바 (장식 픽션) -->
+<div class="ct-statusline ct-statusline--fixed" aria-hidden="true">
+  <span class="ct-statusline__seg ct-statusline__seg--session">mail-07</span>
+  <span class="ct-statusline__seg"><span class="ct-statusline__key">mbox</span><span class="ct-statusline__val" data-sl-folder>INBOX</span></span>
+  <span class="ct-statusline__seg"><span class="ct-statusline__key">unread</span><span class="ct-statusline__val t-primary" data-sl-unread>12</span></span>
+  <span class="ct-statusline__seg hide-sm"><span class="ct-statusline__key">node</span><span class="ct-statusline__val">seoul-2</span></span>
+  <span class="ct-statusline__seg hide-sm"><span class="ct-statusline__key">last sync</span><span class="ct-statusline__val t-success">09:42:07</span></span>
+  <span class="ct-statusline__seg ct-statusline__seg--end"><span class="ct-statusline__val" data-clock>--:--:--</span><span class="ct-statusline__key">KST</span></span>
+</div>
+
+<!-- ============================================================
+     READER TEMPLATES — 메시지별 본문 (행 클릭 시 리더에 마운트)
+     ============================================================ -->
+<template data-msg-tpl="m2">
+  <header class="reader__head">
+    <h1 class="reader__title">prod release v2.6.1 rollout complete</h1>
+    <div class="reader__meta">
+      <span><b>FROM</b> deploy@argocd.internal</span>
+      <span><b>TO</b> operator@cyber.term</span>
+      <span><b>LABEL</b> <span class="ct-badge ct-badge--success ct-badge--sm">DEPLOYS</span></span>
+      <span><b>AT</b> 2026-06-21 09:31:42 KST</span>
+    </div>
+  </header>
+  <div class="reader__body">
+    <p><strong>prod 릴리스 v2.6.1 롤아웃이 완료됐습니다.</strong> 카나리 12% → 100% 승격까지 23초, 다운타임 0입니다.</p>
+    <div class="reader__quote">
+      sync ok :: api@2.6.1 · web@2.6.1 · worker@2.6.1<br>
+      replicas 5/5 healthy · p99 214ms (-9ms) · error rate 0.02%
+    </div>
+    <div class="ct-inline-note ct-inline-note--success">
+      <span class="ct-inline-note__icon" aria-hidden="true">✔</span>
+      <span class="ct-inline-note__text">헬스체크 전 항목 통과. 롤백 윈도는 24시간 유지됩니다 — <code class="ct-code-inline">/rollback v2.6.0</code></span>
+    </div>
+    <p class="t-xs t-subtle">— argocd · auto-sync wave 2 · ap-northeast-2</p>
+  </div>
+</template>
+
+<template data-msg-tpl="m3">
+  <header class="reader__head">
+    <h1 class="reader__title">리뷰 요청: #1284 rate-limiter 미들웨어 추가</h1>
+    <div class="reader__meta">
+      <span><b>FROM</b> 정하늘 &lt;haneul@cyber.term&gt;</span>
+      <span><b>TO</b> operator@cyber.term</span>
+      <span><b>LABEL</b> <span class="ct-badge ct-badge--info ct-badge--sm">TEAM</span></span>
+      <span><b>AT</b> 2026-06-21 08:57:19 KST</span>
+    </div>
+  </header>
+  <div class="reader__body">
+    <p>안녕하세요, <strong>PR #1284</strong> 리뷰 부탁드립니다. gateway 전단에 토큰 버킷 방식 rate-limiter 를 붙였습니다.</p>
+    <ul>
+      <li>버킷 용량 120 req / 분당 리필 60 — 프로덕션 p99 트래픽 기준으로 산정했습니다</li>
+      <li>버킷 상태는 Redis 에 보관, 키 TTL 은 마지막 접근 +10분</li>
+      <li>초과 시 <code class="ct-code-inline">429</code> + <code class="ct-code-inline">Retry-After</code> 헤더 반환</li>
+    </ul>
+    <p>특히 <strong>Redis 키 만료와 리필 타이밍이 겹치는 경계</strong>가 걱정돼서, 그 부분 로직만 한번 봐주시면 감사하겠습니다.</p>
+    <div class="reader__quote">
+      $ git fetch origin pull/1284/head &amp;&amp; git checkout FETCH_HEAD<br>
+      $ pytest tests/middleware/test_ratelimit.py -v
+    </div>
+    <p class="t-xs t-subtle">— 정하늘 · 플랫폼팀</p>
+  </div>
+</template>
+
+<template data-msg-tpl="m4">
+  <header class="reader__head">
+    <h1 class="reader__title">[TRIGGERED] api-gateway p99 latency &gt; 800ms</h1>
+    <div class="reader__meta">
+      <span><b>FROM</b> pagerduty &lt;noreply@pagerduty.com&gt;</span>
+      <span><b>TO</b> operator@cyber.term</span>
+      <span><b>LABEL</b> <span class="ct-badge ct-badge--danger ct-badge--sm">ALERTS</span></span>
+      <span><b>AT</b> 2026-06-21 08:40:03 KST</span>
+    </div>
+  </header>
+  <div class="reader__body">
+    <p><strong>P2 인시던트 #3391 이 트리거됐습니다.</strong> ap-northeast-2 리전 api-gateway 의 p99 지연이 임계값 800ms 를 5분간 초과했습니다.</p>
+    <div class="reader__quote">
+      08:35 p99 812ms · 08:36 847ms · 08:37 901ms · 08:38 883ms · 08:39 861ms<br>
+      upstream :: auth-service conn pool 91% · retry storm 감지
+    </div>
+    <div class="ct-inline-note ct-inline-note--warning">
+      <span class="ct-inline-note__icon" aria-hidden="true">▲</span>
+      <span class="ct-inline-note__text">에스컬레이션까지 <strong>12분</strong> 남았습니다. 확인 후 <code class="ct-code-inline">/ack 3391</code> 로 접수해 주세요.</span>
+    </div>
+    <p>추정 원인: 08:30 배포된 auth-service 커넥션 풀 축소(64→32). 런북 <code class="ct-code-inline">RB-114 게이트웨이 지연</code> 을 참고하세요.</p>
+    <p class="t-xs t-subtle">— pagerduty · escalation policy: platform-oncall</p>
+  </div>
+</template>
+
+<template data-msg-tpl="m5">
+  <header class="reader__head">
+    <h1 class="reader__title">6월 사용량 청구서 — ₩1,284,500</h1>
+    <div class="reader__meta">
+      <span><b>FROM</b> billing@cloudhost.kr</span>
+      <span><b>TO</b> operator@cyber.term</span>
+      <span><b>LABEL</b> <span class="ct-badge ct-badge--warning ct-badge--sm">BILLING</span></span>
+      <span><b>AT</b> 2026-06-20 18:00:00 KST</span>
+    </div>
+  </header>
+  <div class="reader__body">
+    <p><strong>2026년 6월 청구서가 발행됐습니다.</strong> 결제 예정일은 7월 5일, 등록된 법인카드로 자동 결제됩니다.</p>
+    <div class="reader__quote">
+      컴퓨트 (GPU 포함)   ₩842,300<br>
+      스토리지 / 스냅샷   ₩221,400<br>
+      트래픽 (egress)     ₩220,800<br>
+      ─────────────────────────<br>
+      합계               ₩1,284,500 · 전월 ₩1,146,900 대비 +12.0%
+    </div>
+    <p>증가분 대부분은 6/12~6/19 구간의 <strong>카나리 배포용 GPU 노드 2대</strong>입니다. 프리뷰 환경 TTL 자동만료(TASK-207)가 적용되면 다음 달 청구액은 감소할 전망입니다.</p>
+    <p class="t-xs t-subtle">— cloudhost 빌링 · 세금계산서는 익월 초 발행</p>
+  </div>
+</template>
+
+<template data-msg-tpl="m6">
+  <header class="reader__head">
+    <h1 class="reader__title">데일리 스탠드업 요약 06/20 — 스프린트 34</h1>
+    <div class="reader__meta">
+      <span><b>FROM</b> 서연우 &lt;yeonwoo@cyber.term&gt;</span>
+      <span><b>TO</b> platform-all@cyber.term</span>
+      <span><b>LABEL</b> <span class="ct-badge ct-badge--info ct-badge--sm">TEAM</span></span>
+      <span><b>AT</b> 2026-06-20 10:12:44 KST</span>
+    </div>
+  </header>
+  <div class="reader__body">
+    <p>어제 스탠드업 요약 공유드립니다. 스프린트 34(neon-42) 진행률 <strong>34/42 SP</strong> 입니다.</p>
+    <ul>
+      <li><strong>블로커 2건</strong> — TASK-188 (WS 재연결 백오프, 부하테스트 환경 대기), TASK-181 (커서 페이지네이션, 정렬키 스키마 결정 대기)</li>
+      <li>인증 마이그레이션: 세션 토큰 만료 로직 변경 머지 → CI 회귀 발생(빌드 #4821), 핫픽스 진행 중</li>
+      <li>카이: 시크릿 로테이션 배포 완료, 프리뷰 TTL 작업 착수</li>
+    </ul>
+    <p>오늘 <strong>16:00 회고</strong>는 3층 워룸에서 합니다. 마감 D-5, 리뷰 칼럼 적체부터 풉시다.</p>
+    <p class="t-xs t-subtle">— 서연우 · 스크럼 마스터</p>
+  </div>
+</template>
+
+<template data-msg-tpl="m7">
+  <header class="reader__head">
+    <h1 class="reader__title">취약점 경보: openssl 1.1.1k → 3.0.13</h1>
+    <div class="reader__meta">
+      <span><b>FROM</b> security@dependabot</span>
+      <span><b>TO</b> operator@cyber.term</span>
+      <span><b>LABEL</b> <span class="ct-badge ct-badge--danger ct-badge--sm">ALERTS</span></span>
+      <span><b>AT</b> 2026-06-20 14:26:51 KST</span>
+    </div>
+  </header>
+  <div class="reader__body">
+    <p><strong>HIGH 등급 취약점 CVE-2026-2841</strong> 이 openssl 1.1.1k 에서 보고됐습니다. 세션 재협상 과정의 메모리 노출 가능성입니다.</p>
+    <div class="reader__quote">
+      영향 저장소 3 :: auth-service · api-gateway · batch-worker<br>
+      권고 버전 :: openssl 3.0.13 (LTS)
+    </div>
+    <p>베이스 이미지를 갱신하는 <strong>자동 PR #1290</strong> 이 생성됐습니다. auth-service 는 현재 빌드 차단 상태(#4821)이므로 핫픽스 머지 후 함께 배포하는 것을 권장합니다.</p>
+    <p class="t-xs t-subtle">— dependabot · 정책: security-patch auto-PR</p>
+  </div>
+</template>
+
+<template data-msg-tpl="m8">
+  <header class="reader__head">
+    <h1 class="reader__title">야간 DB 스냅샷 완료 — postgres-primary</h1>
+    <div class="reader__meta">
+      <span><b>FROM</b> cron@backup.internal</span>
+      <span><b>TO</b> operator@cyber.term</span>
+      <span><b>LABEL</b> <span class="ct-badge ct-badge--success ct-badge--sm">DEPLOYS</span></span>
+      <span><b>AT</b> 2026-06-19 03:12:08 KST</span>
+    </div>
+  </header>
+  <div class="reader__body">
+    <p><strong>야간 스냅샷 작업이 정상 완료됐습니다.</strong></p>
+    <div class="reader__quote">
+      job :: nightly-snapshot @ 03:00 KST<br>
+      postgres-primary 42.8GB · 소요 11m 42s<br>
+      checksum OK · restore drill OK (샘플 테이블 3종)<br>
+      보관 :: S3 ap-northeast-2 · 보존 주기 30일
+    </div>
+    <p>다음 복구 리허설은 7월 첫째 주 정기 점검에 포함되어 있습니다.</p>
+    <p class="t-xs t-subtle">— cron · backup pipeline v2</p>
+  </div>
+</template>
+
+<template data-msg-tpl="m9">
+  <header class="reader__head">
+    <h1 class="reader__title">플랫폼팀 합류 인사 + VPN 접근 요청</h1>
+    <div class="reader__meta">
+      <span><b>FROM</b> 민래오 &lt;raeo@cyber.term&gt;</span>
+      <span><b>TO</b> operator@cyber.term</span>
+      <span><b>LABEL</b> <span class="ct-badge ct-badge--info ct-badge--sm">TEAM</span></span>
+      <span><b>AT</b> 2026-06-18 09:05:33 KST</span>
+    </div>
+  </header>
+  <div class="reader__body">
+    <p>안녕하세요! 이번 주부터 플랫폼팀에 합류한 <strong>민래오</strong>입니다. 잘 부탁드립니다.</p>
+    <p>온보딩 체크리스트를 진행 중인데 두 가지가 막혀 있습니다.</p>
+    <ul>
+      <li><strong>VPN 프로필</strong> — seoul-2 스테이징 접근 권한 요청드립니다 (기기 등록은 완료)</li>
+      <li>인프라 온보딩 문서 링크 — 위키 주소가 이전 조직 걸로 걸려 있는 것 같아요</li>
+    </ul>
+    <p>편하실 때 답장 주시면 바로 셋업 이어가겠습니다. 감사합니다!</p>
+    <p class="t-xs t-subtle">— 민래오 · 플랫폼팀 (신규)</p>
+  </div>
+</template>
 
 <!-- ============================================================
      COMPOSE DRAWER (right)
@@ -667,6 +933,194 @@
   </div>
 </div>
 
+<!-- ============================== COMMAND PALETTE ============================== -->
+<div class="ct-cmdk" data-cmdk role="dialog" aria-modal="true" aria-label="명령 팔레트" hidden>
+  <div class="ct-cmdk__overlay"></div>
+  <div class="ct-cmdk__panel">
+    <div class="ct-cmdk__input-row">
+      <span class="ct-cmdk__prompt" aria-hidden="true"></span>
+      <input class="ct-cmdk__input" placeholder="명령 또는 페이지 검색…" aria-label="명령 입력">
+      <span class="ct-cmdk__hint"><span class="ct-kbd">ESC</span></span>
+    </div>
+    <div class="ct-cmdk__list" role="listbox">
+      <div class="ct-cmdk__group">
+        <div class="ct-cmdk__group-label">페이지</div>
+        <button class="ct-cmdk__item is-active" role="option" aria-selected="true" data-cmdk-item data-href="dashboard.html" data-keywords="dashboard analytics hud"><span class="ct-cmdk__icon">▤</span><span class="ct-cmdk__label">분석 대시보드</span></button>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-href="kanban.html" data-keywords="kanban board tasks"><span class="ct-cmdk__icon">▦</span><span class="ct-cmdk__label">칸반 보드</span></button>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-href="product.html" data-keywords="product store shop uplink"><span class="ct-cmdk__icon">◈</span><span class="ct-cmdk__label">상품 상세</span></button>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-href="pricing.html" data-keywords="pricing plans billing"><span class="ct-cmdk__icon">$</span><span class="ct-cmdk__label">가격</span></button>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-href="settings.html" data-keywords="settings config preferences"><span class="ct-cmdk__icon">⚙</span><span class="ct-cmdk__label">설정</span></button>
+      </div>
+      <div class="ct-cmdk__group">
+        <div class="ct-cmdk__group-label">작업</div>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-action="theme" data-keywords="theme dark light toggle"><span class="ct-cmdk__icon">◐</span><span class="ct-cmdk__label">테마 전환 (DARK/LIGHT)</span><span class="ct-cmdk__shortcut"><span class="ct-kbd">T</span></span></button>
+      </div>
+      <div class="ct-cmdk__empty" role="status" hidden>NO MATCHES :: 다른 키워드를 입력하세요</div>
+    </div>
+    <div class="ct-cmdk__footer">
+      <span class="ct-cmdk__footer-hint"><span class="ct-kbd">↑</span><span class="ct-kbd">↓</span> 이동</span>
+      <span class="ct-cmdk__footer-hint"><span class="ct-kbd">↵</span> 실행</span>
+      <span class="ct-cmdk__footer-hint"><span class="ct-kbd">ESC</span> 닫기</span>
+    </div>
+  </div>
+</div>
+
 <script src="../app.js"></script>
+<script>
+/* ============================================================
+   INBOX page behaviour — 폴더/라벨 필터 · 검색 · 행 열람(리더 스왑)
+   · 별표 토글 · 모두 선택. 전부 위임 바인딩, 인라인 핸들러 없음.
+   ============================================================ */
+(function () {
+  'use strict';
+  const $  = (s, c) => (c || document).querySelector(s);
+  const $$ = (s, c) => Array.from((c || document).querySelectorAll(s));
+
+  const rows      = $$('.mail-row');
+  const list      = $('.mail__list');
+  const slot      = $('[data-reader-slot]');
+  const card      = $('[data-reader-card]');
+  const chrome    = $('[data-reader-chrome]');
+  const srStatus  = $('[data-mail-status]');
+  const emptyBox  = $('[data-mail-empty]');
+  const emptyCode = $('[data-empty-code]');
+  const emptyTitle= $('[data-empty-title]');
+  const emptyDesc = $('[data-empty-desc]');
+  const search    = $('[data-mail-search]');
+  const unreadBadge = $('[data-unread-badge]');
+  const starBadge   = $('[data-star-badge]');
+  const slFolder  = $('[data-sl-folder]');
+  const slUnread  = $('[data-sl-unread]');
+
+  /* 초기 리더 내용 = m1 (템플릿과 중복 없이 프래그먼트로 캐시) */
+  const m1 = document.createDocumentFragment();
+  Array.from(slot.childNodes).forEach(n => m1.appendChild(n.cloneNode(true)));
+  const tpl = { m1 };
+  $$('template[data-msg-tpl]').forEach(t => { tpl[t.dataset.msgTpl] = t.content; });
+
+  let folder = 'inbox';
+  const EMPTY_TEXT = {
+    sent:    ['MBOX::EMPTY', '보낸 메일이 없습니다', '이 세션에서 발신한 메시지가 아직 없습니다. COMPOSE 로 첫 메시지를 전송해 보세요.'],
+    archive: ['MBOX::EMPTY', '보관함이 비어 있습니다', '보관 처리한 메시지가 여기로 이동합니다.'],
+    trash:   ['MBOX::EMPTY', '휴지통이 비어 있습니다', '삭제된 메시지는 30일 뒤 영구 삭제됩니다.'],
+    query:   ['QUERY::0_MATCHES', '일치하는 메일이 없습니다', '다른 키워드로 다시 검색해 보세요.']
+  };
+
+  function matches(row) {
+    if (folder === 'sent' || folder === 'archive' || folder === 'trash') return false;
+    if (folder === 'starred' && !$('.mail-row__star', row).classList.contains('is-on')) return false;
+    if (['alerts', 'deploys', 'team', 'billing'].includes(folder) && row.dataset.label !== folder) return false;
+    const q = (search.value || '').trim().toLowerCase();
+    if (q && !row.textContent.toLowerCase().includes(q)) return false;
+    return true;
+  }
+
+  function refresh(announce) {
+    let shown = 0;
+    rows.forEach(r => { const ok = matches(r); r.hidden = !ok; if (ok) shown++; });
+    const q = (search.value || '').trim();
+    if (shown === 0) {
+      const key = EMPTY_TEXT[folder] ? folder : 'query';
+      const [code, title, desc] = EMPTY_TEXT[key] || EMPTY_TEXT.query;
+      emptyCode.textContent = code;
+      emptyTitle.textContent = title;
+      emptyDesc.textContent = q && !EMPTY_TEXT[folder] ? `'${q}' 에 대한 결과가 없습니다. ${desc}` : desc;
+      emptyBox.hidden = false;
+    } else {
+      emptyBox.hidden = true;
+    }
+    if (slFolder) slFolder.textContent = folder.toUpperCase();
+    if (announce) srStatus.textContent = `${folder.toUpperCase()} — 메시지 ${shown}건 표시`;
+  }
+
+  /* ---- 폴더/라벨 전환 ---- */
+  $$('[data-folder]').forEach(btn => btn.addEventListener('click', () => {
+    $$('[data-folder]').forEach(b => { b.classList.remove('is-active'); b.removeAttribute('aria-current'); });
+    btn.classList.add('is-active');
+    btn.setAttribute('aria-current', 'true');
+    folder = btn.dataset.folder;
+    search.value = '';
+    refresh(true);
+  }));
+  const resetBtn = $('[data-empty-reset]');
+  if (resetBtn) resetBtn.addEventListener('click', () => {
+    const inboxBtn = $('[data-folder="inbox"]');
+    if (inboxBtn) inboxBtn.click();
+  });
+
+  /* ---- 검색 필터 (0건 → QUERY::0_MATCHES) ---- */
+  search.addEventListener('input', () => refresh(false));
+
+  /* ---- 행 열람: 선택 + 읽음 처리 + 리더 스왑 (CRT 전원 인가) ---- */
+  function syncUnread() {
+    const n = Math.max(0, parseInt(unreadBadge.textContent, 10) || 0);
+    if (slUnread) slUnread.textContent = String(n);
+  }
+  function openRow(row) {
+    rows.forEach(r => { r.classList.remove('is-selected'); r.removeAttribute('aria-current'); });
+    row.classList.add('is-selected');
+    row.setAttribute('aria-current', 'true');
+    if (row.classList.contains('is-unread')) {
+      row.classList.remove('is-unread');
+      const n = parseInt(unreadBadge.textContent, 10) || 0;
+      unreadBadge.textContent = String(Math.max(0, n - 1));
+      unreadBadge.setAttribute('aria-label', `안 읽음 ${unreadBadge.textContent}`);
+      syncUnread();
+    }
+    const frag = tpl[row.dataset.msg];
+    if (frag) {
+      slot.replaceChildren(frag.cloneNode(true));
+      chrome.textContent = row.dataset.log || 'message';
+      /* 스왑된 노드는 리스너가 없으므로 코드블록 COPY 재배선 */
+      $$('[data-copy]', slot).forEach(btn => btn.addEventListener('click', async () => {
+        const pre = btn.closest('.ct-code');
+        const body = pre && pre.querySelector('.ct-code__body');
+        try { await navigator.clipboard.writeText(body ? body.innerText : ''); } catch (_) {}
+        if (window.CT) CT.toast({ msg: '클립보드에 복사했습니다', variant: 'success', timeout: 1800 });
+      }));
+      card.classList.remove('is-swap');
+      void card.offsetWidth;               /* 애니메이션 재시동 */
+      card.classList.add('is-swap');
+    }
+    const title = $('.mail-row__subject', row);
+    srStatus.textContent = `메시지 열림 — ${title ? title.textContent.trim() : ''}`;
+  }
+  list.addEventListener('click', (e) => {
+    if (e.target.closest('button, input, a, label')) return;   /* 내부 컨트롤은 통과 */
+    const row = e.target.closest('.mail-row');
+    if (row) openRow(row);
+  });
+  list.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    if (e.target.classList && e.target.classList.contains('mail-row')) {
+      e.preventDefault();
+      openRow(e.target);
+    }
+  });
+
+  /* ---- 별표 토글 (+ STARRED 배지 동기화) ---- */
+  list.addEventListener('click', (e) => {
+    const star = e.target.closest('.mail-row__star');
+    if (!star) return;
+    const onNow = !star.classList.contains('is-on');
+    star.classList.toggle('is-on', onNow);
+    star.textContent = onNow ? '★' : '☆';
+    star.setAttribute('aria-pressed', String(onNow));
+    star.setAttribute('aria-label', onNow ? '별표 해제' : '별표');
+    if (starBadge) {
+      starBadge.textContent = String($$('.mail-row__star.is-on').length);
+    }
+    if (folder === 'starred') refresh(false);
+  });
+
+  /* ---- 모두 선택 ---- */
+  const selectAll = $('[data-select-all-mail]');
+  if (selectAll) selectAll.addEventListener('change', () => {
+    rows.filter(r => !r.hidden).forEach(r => { $('[data-row-check]', r).checked = selectAll.checked; });
+  });
+
+  syncUnread();
+})();
+</script>
 </body>
 </html>

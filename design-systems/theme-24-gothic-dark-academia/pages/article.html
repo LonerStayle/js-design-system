@@ -1,9 +1,20 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
+<script>
+/* FOUC 방지 — 저장된 판본을 페인트 전에 적용 (다크 = 캐노니컬 기본) */
+(function () {
+  try {
+    var t = localStorage.getItem('theme-24-mode') || 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) { document.documentElement.setAttribute('data-theme', 'dark'); }
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Quiet Vice of the Marginalia · Folio 24</title>
+<title>방주(欄外註)라는 조용한 악덕 · Folio 24</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="../base.css">
 <link rel="stylesheet" href="../components/buttons.css">
 <link rel="stylesheet" href="../components/forms.css">
@@ -11,12 +22,10 @@
 <link rel="stylesheet" href="../components/feedback.css">
 <link rel="stylesheet" href="../components/navigation.css">
 <style>
-/* ── Reading-room top bar ─────────────────────────────────────── */
+/* ── 읽기 진행 괘선 ─────────────────────────────────────────────── */
 .reading-bar {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  top: 0; left: 0; right: 0;
   z-index: 200;
   height: 3px;
   background: transparent;
@@ -33,7 +42,7 @@
   .reading-bar__fill { transition: none; }
 }
 
-/* ── Article layout: two-column on wide screens ───────────────── */
+/* ── 아티클 레이아웃: 목차 / 본문 / 방주 ───────────────────────── */
 .article-layout {
   display: grid;
   grid-template-columns: 220px 1fr;
@@ -45,12 +54,12 @@
   padding: 0 var(--space-5) var(--space-12);
 }
 
-/* ── Table of Contents (sticky) ──────────────────────────────── */
+/* ── 목차 (고정) ────────────────────────────────────────────────── */
 .toc {
   grid-area: toc;
   position: sticky;
   top: calc(56px + var(--space-6));
-  max-height: calc(100vh - 100px);
+  max-height: calc(100dvh - 100px);
   overflow-y: auto;
   scrollbar-width: thin;
   padding: var(--space-4);
@@ -61,8 +70,7 @@
 .toc__heading {
   font-family: var(--font-display);
   font-size: var(--text-xs);
-  letter-spacing: var(--tracking-widest);
-  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps-ko);
   color: var(--color-text-subtle);
   margin-bottom: var(--space-3);
   padding-bottom: var(--space-2);
@@ -93,8 +101,7 @@
 .toc__item a:focus-visible {
   color: var(--color-accent);
   border-left-color: var(--color-accent);
-  background: var(--color-surface-raised);
-  outline: none;
+  background: var(--color-surface-2);
 }
 .toc__item--active a {
   color: var(--color-accent);
@@ -111,17 +118,42 @@
   border-top: 1px solid var(--color-border-subtle);
 }
 
-/* ── Article column ───────────────────────────────────────────── */
+/* 모바일 목차 — 900px 이하에서 디스클로저로 대체 (내비 수단 0 금지) */
+.toc-mobile {
+  display: none;
+  margin: 0 0 var(--space-6);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+.toc-mobile summary {
+  cursor: pointer;
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-caps-ko);
+  color: var(--color-accent);
+  list-style-position: inside;
+}
+.toc-mobile ol {
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-4);
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.toc-mobile a { color: var(--color-text-muted); font-size: var(--text-sm); }
+
+/* ── 본문 컬럼 ─────────────────────────────────────────────────── */
 .article-col {
   grid-area: article;
   max-width: 68ch;
+  min-width: 0;
 }
 
-/* ── Article header ───────────────────────────────────────────── */
-.article-header {
-  padding: var(--space-10) 0 var(--space-6);
-  border-bottom: none;
-}
+/* ── 아티클 헤더 ───────────────────────────────────────────────── */
+.article-header { padding: var(--space-10) 0 var(--space-6); }
 .article-header__hero {
   width: 100%;
   max-width: 68ch;
@@ -131,70 +163,44 @@
   margin-bottom: var(--space-8);
   position: relative;
 }
-.article-header__hero svg {
-  display: block;
-  width: 100%;
-  height: auto;
-}
+.article-header__hero svg { display: block; width: 100%; height: auto; }
 .article-title {
   font-family: var(--font-display);
-  font-size: clamp(2rem, 5vw, 3.4rem);
-  line-height: 1.12;
-  letter-spacing: var(--tracking-tight);
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  line-height: var(--leading-display-ko);
+  letter-spacing: var(--tracking-normal);
   color: var(--color-text-strong);
   margin-bottom: var(--space-4);
 }
 .article-deck {
-  font-family: var(--font-body);
+  font-family: var(--font-serif);
   font-size: var(--text-lg);
-  font-style: italic;
   color: var(--color-text-muted);
   line-height: var(--leading-relaxed);
   margin-bottom: var(--space-6);
   max-width: 56ch;
 }
-.byline {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-.byline__meta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
+.byline { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.byline__meta { display: flex; flex-direction: column; gap: 2px; }
 .byline__name {
   font-family: var(--font-display);
   font-size: var(--text-sm);
   color: var(--color-text-strong);
-  letter-spacing: var(--tracking-wide);
+  letter-spacing: var(--tracking-caps-ko);
 }
-.byline__affil {
-  font-size: var(--text-xs);
-  color: var(--color-text-subtle);
-  font-style: italic;
-}
-.byline__sep {
-  width: 1px;
-  height: 2rem;
-  background: var(--color-border-subtle);
-  margin: 0 var(--space-1);
-}
+.byline__affil { font-size: var(--text-xs); color: var(--color-text-subtle); }
+.byline__sep { width: 1px; height: 2rem; background: var(--color-border-subtle); margin: 0 var(--space-1); }
 .byline__date {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
   font-family: var(--font-display);
-  letter-spacing: var(--tracking-wide);
+  letter-spacing: var(--tracking-caps-ko);
 }
-.byline__time {
-  font-size: var(--text-xs);
-  color: var(--color-text-subtle);
-}
+.byline__time { font-size: var(--text-xs); color: var(--color-text-subtle); }
 
-/* ── Prose body ────────────────────────────────────────────────── */
+/* ── 본문 조판 ─────────────────────────────────────────────────── */
 .article-body {
-  font-family: var(--font-body);
+  font-family: var(--font-serif);
   font-size: clamp(1rem, 1.5vw, 1.125rem);
   line-height: var(--leading-relaxed);
   color: var(--color-text);
@@ -203,40 +209,34 @@
   font-family: var(--font-display);
   font-size: clamp(1.25rem, 2.5vw, 1.75rem);
   color: var(--color-text-strong);
-  letter-spacing: var(--tracking-wide);
+  letter-spacing: var(--tracking-caps-ko);
   margin-top: var(--space-10);
   margin-bottom: var(--space-4);
   scroll-margin-top: 72px;
 }
-.article-body p {
-  margin-bottom: var(--space-5);
-}
-.article-body p + p {
-  text-indent: 1.6em;
-  margin-top: 0;
-}
-.article-body p.no-indent {
-  text-indent: 0;
-}
+.article-body p { margin-bottom: var(--space-5); }
+.article-body p + p { text-indent: 1.6em; margin-top: 0; }
+.article-body p.no-indent { text-indent: 0; }
 
-/* Drop cap */
+/* 드롭캡 — 금박 머리글자 */
 .article-body .has-dropcap::first-letter {
   font-family: var(--font-display);
-  font-size: 4.6em;
+  font-size: 4.2em;
   float: left;
-  line-height: 0.78;
-  margin-right: 0.07em;
-  margin-top: 0.06em;
+  line-height: 0.85;
+  margin-right: 0.09em;
+  margin-top: 0.04em;
   color: var(--gold-400);
-  text-shadow: 1px 2px 6px rgba(166,132,60,0.55), 0 0 24px rgba(166,132,60,0.2);
+  text-shadow: 1px 2px 6px color-mix(in srgb, var(--gold-500) 55%, transparent),
+               0 0 24px color-mix(in srgb, var(--gold-500) 20%, transparent);
 }
 
-/* Pull-quotes */
+/* 풀쿼트 */
 .article-body blockquote {
   margin: var(--space-8) 0;
   padding: var(--space-5) var(--space-6);
   border-left: 3px solid var(--color-accent);
-  background: var(--color-surface-raised);
+  background: var(--color-surface-2);
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
   position: relative;
 }
@@ -254,7 +254,6 @@
 }
 .article-body blockquote p {
   font-size: var(--text-lg);
-  font-style: italic;
   color: var(--color-text-strong);
   margin-bottom: var(--space-2);
   text-indent: 0 !important;
@@ -262,24 +261,18 @@
   position: relative;
   z-index: 1;
 }
-.article-body blockquote p + p {
-  text-indent: 0 !important;
-}
 .article-body blockquote cite {
   display: block;
   font-size: var(--text-sm);
   color: var(--color-text-subtle);
   font-style: normal;
-  letter-spacing: var(--tracking-wide);
+  letter-spacing: var(--tracking-caps-ko);
   padding-left: var(--space-5);
   margin-top: var(--space-2);
 }
-.article-body blockquote cite::before {
-  content: "— ";
-  color: var(--color-accent);
-}
+.article-body blockquote cite::before { content: "— "; color: var(--color-accent); }
 
-/* Figure */
+/* 도판 */
 .article-body figure {
   margin: var(--space-8) 0;
   border: 1px solid var(--color-border-subtle);
@@ -287,40 +280,28 @@
   overflow: hidden;
   background: var(--color-surface);
 }
-.article-body figure svg {
-  display: block;
-  width: 100%;
-  height: auto;
-}
+.article-body figure svg { display: block; width: 100%; height: auto; }
 .article-body figcaption {
   padding: var(--space-3) var(--space-4);
   font-size: var(--text-xs);
   color: var(--color-text-subtle);
-  font-style: italic;
   border-top: 1px solid var(--color-border-subtle);
   text-align: center;
-  letter-spacing: var(--tracking-normal);
 }
 
-/* Marginalia ─────────────────────────────────────────────────── */
-.margin-note-wrap {
-  position: relative;
-}
-.margin-note {
-  display: inline;
-}
-.margin-note__marker {
+/* ── 본문 속 방주 표지 (gloss) — 넓은 화면에선 옆 컬럼이 보여준다 ── */
+.gloss { display: inline; }
+.gloss__marker {
   font-size: 0.7em;
   vertical-align: super;
   color: var(--color-accent);
   font-family: var(--font-display);
   cursor: default;
 }
-.margin-note__text {
-  display: none; /* shown via float on wide screens */
+.gloss__text {
+  display: none;
   font-size: var(--text-xs);
   color: var(--color-text-subtle);
-  font-style: italic;
   line-height: var(--leading-relaxed);
   border-left: 1px solid var(--color-border-subtle);
   padding-left: var(--space-2);
@@ -328,7 +309,7 @@
 
 @media (min-width: 1200px) {
   .article-layout {
-    grid-template-columns: 200px 1fr 200px;
+    grid-template-columns: 200px 1fr 210px;
     grid-template-areas: "toc article margin";
     max-width: 1340px;
   }
@@ -338,39 +319,35 @@
     top: calc(56px + var(--space-6));
     align-self: start;
   }
-  .margin-note__text {
-    display: block;
-  }
-  /* Inline margin markers still show; column provides text */
 }
-/* Fallback: mobile shows margin notes inline */
 @media (max-width: 900px) {
   .article-layout {
     grid-template-columns: 1fr;
     grid-template-areas: "article";
     padding: 0 var(--space-4) var(--space-10);
   }
-  .toc {
-    display: none;
-  }
-  .margin-col {
-    display: none;
-  }
-  .margin-note__text {
+  .toc { display: none; }
+  .toc-mobile { display: block; }
+  .margin-col { display: none; }
+}
+/* 방주 컬럼이 없는 모든 폭(≤1199px)에서는 gloss 를 본문 속 인라인 방주로 */
+@media (max-width: 1199px) {
+  .gloss__text {
     display: inline;
-    font-size: 0.75em;
+    font-size: 0.78em;
     color: var(--color-text-subtle);
-    font-style: italic;
-    vertical-align: middle;
+    border-left: 0;
+    padding-left: 0;
+    vertical-align: baseline;
   }
-  .margin-note__text::before { content: " ["; }
-  .margin-note__text::after  { content: "]"; }
+  .gloss__text::before { content: " ["; }
+  .gloss__text::after  { content: "]"; }
 }
 @media (min-width: 901px) and (max-width: 1199px) {
   .margin-col { display: none; }
 }
 
-/* Code / catalogue block */
+/* 서지 목록 블록 — 코드블록 어법의 분류 목록 */
 .catalogue-block {
   font-family: var(--font-mono);
   font-size: var(--text-sm);
@@ -382,14 +359,15 @@
   margin: var(--space-6) 0;
   line-height: 1.7;
   overflow-x: auto;
+  white-space: pre;
 }
-.catalogue-block .tok-kw  { color: var(--gold-400); }
-.catalogue-block .tok-str { color: #c8916a; }
-.catalogue-block .tok-num { color: #7fb77e; }
-.catalogue-block .tok-com { color: var(--color-text-subtle); font-style: italic; }
-.catalogue-block .tok-fn  { color: var(--gold-300); }
+.catalogue-block .tok-kw  { color: var(--code-keyword); }
+.catalogue-block .tok-str { color: var(--code-string); }
+.catalogue-block .tok-num { color: var(--code-number); }
+.catalogue-block .tok-com { color: var(--code-comment); }
+.catalogue-block .tok-fn  { color: var(--code-fg); }
 
-/* Footnotes */
+/* 각주 */
 .footnotes {
   margin-top: var(--space-12);
   padding-top: var(--space-6);
@@ -398,8 +376,7 @@
 .footnotes__heading {
   font-family: var(--font-display);
   font-size: var(--text-sm);
-  letter-spacing: var(--tracking-widest);
-  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps-ko);
   color: var(--color-text-subtle);
   margin-bottom: var(--space-4);
 }
@@ -408,6 +385,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  margin: 0;
 }
 .footnotes li {
   font-size: var(--text-xs);
@@ -427,23 +405,13 @@
   text-decoration: none;
   font-family: var(--font-display);
 }
-.fn-ref:hover, .fn-ref:focus-visible {
-  text-decoration: underline;
-}
+.fn-ref:hover, .fn-ref:focus-visible { text-decoration: underline; }
 
-/* Footer ─────────────────────────────────────────────────────── */
+/* ── 아티클 푸터 ───────────────────────────────────────────────── */
 .article-footer {
   max-width: 68ch;
   margin: var(--space-12) auto var(--space-6);
   padding: 0 var(--space-5);
-}
-.further-reading__heading {
-  font-family: var(--font-display);
-  font-size: var(--text-sm);
-  letter-spacing: var(--tracking-widest);
-  text-transform: uppercase;
-  color: var(--color-text-subtle);
-  margin-bottom: var(--space-4);
 }
 .further-reading__list {
   list-style: none;
@@ -453,13 +421,15 @@
   flex-direction: column;
   gap: var(--space-3);
 }
-.further-reading__list li a {
+.linklike {
+  display: inline;
+  padding: 0;
+  text-align: left;
+  font: inherit;
   color: var(--color-text);
-  text-decoration: none;
-  font-style: italic;
+  cursor: pointer;
 }
-.further-reading__list li a:hover,
-.further-reading__list li a:focus-visible {
+.linklike:hover, .linklike:focus-visible {
   color: var(--color-accent);
   text-decoration: underline;
 }
@@ -470,7 +440,7 @@
   margin-top: 2px;
 }
 
-/* Hero illuminated frame inner glow */
+/* 도판 액자 안쪽 금선 */
 .illuminated-hero {
   background: var(--color-surface);
   padding: var(--space-4);
@@ -486,120 +456,114 @@
   opacity: 0.3;
 }
 
-/* Margin column sticky notes */
-.margin-col {
-  padding-top: var(--space-6);
-}
+/* ── 방주 컬럼 — 사서의 손글씨 (–font-hand · –ink-annotation) ──── */
+.margin-col { padding-top: var(--space-6); }
 .margin-col__note {
-  font-size: var(--text-xs);
-  color: var(--color-text-subtle);
-  font-style: italic;
-  line-height: var(--leading-relaxed);
-  border-left: 1px solid var(--color-accent);
-  padding-left: var(--space-2);
+  font-family: var(--font-hand);
+  font-size: 1.05rem;
+  color: var(--ink-annotation);
+  line-height: 1.45;
+  rotate: -1.2deg;
+  border-left: var(--border-hair);
+  padding-left: var(--space-3);
   margin-bottom: var(--space-6);
-  opacity: 0.8;
 }
 .margin-col__note strong {
   display: block;
-  font-style: normal;
   font-family: var(--font-display);
+  font-style: normal;
+  font-weight: var(--weight-semibold);
   font-size: 0.65rem;
-  letter-spacing: var(--tracking-widest);
+  letter-spacing: var(--tracking-caps-ko);
   text-transform: uppercase;
   color: var(--color-accent);
   margin-bottom: 2px;
 }
 
-/* Section scroll-margin */
 [id] { scroll-margin-top: 72px; }
 </style>
 </head>
 <body>
 
-<a class="skip-link" href="#main">Skip to content</a>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
 
-<!-- Reading progress bar -->
-<div class="reading-bar" role="progressbar" aria-label="Reading progress" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" id="reading-bar">
+<!-- 읽기 진행 괘선 -->
+<div class="reading-bar" role="progressbar" aria-label="읽기 진행률" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" id="reading-bar">
   <div class="reading-bar__fill" id="reading-bar-fill"></div>
 </div>
 
-<!-- Top Navigation -->
-<nav class="navbar" aria-label="Primary">
+<!-- 상단 내비게이션 -->
+<nav class="navbar" aria-label="주요 내비게이션">
   <a class="navbar__brand" href="../index.html">
     <span class="mark" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 5a2 2 0 0 1 2-2h6v18H5a2 2 0 0 1-2-2zM21 5a2 2 0 0 0-2-2h-6v18h6a2 2 0 0 0 2-2z"/></svg></span>
     <span>Folio<span class="text-accent">·</span>24</span>
   </a>
   <div class="navbar__nav">
-    <a class="nav-link" href="dashboard.html">Dashboard</a>
-    <a class="nav-link" href="kanban.html">Board</a>
-    <a class="nav-link" href="inbox.html">Letters</a>
-    <a class="nav-link" href="article.html" aria-current="page">Reading Room</a>
+    <a class="nav-link" href="dashboard.html">대시보드</a>
+    <a class="nav-link" href="kanban.html">칸반</a>
+    <a class="nav-link" href="inbox.html">서신함</a>
+    <a class="nav-link is-active" href="article.html" aria-current="page">리딩 룸</a>
+    <a class="nav-link" href="pricing.html">멤버십</a>
   </div>
   <span class="navbar__spacer"></span>
   <div class="navbar__actions">
-    <button class="btn btn--ghost btn--sm" data-cmdk-open aria-label="Open command palette">
+    <button class="btn btn--ghost btn--sm" data-cmdk-open aria-label="명령 팔레트 열기">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
       <kbd>⌘K</kbd>
     </button>
     <button class="btn btn--secondary btn--sm" data-theme-toggle aria-pressed="false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-      <span data-theme-label>Parchment</span>
+      <span data-theme-label>양피지</span>
+    </button>
+    <button class="btn btn--icon btn--ghost nav-toggle" data-nav-toggle aria-label="내비게이션 열기" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
     </button>
   </div>
 </nav>
 
-<!-- Main content -->
+<!-- 본문 -->
 <main id="main">
 
-  <!-- Article Header (full-width, centered) -->
+  <!-- 아티클 헤더 -->
   <header class="article-header container--narrow" style="max-width:72ch; margin-inline:auto; padding:var(--space-10) var(--space-5) 0;">
 
-    <!-- Illuminated Hero SVG -->
+    <!-- 동판화 도판 — 서가와 촛불 (도판은 자체 잉크 지반을 갖는 인쇄물) -->
     <div class="article-header__hero illuminated-hero frame-corners reveal" data-delay="1">
-      <svg viewBox="0 0 800 320" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+      <svg viewBox="0 0 800 320" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" style="color:var(--gold-500);">
         <defs>
           <radialGradient id="hg1" cx="50%" cy="50%" r="60%">
-            <stop offset="0%" stop-color="#2a1f14"/>
-            <stop offset="100%" stop-color="#0d0a07"/>
+            <stop offset="0%" style="stop-color:var(--gold-900)"/>
+            <stop offset="100%" style="stop-color:var(--code-bar-bg)"/>
           </radialGradient>
           <filter id="glow1">
             <feGaussianBlur stdDeviation="2.5" result="blur"/>
             <feComposite in="SourceGraphic" in2="blur" operator="over"/>
           </filter>
         </defs>
-        <!-- Background -->
+        <!-- 지반 -->
         <rect width="800" height="320" fill="url(#hg1)"/>
-        <!-- Border double rule -->
-        <rect x="8" y="8" width="784" height="304" fill="none" stroke="#a8863c" stroke-width="0.8" rx="2"/>
-        <rect x="14" y="14" width="772" height="292" fill="none" stroke="#a8863c" stroke-width="0.3" rx="1"/>
-        <!-- Corner ornaments -->
-        <g stroke="#a8863c" stroke-width="1" fill="none" filter="url(#glow1)">
-          <!-- TL -->
+        <!-- 이중 괘선 액자 -->
+        <rect x="8" y="8" width="784" height="304" fill="none" stroke="currentColor" stroke-width="0.8" rx="2"/>
+        <rect x="14" y="14" width="772" height="292" fill="none" stroke="currentColor" stroke-width="0.3" rx="1"/>
+        <!-- 모서리 장식 -->
+        <g stroke="currentColor" stroke-width="1" fill="none" filter="url(#glow1)">
           <path d="M8 38 L8 8 L38 8"/>
-          <circle cx="8" cy="8" r="3" fill="#a8863c"/>
-          <!-- TR -->
+          <circle cx="8" cy="8" r="3" fill="currentColor"/>
           <path d="M762 8 L792 8 L792 38"/>
-          <circle cx="792" cy="8" r="3" fill="#a8863c"/>
-          <!-- BL -->
+          <circle cx="792" cy="8" r="3" fill="currentColor"/>
           <path d="M8 282 L8 312 L38 312"/>
-          <circle cx="8" cy="312" r="3" fill="#a8863c"/>
-          <!-- BR -->
+          <circle cx="8" cy="312" r="3" fill="currentColor"/>
           <path d="M762 312 L792 312 L792 282"/>
-          <circle cx="792" cy="312" r="3" fill="#a8863c"/>
+          <circle cx="792" cy="312" r="3" fill="currentColor"/>
         </g>
-        <!-- Central bookshelf engraving -->
-        <!-- Arch -->
-        <path d="M300 260 L300 120 Q300 60 400 60 Q500 60 500 120 L500 260 Z" fill="none" stroke="#a8863c" stroke-width="0.9"/>
-        <!-- Floor -->
-        <line x1="240" y1="260" x2="560" y2="260" stroke="#a8863c" stroke-width="0.7"/>
-        <!-- Shelves -->
-        <line x1="310" y1="200" x2="490" y2="200" stroke="#a8863c" stroke-width="0.5"/>
-        <line x1="310" y1="160" x2="490" y2="160" stroke="#a8863c" stroke-width="0.5"/>
-        <line x1="310" y1="120" x2="490" y2="120" stroke="#a8863c" stroke-width="0.5"/>
-        <!-- Books on shelves -->
-        <g fill="none" stroke="#a8863c" stroke-width="0.6">
-          <!-- Shelf 3 books (bottom) -->
+        <!-- 아치 서가 -->
+        <path d="M300 260 L300 120 Q300 60 400 60 Q500 60 500 120 L500 260 Z" fill="none" stroke="currentColor" stroke-width="0.9"/>
+        <line x1="240" y1="260" x2="560" y2="260" stroke="currentColor" stroke-width="0.7"/>
+        <line x1="310" y1="200" x2="490" y2="200" stroke="currentColor" stroke-width="0.5"/>
+        <line x1="310" y1="160" x2="490" y2="160" stroke="currentColor" stroke-width="0.5"/>
+        <line x1="310" y1="120" x2="490" y2="120" stroke="currentColor" stroke-width="0.5"/>
+        <!-- 서가의 책들 -->
+        <g fill="none" stroke="currentColor" stroke-width="0.6">
           <rect x="318" y="205" width="9" height="54" rx="1"/>
           <rect x="329" y="208" width="12" height="51" rx="1"/>
           <rect x="343" y="203" width="8" height="56" rx="1"/>
@@ -614,7 +578,6 @@
           <rect x="444" y="204" width="11" height="55" rx="1"/>
           <rect x="457" y="208" width="9" height="51" rx="1"/>
           <rect x="468" y="205" width="12" height="54" rx="1"/>
-          <!-- Shelf 2 -->
           <rect x="320" y="165" width="8" height="34" rx="1"/>
           <rect x="330" y="168" width="11" height="31" rx="1"/>
           <rect x="343" y="164" width="9" height="35" rx="1"/>
@@ -629,7 +592,6 @@
           <rect x="447" y="164" width="8" height="35" rx="1"/>
           <rect x="457" y="167" width="10" height="32" rx="1"/>
           <rect x="469" y="163" width="9" height="36" rx="1"/>
-          <!-- Shelf 1 -->
           <rect x="325" y="126" width="7" height="33" rx="1"/>
           <rect x="334" y="129" width="10" height="30" rx="1"/>
           <rect x="346" y="125" width="8" height="34" rx="1"/>
@@ -644,132 +606,137 @@
           <rect x="448" y="128" width="8" height="31" rx="1"/>
           <rect x="458" y="126" width="9" height="33" rx="1"/>
         </g>
-        <!-- Candle left -->
-        <g stroke="#a8863c" fill="none">
+        <!-- 왼쪽 촛불 -->
+        <g stroke="currentColor" fill="none">
           <rect x="240" y="235" width="12" height="25" rx="1" stroke-width="0.8"/>
           <line x1="246" y1="235" x2="246" y2="229" stroke-width="0.6"/>
-          <ellipse cx="246" cy="225" rx="4" ry="7" fill="#a8863c33" stroke="#ffd700" stroke-width="0.5"/>
-          <line x1="246" y1="218" x2="244" y2="212" stroke="#ffd700" stroke-width="0.4" opacity="0.6"/>
+          <ellipse cx="246" cy="225" rx="4" ry="7" style="fill:color-mix(in srgb, var(--gold-500) 20%, transparent); stroke:var(--ember-300)" stroke-width="0.5"/>
+          <line x1="246" y1="218" x2="244" y2="212" style="stroke:var(--ember-300)" stroke-width="0.4" opacity="0.6"/>
         </g>
-        <!-- Candle right -->
-        <g stroke="#a8863c" fill="none">
+        <!-- 오른쪽 촛불 -->
+        <g stroke="currentColor" fill="none">
           <rect x="548" y="235" width="12" height="25" rx="1" stroke-width="0.8"/>
           <line x1="554" y1="235" x2="554" y2="229" stroke-width="0.6"/>
-          <ellipse cx="554" cy="225" rx="4" ry="7" fill="#a8863c33" stroke="#ffd700" stroke-width="0.5"/>
-          <line x1="554" y1="218" x2="552" y2="212" stroke="#ffd700" stroke-width="0.4" opacity="0.6"/>
+          <ellipse cx="554" cy="225" rx="4" ry="7" style="fill:color-mix(in srgb, var(--gold-500) 20%, transparent); stroke:var(--ember-300)" stroke-width="0.5"/>
+          <line x1="554" y1="218" x2="552" y2="212" style="stroke:var(--ember-300)" stroke-width="0.4" opacity="0.6"/>
         </g>
-        <!-- Side flourishes -->
-        <g stroke="#a8863c" stroke-width="0.5" fill="none" opacity="0.6">
+        <!-- 좌우 당초문 -->
+        <g stroke="currentColor" stroke-width="0.5" fill="none" opacity="0.6">
           <path d="M80 160 Q100 140 120 160 Q100 180 80 160 Z"/>
           <path d="M80 160 L60 160"/>
           <path d="M120 160 L140 160"/>
-          <circle cx="58" cy="160" r="2" fill="#a8863c"/>
-          <circle cx="142" cy="160" r="2" fill="#a8863c"/>
-          <!-- vertical vine -->
+          <circle cx="58" cy="160" r="2" fill="currentColor"/>
+          <circle cx="142" cy="160" r="2" fill="currentColor"/>
           <path d="M110 100 Q105 120 110 140 Q115 160 110 180 Q105 200 110 220" stroke-width="0.4"/>
-          <!-- mirror -->
           <path d="M720 160 Q700 140 680 160 Q700 180 720 160 Z"/>
           <path d="M720 160 L740 160"/>
           <path d="M680 160 L660 160"/>
-          <circle cx="742" cy="160" r="2" fill="#a8863c"/>
-          <circle cx="658" cy="160" r="2" fill="#a8863c"/>
+          <circle cx="742" cy="160" r="2" fill="currentColor"/>
+          <circle cx="658" cy="160" r="2" fill="currentColor"/>
           <path d="M690 100 Q695 120 690 140 Q685 160 690 180 Q695 200 690 220" stroke-width="0.4"/>
         </g>
-        <!-- Text label at bottom -->
-        <text x="400" y="290" text-anchor="middle" font-family="serif" font-size="9" fill="#a8863c" letter-spacing="3" opacity="0.7">BIBLIOTHECA · OBSCURA · MDCCCLXXXVII</text>
+        <!-- 동판 각인 (라틴 장식) -->
+        <text x="400" y="290" text-anchor="middle" font-family="serif" font-size="9" fill="currentColor" letter-spacing="3" opacity="0.7">BIBLIOTHECA · OBSCURA · MDCCCLXXXVII</text>
       </svg>
     </div>
 
-    <p class="eyebrow reveal" data-delay="2">Essay &middot; On Bibliophilia</p>
+    <p class="eyebrow reveal" data-delay="2">수필 · 애서(愛書)에 관하여</p>
 
-    <h1 class="article-title reveal" data-delay="3">The Quiet Vice of the Marginalia</h1>
+    <h1 class="article-title reveal" data-delay="3">방주(欄外註)라는 조용한 악덕</h1>
 
     <p class="article-deck reveal" data-delay="4">
-      On the sacred heresy of writing in books — and what the annotations of the dead reveal about the living who made them.
+      책에 글씨를 남기는 신성한 이단에 관하여 — 그리고 죽은 이들의 주석이,
+      그것을 적은 산 사람에 관해 일러주는 것들.
     </p>
 
     <div class="byline reveal" data-delay="5">
-      <div class="avatar avatar--lg avatar--ring" aria-hidden="true" style="background:var(--color-surface-raised); font-family:var(--font-display); font-size:var(--text-lg); display:grid; place-items:center; color:var(--color-accent);">
-        EM
+      <div class="avatar avatar--lg avatar--ring" aria-hidden="true" style="background:var(--color-surface-2); font-family:var(--font-display); font-size:var(--text-lg); display:grid; place-items:center; color:var(--color-accent);">
+        서
       </div>
       <div class="byline__meta">
-        <span class="byline__name">Dr. Eleanor Margrave</span>
-        <span class="byline__affil">Fellow of Merton College, Oxford &middot; Chair of Antiquarian Studies</span>
+        <span class="byline__name">서혜원 박사</span>
+        <span class="byline__affil">장서각 고문헌연구실 수석연구원 · 서지학</span>
       </div>
       <div class="byline__sep" aria-hidden="true"></div>
       <div class="byline__meta">
-        <span class="byline__date">MDCCCXCIV &mdash; Michaelmas Term</span>
-        <span class="byline__time">Approximately 12 minutes to read</span>
+        <span class="byline__date">제24집 · 2026년 가을</span>
+        <span class="byline__time">읽는 시간 약 12분</span>
       </div>
     </div>
 
     <div class="ornate-rule mt-8 reveal" data-delay="6" aria-hidden="true"></div>
   </header>
 
-  <!-- Two-column layout: TOC + Article + Margin notes -->
+  <!-- 3단 조판: 목차 + 본문 + 방주 -->
   <div class="article-layout">
 
-    <!-- Table of Contents -->
-    <nav class="toc" aria-label="Table of contents">
-      <p class="toc__heading">Contents</p>
+    <!-- 목차 -->
+    <nav class="toc" aria-label="차례">
+      <p class="toc__heading">차례</p>
       <ol class="toc__list" role="list">
-        <li class="toc__item" id="toc-i"><a href="#on-the-nature">I. On the Nature of Marginalia</a></li>
-        <li class="toc__item" id="toc-ii"><a href="#the-annotators">II. The Annotators of History</a></li>
-        <li class="toc__item" id="toc-iii"><a href="#the-architecture">III. The Architecture of Forgotten Libraries</a></li>
-        <li class="toc__item" id="toc-iv"><a href="#the-catalogue">IV. A Catalogue of Annotations</a></li>
-        <li class="toc__item" id="toc-v"><a href="#the-heresy">V. The Beautiful Heresy</a></li>
-        <li class="toc__item" id="toc-vi"><a href="#in-conclusion">VI. In Conclusion</a></li>
+        <li class="toc__item"><a href="#on-the-nature">I. 방주의 본성에 관하여</a></li>
+        <li class="toc__item"><a href="#the-annotators">II. 역사 속의 주석가들</a></li>
+        <li class="toc__item"><a href="#the-architecture">III. 잊힌 서고의 건축</a></li>
+        <li class="toc__item"><a href="#the-catalogue">IV. 주석의 분류 목록</a></li>
+        <li class="toc__item"><a href="#the-heresy">V. 아름다운 이단</a></li>
+        <li class="toc__item"><a href="#in-conclusion">VI. 맺으며</a></li>
       </ol>
       <p class="toc__ornament" aria-hidden="true">&#10022; &nbsp; &#10022; &nbsp; &#10022;</p>
     </nav>
 
-    <!-- Article Body -->
-    <article class="article-col article-body" aria-label="Article body">
+    <!-- 본문 -->
+    <article class="article-col article-body" aria-label="본문">
+
+      <!-- 모바일 목차 (900px 이하) -->
+      <details class="toc-mobile">
+        <summary>차례</summary>
+        <ol>
+          <li><a href="#on-the-nature">I. 방주의 본성에 관하여</a></li>
+          <li><a href="#the-annotators">II. 역사 속의 주석가들</a></li>
+          <li><a href="#the-architecture">III. 잊힌 서고의 건축</a></li>
+          <li><a href="#the-catalogue">IV. 주석의 분류 목록</a></li>
+          <li><a href="#the-heresy">V. 아름다운 이단</a></li>
+          <li><a href="#in-conclusion">VI. 맺으며</a></li>
+        </ol>
+      </details>
 
       <section id="on-the-nature">
-        <h2>I. On the Nature of Marginalia</h2>
+        <h2>I. 방주의 본성에 관하여</h2>
 
-        <p class="has-dropcap no-indent">There is a particular quality of silence that settles over a reader who has just discovered, in the margin of a borrowed library book, evidence of a prior reader's passage — a pencilled exclamation, a corrective underline, a small and furious question mark beside a line of argument that had seemed, to you, perfectly reasonable. It is the silence of confrontation, of finding oneself suddenly in conversation with a ghost. The margin, that slender white corridor running beside the printed text, has always been the domain of the intimate and the unguarded. It is where thinkers think aloud, where scholars quarrel with the dead, where readers confess what they would never say in a lecture hall.
+        <p class="has-dropcap no-indent">도서관에서 빌린 책의 여백에서 앞서 다녀간 독자의 흔적을 — 연필로 눌러 쓴 감탄을, 교정의 밑줄을, 지극히 온당해 보이던 논증 곁에 붙은 작고 성난 물음표를 — 발견한 독자에게는 특별한 종류의 침묵이 내려앉습니다. 그것은 대면의 침묵이며, 유령과 갑자기 대화하게 된 자의 침묵입니다. 인쇄된 본문 곁을 따라 달리는 그 좁고 흰 회랑, 곧 여백은 언제나 내밀하고 무방비한 것들의 영토였습니다. 사상가는 거기서 소리 내어 생각하고, 학자는 거기서 죽은 이와 다투며, 독자는 강의실에서라면 결코 입 밖에 내지 않을 것을 거기에 고백합니다.</p>
 
-        <p>The word itself carries its etymology openly: <em>margo</em>, the Latin for edge or border. But there is nothing marginal about what is written there. In the great tradition of Western scholarship, the margin is often where the most vital conversation takes place — where Erasmus argued with Jerome, where Newton wrestled with Descartes, where Keats wrote the poems he could not yet write. The printed text may be the occasion, but the marginalia is the event.<a href="#fn1" id="fnref1" class="fn-ref" aria-label="Footnote 1">[1]</a></p>
+        <p>방주(欄外註)라는 말의 서양 이름은 제 유래를 숨기지 않습니다. 라틴어 <em lang="la">margo</em> — 가장자리, 경계라는 뜻입니다. 그러나 거기 적히는 것에 변두리다운 구석은 없습니다. 서양 학문의 큰 전통에서 가장 요긴한 대화는 종종 여백에서 벌어졌습니다. 에라스뮈스는 여백에서 히에로니무스와 논쟁했고, 뉴턴은 데카르트와 씨름했으며, 키츠는 아직 쓰지 못한 시를 거기에 먼저 적었습니다. 인쇄된 본문이 계기라면, 방주는 사건입니다.<a href="#fn1" id="fnref1" class="fn-ref" aria-label="각주 1">[1]</a></p>
 
-        <p>To write in a book is, of course, to commit a small sacrilege — or so the librarians have always maintained. The volumes behind their glass cases, the manuscripts in their temperature-controlled vaults, are to be approached with clean hands and a humbled eye. We are custodians, they remind us. The books do not belong to us. And yet the most treasured objects in any rare books library are precisely those volumes that have been most extensively violated by the attentions of their previous owners. The marginalia of <em>past readers</em> are what give an old book its soul.</p>
+        <p>책에 글씨를 쓰는 일이 작은 신성모독임은 물론입니다 — 적어도 사서들은 늘 그렇게 일러 왔습니다. 유리장 안의 장서와 항온 서고의 필사본 앞에서 우리는 깨끗한 손과 겸손한 눈으로 서야 합니다. 우리는 관리인일 뿐이며 책은 우리 것이 아니라고 말입니다. 그런데 어느 희귀본 서고에서든 가장 아껴지는 물건은, 정작 옛 주인들의 손길로 가장 성실하게 '훼손된' 바로 그 책들입니다. 옛 책에 혼을 불어넣는 것은 <em>앞서 읽은 이들</em>의 방주입니다.</p>
       </section>
 
       <div class="ornate-rule" aria-hidden="true"></div>
 
       <section id="the-annotators">
-        <h2>II. The Annotators of History</h2>
+        <h2>II. 역사 속의 주석가들</h2>
 
-        <p class="no-indent">Consider the case of Gabriel Harvey (MDXLV–MDCXXX), the Elizabethan scholar whose annotated copies of Livy, Guicciardini, and Machiavelli survive in the British Library.<a href="#fn2" id="fnref2" class="fn-ref" aria-label="Footnote 2">[2]</a> Harvey was, by all contemporary accounts, an insufferable man — pedantic, vain, and prone to inserting himself into literary quarrels that might have been better left alone. Edmund Spenser tolerated him. Thomas Nashe loathed him. But Harvey's marginalia are among the most extraordinary documents of English Renaissance thought, because in them we see a mind of formidable energy working directly upon the texts that shaped his age.</p>
+        <p class="no-indent">엘리자베스 시대의 학자 가브리엘 하비(1545–1630)의 경우를 보십시오. 리비우스와 구이치아르디니, 마키아벨리를 읽으며 남긴 그의 주석본들이 지금도 영국도서관에 전합니다.<a href="#fn2" id="fnref2" class="fn-ref" aria-label="각주 2">[2]</a> 동시대의 증언에 따르면 하비는 견디기 어려운 사람이었습니다 — 현학적이고 허영심이 많았으며, 내버려 두는 편이 나았을 문단의 싸움마다 끼어들었습니다. 스펜서는 그를 참아 주었고, 내시는 그를 미워했습니다. 그러나 하비의 방주는 영국 르네상스 사상사에서 가장 비상한 기록으로 꼽힙니다. 그 시대를 빚은 텍스트 위에서 무서운 정력으로 일하는 정신을, 우리는 거기서 직접 봅니다.</p>
 
-        <p>He wrote in multiple colours of ink, in several languages, returning to the same passages across decades. A note written in his youth becomes, in his middle age, the object of his own later correction, annotated anew. The margin becomes a palimpsest, a record of a mind in argument with itself across time. Reading Harvey's books is less like reading scholarship than like eavesdropping on a very long and occasionally heated internal monologue.</p>
+        <p>그는 여러 색의 잉크로, 여러 언어로 썼고, 수십 년에 걸쳐 같은 대목으로 되돌아왔습니다. 젊은 날의 메모가 중년에 이르러 스스로의 교정 대상이 되고, 그 위에 다시 주석이 붙습니다. 여백은 겹쳐 쓴 양피지가 되고, 시간을 가로질러 자기 자신과 논쟁하는 한 정신의 기록이 됩니다. 하비의 책을 읽는 일은 학술서를 읽는 일이라기보다, 아주 길고 이따금 격해지는 내면의 독백을 엿듣는 일에 가깝습니다.</p>
 
         <blockquote>
-          <p>A booke without annotations is like a countrie without inhabitants: rich in soile, but barren of culture — the land lies fallow, waiting for a mind to till it.</p>
-          <cite>Gabriel Harvey, written in the flyleaf of his copy of Livy's <em>Ab Urbe Condita</em>, c. MDLXX</cite>
+          <p>주석 없는 책은 주민 없는 나라와 같다. 땅은 기름지되 갈리지 않았으니, 밭은 그것을 갈아 줄 정신을 기다리며 묵고 있을 뿐이다.</p>
+          <cite>가브리엘 하비 — 리비우스 《로마사》 소장본 면지에 남긴 글, 1570년경</cite>
         </blockquote>
 
-        <p>Harvey's practice was not unusual for his time. The Renaissance scholar's relationship to the printed book was participatory in a way that modern readers, trained to respect the integrity of the text, find difficult to imagine. The <em>studia humanitatis</em> demanded active engagement; the book was an interlocutor, not an oracle. To read without annotating was, in some learned circles, considered a form of intellectual laziness, a passive receipt of knowledge rather than its active digestion and transformation.</p>
+        <p>조선의 서가에도 같은 기질의 사람들이 있었습니다. 스스로를 간서치(看書痴), 곧 '책만 보는 바보'라 부른 이덕무는 읽은 책마다 초록과 평어를 남겨, 그 메모들이 그대로 《청장관전서》의 뼈대가 되었습니다. 유희춘은 《미암일기》에 그날 읽은 책과 그 소회를 십 년 넘게 적었고, 다산은 유배지에서 제자들에게 초서(抄書) — 베껴 적으며 읽기 — 를 공부의 첫 법도로 가르쳤습니다. 읽기가 곧 쓰기였던 전통은, 동과 서가 다르지 않았던 셈입니다.</p>
 
-        <p>We find this practice across cultures and centuries. The Islamic tradition of <em>ta'liq</em> — the commentary appended to a text — produced entire libraries of marginalia that were eventually canonised into independent scholarly works. The Talmud itself is, in structural terms, an institutionalised marginal commentary on the Torah, the notes having grown to the point where they enfolded and finally displaced the original in cultural significance. Even the Homeric texts that survived antiquity came to us embedded in their scholiasts — the learned readers of Alexandria and Byzantium whose notes crowded the margins and eventually became inseparable from the works they annotated.</p>
+        <p>이런 관행은 그 시대에 드물지 않았습니다. 르네상스 학인이 인쇄본과 맺은 관계는, 텍스트의 순결을 존중하도록 훈련받은 현대의 독자로서는 상상하기 어려울 만큼 참여적이었습니다. 인문 공부는 능동적 개입을 요구했고, 책은 신탁이 아니라 대화 상대였습니다. 주석 없이 읽는 것은 일부 학인 사회에서 지적 태만으로 — 지식의 능동적 소화와 변환이 아닌 수동적 수령으로 — 여겨졌습니다.</p>
 
-        <!-- Figure: illuminated engraving of an annotated page -->
+        <!-- 도판: 주석 달린 낱장의 동판화 -->
         <figure>
-          <svg viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" style="background:#0d0a07;">
-            <defs>
-              <filter id="parchment-grain">
-                <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/>
-                <feColorMatrix type="saturate" values="0"/>
-                <feBlend in="SourceGraphic" mode="multiply"/>
-              </filter>
-            </defs>
-            <!-- Page background -->
-            <rect x="60" y="20" width="580" height="240" rx="2" fill="#141008" stroke="#a8863c" stroke-width="0.6"/>
-            <!-- Margin line -->
-            <line x1="160" y1="20" x2="160" y2="260" stroke="#a8863c" stroke-width="0.5" stroke-dasharray="2,4" opacity="0.4"/>
-            <!-- Text lines - main body -->
-            <g fill="#a8863c" opacity="0.22">
+          <svg viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" style="color:var(--gold-500); background:var(--code-bar-bg);">
+            <!-- 낱장 지면 -->
+            <rect x="60" y="20" width="580" height="240" rx="2" style="fill:var(--code-bg)" stroke="currentColor" stroke-width="0.6"/>
+            <!-- 판면 경계선 -->
+            <line x1="160" y1="20" x2="160" y2="260" stroke="currentColor" stroke-width="0.5" stroke-dasharray="2,4" opacity="0.4"/>
+            <!-- 본문 행 -->
+            <g fill="currentColor" opacity="0.22">
               <rect x="170" y="40" width="260" height="4" rx="1"/>
               <rect x="170" y="52" width="240" height="4" rx="1"/>
               <rect x="170" y="64" width="255" height="4" rx="1"/>
@@ -788,13 +755,13 @@
               <rect x="170" y="220" width="248" height="4" rx="1"/>
               <rect x="170" y="232" width="258" height="4" rx="1"/>
             </g>
-            <!-- Underlined passage -->
-            <rect x="170" y="100" width="258" height="4" rx="1" fill="#a8863c" opacity="0.5"/>
-            <line x1="170" y1="106" x2="428" y2="106" stroke="#a8863c" stroke-width="0.8" opacity="0.7"/>
-            <!-- Drop cap -->
-            <text x="172" y="68" font-family="serif" font-size="22" fill="#a8863c" opacity="0.8">T</text>
-            <!-- Margin notes (left) -->
-            <g font-family="serif" font-size="7" fill="#a8863c" opacity="0.7">
+            <!-- 밑줄 그은 대목 -->
+            <rect x="170" y="100" width="258" height="4" rx="1" fill="currentColor" opacity="0.5"/>
+            <line x1="170" y1="106" x2="428" y2="106" stroke="currentColor" stroke-width="0.8" opacity="0.7"/>
+            <!-- 머리글자 -->
+            <text x="172" y="68" font-family="serif" font-size="22" fill="currentColor" opacity="0.8">T</text>
+            <!-- 왼쪽 여백 주석 (라틴 — 하비의 필적) -->
+            <g font-family="serif" font-size="7" fill="currentColor" opacity="0.7">
               <text x="68" y="46" transform="rotate(-2,68,46)">Nota bene</text>
               <text x="68" y="98">Vide Harvey</text>
               <text x="68" y="108">p. ccxii</text>
@@ -803,23 +770,23 @@
               <text x="72" y="195" transform="rotate(-1,72,195)">!</text>
               <text x="68" y="220">Non verum!</text>
             </g>
-            <!-- Right margin notes -->
-            <g font-family="serif" font-size="7" fill="#a8863c" opacity="0.55">
+            <!-- 오른쪽 여백 주석 -->
+            <g font-family="serif" font-size="7" fill="currentColor" opacity="0.55">
               <text x="444" y="52" transform="rotate(1,444,52)">quaere</text>
-              <text x="446" y="138">✓ confirmed</text>
-              <text x="448" y="172">see also</text>
+              <text x="446" y="138">✓ confirmatum</text>
+              <text x="448" y="172">vide etiam</text>
               <text x="446" y="182">fol. 38r</text>
             </g>
-            <!-- Small hand pointer -->
-            <path d="M152 99 L160 103" stroke="#a8863c" stroke-width="1" opacity="0.6"/>
-            <text x="135" y="104" font-size="10" fill="#a8863c" opacity="0.6">☞</text>
-            <!-- Page number -->
-            <text x="395" y="252" font-family="serif" font-size="9" fill="#a8863c" opacity="0.4" text-anchor="middle">— clvii —</text>
-            <!-- Border ornament -->
-            <rect x="60" y="20" width="580" height="240" rx="2" fill="none" stroke="#a8863c" stroke-width="0.4" opacity="0.3"/>
+            <!-- 마니쿨라 -->
+            <path d="M152 99 L160 103" stroke="currentColor" stroke-width="1" opacity="0.6"/>
+            <text x="135" y="104" font-size="10" fill="currentColor" opacity="0.6">☞</text>
+            <!-- 쪽 번호 -->
+            <text x="395" y="252" font-family="serif" font-size="9" fill="currentColor" opacity="0.4" text-anchor="middle">— clvii —</text>
+            <rect x="60" y="20" width="580" height="240" rx="2" fill="none" stroke="currentColor" stroke-width="0.4" opacity="0.3"/>
           </svg>
           <figcaption>
-            A composite rendering of an annotated leaf from Gabriel Harvey's personal copy of Livy's <em>Ab Urbe Condita</em> (Venice, MDLX), showing three distinct hands across four decades of annotation. British Library, MS Sloane 4495.
+            가브리엘 하비의 리비우스 《로마사》(베네치아, 1560) 소장본 낱장의 재구성 도판.
+            사십 년에 걸친 세 벌의 필적이 겹쳐 있다. 영국도서관 소장.
           </figcaption>
         </figure>
       </section>
@@ -827,153 +794,155 @@
       <div class="ornate-rule" aria-hidden="true"></div>
 
       <section id="the-architecture">
-        <h2>III. The Architecture of Forgotten Libraries</h2>
+        <h2>III. 잊힌 서고의 건축</h2>
 
-        <p class="no-indent">It is a commonplace of library history that the great collections of the ancient world were destroyed: Alexandria burned, Pergamon dispersed, the libraries of Carthage salted with the city that contained them. We mourn these losses in the abstract, the way one mourns a relative one never knew — with genuine feeling but without specific grief. But the truth of what was lost is more subtle, and more terrible, than the simple subtraction of texts.<a href="#fn3" id="fnref3" class="fn-ref" aria-label="Footnote 3">[3]</a></p>
+        <p class="no-indent">고대의 큰 서고들이 파괴되었다는 것은 도서관사의 상식입니다. 알렉산드리아는 불탔고, 페르가몬은 흩어졌으며, 카르타고의 서고는 도시와 함께 소금에 묻혔습니다.<a href="#fn3" id="fnref3" class="fn-ref" aria-label="각주 3">[3]</a> 우리는 이 상실을 추상적으로 애도합니다 — 만나 본 적 없는 친척을 애도하듯, 진심이되 구체적인 슬픔은 없이 말입니다. 그러나 잃어버린 것의 실체는 텍스트의 단순한 뺄셈보다 미묘하고, 더 참혹합니다.</p>
 
-        <p>What was lost was not merely the books but the <em>reading</em> of the books — the accumulated understanding built across generations of scholars working on the same texts, the marginalia that recorded disputes now irrecoverable, the annotations that once guided interpretation and now are simply gone. Every destroyed library takes with it not only the works it housed but the entire conversational edifice erected around them.</p>
+        <p>잃은 것은 책이 아니라 책의 <em>읽기</em>였습니다 — 같은 텍스트를 두고 여러 세대의 학자가 쌓아 올린 이해, 이제는 복원할 길 없는 논쟁을 담고 있던 방주들, 한때 해석을 이끌었으나 이제는 그저 사라져 버린 주석들 말입니다.
+        <span class="gloss">
+          <span class="gloss__marker" aria-hidden="true">†</span>
+          <span class="gloss__text">1866년 강화도의 외규장각에서 실려 간 의궤 297책은 145년 만에 돌아왔습니다 — 여백의 먼지까지 그대로.</span>
+        </span>
+        서고 하나가 무너질 때마다 그 안의 장서만이 아니라, 그 둘레에 세워져 있던 대화의 건축 전체가 함께 무너집니다.</p>
 
-        <aside class="margin-note" aria-label="Marginalia note">
-          <span class="margin-note__marker" aria-hidden="true">†</span>
-          <span class="margin-note__text">The Library of Antioch, destroyed by the Emperor Jovian in CCCLXIII, is said to have contained the complete works of Aristotle in the original — including the lost second book of the <em>Poetics</em> on Comedy.</span>
-        </aside>
-
-        <p>The medieval monasteries understood something of this. The scriptoria of Cluny and Monte Cassino were not merely copying houses; they were engines of perpetuation. The monks who spent their days reproducing texts also spent their hours reading them, and the copies they produced were invariably annotated — the glosses interlinear, the commentary marginal, the correction continuous. The physical act of writing a text produced understanding of it that mere reading did not, and that understanding left its traces in the manuscript itself.</p>
-
-        <p>Umberto Eco, who knew his libraries, understood that a collection of books is always also a collection of absences. The gaps on a scholar's shelves tell as much as the volumes that fill them. A library reveals its owner's intellectual anxieties, the books deliberately not acquired, the subjects avoided, the rivals unread. And the marginalia within those volumes make this portrait still more intimate: here is not merely what was read but what was <em>thought</em> about what was read — the resistances, the agreements, the sudden illuminations that sent the reader back to a shelf already visited.</p>
+        <p>중세의 수도원들은 이것을 얼마간 이해하고 있었습니다. 클뤼니와 몬테카시노의 필사실은 단순한 복사소가 아니라 영속의 기관이었습니다. 온종일 텍스트를 베끼는 수도사들은 그 시간만큼 텍스트를 읽었고, 그들이 만든 사본에는 어김없이 주석이 붙었습니다 — 행간에는 풀이가, 여백에는 논평이, 본문에는 끊임없는 교정이. 조선의 교서관과 규장각 각신들이 남긴 교감기(校勘記)도 같은 이치의 산물입니다. 텍스트를 손으로 쓰는 노동은 눈으로만 읽는 것이 주지 못하는 이해를 낳고, 그 이해는 필사본 자체에 흔적을 남깁니다.</p>
 
         <blockquote>
-          <p>The library is not a place where books are stored. It is a place where books are <em>remembered</em> — by the institution, yes, but also and more vitally by the readers who return to them, generation upon generation, each leaving some ghost of their passage in the margins.</p>
-          <cite>Dr. Miriam Solloway, <em>The Memory Palace: Libraries and the Architecture of Knowledge</em> (Oxford University Press, MCMXCVI), p. 274</cite>
+          <p>도서관은 책을 보관하는 곳이 아니다. 책이 <em>기억되는</em> 곳이다 — 기관에 의해서만이 아니라, 세대를 이어 그 책으로 되돌아오며 여백에 저마다 지나간 자취를 남기는 독자들에 의해서.</p>
+          <cite>민혜란, 《기억의 궁전 — 도서관과 지식의 건축》 (문헌각, 1996), 274쪽</cite>
         </blockquote>
 
-        <p>The great private libraries of the seventeenth and eighteenth centuries — those assembled by scholars like John Dee, Robert Cotton, and Richard Heber — were understood by their owners not as collections but as extended minds. Cotton's library, which formed the nucleus of what would eventually become the British Library, was so intimately connected with its owner's intellectual life that its arrangement, by the busts of Roman emperors above each press, seemed less like a cataloguing system than an autobiography.</p>
+        <p>17–18세기의 큰 개인 장서들 — 존 디, 로버트 코튼, 리처드 헤버가 모은 서고들 — 을 그 주인들은 수집품이 아니라 연장된 정신으로 여겼습니다. 훗날 영국도서관의 모태가 된 코튼의 서고는 주인의 지적 생애와 어찌나 밀착해 있었던지, 서가마다 로마 황제의 흉상을 얹어 분류한 그 배열이 목록 체계라기보다 한 편의 자서전처럼 보일 지경입니다.</p>
       </section>
 
       <div class="ornate-rule" aria-hidden="true"></div>
 
       <section id="the-catalogue">
-        <h2>IV. A Catalogue of Annotations</h2>
+        <h2>IV. 주석의 분류 목록</h2>
 
-        <p class="no-indent">In the interest of scholarly precision, I offer here a brief formal catalogue of the major annotation types encountered in the European manuscript tradition, following the taxonomy proposed by Professors Dagenais and Sherman in their respective studies of the annotated codex.<a href="#fn4" id="fnref4" class="fn-ref" aria-label="Footnote 4">[4]</a></p>
+        <p class="no-indent">학문적 엄밀을 위해, 유럽 필사본 전통에서 마주치는 주요 주석 유형의 간략한 분류를 여기 적어 둡니다. 대거네이스와 셔먼 두 교수가 각자의 주석본 연구에서 제안한 분류법을 따랐습니다.<a href="#fn4" id="fnref4" class="fn-ref" aria-label="각주 4">[4]</a></p>
 
-        <!-- Catalogue citation block styled as code-block -->
-        <div class="catalogue-block" role="region" aria-label="Formal annotation catalogue">
-<span class="tok-com"># TYPOLOGIA ANNOTATIONUM — Margrave Classification System, rev. MCMXCVIII</span>
+        <!-- 분류 목록 — 코드블록 어법 (라틴 유형명은 서지학 관례) -->
+        <div class="catalogue-block" role="region" aria-label="주석 유형 분류 목록" tabindex="0">
+<span class="tok-com"># TYPOLOGIA ANNOTATIONUM — 서혜원 분류 체계, 1998년 개정</span>
 
-<span class="tok-kw">TYPE</span> <span class="tok-fn">Nota Bene</span>          <span class="tok-com">:: Attention marker; simple vertical stroke or 'NB'</span>
-<span class="tok-kw">TYPE</span> <span class="tok-fn">Manicule</span>           <span class="tok-com">:: Pointing hand (☞); directs eye to key passage</span>
-<span class="tok-kw">TYPE</span> <span class="tok-fn">Interlinearis</span>      <span class="tok-com">:: Gloss above or below the text line; typically lexical</span>
-<span class="tok-kw">TYPE</span> <span class="tok-fn">Marginalis</span>         <span class="tok-com">:: Extended commentary in the margin; analytical</span>
-<span class="tok-kw">TYPE</span> <span class="tok-fn">Correctio</span>          <span class="tok-com">:: Scribal or reader correction of perceived error</span>
-<span class="tok-kw">TYPE</span> <span class="tok-fn">Crux Interpretum</span>   <span class="tok-com">:: Cross-mark (†) indicating crux; disputed passage</span>
-<span class="tok-kw">TYPE</span> <span class="tok-fn">Exclamatio</span>          <span class="tok-com">:: Single or multiple exclamation; emotional response</span>
-<span class="tok-kw">TYPE</span> <span class="tok-fn">Quaestio</span>           <span class="tok-com">:: Question mark; scepticism or genuine inquiry</span>
-<span class="tok-kw">TYPE</span> <span class="tok-fn">Cross-reference</span>    <span class="tok-com">:: Locus (place) citation; binds text to tradition</span>
-<span class="tok-kw">TYPE</span> <span class="tok-fn">Florilegia</span>         <span class="tok-com">:: Passage extracted for commonplace book; double bracket</span>
+<span class="tok-kw">TYPE</span> <span class="tok-fn">Nota Bene</span>          <span class="tok-com">:: 주의 표지 — 세로줄 하나 또는 'NB'</span>
+<span class="tok-kw">TYPE</span> <span class="tok-fn">Manicule</span>           <span class="tok-com">:: 손가락 표시(☞) — 요긴한 대목을 가리킨다</span>
+<span class="tok-kw">TYPE</span> <span class="tok-fn">Interlinearis</span>      <span class="tok-com">:: 행간 주석 — 대개 낱말 풀이</span>
+<span class="tok-kw">TYPE</span> <span class="tok-fn">Marginalis</span>         <span class="tok-com">:: 여백의 논평 — 분석적 방주</span>
+<span class="tok-kw">TYPE</span> <span class="tok-fn">Correctio</span>          <span class="tok-com">:: 필경사·독자의 교정</span>
+<span class="tok-kw">TYPE</span> <span class="tok-fn">Crux Interpretum</span>   <span class="tok-com">:: 십자 표시(†) — 해석이 갈리는 난소(難所)</span>
+<span class="tok-kw">TYPE</span> <span class="tok-fn">Exclamatio</span>         <span class="tok-com">:: 감탄 부호 — 정서적 반응</span>
+<span class="tok-kw">TYPE</span> <span class="tok-fn">Quaestio</span>           <span class="tok-com">:: 물음표 — 회의 또는 진짜 물음</span>
+<span class="tok-kw">TYPE</span> <span class="tok-fn">Cross-reference</span>    <span class="tok-com">:: 전거(典據) 표시 — 텍스트를 전통에 잇는다</span>
+<span class="tok-kw">TYPE</span> <span class="tok-fn">Florilegia</span>         <span class="tok-com">:: 초록 표시 — 초록집으로 옮길 대목, 겹괄호</span>
 
-<span class="tok-com"># Period distribution: Antiquity (I–VI c.) · Medieval (VII–XIV c.)</span>
-<span class="tok-com">#                      Humanist (XV–XVI c.) · Modern (XVII–present)</span>
+<span class="tok-com"># 시기 분포: 고대 (1–6세기) · 중세 (7–14세기)</span>
+<span class="tok-com">#            인문주의 (15–16세기) · 근대 (17세기–현재)</span>
         </div>
 
-        <p>Each type carries its own phenomenology of reading. The manicule — that strange little hand, index finger extended, that appears in manuscripts from the ninth century through the eighteenth — is perhaps the most poignant of all annotation types. It is pure direction: <em>look here</em>. Nothing more is said. The hand points at a passage the annotator considered important, but offers no explanation of why, no gloss, no commentary. We are left to deduce importance from gesture alone.</p>
+        <p>유형마다 고유한 읽기의 현상학이 있습니다. 마니쿨라 — 9세기부터 18세기까지 필사본에 나타나는, 집게손가락을 편 그 기이한 작은 손 — 는 모든 주석 유형 가운데 가장 애틋합니다. 그것은 순수한 지시입니다. <em>여기를 보라.</em> 그 이상은 말하지 않습니다. 어째서 중요한지에 대한 풀이도 논평도 없습니다. 우리는 몸짓 하나에서 중요함을 짐작해 내야 합니다.</p>
 
-        <p>The crux interpretum, marked by a dagger symbol, is its philosophical opposite. Where the manicule says "look here," the crux says "I do not know what to make of this." It is the annotation of intellectual honesty, the scholar's admission that the text has defeated them at this point, that the passage is contested or obscure or simply beyond their current understanding. To mark a crux is to leave a problem for the future — both one's own future self and whoever might read after.</p>
-
-        <aside class="margin-note" aria-label="Marginalia note">
-          <span class="margin-note__marker" aria-hidden="true">†</span>
-          <span class="margin-note__text">The Latin term <em>crux</em> here derives from the shape of the mark (†) rather than from any penitential connotation, though the pun was surely not lost on medieval monks.</span>
-        </aside>
+        <p>단검 기호로 표시되는 <em lang="la">crux interpretum</em>은 그 철학적 반대항입니다. 마니쿨라가 '여기를 보라'고 말한다면, 크룩스는 '나는 이 대목을 어찌해야 할지 모르겠다'고 말합니다.
+        <span class="gloss">
+          <span class="gloss__marker" aria-hidden="true">†</span>
+          <span class="gloss__text">여기서 crux라는 라틴어는 기호(†)의 생김에서 왔을 뿐 고행의 뜻은 아니지만, 중세 수도사들이 그 말장난을 놓쳤을 리 없습니다.</span>
+        </span>
+        그것은 지적 정직의 주석이며, 텍스트가 이 지점에서 자신을 이겼다는 학자의 자백입니다. 크룩스를 찍는 것은 미래를 위해 문제를 남겨 두는 일입니다 — 훗날의 자기 자신과, 그 뒤에 읽을 누군가를 위해.</p>
       </section>
 
       <div class="ornate-rule" aria-hidden="true"></div>
 
       <section id="the-heresy">
-        <h2>V. The Beautiful Heresy</h2>
+        <h2>V. 아름다운 이단</h2>
 
-        <p class="no-indent">I confess: I write in books. Not borrowed books, not library books — I am not a monster — but my own books, the ones that line the study where I write these words. I write in pencil, not pen, partly out of residual guilt and partly because pencil permits a certain tentativeness that ink does not.<a href="#fn5" id="fnref5" class="fn-ref" aria-label="Footnote 5">[5]</a> A pencilled note can be erased; a thought in ink is permanent, and permanence demands a confidence I rarely feel at the moment of reading.</p>
+        <p class="no-indent">고백하건대, 저는 책에 씁니다. 빌린 책도, 도서관 책도 아니고 — 저는 괴물이 아닙니다 — 이 글을 쓰는 서재에 꽂힌 제 책들에 씁니다. 펜이 아니라 연필로 씁니다. 절반은 남은 죄책감 때문이고, 절반은 연필이 허락하는 머뭇거림 때문입니다.<a href="#fn5" id="fnref5" class="fn-ref" aria-label="각주 5">[5]</a> 연필 메모는 지울 수 있지만 잉크로 적은 생각은 영구하며, 영구함은 책을 읽는 그 순간의 저로서는 좀처럼 갖지 못하는 확신을 요구합니다.</p>
 
-        <p>My annotations are, I suspect, modest compared to Harvey's. I mark passages I want to return to. I note connections to other books. I occasionally argue in the margin with an argument that seems to me insufficiently supported, and I sometimes draw a small star beside sentences that achieve what I think of as the ideal of prose — the moment when the right words arrive in the right order and a complex truth is expressed with perfect economy. I have no system. The taxonomy I offered in the preceding section is descriptive, not autobiographical.</p>
+        <p>제 주석은 하비에 비하면 조촐할 것입니다. 다시 돌아올 대목을 표시하고, 다른 책과의 연결을 적습니다. 근거가 부실해 보이는 논증과는 이따금 여백에서 다투고, 옳은 낱말들이 옳은 차례로 도착해 복잡한 진실이 완벽한 절약으로 표현되는 문장 — 제가 산문의 이상이라 여기는 그 순간 — 곁에는 작은 별표를 그립니다. 체계는 없습니다. 앞 장에서 적어 둔 분류법은 기술(記述)이지 자전(自傳)이 아닙니다.</p>
 
-        <p>But the act of annotation is, I find, inseparable from the act of understanding. To mark a passage is to commit to it, to say: this matters to me, in this way, at this moment. The very labour of setting pencil to paper slows the reading eye and forces a kind of deliberateness that passive reading does not require. Annotation is, in this sense, a physical practice of attention — a discipline of the body as much as the mind.</p>
+        <p>그러나 주석의 행위가 이해의 행위와 떼어 낼 수 없다는 것을 저는 압니다. 한 대목에 표시를 남기는 것은 그 대목에 스스로를 거는 일입니다 — 이것이 나에게, 이런 방식으로, 지금 이 순간 중요하다고 말하는 일입니다. 연필을 종이에 대는 그 수고가 읽는 눈을 늦추고, 수동적 독서는 요구하지 않는 신중함을 강제합니다. 주석은 그런 의미에서 주의(注意)의 신체적 수행이며 — 정신 못지않게 몸의 규율입니다.</p>
 
-        <p>There is a countervailing view, advanced most eloquently by Alberto Manguel in <em>A History of Reading</em>, that the annotated copy is a kind of palimpsest, the later reader's thoughts threatening to overlay and distort the earlier text. When we find a copy of Keats heavily annotated by a Victorian scholar who found the poet insufficiently moral, we read both Keats and the Victorian at once, and the risk is that the annotator's voice — shrill, persistent, inhabiting every margin — might drown the original. The margins, on this view, are contested territory.</p>
+        <p>반론도 있습니다. 알베르토 망겔이 《독서의 역사》에서 가장 설득력 있게 편 견해로, 주석 달린 책은 일종의 겹쳐 쓴 양피지여서 나중 독자의 생각이 먼저의 텍스트를 덮어 일그러뜨릴 위험이 있다는 것입니다. 키츠를 도덕적으로 못마땅해한 어느 빅토리아 시대 학자가 빽빽이 주석을 단 키츠 시집을 펼칠 때, 우리는 키츠와 그 빅토리아인을 동시에 읽게 되고, 모든 여백에 서식하는 그 집요한 목소리가 원문을 익사시킬지도 모릅니다. 이 견해에서 여백은 분쟁지입니다.</p>
 
-        <p>Manguel is not wrong. But I think the risk is overstated, and in any case, the alternative — the pristine, unannotated volume that bears no trace of reading — is a kind of death. A book that has not been read is a building that has not been inhabited: structurally sound, perhaps, but without the quality of life that habitation brings. The slightly battered spine, the pencilled star, the small argumentative question mark — these are the signs of a book's career in the world, its passage through mind after mind.</p>
+        <p>망겔이 틀린 것은 아닙니다. 그러나 그 위험은 과장되었다고 저는 생각하며, 어느 쪽이든 그 대안 — 읽은 흔적이 하나도 없는 순결한 책 — 은 일종의 죽음입니다. 읽히지 않은 책은 사람이 살지 않은 집입니다. 구조는 멀쩡할지언정, 거주가 불어넣는 생기가 없습니다. 조금 닳은 책등, 연필 별표, 작고 시비조인 물음표 — 이것들이 책이 세상에서 보낸 이력의 표지이며, 정신에서 정신으로 건너온 항해의 기록입니다.</p>
       </section>
 
       <div class="ornate-rule" aria-hidden="true"></div>
 
       <section id="in-conclusion">
-        <h2>VI. In Conclusion</h2>
+        <h2>VI. 맺으며</h2>
 
-        <p class="no-indent">I have been arguing, I realise, for something that requires no argument among those who already practise it, and that no argument will convince those who do not. The marginalist and the purist look at the same annotated page and see entirely different things: the one sees evidence of engagement, a record of thought, a palimpsest of reading across time; the other sees desecration, the text defaced, the reading experience of subsequent users contaminated by the intrusions of a prior ego.</p>
+        <p class="no-indent">돌이켜 보면 저는, 이미 실천하는 이들에게는 논증이 필요 없고 실천하지 않는 이들은 어떤 논증으로도 설득되지 않을 무언가를 논증해 온 셈입니다. 방주가(傍註家)와 순결주의자는 같은 주석본을 펼쳐 놓고 전혀 다른 것을 봅니다. 한쪽은 몰입의 증거를, 사유의 기록을, 시간을 가로지른 읽기의 겹층을 보고 — 다른 쪽은 모독을, 훼손된 본문을, 앞선 자아의 침입으로 오염된 다음 독자의 경험을 봅니다.</p>
 
-        <p>Perhaps the truth is that both are right, and the discomfort of the annotated book is precisely its value. It refuses to be merely an object. It insists on being a transaction, a record of exchange between mind and text, text and time. When we discover the annotations of a previous reader, we are not simply reading about the past; we are encountering it in its most intimate register — the private, provisional, unguarded thought of someone who sat where we now sit, with roughly the same candle burning and the same darkness outside the window, and found this sentence worth noting.</p>
+        <p>아마 진실은 둘 다 옳다는 것이고, 주석본이 주는 불편이 바로 그 가치일 것입니다. 그 책은 한낱 물건이기를 거부합니다. 정신과 텍스트, 텍스트와 시간 사이에 오간 거래의 기록이기를 고집합니다. 앞서 읽은 이의 주석을 발견할 때 우리는 과거에 '관해' 읽는 것이 아니라, 과거를 가장 내밀한 음역에서 만납니다 — 지금 우리가 앉은 자리에 앉아, 얼추 같은 촛불을 밝히고 창밖의 같은 어둠을 두고서, 이 문장은 적어 둘 만하다고 여겼던 어느 사적이고 잠정적이며 무방비했던 생각을.</p>
 
-        <p>There is something almost sacramental in this. The annotated book is a kind of secular relic — it has been touched, attended to, marked by a specific intelligence at a specific moment, and in handling it we enter into contact with that specificity. Libraries guard these objects not merely because they are old or rare or beautiful, though they are often all three, but because they are irreplaceable records of the activity of reading itself.</p>
+        <p>여기에는 거의 성사(聖事)에 가까운 데가 있습니다. 우리 옛 선비들이 돌아가신 스승의 책을 수택본(手澤本) — '손의 윤기가 밴 책' — 이라 부르며 차마 팔지 못한 것도 같은 마음이었을 것입니다. 주석 달린 책은 세속의 성유물입니다. 특정한 지성이 특정한 순간에 만지고 돌보고 표시해 둔 것이며, 그것을 손에 드는 우리는 그 특정함과 접촉하게 됩니다. 도서관이 이 물건들을 지키는 까닭은 그것이 오래되고 희귀하고 아름다워서만이 아니라 — 대개 셋 다이긴 합니다만 — 읽기라는 행위 자체의 대체 불가능한 기록이기 때문입니다.</p>
 
-        <p>In the end, the marginalia is what the book becomes when it meets a mind. The text is the potential; the annotation is the actualisation. And it is in the margin — that slender white corridor beside the word — that the life of literature is most fully and most honestly lived.<a href="#fn6" id="fnref6" class="fn-ref" aria-label="Footnote 6">[6]</a></p>
+        <p>결국 방주란, 책이 하나의 정신을 만났을 때 되는 무엇입니다. 텍스트가 가능태라면 주석은 현실태입니다. 그리고 문학의 삶이 가장 충만하게, 가장 정직하게 영위되는 곳은 바로 저 여백 — 낱말 곁의 그 좁고 흰 회랑입니다.<a href="#fn6" id="fnref6" class="fn-ref" aria-label="각주 6">[6]</a></p>
       </section>
 
-      <!-- Ornate section divider before footnotes -->
+      <!-- 각주 앞 장식 -->
       <div class="flourish mt-10 mb-2" aria-hidden="true" style="margin-inline:auto; display:block;"></div>
       <div class="fleur" aria-hidden="true" style="margin-inline:auto; display:block; margin-bottom:var(--space-6);"></div>
 
-      <!-- Footnotes -->
-      <section class="footnotes" aria-label="Footnotes">
-        <p class="footnotes__heading">Notae</p>
+      <!-- 각주 -->
+      <section class="footnotes" aria-label="각주">
+        <p class="footnotes__heading">주(註) · Notae</p>
         <ol>
           <li id="fn1">
-            The observation is not original to me; it is drawn in part from H.J. Jackson's invaluable <em>Marginalia: Readers Writing in Books</em> (Yale University Press, MMII), which remains the definitive study of the English-language annotative tradition.
-            <a href="#fnref1" aria-label="Return to footnote 1 in text">↩</a>
+            이 관찰은 온전히 저의 것이 아닙니다. H. J. 잭슨의 귀중한 연구 《Marginalia: Readers Writing in Books》(Yale University Press, 2001)에 크게 기대었습니다. 영어권 주석 전통에 관한 한 여전히 결정판입니다.
+            <a href="#fnref1" aria-label="본문의 각주 1 위치로 돌아가기">↩</a>
           </li>
           <li id="fn2">
-            The Harvey materials at the British Library are catalogued under MS Harley 4935 and related shelfmarks. Virginia Stern's biography <em>Gabriel Harvey: His Life, Marginalia and Library</em> (Oxford, MCMLXXIX) remains the essential guide.
-            <a href="#fnref2" aria-label="Return to footnote 2 in text">↩</a>
+            하비 자료는 영국도서관 MS Harley 4935 및 관련 청구기호로 정리되어 있습니다. 버지니아 스턴의 전기 《Gabriel Harvey: His Life, Marginalia and Library》(Oxford, 1979)가 필수 안내서입니다.
+            <a href="#fnref2" aria-label="본문의 각주 2 위치로 돌아가기">↩</a>
           </li>
           <li id="fn3">
-            On the ancient libraries, see Lionel Casson, <em>Libraries in the Ancient World</em> (Yale, MMI), and more recently Matthew Battles, <em>Library: An Unquiet History</em> (Norton, MMIII).
-            <a href="#fnref3" aria-label="Return to footnote 3 in text">↩</a>
+            고대의 도서관에 관해서는 라이오넬 카슨, 《고대 세계의 도서관》(Yale, 2001)을 보십시오. 이덕무의 독서 기록은 《청장관전서》 곳곳에 전합니다.
+            <a href="#fnref3" aria-label="본문의 각주 3 위치로 돌아가기">↩</a>
           </li>
           <li id="fn4">
-            John Dagenais, <em>The Ethics of Reading in Manuscript Culture</em> (Princeton, MCMXCIV); William H. Sherman, <em>Used Books: Marking Readers in Renaissance England</em> (Pennsylvania, MMVIII).
-            <a href="#fnref4" aria-label="Return to footnote 4 in text">↩</a>
+            존 대거네이스, 《The Ethics of Reading in Manuscript Culture》(Princeton, 1994); 윌리엄 H. 셔먼, 《Used Books: Marking Readers in Renaissance England》(Pennsylvania, 2008).
+            <a href="#fnref4" aria-label="본문의 각주 4 위치로 돌아가기">↩</a>
           </li>
           <li id="fn5">
-            The pencil/ink distinction has its defenders and detractors. Nabokov wrote in pencil on index cards, eventually transferring to pen; Montaigne used whatever was to hand; Darwin's annotations in his scientific reading are in a variety of implements depending apparently on his mood and location.
-            <a href="#fnref5" aria-label="Return to footnote 5 in text">↩</a>
+            연필이냐 잉크냐의 구별에는 저마다의 옹호자가 있습니다. 나보코프는 색인 카드에 연필로 썼고, 몽테뉴는 손에 잡히는 대로 썼으며, 다산은 아예 베껴 쓰기(초서)를 독서의 법도로 세웠습니다.
+            <a href="#fnref5" aria-label="본문의 각주 5 위치로 돌아가기">↩</a>
           </li>
           <li id="fn6">
-            This conclusion echoes, consciously, the closing argument of Walter Ong's <em>Orality and Literacy</em> (Methuen, MCMLXXXII), which situates the written text as the condition of possibility for certain forms of extended analytical thought. The margin, I suggest, extends this argument one step further.
-            <a href="#fnref6" aria-label="Return to footnote 6 in text">↩</a>
+            이 결론은 월터 옹의 《구술문화와 문자문화》(Methuen, 1982)의 맺음을 의식적으로 되울린 것입니다. 문자 텍스트를 특정한 분석적 사유의 가능 조건으로 놓는 그 논지를, 여백은 한 걸음 더 밀고 나간다고 저는 생각합니다.
+            <a href="#fnref6" aria-label="본문의 각주 6 위치로 돌아가기">↩</a>
           </li>
         </ol>
       </section>
 
     </article>
 
-    <!-- Margin column (wide screens only) -->
-    <aside class="margin-col" aria-label="Marginalia">
+    <!-- 방주 컬럼 (넓은 화면 전용) — 사서의 손글씨 -->
+    <aside class="margin-col" aria-label="여백의 방주">
       <div class="margin-col__note" data-margin-for="on-the-nature">
         <strong>Nota Bene</strong>
-        The white space beside the text has been called "the democracy of the codex" — available to all readers equally, regardless of rank or authority.
+        여백은 '코덱스의 민주주의'라 불렸습니다 — 지위와 권위에 상관없이 모든 독자에게 똑같이 열려 있으니.
       </div>
       <div class="margin-col__note" data-margin-for="the-annotators">
-        <strong>Gabriel Harvey</strong>
-        Harvey's books survive in such numbers partly because his nemesis Nashe mocked the habit of annotation — the controversy kept both men legible to posterity.
+        <strong>가브리엘 하비</strong>
+        하비의 책이 이만큼 남은 데는 숙적 내시가 그의 주석벽(癖)을 조롱한 공도 있습니다 — 싸움 덕에 두 사람 다 후세에 읽히게 되었으니.
       </div>
       <div class="margin-col__note" data-margin-for="the-architecture">
-        <strong>The Scholia</strong>
-        The Homeric scholia — marginal notes by ancient scholars — were so extensive that some Byzantine manuscripts contain more commentary than text.
+        <strong>외규장각</strong>
+        1866년 강화도에서 실려 간 의궤 297책은 145년 만에 돌아왔습니다 — 여백의 먼지까지 그대로.
       </div>
       <div class="margin-col__note" data-margin-for="the-catalogue">
-        <strong>The Manicule</strong>
-        The earliest known manicule appears in a manuscript of Cicero, ca. IX century. The form persists in print type-setting well into the XVIII century.
+        <strong>마니쿨라</strong>
+        가장 오래된 마니쿨라는 9세기 무렵 키케로 필사본에 나타나, 18세기 활판에까지 살아남았습니다.
+      </div>
+      <div class="margin-col__note" data-margin-for="the-catalogue">
+        <strong>Crux Interpretum</strong>
+        여기서 crux라는 라틴어는 기호(†)의 생김에서 왔을 뿐 고행의 뜻은 아니지만, 중세 수도사들이 그 말장난을 놓쳤을 리 없습니다.
       </div>
       <div class="margin-col__note" data-margin-for="the-heresy">
-        <strong>Pencil and Memory</strong>
-        Vladimir Nabokov insisted his annotations be erased from library copies before return — he understood both the impulse and the obligation.
+        <strong>연필과 기억</strong>
+        나보코프는 도서관 책을 돌려주기 전에 제 주석을 지우게 했습니다 — 충동과 의무를 둘 다 알았던 것입니다.
       </div>
     </aside>
 
@@ -981,99 +950,114 @@
 
 </main>
 
-<!-- Article Footer -->
-<footer class="article-footer" aria-label="Article footer">
+<!-- 아티클 푸터 -->
+<footer class="article-footer" aria-label="아티클 푸터">
 
-  <!-- Author bio card -->
+  <!-- 저자 소개 -->
   <div class="card card--illuminated reveal mt-10 mb-8">
     <div class="card__header">
       <div style="display:flex; align-items:center; gap:var(--space-4);">
-        <div class="avatar avatar--lg avatar--ring" aria-hidden="true" style="background:var(--color-surface-raised); font-family:var(--font-display); font-size:var(--text-lg); display:grid; place-items:center; color:var(--color-accent);">
-          EM
+        <div class="avatar avatar--lg avatar--ring" aria-hidden="true" style="background:var(--color-surface-2); font-family:var(--font-display); font-size:var(--text-lg); display:grid; place-items:center; color:var(--color-accent);">
+          서
         </div>
         <div>
-          <p class="card__title">Dr. Eleanor Margrave</p>
-          <p class="card__subtitle">Fellow of Merton College, Oxford</p>
+          <p class="card__title">서혜원 박사</p>
+          <p class="card__subtitle">장서각 고문헌연구실 수석연구원</p>
         </div>
       </div>
-      <span class="badge badge--accent badge--pill">Author</span>
+      <span class="badge badge--accent badge--pill">저자</span>
     </div>
     <div class="card__body">
-      Dr. Eleanor Margrave holds the Cavendish Chair of Antiquarian Studies at Merton College, Oxford. She is the author of <em>Readers and Their Books: An Anatomy of Annotation</em> (Clarendon Press, MCMXCIV) and <em>The Scholarship of the Margin</em> (Oxford University Press, MMIII). She is currently completing a study of Scottish Enlightenment reading practices, tentatively entitled <em>What the Dead Have Underlined</em>. Her personal library, housed in a converted Victorian coach house in North Oxford, contains some fourteen thousand volumes, most of them annotated.
+      서혜원 박사는 장서각 고문헌연구실에서 서지학 연구를 이끌고 있습니다. 《독자와 그의 책 — 주석의 해부》(문헌각, 2019)와 《여백의 학문》(장서각총서, 2023)을 썼으며, 지금은 조선 후기 세책가(貰冊家)의 독서 흔적을 좇는 연구 — 가제 《죽은 이들이 밑줄 친 것들》 — 를 마무리하고 있습니다. 파주의 옛 제본소를 고쳐 만든 서재에 만 사천여 권을 두었는데, 대부분에 연필 자국이 있습니다.
     </div>
     <div class="card__footer">
-      <span class="badge badge--warning">Antiquarian Studies</span>
-      <span class="badge badge--info">Manuscript Studies</span>
-      <span class="badge badge--accent">History of Reading</span>
+      <span class="badge badge--warning">서지학</span>
+      <span class="badge badge--info">필사본 연구</span>
+      <span class="badge badge--accent">독서사</span>
     </div>
   </div>
 
-  <!-- Further Reading -->
+  <!-- 더 읽을거리 -->
   <div class="card reveal" data-delay="1">
     <div class="card__header">
-      <p class="card__title">Further Reading</p>
+      <p class="card__title">더 읽을거리</p>
     </div>
     <div class="card__body">
       <ul class="further-reading__list">
         <li>
-          <a href="#">On the Disposition of Private Libraries: A Victorian Controversy</a>
-          <span>Dr. W. P. Cavendish &mdash; Folio 24 Reading Room &mdash; Hilary Term, MCMXCIX</span>
+          <button type="button" class="linklike" data-toast data-toast-title="서고 요청" data-toast="해당 호를 열람실로 옮겨 오라고 일러두었습니다. 준비되면 기별드리겠습니다." data-toast-variant="info">사가(私家) 장서의 처분에 관하여 — 어느 빅토리아 시대의 논쟁</button>
+          <span>민혜란 — 장서각 열람실 기록 — 1999년 겨울호</span>
         </li>
         <li>
-          <a href="#">The Commonplace Book as Intellectual Autobiography</a>
-          <span>Prof. S. Anand &mdash; Folio 24 Reading Room &mdash; Trinity Term, MMII</span>
+          <button type="button" class="linklike" data-toast data-toast-title="서고 요청" data-toast="해당 호를 열람실로 옮겨 오라고 일러두었습니다. 준비되면 기별드리겠습니다." data-toast-variant="info">초록집(抄錄集) — 지적 자서전으로서의 발췌</button>
+          <span>권오섭 — 장서각 열람실 기록 — 2022년 봄호</span>
         </li>
         <li>
-          <a href="#">Scripta Manent: On the Permanence of Written Things</a>
-          <span>Dr. I. R. Blackwood &mdash; Folio 24 Reading Room &mdash; Michaelmas Term, MMIV</span>
+          <button type="button" class="linklike" data-toast data-toast-title="서고 요청" data-toast="해당 호를 열람실로 옮겨 오라고 일러두었습니다. 준비되면 기별드리겠습니다." data-toast-variant="info">Scripta Manent — 씌어진 것의 영속에 관하여</button>
+          <span>서지원 — 장서각 열람실 기록 — 2024년 가을호</span>
         </li>
       </ul>
     </div>
   </div>
 
-  <!-- Fleur ornament and back link -->
+  <!-- 콜로폰 -->
   <div class="text-center mt-10 mb-4">
     <div class="fleur fleur--lg" aria-hidden="true" style="margin-inline:auto; margin-bottom:var(--space-4);"></div>
-    <p class="text-muted" style="font-size:var(--text-xs); letter-spacing:var(--tracking-widest); font-family:var(--font-display);">
-      <em>Verba volant, scripta manent</em>
+    <p class="text-muted" style="font-size:var(--text-xs); letter-spacing:var(--tracking-caps-ko); font-family:var(--font-display);">
+      <span lang="la"><em>Verba volant, scripta manent</em></span> — 말은 날아가고, 쓰인 것은 남습니다
     </p>
     <p class="mt-4" style="font-size:var(--text-sm);">
-      <a href="../index.html" class="text-accent" style="text-decoration:none; letter-spacing:var(--tracking-wide); font-family:var(--font-display);">
-        ← Return to Folio&thinsp;24
+      <a href="../index.html" class="text-accent" style="letter-spacing:var(--tracking-caps-ko); font-family:var(--font-display);">
+        ← Folio 24 서가로 돌아가기
       </a>
     </p>
   </div>
 
 </footer>
 
+<!-- ═══════════════════════ COMMAND PALETTE ═══════════════════════ -->
+<div class="cmdk-overlay" id="cmdk" role="dialog" aria-modal="true" aria-label="명령 팔레트" aria-hidden="true">
+  <div class="cmdk">
+    <div class="cmdk__search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input class="cmdk__input" placeholder="명령을 입력하거나 검색하세요…" aria-label="명령 팔레트 검색" />
+      <kbd>ESC</kbd>
+    </div>
+    <div class="cmdk__list">
+      <div class="cmdk__group-label">이동</div>
+      <div class="cmdk__item" role="option" data-href="../index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg> 열람실(홈)로 돌아가기</div>
+      <div class="cmdk__item" role="option" data-href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg> 대시보드로 이동 <span class="cmdk__hint">페이지 I</span></div>
+      <div class="cmdk__item" role="option" data-href="inbox.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg> 서신함 열기 <span class="cmdk__hint">페이지 III</span></div>
+      <div class="cmdk__group-label">동작</div>
+      <div class="cmdk__item" role="option" data-action="toggle-theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg> 테마 전환 (양피지 / 촛불)</div>
+      <div class="cmdk__item" role="option" data-toast-title="서표 끼움" data-toast="읽던 자리에 서표를 끼워 두었습니다. 언제든 다시 펼칠 수 있습니다."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg> 읽던 자리에 서표 끼우기</div>
+      <div class="cmdk__item" role="option" data-toast-title="필사 요청" data-toast="이 수필의 필사본 제작을 필사실에 맡겼습니다. 완성되면 기별드리겠습니다."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg> 이 수필 필사 맡기기</div>
+      <div class="cmdk__empty" hidden>이 폴리오에서 명령을 찾을 수 없습니다.</div>
+    </div>
+  </div>
+</div>
+
 <script src="../app.js"></script>
 <script>
 (function () {
-  /* Reading progress bar */
+  /* 읽기 진행 괘선 */
   var fill = document.getElementById('reading-bar-fill');
   var bar  = document.getElementById('reading-bar');
   var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  if (prefersReduced && fill) {
-    fill.style.transition = 'none';
-  }
+  if (prefersReduced && fill) fill.style.transition = 'none';
 
   function updateProgress() {
     var scrollTop  = window.scrollY || document.documentElement.scrollTop;
     var docHeight  = document.documentElement.scrollHeight - document.documentElement.clientHeight;
     var pct = docHeight > 0 ? Math.min(100, (scrollTop / docHeight) * 100) : 0;
-    if (fill) {
-      fill.style.width = pct.toFixed(1) + '%';
-    }
-    if (bar) {
-      bar.setAttribute('aria-valuenow', Math.round(pct));
-    }
+    if (fill) fill.style.width = pct.toFixed(1) + '%';
+    if (bar) bar.setAttribute('aria-valuenow', Math.round(pct));
   }
-
   window.addEventListener('scroll', updateProgress, { passive: true });
   updateProgress();
 
-  /* TOC active section highlighting */
+  /* 목차 현재 위치 표시 */
   var tocItems = document.querySelectorAll('.toc__item');
   var sections = document.querySelectorAll('section[id]');
 
@@ -1081,21 +1065,14 @@
     var scrollY = window.scrollY + 100;
     var current = '';
     sections.forEach(function (s) {
-      if (s.offsetTop <= scrollY) {
-        current = s.id;
-      }
+      if (s.offsetTop <= scrollY) current = s.id;
     });
     tocItems.forEach(function (item) {
       var link = item.querySelector('a');
       var href = link ? link.getAttribute('href') : '';
-      if (href === '#' + current) {
-        item.classList.add('toc__item--active');
-      } else {
-        item.classList.remove('toc__item--active');
-      }
+      item.classList.toggle('toc__item--active', href === '#' + current);
     });
   }
-
   window.addEventListener('scroll', updateToc, { passive: true });
   updateToc();
 })();

@@ -1,9 +1,22 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ONBOARDING // CYBER.TERM</title>
+<meta name="description" content="OPERATOR ONBOARDING — 새 워크스페이스를 부팅하는 4단계 설치 마법사. 자격증명 · 환경 · 통합 · 배포.">
+
+<!-- FOUC 방지: 저장 테마를 렌더 전에 동기 적용 (키는 app.js Theme.KEY 와 동일) -->
+<script>
+(function () {
+  try {
+    var t = localStorage.getItem("ct-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
+
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../semantic.css">
 <link rel="stylesheet" href="../base.css">
@@ -15,18 +28,14 @@
 <link rel="stylesheet" href="../components/feedback.css">
 <link rel="stylesheet" href="../components/nav.css">
 <style>
-  /* ---- onboarding-only layout — tokens only ---- */
+  /* ---- onboarding-only layout — tokens only ----
+     장면: SRE 고민석이 nexa-core 워크스페이스를 부팅하는 새벽 배치 작업.
+     분위기 glow 는 공용 scene 엔진(data-scene="ops" · 시안 관제 채널). */
   .ob {
     position: relative;
     max-width: 860px;
     margin-inline: auto;
     padding: var(--space-10) var(--space-4) var(--space-12);
-  }
-  .ob__glow {
-    position: absolute; inset: 0; pointer-events: none; z-index: 0;
-    background:
-      radial-gradient(55% 45% at 18% 0%, rgba(var(--rgb-cyan) / .12), transparent 70%),
-      radial-gradient(45% 45% at 88% 12%, rgba(var(--rgb-magenta) / .10), transparent 70%);
   }
   .ob__inner { position: relative; z-index: 1; }
 
@@ -48,6 +57,12 @@
 
   /* terminal-window wizard card */
   .ob__card { box-shadow: var(--shadow-glow-md); }
+  /* 배포 완료 — 카드가 그린 인광으로 '전원 인가' 된다 (1회성) */
+  .ob__card.is-online {
+    border-color: var(--color-success-text);
+    box-shadow: var(--shadow-glow-md), 0 0 26px rgba(var(--rgb-green) / .18);
+    animation: ct-boot-in var(--duration-slow) var(--ease-out);
+  }
   .ob__panel-meta {
     display: flex; align-items: center; gap: var(--space-3);
     flex-wrap: wrap;
@@ -97,7 +112,11 @@
   .ob-int__name { font-size: var(--text-sm); color: var(--color-text); font-weight: var(--weight-bold); }
   .ob-int__cat { font-size: var(--text-2xs); color: var(--color-text-subtle); letter-spacing: var(--tracking-wide); text-transform: uppercase; }
   .ob-int__desc { font-size: var(--text-2xs); color: var(--color-text-muted); }
-  .ob-int__row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+  .ob-int__row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+  }
 
   /* boot review (step 4) */
   .ob-boot {
@@ -132,36 +151,48 @@
   }
 </style>
 </head>
-<body>
-<a class="skip-link" href="#main">CONTENT 로 건너뛰기</a>
-<div class="crt-overlay" aria-hidden="true"></div>
+<body data-scene="ops">
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
+<!-- CRT 베젤 + OSD -->
+<div class="crt-overlay" aria-hidden="true">
+  <span class="crt-overlay__osd">TERM-07 // PROVISIONING · SIGNAL OK</span>
+</div>
 
 <header class="ct-navbar">
   <div class="container flex items-center justify-between" style="height:60px;">
     <a class="ct-navbar__brand" href="../index.html"><span class="t-accent">◢</span> CYBER<span class="t-primary">.</span>TERM</a>
     <nav class="ct-navbar__nav" aria-label="주요">
-      <a class="ct-navbar__link" href="../index.html">HOME</a>
-      <a class="ct-navbar__link" href="dashboard.html">DASH</a>
-      <a class="ct-navbar__link" href="kanban.html">KANBAN</a>
-      <a class="ct-navbar__link" href="inbox.html">INBOX</a>
-      <a class="ct-navbar__link" href="settings.html">SETTINGS</a>
+      <a class="ct-navbar__link" href="../index.html" data-navline>HOME</a>
+      <a class="ct-navbar__link" href="dashboard.html" data-navline>DASH</a>
+      <a class="ct-navbar__link" href="kanban.html" data-navline>KANBAN</a>
+      <a class="ct-navbar__link" href="inbox.html" data-navline>INBOX</a>
+      <a class="ct-navbar__link" href="settings.html" data-navline>SETTINGS</a>
     </nav>
     <div class="ct-navbar__actions flex items-center gap-2">
-      <button class="ct-btn ct-btn--secondary ct-btn--sm" data-cmdk-open>SEARCH <span class="ct-kbd">⌘K</span></button>
-      <button class="ct-btn ct-btn--icon ct-btn--sm" data-theme-toggle aria-label="테마 전환"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+      <button class="ct-btn ct-btn--secondary ct-btn--sm" data-cmdk-open aria-label="명령 팔레트 열기">SEARCH <span class="ct-kbd">⌘K</span></button>
+      <button class="ct-btn ct-btn--icon ct-btn--sm" data-theme-toggle aria-label="테마 전환" title="다크 / 라이트"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
       <button class="ct-navbar__toggle" data-nav-toggle aria-label="메뉴" aria-expanded="false">≡</button>
     </div>
   </div>
 </header>
 
+<!-- tmux 세션 바 — 설치 세션 진행 상황 스트립 (장식, 스텝은 JS 동기화) -->
+<div class="ct-statusline" aria-hidden="true">
+  <span class="ct-statusline__seg ct-statusline__seg--session">setup.init</span>
+  <span class="ct-statusline__seg"><span class="ct-statusline__key">step</span><span class="ct-statusline__val" data-ob-stepline>01/04</span></span>
+  <span class="ct-statusline__seg"><span class="ct-statusline__key">region</span><span class="ct-statusline__val">seoul-2</span></span>
+  <span class="ct-statusline__seg hide-sm"><span class="ct-statusline__key">uplink</span><span class="ct-statusline__val t-success">OK</span></span>
+  <span class="ct-statusline__seg ct-statusline__seg--end"><span class="ct-statusline__val" data-clock>--:--:--</span><span class="ct-statusline__key">KST</span></span>
+</div>
+
 <main id="main" class="site-main">
   <div class="ob">
-    <div class="ob__glow" aria-hidden="true"></div>
+    <div class="scene-glow" aria-hidden="true"></div>
     <div class="ob__inner">
 
       <!-- ===================== HEAD ===================== -->
       <header class="ob__head">
-        <span class="label ob__kicker">// SYSTEM INITIALIZATION · setup.init</span>
+        <span class="label ob__kicker">// SYSTEM INITIALIZATION · setup.init --operator=ko_minseok</span>
         <h1 class="t-display">OPERATOR <span class="accent">ONBOARDING</span></h1>
         <p class="t-muted" style="font-size:var(--text-sm);max-width:60ch">
           새 워크스페이스를 부팅합니다. 네 단계를 거쳐 자격증명을 등록하고, 환경을 프로비저닝하고,
@@ -170,8 +201,8 @@
       </header>
 
       <!-- ===================== STEPS (progress indicator only) ===================== -->
-      <nav class="ob__steps clip-corner-tr" aria-label="설치 진행">
-        <ol class="ct-steps" data-ob-steps>
+      <nav class="ob__steps clip-corner-tr" aria-label="설치 진행" data-ob-steps data-reveal>
+        <ol class="ct-steps">
           <li class="ct-steps__step is-current">
             <span class="ct-steps__index">1</span>
             <span class="ct-steps__label">IDENTITY</span>
@@ -196,7 +227,7 @@
       </nav>
 
       <!-- ===================== WIZARD CARD ===================== -->
-      <section class="ct-card ct-card--glow ob__card" aria-label="설치 마법사">
+      <section class="ct-card ct-card--glow ob__card" aria-label="설치 마법사" data-reveal>
         <div class="ct-card__chrome">
           <div class="ct-card__dots"><span class="ct-card__dot"></span><span class="ct-card__dot"></span><span class="ct-card__dot"></span></div>
           <span class="ct-card__title ct-card__title--prompt">setup.init</span>
@@ -263,10 +294,12 @@
                 <div class="ct-field">
                   <label class="ct-field__label" for="ob-ws">WORKSPACE NAME <span class="ct-field__req">*</span></label>
                   <div class="ct-input-group">
-                    <input id="ob-ws" class="ct-input" placeholder="nexa-core" value="nexa-core" autocomplete="off">
+                    <input id="ob-ws" class="ct-input" placeholder="nexa-core" value="" autocomplete="off"
+                           aria-describedby="ob-ws-hint ob-ws-error">
                     <span class="ct-input-group__addon ct-input-group__addon--suffix">.cyber.term</span>
                   </div>
-                  <span class="ct-field__hint">팀 전용 서브도메인으로 사용됩니다.</span>
+                  <span class="ct-field__hint" id="ob-ws-hint">팀 전용 서브도메인으로 사용됩니다.</span>
+                  <span class="ct-field__error" id="ob-ws-error" data-ob-ws-error hidden>워크스페이스 이름은 필수입니다 · 소문자·숫자·하이픈 2자 이상</span>
                 </div>
                 <div class="ct-field">
                   <label class="ct-field__label" for="ob-region">REGION</label>
@@ -325,7 +358,7 @@
                   </div>
                 </div>
                 <p class="ob-int__desc">PR 상태 동기화 · 커밋 트리거 · 코드 오너 매핑.</p>
-                <div class="ob-int__row" style="margin-top:var(--space-3)">
+                <div class="ob-int__row">
                   <span class="ct-badge ct-badge--success ct-badge--dot ct-badge--sm">CONNECTED</span>
                   <label class="ct-switch"><input class="ct-switch__input" type="checkbox" checked aria-label="GitHub 연결"><span class="ct-switch__track"><span class="ct-switch__knob"></span></span></label>
                 </div>
@@ -340,7 +373,7 @@
                   </div>
                 </div>
                 <p class="ob-int__desc">알림 라우팅 · 배포 브로드캐스트 · /term 슬래시 커맨드.</p>
-                <div class="ob-int__row" style="margin-top:var(--space-3)">
+                <div class="ob-int__row">
                   <span class="ct-badge ct-badge--success ct-badge--dot ct-badge--sm">CONNECTED</span>
                   <label class="ct-switch"><input class="ct-switch__input" type="checkbox" checked aria-label="Slack 연결"><span class="ct-switch__track"><span class="ct-switch__knob"></span></span></label>
                 </div>
@@ -355,7 +388,7 @@
                   </div>
                 </div>
                 <p class="ob-int__desc">예외 캡처 · 릴리스 트래킹 · 소스맵 업로드.</p>
-                <div class="ob-int__row" style="margin-top:var(--space-3)">
+                <div class="ob-int__row">
                   <span class="ct-badge ct-badge--neutral ct-badge--sm">OFF</span>
                   <label class="ct-switch"><input class="ct-switch__input" type="checkbox" aria-label="Sentry 연결"><span class="ct-switch__track"><span class="ct-switch__knob"></span></span></label>
                 </div>
@@ -370,7 +403,7 @@
                   </div>
                 </div>
                 <p class="ob-int__desc">프리뷰 URL · 엣지 배포 · 빌드 로그 스트림.</p>
-                <div class="ob-int__row" style="margin-top:var(--space-3)">
+                <div class="ob-int__row">
                   <span class="ct-badge ct-badge--success ct-badge--dot ct-badge--sm">CONNECTED</span>
                   <label class="ct-switch"><input class="ct-switch__input" type="checkbox" checked aria-label="Vercel 연결"><span class="ct-switch__track"><span class="ct-switch__knob"></span></span></label>
                 </div>
@@ -385,7 +418,7 @@
                   </div>
                 </div>
                 <p class="ob-int__desc">인시던트 에스컬레이션 · 온콜 로테이션 동기화.</p>
-                <div class="ob-int__row" style="margin-top:var(--space-3)">
+                <div class="ob-int__row">
                   <span class="ct-badge ct-badge--neutral ct-badge--sm">OFF</span>
                   <label class="ct-switch"><input class="ct-switch__input" type="checkbox" aria-label="PagerDuty 연결"><span class="ct-switch__track"><span class="ct-switch__knob"></span></span></label>
                 </div>
@@ -400,7 +433,7 @@
                   </div>
                 </div>
                 <p class="ob-int__desc">이슈 ↔ 커밋 링크 · 사이클 자동 진행 업데이트.</p>
-                <div class="ob-int__row" style="margin-top:var(--space-3)">
+                <div class="ob-int__row">
                   <span class="ct-badge ct-badge--success ct-badge--dot ct-badge--sm">CONNECTED</span>
                   <label class="ct-switch"><input class="ct-switch__input" type="checkbox" checked aria-label="Linear 연결"><span class="ct-switch__track"><span class="ct-switch__knob"></span></span></label>
                 </div>
@@ -417,10 +450,11 @@
               <span class="ct-badge ct-badge--accent ct-badge--outline ob__panel-tag">STEP 04</span>
             </div>
 
-            <!-- boot sequence (renders when this panel first becomes visible) -->
+            <!-- boot sequence (renders when this panel first becomes visible; %WS% = 실제 입력값)
+                 payload 는 data-ob-boot 에 — app.js 공용 [data-boot] 엔진과 이중 구동 방지 -->
             <div class="ob-boot t-mono" role="img" aria-label="프로비저닝 부팅 시퀀스">
-              <div data-ob-boot data-boot="allocating namespace :: nexa-core.cyber.term|provisioning region ap-northeast-2 [seoul]|mounting 4 operator credentials|linking integrations [github · slack · vercel · linear]|compiling pipeline manifest|warming edge nodes [12/12]|cluster handshake complete">
-                <div data-boot-out></div>
+              <div data-ob-boot="allocating namespace :: %WS%.cyber.term|provisioning region ap-northeast-2 [seoul]|mounting 4 operator credentials|linking integrations [github · slack · vercel · linear]|compiling pipeline manifest|warming edge nodes [12/12]|cluster handshake complete">
+                <div data-ob-boot-out></div>
               </div>
               <div data-ob-boot-reveal class="ob-boot__reveal">
                 <span class="prompt"></span><span data-ob-typing data-text="all systems nominal — ready to initialize_" data-delay="400"></span>
@@ -434,7 +468,7 @@
                 <span class="ct-list__meta"><span class="ct-badge ct-badge--primary ct-badge--sm">SRE</span></span>
               </li>
               <li class="ct-list__item">
-                <div class="ct-list__content"><div class="ct-list__title">WORKSPACE</div><div class="ct-list__sub">nexa-core.cyber.term · 6–20 seats</div></div>
+                <div class="ct-list__content"><div class="ct-list__title">WORKSPACE</div><div class="ct-list__sub"><span data-ob-sum-ws>nexa-core</span>.cyber.term · 6–20 seats</div></div>
                 <span class="ct-list__meta t-primary">ap-northeast-2</span>
               </li>
               <li class="ct-list__item">
@@ -459,12 +493,9 @@
         <div class="ct-card__footer">
           <div class="ob__nav">
             <button class="ct-btn ct-btn--ghost" data-ob-back disabled>‹ BACK</button>
-            <span class="ob__nav-status" data-ob-status>IDENTITY 단계 — 1/4</span>
+            <span class="ob__nav-status" data-ob-status role="status">IDENTITY 단계 — 1/4</span>
             <button class="ct-btn ct-btn--primary" data-ob-next>NEXT ›</button>
-            <button class="ct-btn ct-btn--primary ct-btn--lg" data-ob-init hidden
-                    data-toast="워크스페이스 nexa-core 부팅 완료 · 초대 메일 3건 발송됨"
-                    data-toast-title="INITIALIZED"
-                    data-toast-variant="success">INITIALIZE ▸</button>
+            <button class="ct-btn ct-btn--primary ct-btn--lg" data-ob-init hidden>INITIALIZE ▸</button>
           </div>
         </div>
       </section>
@@ -473,42 +504,99 @@
   </div><!-- /ob -->
 </main>
 
+<!-- ============================== COMMAND PALETTE ============================== -->
+<div class="ct-cmdk" data-cmdk role="dialog" aria-modal="true" aria-label="명령 팔레트" hidden>
+  <div class="ct-cmdk__overlay"></div>
+  <div class="ct-cmdk__panel">
+    <div class="ct-cmdk__input-row">
+      <span class="ct-cmdk__prompt" aria-hidden="true"></span>
+      <input class="ct-cmdk__input" placeholder="명령 또는 페이지 검색…" aria-label="명령 입력">
+      <span class="ct-cmdk__hint"><span class="ct-kbd">ESC</span></span>
+    </div>
+    <div class="ct-cmdk__list" role="listbox">
+      <div class="ct-cmdk__group">
+        <div class="ct-cmdk__group-label">페이지</div>
+        <button class="ct-cmdk__item is-active" role="option" aria-selected="true" data-cmdk-item data-href="../index.html" data-keywords="home hub console"><span class="ct-cmdk__icon">◢</span><span class="ct-cmdk__label">홈 콘솔</span></button>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-href="dashboard.html" data-keywords="dashboard analytics hud"><span class="ct-cmdk__icon">▤</span><span class="ct-cmdk__label">분석 대시보드</span></button>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-href="kanban.html" data-keywords="kanban board tasks"><span class="ct-cmdk__icon">▦</span><span class="ct-cmdk__label">칸반 보드</span></button>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-href="inbox.html" data-keywords="inbox mail messages"><span class="ct-cmdk__icon">✉</span><span class="ct-cmdk__label">받은편지함</span></button>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-href="pricing.html" data-keywords="pricing plans billing tiers"><span class="ct-cmdk__icon">$</span><span class="ct-cmdk__label">가격 · 액세스 등급</span></button>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-href="settings.html" data-keywords="settings config preferences"><span class="ct-cmdk__icon">⚙</span><span class="ct-cmdk__label">설정</span></button>
+      </div>
+      <div class="ct-cmdk__group">
+        <div class="ct-cmdk__group-label">작업</div>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-action="theme" data-keywords="theme dark light toggle"><span class="ct-cmdk__icon">◐</span><span class="ct-cmdk__label">테마 전환 (DARK/LIGHT)</span><span class="ct-cmdk__shortcut"><span class="ct-kbd">T</span></span></button>
+      </div>
+      <div class="ct-cmdk__empty" role="status" hidden>NO MATCHES :: 다른 키워드를 입력하세요</div>
+    </div>
+    <div class="ct-cmdk__footer">
+      <span class="ct-cmdk__footer-hint"><span class="ct-kbd">↑</span><span class="ct-kbd">↓</span> 이동</span>
+      <span class="ct-cmdk__footer-hint"><span class="ct-kbd">↵</span> 실행</span>
+      <span class="ct-cmdk__footer-hint"><span class="ct-kbd">ESC</span> 닫기</span>
+    </div>
+  </div>
+</div>
+
 <script src="../app.js"></script>
 <script>
-  /* ---- onboarding wizard step controller (dependency-free) ---- */
+  /* ---- onboarding wizard step controller (dependency-free) ----
+     장면 사건: ② WORKSPACE 필수값 검증(에러 1회 경험) → ④ INITIALIZE 배포 클라이맥스 */
   (function () {
     'use strict';
     var stepsList = document.querySelector('[data-ob-steps]');
     if (!stepsList) return;
-    var steps   = Array.prototype.slice.call(stepsList.querySelectorAll('.ct-steps__step'));
-    var panels  = Array.prototype.slice.call(document.querySelectorAll('[data-ob-panel]'));
-    var back    = document.querySelector('[data-ob-back]');
-    var next    = document.querySelector('[data-ob-next]');
-    var init    = document.querySelector('[data-ob-init]');
-    var counter = document.querySelector('[data-ob-counter]');
-    var status  = document.querySelector('[data-ob-status]');
-    var TOTAL   = panels.length;
+    var steps    = Array.prototype.slice.call(stepsList.querySelectorAll('.ct-steps__step'));
+    var panels   = Array.prototype.slice.call(document.querySelectorAll('[data-ob-panel]'));
+    var back     = document.querySelector('[data-ob-back]');
+    var next     = document.querySelector('[data-ob-next]');
+    var init     = document.querySelector('[data-ob-init]');
+    var counter  = document.querySelector('[data-ob-counter]');
+    var status   = document.querySelector('[data-ob-status]');
+    var stepline = document.querySelector('[data-ob-stepline]');
+    var wsInput  = document.getElementById('ob-ws');
+    var wsError  = document.querySelector('[data-ob-ws-error]');
+    var TOTAL    = panels.length;
     var bootDone = false;
+    var deployed = false, deploying = false;
     var cur = 0;
+    var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     function pad(n) { return (n < 10 ? '0' : '') + n; }
+    function wsName() {
+      var v = wsInput ? (wsInput.value || '').trim() : '';
+      return v || 'nexa-core';
+    }
 
-    // run the step-4 boot sequence once, on first reveal, using the same
-    // engine app.js exposes (data-boot semantics) but scoped to this panel.
+    /* ---- step-2 required-field validation (필수값 에러를 장면 속에서 1회 경험) ---- */
+    function validateWs() {
+      var v = (wsInput.value || '').trim();
+      var ok = /^[a-z0-9][a-z0-9-]{1,30}$/.test(v);
+      wsInput.classList.toggle('is-invalid', !ok);
+      if (ok) { wsInput.removeAttribute('aria-invalid'); if (wsError) wsError.hidden = true; }
+      else    { wsInput.setAttribute('aria-invalid', 'true'); if (wsError) wsError.hidden = false; }
+      return ok;
+    }
+    if (wsInput) wsInput.addEventListener('input', function () {
+      // 입력 즉시 에러 해제 (재검증은 NEXT 시점)
+      if (wsInput.classList.contains('is-invalid')) validateWs();
+    });
+
+    /* ---- step-4 boot sequence: 첫 진입 시 1회, %WS% 를 실제 입력값으로 치환 ---- */
     function runBoot() {
       if (bootDone) return; bootDone = true;
       var box = document.querySelector('[data-ob-boot]');
       var reveal = document.querySelector('[data-ob-boot-reveal]');
       var typingEl = document.querySelector('[data-ob-typing]');
       if (!box) return;
-      var out = box.querySelector('[data-boot-out]') || box;
-      var lines = (box.getAttribute('data-boot') || '').split('|').filter(Boolean);
-      var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var out = box.querySelector('[data-ob-boot-out]') || box;
+      var ws = wsName();
+      var lines = (box.getAttribute('data-ob-boot') || '').split('|').filter(Boolean)
+        .map(function (l) { return l.replace('%WS%', ws); });
       var showReveal = function () {
         if (reveal) reveal.style.opacity = '1';
         if (typingEl) {
           var text = typingEl.getAttribute('data-text') || '';
-          if (reduced) { typingEl.textContent = text; return; }
+          if (REDUCED) { typingEl.textContent = text; return; }
           typingEl.textContent = ''; typingEl.classList.add('cursor');
           var i = 0;
           (function tick() {
@@ -517,46 +605,56 @@
           })();
         }
       };
-      if (reduced || !lines.length) {
-        out.innerHTML = lines.map(function (l) { return '<div class="ct-bootline"><span class="t-success">OK</span> ' + l + '</div>'; }).join('');
+      if (REDUCED || !lines.length) {
+        out.textContent = '';
+        lines.forEach(function (l) { appendLine(out, l); });
         showReveal(); return;
       }
-      out.innerHTML = '';
+      out.textContent = '';
       var n = 0;
       (function tick() {
         if (n < lines.length) {
-          var d = document.createElement('div');
-          d.className = 'ct-bootline';
-          d.innerHTML = '<span class="t-success">OK</span> ' + lines[n];
-          out.appendChild(d); n++;
+          appendLine(out, lines[n]); n++;
           setTimeout(tick, 150 + Math.random() * 130);
         } else { setTimeout(showReveal, 260); }
       })();
     }
+    function appendLine(out, text) {
+      var d = document.createElement('div');
+      d.className = 'ct-bootline';
+      var ok = document.createElement('span');
+      ok.className = 't-success'; ok.textContent = 'OK';
+      d.appendChild(ok);
+      d.appendChild(document.createTextNode(' ' + text));
+      out.appendChild(d);
+    }
 
+    /* ---- render ---- */
     function render() {
-      // panels
       panels.forEach(function (p, i) { p.hidden = (i !== cur); });
-      // steps: passed = complete, active = current, ahead = upcoming
       steps.forEach(function (s, i) {
         s.classList.remove('is-complete', 'is-current', 'is-upcoming');
         if (i < cur) s.classList.add('is-complete');
         else if (i === cur) s.classList.add('is-current');
         else s.classList.add('is-upcoming');
       });
-      // nav buttons
       back.disabled = (cur === 0);
       var last = (cur === TOTAL - 1);
       next.hidden = last;
       init.hidden = !last;
-      // chrome counter + status line
       var labels = ['IDENTITY', 'WORKSPACE', 'INTEGRATIONS', 'DEPLOY'];
-      if (counter) counter.textContent = pad(cur + 1) + ' / ' + pad(TOTAL);
-      if (status) status.textContent = labels[cur] + ' 단계 — ' + (cur + 1) + '/' + TOTAL;
-      if (last) runBoot();
+      if (counter && !deployed) counter.textContent = pad(cur + 1) + ' / ' + pad(TOTAL);
+      if (status && !deployed) status.textContent = labels[cur] + ' 단계 — ' + (cur + 1) + '/' + TOTAL;
+      if (stepline) stepline.textContent = pad(cur + 1) + '/' + pad(TOTAL);
+      if (last) {
+        var sumWs = document.querySelector('[data-ob-sum-ws]');
+        if (sumWs) sumWs.textContent = wsName();
+        runBoot();
+      }
     }
 
     if (next) next.addEventListener('click', function () {
+      if (cur === 1 && wsInput && !validateWs()) { wsInput.focus(); return; }
       if (cur < TOTAL - 1) { cur++; render();
         var card = document.querySelector('.ob__card');
         if (card) card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -564,6 +662,51 @@
     });
     if (back) back.addEventListener('click', function () {
       if (cur > 0) { cur--; render(); }
+    });
+
+    /* ---- INITIALIZE — 배포 클라이맥스 (1회성 · 광과민 안전) ---- */
+    if (init) init.addEventListener('click', function () {
+      if (deploying) return;
+      if (deployed) {
+        if (window.CT) CT.navline('dashboard.html'); else window.location.href = 'dashboard.html';
+        return;
+      }
+      deploying = true;
+      var ws = wsName();
+      var box = document.querySelector('[data-ob-boot]');
+      var out = box ? (box.querySelector('[data-ob-boot-out]') || box) : null;
+      var lines = [
+        'igniting neon rail :: cyan/magenta',
+        'spawning pods [4/4]',
+        'dispatching 3 invites via relay',
+        'workspace online :: ' + ws + '.cyber.term'
+      ];
+      init.classList.add('is-loading');
+      init.disabled = true;
+      function finish() {
+        deploying = false; deployed = true;
+        init.classList.remove('is-loading');
+        init.disabled = false;
+        init.textContent = 'ENTER CONSOLE ▸';
+        if (counter) counter.textContent = 'ONLINE';
+        if (status) status.textContent = '배포 완료 — ' + ws + '.cyber.term 가동 중';
+        var card = document.querySelector('.ob__card');
+        if (card) card.classList.add('is-online');
+        if (window.CT) CT.toast({
+          title: 'INITIALIZED',
+          msg: '워크스페이스 ' + ws + ' 부팅 완료 · 초대 메일 3건을 발송했습니다',
+          variant: 'success'
+        });
+      }
+      if (REDUCED || !out) {
+        if (out) lines.forEach(function (l) { appendLine(out, l); });
+        finish(); return;
+      }
+      var n = 0;
+      (function tick() {
+        if (n < lines.length) { appendLine(out, lines[n]); n++; setTimeout(tick, 210); }
+        else { setTimeout(finish, 260); }
+      })();
     });
 
     render();

@@ -1,9 +1,19 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PROFILE // CYBER.TERM</title>
+<!-- FOUC 방지: 저장 테마를 렌더 전에 동기 적용 (키는 app.js Theme.KEY 와 동일) -->
+<script>
+(function () {
+  try {
+    var t = localStorage.getItem("ct-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../semantic.css">
 <link rel="stylesheet" href="../base.css">
@@ -20,19 +30,80 @@
 
 /* ---- profile header banner ---- */
 .pf-header { position: relative; overflow: hidden; }
-.pf-header .ct-card__body { padding: var(--space-6); }
+.pf-header .ct-card__body {
+  padding: var(--space-6);
+  padding-right: calc(var(--space-6) + 38px);   /* clearance strip 폭 확보 */
+  position: relative;
+}
+/* radial 복붙 제거 — 씬 엔진(.scene-glow, 기본 hub 채널)이 담당. 모눈만 남긴다 */
 .pf-banner {
   position: absolute; inset: 0; pointer-events: none; z-index: 0;
   background:
-    radial-gradient(60% 120% at 12% 0%, rgba(var(--rgb-cyan) / .16), transparent 60%),
-    radial-gradient(55% 130% at 92% 10%, rgba(var(--rgb-magenta) / .14), transparent 62%),
     repeating-linear-gradient(90deg, var(--grid-line) 0 1px, transparent 1px var(--space-8)),
     repeating-linear-gradient(0deg, var(--grid-line) 0 1px, transparent 1px var(--space-8));
+}
+
+/* ---- clearance security strip — 카드 우측 세로 인증 띠 + 바코드 (시그니처) ---- */
+.pf-clearance {
+  position: absolute;
+  top: var(--card-chrome-h); right: 0; bottom: 0;
+  width: 38px;
+  display: flex; align-items: center; justify-content: center;
+  gap: var(--space-3);
+  writing-mode: vertical-rl;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--color-accent);
+  text-shadow: var(--glow-magenta);
+  background: rgba(var(--rgb-magenta) / .06);
+  border-left: var(--border-1) solid rgba(var(--rgb-magenta) / .35);
+  z-index: 1;
+  pointer-events: none;
+  user-select: none;
+  overflow: hidden;
+}
+/* 바코드 세그먼트 — 세로 띠라 가로 스트라이프가 바코드로 읽힌다 */
+.pf-clearance::before,
+.pf-clearance::after {
+  content: "";
+  flex: 0 1 56px;               /* 좁은 높이에선 바코드가 먼저 줄어든다 */
+  min-height: 14px;
+  width: 14px;
+  background: repeating-linear-gradient(0deg,
+    rgba(var(--rgb-magenta) / .55) 0 2px, transparent 2px 5px,
+    rgba(var(--rgb-magenta) / .30) 5px 6px, transparent 6px 9px);
+}
+.pf-clearance span { flex: 0 1 auto; overflow: hidden; }
+@media (max-width: 640px) {
+  /* 모바일: 숨기지 않고 하단 가로 띠로 재배치 */
+  .pf-clearance {
+    top: auto; left: 0; right: 0; bottom: 0;
+    width: auto; height: 30px;
+    writing-mode: horizontal-tb;
+    border-left: none;
+    border-top: var(--border-1) solid rgba(var(--rgb-magenta) / .35);
+  }
+  .pf-clearance::before,
+  .pf-clearance::after {
+    flex: 0 0 48px;
+    width: 48px; height: 12px;
+    background: repeating-linear-gradient(90deg,
+      rgba(var(--rgb-magenta) / .55) 0 2px, transparent 2px 5px,
+      rgba(var(--rgb-magenta) / .30) 5px 6px, transparent 6px 9px);
+  }
+  .pf-header .ct-card__body {
+    padding-right: var(--space-6);
+    padding-bottom: calc(var(--space-6) + 30px);
+  }
 }
 .pf-id { position: relative; z-index: 1; display: flex; gap: var(--space-6); align-items: flex-start; flex-wrap: wrap; }
 .pf-id__avatar { flex-shrink: 0; }
 .pf-id__main { flex: 1 1 280px; min-width: 240px; }
-.pf-id h1 { font-size: clamp(1.75rem, 4.5vw, var(--text-3xl)); line-height: 1.1; margin: 0; }
+/* 한글 이름 행간·자간은 base.css .display-ko(1.16 / 자간 0)가 담당 */
+.pf-id h1 { font-size: clamp(1.75rem, 4.5vw, var(--text-3xl)); margin: 0; }
 .pf-id__handle { color: var(--color-accent); text-shadow: var(--glow-magenta); font-size: var(--text-md); }
 .pf-id__bio { color: var(--color-text-muted); max-width: 60ch; margin-top: var(--space-3); font-size: var(--text-sm); }
 .pf-meta { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin-top: var(--space-4); }
@@ -124,18 +195,20 @@
 </style>
 </head>
 <body>
-<a class="skip-link" href="#main">CONTENT 로 건너뛰기</a>
-<div class="crt-overlay" aria-hidden="true"></div>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
+<div class="crt-overlay" aria-hidden="true">
+  <span class="crt-overlay__osd">TERM-07 // ID SCAN OK · 60Hz</span>
+</div>
 
 <header class="ct-navbar">
   <div class="container flex items-center justify-between" style="height:60px;">
     <a class="ct-navbar__brand" href="../index.html"><span class="t-accent">◢</span> CYBER<span class="t-primary">.</span>TERM</a>
     <nav class="ct-navbar__nav" aria-label="주요">
-      <a class="ct-navbar__link" href="../index.html">HOME</a>
-      <a class="ct-navbar__link" href="dashboard.html">DASH</a>
-      <a class="ct-navbar__link" href="kanban.html">KANBAN</a>
-      <a class="ct-navbar__link" href="inbox.html">INBOX</a>
-      <a class="ct-navbar__link" href="settings.html">SETTINGS</a>
+      <a class="ct-navbar__link" href="../index.html" data-navline>HOME</a>
+      <a class="ct-navbar__link" href="dashboard.html" data-navline>DASH</a>
+      <a class="ct-navbar__link" href="kanban.html" data-navline>KANBAN</a>
+      <a class="ct-navbar__link" href="inbox.html" data-navline>INBOX</a>
+      <a class="ct-navbar__link" href="settings.html" data-navline>SETTINGS</a>
     </nav>
     <div class="ct-navbar__actions flex items-center gap-2">
       <button class="ct-btn ct-btn--secondary ct-btn--sm" data-cmdk-open>SEARCH <span class="ct-kbd">⌘K</span></button>
@@ -152,20 +225,25 @@
   <nav class="ct-breadcrumb" aria-label="경로">
     <a class="ct-breadcrumb__item ct-breadcrumb__item--root" href="../index.html" aria-label="홈"></a>
     <span class="ct-breadcrumb__sep">/</span>
-    <a class="ct-breadcrumb__item" href="#">users</a>
+    <span class="ct-breadcrumb__item">users</span>
     <span class="ct-breadcrumb__sep">/</span>
     <span class="ct-breadcrumb__item is-current" aria-current="page">node_runner</span>
   </nav>
 
   <!-- ============ PROFILE HEADER (banner) ============ -->
-  <section class="ct-card ct-card--glow pf-header" aria-label="프로필 헤더" style="margin-top:var(--space-5)">
+  <section class="ct-card ct-card--glow pf-header" aria-label="프로필 헤더" style="margin-top:var(--space-5)" data-reveal>
     <div class="ct-card__chrome">
       <div class="ct-card__dots"><span class="ct-card__dot"></span><span class="ct-card__dot"></span><span class="ct-card__dot"></span></div>
       <span class="ct-card__title ct-card__title--prompt">whoami --verbose</span>
       <div class="ct-card__actions"><span class="ct-badge ct-badge--success ct-badge--dot">ONLINE</span></div>
     </div>
+    <!-- 시그니처: 클리어런스 세로 인증 띠 (장식 픽션) -->
+    <div class="pf-clearance" aria-hidden="true">
+      <span>CLEARANCE L4 // GRID-07 AUTH</span>
+    </div>
     <div class="ct-card__body">
       <div class="pf-banner" aria-hidden="true"></div>
+      <div class="scene-glow" aria-hidden="true"></div>
 
       <div class="pf-id">
         <div class="pf-id__avatar">
@@ -175,7 +253,7 @@
           </span>
         </div>
         <div class="pf-id__main">
-          <h1>JINSU CHOI</h1>
+          <h1 class="display-ko">최진수 <span class="t-subtle" style="font-size:var(--text-md)">// CHOI JINSU</span></h1>
           <div class="pf-id__handle t-mono">@node_runner</div>
           <p class="pf-id__bio">
             netrunner / ops 엔지니어. 분산 클러스터를 깨우고, 새벽 3시 인시던트를 잠재웁니다.
@@ -286,7 +364,7 @@
                 <span class="pf-heat__cell pf-heat__cell--l3"></span>
                 <span class="pf-heat__cell pf-heat__cell--l4"></span>
                 <span>more</span>
-                <span style="margin-left:auto;color:var(--color-text-muted)">9,612 contributions</span>
+                <span style="margin-left:auto;color:var(--color-text-muted)">연 9,612회 기여</span>
               </div>
             </div>
 
@@ -388,72 +466,72 @@
           <div class="ct-tabs__panel" role="tabpanel" id="pf-p3" aria-labelledby="pf-t3" hidden>
             <div class="pf-block__h">repositories</div>
             <div class="pf-repos">
-              <a class="ct-card ct-card--link pf-repo" href="#">
+              <article class="ct-card pf-repo">
                 <div class="ct-card__body">
                   <div class="pf-repo__name">edge-gateway</div>
                   <div class="pf-repo__desc">무중단 배포 게이트웨이. 카나리·블루그린·자동 롤백을 단일 컨트롤 플레인에서.</div>
                   <div class="pf-repo__foot">
                     <span class="pf-repo__lang"><span class="pf-dot pf-dot--rs"></span>Rust</span>
                     <span class="pf-star"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>1.2k</span>
-                    <span>updated 2h</span>
+                    <span>2시간 전</span>
                   </div>
                 </div>
-              </a>
-              <a class="ct-card ct-card--link pf-repo" href="#">
+              </article>
+              <article class="ct-card pf-repo">
                 <div class="ct-card__body">
                   <div class="pf-repo__name">obsrv-ebpf</div>
                   <div class="pf-repo__desc">무에이전트 관측 파이프라인. eBPF 로 커널에서 직접 트레이스 수집.</div>
                   <div class="pf-repo__foot">
                     <span class="pf-repo__lang"><span class="pf-dot pf-dot--go"></span>Go</span>
                     <span class="pf-star"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>864</span>
-                    <span>updated 1h</span>
+                    <span>1시간 전</span>
                   </div>
                 </div>
-              </a>
-              <a class="ct-card ct-card--link pf-repo" href="#">
+              </article>
+              <article class="ct-card pf-repo">
                 <div class="ct-card__body">
                   <div class="pf-repo__name">night-oncall</div>
                   <div class="pf-repo__desc">온콜 런북 자동화 봇. 알림 → 진단 → 1차 완화까지 무인 처리.</div>
                   <div class="pf-repo__foot">
                     <span class="pf-repo__lang"><span class="pf-dot pf-dot--ts"></span>TypeScript</span>
                     <span class="pf-star"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>503</span>
-                    <span>updated 2d</span>
+                    <span>2일 전</span>
                   </div>
                 </div>
-              </a>
-              <a class="ct-card ct-card--link pf-repo" href="#">
+              </article>
+              <article class="ct-card pf-repo">
                 <div class="ct-card__body">
                   <div class="pf-repo__name">k8s-warden</div>
                   <div class="pf-repo__desc">멀티클러스터 정책 가드. 위험한 매니페스트를 배포 전에 차단.</div>
                   <div class="pf-repo__foot">
                     <span class="pf-repo__lang"><span class="pf-dot pf-dot--go"></span>Go</span>
                     <span class="pf-star"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>391</span>
-                    <span>updated 5d</span>
+                    <span>5일 전</span>
                   </div>
                 </div>
-              </a>
-              <a class="ct-card ct-card--link pf-repo" href="#">
+              </article>
+              <article class="ct-card pf-repo">
                 <div class="ct-card__body">
                   <div class="pf-repo__name">tracegrid</div>
                   <div class="pf-repo__desc">분산 트레이스 시각화 TUI. 터미널에서 span 폭포를 그립니다.</div>
                   <div class="pf-repo__foot">
                     <span class="pf-repo__lang"><span class="pf-dot pf-dot--rs"></span>Rust</span>
                     <span class="pf-star"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>277</span>
-                    <span>updated 1w</span>
+                    <span>1주 전</span>
                   </div>
                 </div>
-              </a>
-              <a class="ct-card ct-card--link pf-repo" href="#">
+              </article>
+              <article class="ct-card pf-repo">
                 <div class="ct-card__body">
                   <div class="pf-repo__name">latency-lab</div>
                   <div class="pf-repo__desc">SLO 회귀 벤치 하네스. p50/p99 변동을 PR마다 코멘트로.</div>
                   <div class="pf-repo__foot">
                     <span class="pf-repo__lang"><span class="pf-dot pf-dot--py"></span>Python</span>
                     <span class="pf-star"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>148</span>
-                    <span>updated 2w</span>
+                    <span>2주 전</span>
                   </div>
                 </div>
-              </a>
+              </article>
             </div>
           </div>
 
@@ -465,7 +543,7 @@
     <aside class="pf-side" aria-label="사이드 정보">
 
       <!-- system.id -->
-      <div class="ct-card ct-card--accent">
+      <div class="ct-card ct-card--accent" data-reveal>
         <div class="ct-card__chrome">
           <div class="ct-card__dots"><span class="ct-card__dot"></span><span class="ct-card__dot"></span><span class="ct-card__dot"></span></div>
           <span class="ct-card__title ct-card__title--prompt">system.id</span>
@@ -483,7 +561,7 @@
       </div>
 
       <!-- achievements -->
-      <div class="ct-card">
+      <div class="ct-card" data-reveal>
         <div class="ct-card__chrome">
           <div class="ct-card__dots"><span class="ct-card__dot"></span><span class="ct-card__dot"></span><span class="ct-card__dot"></span></div>
           <span class="ct-card__title">achievements.log</span>
@@ -502,7 +580,7 @@
       </div>
 
       <!-- connections -->
-      <div class="ct-card">
+      <div class="ct-card" data-reveal>
         <div class="ct-card__chrome">
           <div class="ct-card__dots"><span class="ct-card__dot"></span><span class="ct-card__dot"></span><span class="ct-card__dot"></span></div>
           <span class="ct-card__title">connections</span>
@@ -555,6 +633,39 @@
 </footer>
 
 </main>
+
+<!-- ============================== COMMAND PALETTE ============================== -->
+<div class="ct-cmdk" data-cmdk role="dialog" aria-modal="true" aria-label="명령 팔레트" hidden>
+  <div class="ct-cmdk__overlay"></div>
+  <div class="ct-cmdk__panel">
+    <div class="ct-cmdk__input-row">
+      <span class="ct-cmdk__prompt" aria-hidden="true"></span>
+      <input class="ct-cmdk__input" placeholder="명령 또는 페이지 검색…" aria-label="명령 입력">
+      <span class="ct-cmdk__hint"><span class="ct-kbd">ESC</span></span>
+    </div>
+    <div class="ct-cmdk__list" role="listbox">
+      <div class="ct-cmdk__group">
+        <div class="ct-cmdk__group-label">페이지</div>
+        <button class="ct-cmdk__item is-active" role="option" aria-selected="true" data-cmdk-item data-href="../index.html" data-keywords="home index hub"><span class="ct-cmdk__icon">◢</span><span class="ct-cmdk__label">홈 콘솔</span></button>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-href="dashboard.html" data-keywords="dashboard analytics hud"><span class="ct-cmdk__icon">▤</span><span class="ct-cmdk__label">분석 대시보드</span></button>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-href="kanban.html" data-keywords="kanban board tasks"><span class="ct-cmdk__icon">▦</span><span class="ct-cmdk__label">칸반 보드</span></button>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-href="inbox.html" data-keywords="inbox mail messages"><span class="ct-cmdk__icon">✉</span><span class="ct-cmdk__label">받은편지함</span></button>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-href="settings.html" data-keywords="settings config preferences"><span class="ct-cmdk__icon">⚙</span><span class="ct-cmdk__label">설정</span></button>
+      </div>
+      <div class="ct-cmdk__group">
+        <div class="ct-cmdk__group-label">작업</div>
+        <button class="ct-cmdk__item" role="option" aria-selected="false" data-cmdk-item data-action="theme" data-keywords="theme dark light toggle"><span class="ct-cmdk__icon">◐</span><span class="ct-cmdk__label">테마 전환 (DARK/LIGHT)</span><span class="ct-cmdk__shortcut"><span class="ct-kbd">T</span></span></button>
+      </div>
+      <div class="ct-cmdk__empty" role="status" hidden>NO MATCHES :: 다른 키워드를 입력하세요</div>
+    </div>
+    <div class="ct-cmdk__footer">
+      <span class="ct-cmdk__footer-hint"><span class="ct-kbd">↑</span><span class="ct-kbd">↓</span> 이동</span>
+      <span class="ct-cmdk__footer-hint"><span class="ct-kbd">↵</span> 실행</span>
+      <span class="ct-cmdk__footer-hint"><span class="ct-kbd">ESC</span> 닫기</span>
+    </div>
+  </div>
+</div>
+
 <script src="../app.js"></script>
 </body>
 </html>

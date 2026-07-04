@@ -1,9 +1,21 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
+<script>
+/* FOUC 방지 — 저장된 판본을 페인트 전에 적용 (다크 = 캐노니컬 기본) */
+(function () {
+  try {
+    var t = localStorage.getItem('theme-24-mode') || 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) { document.documentElement.setAttribute('data-theme', 'dark'); }
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Scriptorium Board · Folio 24</title>
+<title>필사실 작업 대장 · Folio 24</title>
+<meta name="description" content="장서각 필사실의 작업 대장. 보사·개장·금니·교감 — 낱장이 공정을 지나 완질에 이르면 밀랍으로 봉인됩니다.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="../base.css">
 <link rel="stylesheet" href="../components/buttons.css">
 <link rel="stylesheet" href="../components/forms.css">
@@ -11,8 +23,8 @@
 <link rel="stylesheet" href="../components/feedback.css">
 <link rel="stylesheet" href="../components/navigation.css">
 <style>
-/* ---- Board Layout --------------------------------------------------- */
-.board-page { display: flex; flex-direction: column; min-height: 100vh; }
+/* ---- 보드 레이아웃 --------------------------------------------------- */
+.board-page { min-height: 100dvh; display: flex; flex-direction: column; }
 
 .board-toolbar {
   display: flex; align-items: center; gap: var(--space-3);
@@ -21,426 +33,370 @@
   background: var(--color-surface);
   flex-wrap: wrap;
 }
-
 .board-toolbar__title-group { flex: 0 0 auto; }
 .board-toolbar__title-group .eyebrow { font-size: var(--text-2xs); }
 .board-toolbar__title-group h1 {
   font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
   color: var(--color-text-strong);
-  margin: 0; line-height: 1.2;
+  margin: 0; line-height: var(--leading-heading-ko);
 }
-
+.board-note { margin-left: var(--space-4); align-self: flex-end; }
+@media (max-width: 1100px) { .board-note { display: none; } }
 .board-toolbar__search { flex: 1 1 200px; max-width: 320px; }
-
 .board-toolbar__spacer { flex: 1 1 auto; }
+.board-toolbar__actions { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
 
-.board-toolbar__actions {
-  display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;
-}
-
-/* ---- Board Scroll Container ----------------------------------------- */
+/* ---- 보드 스크롤 컨테이너 -------------------------------------------- */
 .board-scroll {
-  flex: 1 1 auto;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: var(--space-5) var(--space-6);
-  padding-bottom: var(--space-8);
+  flex: 1 1 auto; min-height: 0;
+  overflow-x: auto; overflow-y: hidden;
+  padding: var(--space-5) var(--space-6) var(--space-6);
 }
-
 .board {
-  display: flex;
-  gap: var(--space-4);
-  align-items: flex-start;
-  min-width: max-content;
-  height: calc(100vh - 180px);
+  display: flex; gap: var(--space-4); align-items: flex-start;
+  min-width: max-content; height: 100%;
 }
+/* 목록 보기 — 세그먼트 '목록' 선택 시 세로 적재 */
+.board--list { flex-direction: column; min-width: 0; height: auto; }
+.board--list .kanban-col { width: 100%; min-width: 0; max-height: none; }
+.board.board--list { align-items: stretch; }
+.board-scroll.is-list { overflow-y: auto; height: auto; }
 
-/* ---- Column --------------------------------------------------------- */
+/* ---- 컬럼 ------------------------------------------------------------ */
 .kanban-col {
-  display: flex;
-  flex-direction: column;
-  width: 300px;
-  min-width: 280px;
-  max-height: 100%;
+  display: flex; flex-direction: column;
+  width: 302px; min-width: 280px; max-height: 100%;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   flex-shrink: 0;
 }
-
 .kanban-col__header {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface-2);
   border-radius: var(--radius-md) var(--radius-md) 0 0;
   flex-shrink: 0;
 }
-
 .kanban-col__title {
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
+  font-size: var(--text-sm); font-weight: var(--weight-semibold);
   color: var(--color-text-strong);
   display: flex; align-items: center; gap: var(--space-2);
+  flex: 1; min-width: 0;
 }
-
-.kanban-col__title .col-dot {
-  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+.kanban-col__title .col-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.col-dot--proposed    { background: var(--color-text-muted); }
+.col-dot--in-progress { background: var(--gold-400); box-shadow: var(--glow-candle-sm); }
+.col-dot--review      { background: var(--color-primary); }
+.col-dot--done        { background: var(--color-success); }
+.col-folio {
+  font-family: var(--font-display); font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide); color: var(--color-text-subtle);
+  flex: none; font-variant-numeric: tabular-nums;
 }
-
-.col-dot--proposed { background: var(--color-text-muted); }
-.col-dot--in-progress { background: var(--color-warning-fg); }
-.col-dot--review { background: var(--color-primary); }
-.col-dot--done { background: var(--color-success); }
-
 .kanban-col__cards {
-  flex: 1 1 auto;
-  overflow-y: auto;
-  overflow-x: hidden;
+  flex: 1 1 auto; overflow-y: auto; overflow-x: hidden;
   padding: var(--space-3);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+  display: flex; flex-direction: column; gap: var(--space-3);
   min-height: 60px;
 }
-
-/* Drop target highlight */
 .kanban-col__cards.drag-over {
   background: var(--color-accent-soft);
   border-radius: 0 0 var(--radius-md) var(--radius-md);
   outline: 2px dashed var(--color-accent);
   outline-offset: -4px;
 }
+.kanban-col__footer { padding: var(--space-2) var(--space-3); border-top: 1px solid var(--color-border); flex-shrink: 0; }
+.kanban-col__footer .btn { width: 100%; justify-content: flex-start; }
 
-/* ---- Card extras ---------------------------------------------------- */
-.kanban-card {
-  outline: none;
-}
-.kanban-card:focus-visible {
-  outline: 2px solid var(--color-ring);
-  outline-offset: 2px;
-}
-
-.kanban-card__badge-row {
-  display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.kanban-card__meta {
-  display: flex; align-items: center; justify-content: space-between; margin-top: var(--space-3);
-}
-
-.kanban-card__meta-left {
-  display: flex; align-items: center; gap: var(--space-2);
-}
-
-.kanban-card__meta-right {
-  display: flex; align-items: center; gap: var(--space-3);
-}
-
+/* ---- 카드 확장 -------------------------------------------------------- */
+.kanban-card { position: relative; outline: none; }
+.kanban-card:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }
+.kanban-card__badge-row { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); flex-wrap: wrap; }
+.kanban-card__desc { font-size: var(--text-2xs); margin-top: var(--space-1); }
+.kanban-card__meta { display: flex; align-items: center; justify-content: space-between; margin-top: var(--space-3); gap: var(--space-2); }
+.kanban-card__meta-left { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.kanban-card__meta-right { display: flex; align-items: center; gap: var(--space-2); flex: none; }
 .kanban-card__micro {
   display: flex; align-items: center; gap: var(--space-1);
   font-size: var(--text-2xs); color: var(--color-text-subtle);
+  font-variant-numeric: tabular-nums;
 }
-
 .kanban-card__due {
-  font-size: var(--text-2xs);
+  font-size: var(--text-2xs); color: var(--color-text-subtle);
+  font-family: var(--font-display); letter-spacing: var(--tracking-wide);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.kanban-card__due--overdue { color: var(--color-danger); }
+.kanban-card__due--soon    { color: var(--color-warning-fg); }
+
+/* 키보드 이동 — 마우스 전용 DnD의 대체 수단 */
+.kanban-card__move { display: inline-flex; gap: 2px; }
+.card-move {
+  width: 1.5rem; height: 1.5rem; display: grid; place-items: center;
+  border: 1px solid var(--color-border-subtle); border-radius: var(--radius-sm);
   color: var(--color-text-subtle);
-  font-family: var(--font-display);
-  letter-spacing: var(--tracking-wide);
+  transition: color var(--duration-fast), border-color var(--duration-fast), background var(--duration-fast);
+}
+.card-move:hover { color: var(--color-accent); border-color: var(--color-accent); background: var(--color-accent-soft); }
+.card-move svg { width: 0.75rem; height: 0.75rem; }
+
+/* 완질 봉인 — 낱장이 마지막 공정에 이르면 밀랍 인장이 '쿵' 찍힌다 */
+.kanban-card .card-seal {
+  position: absolute; top: -0.7rem; right: -0.35rem; z-index: 1;
+  width: 2.1em; height: 2.1em; font-size: 0.78rem;
+  rotate: 8deg;
 }
 
-.kanban-card__due--overdue { color: var(--color-danger-fg); }
-.kanban-card__due--soon { color: var(--color-warning-fg); }
-
-/* ---- Column add button --------------------------------------------- */
-.kanban-col__footer {
-  padding: var(--space-2) var(--space-3);
-  border-top: 1px solid var(--color-border);
-  flex-shrink: 0;
-}
-
-/* ---- DnD ghost placeholder ----------------------------------------- */
+/* ---- DnD 자리 표시 ---------------------------------------------------- */
 .card-placeholder {
   height: 80px;
   border: 2px dashed var(--color-border-strong);
   border-radius: var(--radius-sm);
   background: var(--color-accent-soft);
-  opacity: 0.5;
-  flex-shrink: 0;
+  opacity: 0.5; flex-shrink: 0;
 }
 
-/* ---- Responsive ------------------------------------------------------- */
-@media (max-width: 768px) {
-  .board-scroll {
-    padding: var(--space-3);
-  }
-  .board {
-    height: auto;
-    min-width: unset;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-  }
-  .kanban-col {
-    width: 260px;
-    min-width: 260px;
-    max-height: 70vh;
-  }
-  .board-toolbar {
-    padding: var(--space-3) var(--space-4);
-  }
-  .board-toolbar__search {
-    max-width: 100%;
-    flex: 1 1 100%;
-    order: 10;
-  }
-}
-
-/* ---- Scrollbar styling ---------------------------------------------- */
-.kanban-col__cards::-webkit-scrollbar { width: 4px; }
-.kanban-col__cards::-webkit-scrollbar-track { background: transparent; }
-.kanban-col__cards::-webkit-scrollbar-thumb {
-  background: var(--color-border-strong);
-  border-radius: 2px;
-}
-
-/* ---- View note ------------------------------------------------------ */
+/* ---- 안내 · 콜로폰 ----------------------------------------------------- */
 .dnd-note {
-  font-size: var(--text-2xs);
-  color: var(--color-text-subtle);
-  font-style: italic;
+  font-size: var(--text-2xs); color: var(--color-text-subtle); font-style: italic;
   padding: var(--space-2) var(--space-6);
   border-top: 1px solid var(--color-border);
-  text-align: center;
-  background: var(--color-surface);
+  text-align: center; background: var(--color-surface);
 }
+.board-colophon {
+  text-align: center;
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--color-border);
+}
+.board-colophon .fleur { margin-inline: auto; }
+.board-colophon p { font-size: var(--text-2xs); margin-top: var(--space-2); }
+
+/* ---- 반응형 ------------------------------------------------------------ */
+@media (max-width: 768px) {
+  .board-scroll { padding: var(--space-3); }
+  .board { height: auto; }
+  .kanban-col { width: 262px; min-width: 262px; max-height: 70dvh; }
+  .board-toolbar { padding: var(--space-3) var(--space-4); }
+  .board-toolbar__search { max-width: 100%; flex: 1 1 100%; order: 10; }
+}
+
+/* ---- 스크롤바 ----------------------------------------------------------- */
+.kanban-col__cards::-webkit-scrollbar { width: 4px; }
+.kanban-col__cards::-webkit-scrollbar-track { background: transparent; }
+.kanban-col__cards::-webkit-scrollbar-thumb { background: var(--color-border-strong); border-radius: 2px; }
 </style>
 </head>
 <body class="board-page">
-<a class="skip-link" href="#main">Skip to content</a>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
 
 <!-- ===================== NAVBAR ===================== -->
-<nav class="navbar" aria-label="Primary">
+<nav class="navbar" aria-label="주요 내비게이션">
   <a class="navbar__brand" href="../index.html">
     <span class="mark" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 5a2 2 0 0 1 2-2h6v18H5a2 2 0 0 1-2-2zM21 5a2 2 0 0 0-2-2h-6v18h6a2 2 0 0 0 2-2z"/></svg></span>
     <span>Folio<span class="text-accent">·</span>24</span>
   </a>
   <div class="navbar__nav">
-    <a class="nav-link" href="dashboard.html">Dashboard</a>
-    <a class="nav-link is-active" href="kanban.html" aria-current="page">Board</a>
-    <a class="nav-link" href="inbox.html">Letters</a>
-    <a class="nav-link" href="article.html">Reading Room</a>
+    <a class="nav-link" href="dashboard.html">대시보드</a>
+    <a class="nav-link" aria-current="page" href="kanban.html">필사실</a>
+    <a class="nav-link" href="inbox.html">서신함</a>
+    <a class="nav-link" href="article.html">열람실</a>
   </div>
   <span class="navbar__spacer"></span>
   <div class="navbar__actions">
-    <button class="btn btn--ghost btn--sm" data-cmdk-open aria-label="Open command palette">
+    <button class="btn btn--ghost btn--sm" data-cmdk-open aria-label="명령 팔레트 열기">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <kbd>⌘K</kbd>
+      <span class="hide-mobile">검색</span> <kbd>⌘K</kbd>
     </button>
     <button class="btn btn--secondary btn--sm" data-theme-toggle aria-pressed="false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-      <span data-theme-label>Parchment</span>
+      <span data-theme-label>양피지</span>
+    </button>
+    <button class="btn btn--icon btn--ghost nav-toggle" data-nav-toggle aria-label="내비게이션 열기" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
     </button>
   </div>
 </nav>
 
-<!-- ===================== TOOLBAR ===================== -->
-<div class="board-toolbar" role="region" aria-label="Board toolbar">
-  <!-- Title group -->
+<!-- ===================== 도구 막대 ===================== -->
+<div class="board-toolbar" role="region" aria-label="보드 도구 막대">
   <div class="board-toolbar__title-group">
-    <p class="eyebrow">Manuscriptum · A.D. MDCCCXLII</p>
-    <h1>The Scriptorium Board</h1>
+    <p class="eyebrow">Scriptorium · MMXXVI</p>
+    <h1>필사실 작업 대장</h1>
   </div>
 
-  <!-- Search / filter -->
+  <span class="margin-note margin-note--sm board-note">물 얼룩진 『시편언해』부터 — 감독 사서 씀</span>
+
   <div class="board-toolbar__search">
     <div class="searchbar" role="search">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <input
-        type="search"
-        id="board-filter"
-        data-filter="#board"
-        placeholder="Search the manuscripts…"
-        aria-label="Filter cards by keyword"
-        autocomplete="off"
-      />
+      <input type="search" id="board-filter" data-filter="#board"
+        placeholder="작업 낱장을 검색하십시오…" aria-label="작업 낱장 검색" autocomplete="off" />
     </div>
   </div>
 
   <span class="board-toolbar__spacer"></span>
 
-  <!-- Right-side actions -->
   <div class="board-toolbar__actions">
-    <!-- Contributors avatar group -->
-    <div class="avatar-group" aria-label="Contributors: Brother Aldric, Sister Isolde, Brother Matthias, Sister Rowena, and 2 others">
-      <div class="avatar avatar--sm avatar--ring" title="Frater Aldric of Mercia" aria-label="Frater Aldric">AL</div>
-      <div class="avatar avatar--sm avatar--ring" title="Soror Isolde of Winchester" aria-label="Soror Isolde">IS</div>
-      <div class="avatar avatar--sm avatar--ring" title="Frater Matthias de Cologne" aria-label="Frater Matthias">MK</div>
-      <div class="avatar avatar--sm avatar--ring" title="Soror Rowena of York" aria-label="Soror Rowena">RY</div>
-      <div class="avatar avatar--sm avatar--more" title="2 more scholars" aria-label="+2 more">+2</div>
+    <!-- 작업 인원 -->
+    <div class="avatar-group" aria-label="작업 인원: 윤서인, 남도현, 백가연, 정소민 외 2명">
+      <div class="avatar avatar--sm avatar--ring" title="윤서인 — 탈초·교감" aria-label="윤서인">윤</div>
+      <div class="avatar avatar--sm avatar--ring" title="남도현 — 주서·색인" aria-label="남도현">남</div>
+      <div class="avatar avatar--sm avatar--ring" title="백가연 — 금니·정리" aria-label="백가연">백</div>
+      <div class="avatar avatar--sm avatar--ring" title="정소민 — 개장·복원" aria-label="정소민">정</div>
+      <div class="avatar avatar--sm avatar--more" title="외 2명" aria-label="외 2명">+2</div>
     </div>
 
-    <!-- Segmented view selector -->
-    <div class="segmented" role="group" aria-label="Board view">
-      <button aria-selected="true" type="button">
+    <!-- 보기 방식 세그먼트 -->
+    <div class="segmented" role="radiogroup" aria-label="보기 방식" data-segmented>
+      <button role="radio" aria-checked="true" type="button" data-view="board">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="18" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg>
-        Board
+        보드
       </button>
-      <button aria-selected="false" type="button">
+      <button role="radio" aria-checked="false" type="button" data-view="list">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1"/><circle cx="3" cy="12" r="1"/><circle cx="3" cy="18" r="1"/></svg>
-        List
+        목록
       </button>
     </div>
 
-    <!-- New leaf button -->
-    <button class="btn btn--primary btn--sm" type="button" aria-label="Add a new manuscript task">
+    <!-- 새 낱장 -->
+    <button class="btn btn--primary btn--sm" type="button" data-modal-open="new-leaf-modal" aria-label="새 작업 낱장 등록">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-      New Leaf
+      새 낱장
     </button>
   </div>
 </div>
 
-<!-- ===================== BOARD ===================== -->
-<main id="main" class="board-scroll" aria-label="Manuscript production board">
+<!-- ===================== 보드 ===================== -->
+<main id="main" class="board-scroll" aria-label="필사 작업 보드">
   <div class="board" id="board">
 
-    <!-- ============= COLUMN 1: Proposed ============= -->
-    <div class="kanban-col" role="region" aria-label="Proposed column">
+    <!-- ============= 열 1: 접수 대장 ============= -->
+    <div class="kanban-col" role="region" aria-label="접수 대장 열">
       <div class="kanban-col__header">
         <span class="kanban-col__title">
           <span class="col-dot col-dot--proposed" aria-hidden="true"></span>
-          Proposed
+          접수 대장
         </span>
-        <span class="badge badge--pill" id="count-proposed" aria-label="4 cards in Proposed">4</span>
+        <span class="col-folio" aria-hidden="true">fol. I</span>
+        <span class="badge badge--pill" id="count-proposed" aria-label="'접수 대장' 열 4건">4</span>
       </div>
-      <div class="kanban-col__cards" id="col-proposed" data-col="proposed"
-           role="list" aria-label="Proposed tasks">
+      <div class="kanban-col__cards" id="col-proposed" data-col="proposed" role="list" aria-label="접수 대장 작업">
 
-        <!-- Card P1 -->
-        <article class="kanban-card"
-                 role="listitem"
-                 draggable="true"
-                 tabindex="0"
-                 data-filter-item
-                 data-card-id="p1"
-                 aria-label="Transcribe the Marginal Glosses of Codex Aurelianus — Proposed">
+        <!-- P1 -->
+        <article class="kanban-card" role="listitem" draggable="true" tabindex="0" data-filter-item data-card-id="p1"
+                 aria-label="승정원일기 인조 10년 조 초서 탈초 — 접수 대장, 담당 윤서인">
           <div class="kanban-card__badge-row">
-            <span class="badge badge--wax">Palaeography</span>
+            <span class="badge badge--wax">탈초</span>
           </div>
-          <p class="kanban-card__title">Transcribe the Marginal Glosses of Codex Aurelianus</p>
-          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
-            XVII folios of minute Caroline minuscule; requires magnification glass &amp; steady hand.
-          </p>
+          <p class="kanban-card__title">『승정원일기』 인조 10년 조 — 초서 탈초</p>
+          <p class="text-subtle kanban-card__desc">흘림이 심한 초서 17면. 확대경과 차분한 손이 필요합니다.</p>
           <div class="kanban-card__meta">
             <div class="kanban-card__meta-left">
-              <div class="avatar avatar--sm" title="Frater Aldric" aria-label="Assigned to Frater Aldric">AL</div>
-              <span class="kanban-card__due">Kal. Mar.</span>
+              <div class="avatar avatar--sm" title="윤서인" aria-label="담당 윤서인">윤</div>
+              <span class="kanban-card__due">7월 21일</span>
             </div>
             <div class="kanban-card__meta-right">
-              <span class="kanban-card__micro" aria-label="3 comments">
+              <span class="kanban-card__micro" aria-label="의견 3건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 3
               </span>
-              <span class="kanban-card__micro" aria-label="1 attachment">
+              <span class="kanban-card__micro" aria-label="첨부 1건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 1
               </span>
+              <span class="kanban-card__move" role="group" aria-label="낱장 이동">
+                <button class="card-move" type="button" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+                <button class="card-move" type="button" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+              </span>
             </div>
           </div>
         </article>
 
-        <!-- Card P2 -->
-        <article class="kanban-card kanban-card--danger"
-                 role="listitem"
-                 draggable="true"
-                 tabindex="0"
-                 data-filter-item
-                 data-card-id="p2"
-                 aria-label="Catalogue the Uncatalogued Herbarium of Brother Theophilus — Proposed, high priority">
+        <!-- P2 -->
+        <article class="kanban-card kanban-card--danger" role="listitem" draggable="true" tabindex="0" data-filter-item data-card-id="p2"
+                 aria-label="백씨 문중 기탁 고문서 214점 정리 — 접수 대장, 긴급, 기한 지남, 담당 백가연">
           <div class="kanban-card__badge-row">
-            <span class="badge badge--danger badge--pill">Urgent</span>
-            <span class="badge">Cataloguing</span>
+            <span class="badge badge--danger badge--pill">긴급</span>
+            <span class="badge">정리</span>
           </div>
-          <p class="kanban-card__title">Catalogue the Uncatalogued Herbarium of Brother Theophilus</p>
-          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
-            Pressed specimens dating from MDCXXIII; ink annotations in three hands.
-          </p>
+          <p class="kanban-card__title">백씨 문중 기탁 고문서 214점 — 목록화</p>
+          <p class="text-subtle kanban-card__desc">한지 낙질 혼재, 세 사람의 손글씨가 섞여 있습니다.</p>
           <div class="kanban-card__meta">
             <div class="kanban-card__meta-left">
-              <div class="avatar avatar--sm" title="Soror Rowena" aria-label="Assigned to Soror Rowena">RY</div>
-              <span class="kanban-card__due kanban-card__due--overdue">Id. Ian.</span>
+              <div class="avatar avatar--sm" title="백가연" aria-label="담당 백가연">백</div>
+              <span class="kanban-card__due kanban-card__due--overdue">6월 30일 (지연)</span>
             </div>
             <div class="kanban-card__meta-right">
-              <span class="kanban-card__micro" aria-label="7 comments">
+              <span class="kanban-card__micro" aria-label="의견 7건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 7
               </span>
-              <span class="kanban-card__micro" aria-label="3 attachments">
+              <span class="kanban-card__micro" aria-label="첨부 3건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 3
               </span>
-            </div>
-          </div>
-        </article>
-
-        <!-- Card P3 -->
-        <article class="kanban-card"
-                 role="listitem"
-                 draggable="true"
-                 tabindex="0"
-                 data-filter-item
-                 data-card-id="p3"
-                 aria-label="Verify the Provenance of the Antiphonary Fragment — Proposed">
-          <div class="kanban-card__badge-row">
-            <span class="badge badge--info badge--pill">Research</span>
-          </div>
-          <p class="kanban-card__title">Verify the Provenance of the Antiphonary Fragment</p>
-          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
-            Partial leaf, XII cent., discovered inside the binding of Psalterium MS.47.
-          </p>
-          <div class="kanban-card__meta">
-            <div class="kanban-card__meta-left">
-              <div class="avatar avatar--sm" title="Frater Matthias" aria-label="Assigned to Frater Matthias">MK</div>
-              <span class="kanban-card__due">Prid. Non. Apr.</span>
-            </div>
-            <div class="kanban-card__meta-right">
-              <span class="kanban-card__micro" aria-label="2 comments">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                2
+              <span class="kanban-card__move" role="group" aria-label="낱장 이동">
+                <button class="card-move" type="button" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+                <button class="card-move" type="button" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
               </span>
             </div>
           </div>
         </article>
 
-        <!-- Card P4 -->
-        <article class="kanban-card"
-                 role="listitem"
-                 draggable="true"
-                 tabindex="0"
-                 data-filter-item
-                 data-card-id="p4"
-                 aria-label="Commission a New Binding for Tractatus de Stellis — Proposed">
+        <!-- P3 -->
+        <article class="kanban-card" role="listitem" draggable="true" tabindex="0" data-filter-item data-card-id="p3"
+                 aria-label="두시언해 낙장 출처 규명 — 접수 대장, 담당 남도현">
           <div class="kanban-card__badge-row">
-            <span class="badge badge--wax">Conservation</span>
+            <span class="badge badge--info badge--pill">조사</span>
           </div>
-          <p class="kanban-card__title">Commission a New Binding for <em>Tractatus de Stellis</em></p>
-          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
-            Spine detached; quires loose. Requires full re-sewn binding in calf vellum.
-          </p>
+          <p class="kanban-card__title">『두시언해』 낙장 — 출처 규명</p>
+          <p class="text-subtle kanban-card__desc">권10 제3장 낙장이 『심경언해』 표지 배접에서 발견되었습니다.</p>
           <div class="kanban-card__meta">
             <div class="kanban-card__meta-left">
-              <div class="avatar avatar--sm" title="Soror Isolde" aria-label="Assigned to Soror Isolde">IS</div>
-              <span class="kanban-card__due">Non. Mai.</span>
+              <div class="avatar avatar--sm" title="남도현" aria-label="담당 남도현">남</div>
+              <span class="kanban-card__due">7월 28일</span>
             </div>
             <div class="kanban-card__meta-right">
-              <span class="kanban-card__micro" aria-label="0 comments">
+              <span class="kanban-card__micro" aria-label="의견 2건">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                2
+              </span>
+              <span class="kanban-card__move" role="group" aria-label="낱장 이동">
+                <button class="card-move" type="button" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+                <button class="card-move" type="button" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+              </span>
+            </div>
+          </div>
+        </article>
+
+        <!-- P4 -->
+        <article class="kanban-card" role="listitem" draggable="true" tabindex="0" data-filter-item data-card-id="p4"
+                 aria-label="규합총서 필사본 책등 재제본 — 접수 대장, 담당 정소민">
+          <div class="kanban-card__badge-row">
+            <span class="badge badge--wax">개장(改裝)</span>
+          </div>
+          <p class="kanban-card__title">『규합총서』 필사본 — 책등 재제본</p>
+          <p class="text-subtle kanban-card__desc">책등 이탈, 침안 느슨. 오침안정법으로 다시 매어야 합니다.</p>
+          <div class="kanban-card__meta">
+            <div class="kanban-card__meta-left">
+              <div class="avatar avatar--sm" title="정소민" aria-label="담당 정소민">정</div>
+              <span class="kanban-card__due">8월 8일</span>
+            </div>
+            <div class="kanban-card__meta-right">
+              <span class="kanban-card__micro" aria-label="의견 없음">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 0
               </span>
-              <span class="kanban-card__micro" aria-label="2 attachments">
+              <span class="kanban-card__micro" aria-label="첨부 2건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 2
+              </span>
+              <span class="kanban-card__move" role="group" aria-label="낱장 이동">
+                <button class="card-move" type="button" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+                <button class="card-move" type="button" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
               </span>
             </div>
           </div>
@@ -448,272 +404,251 @@
 
       </div>
       <div class="kanban-col__footer">
-        <button class="btn btn--ghost btn--sm" style="width:100%;justify-content:flex-start;" type="button">
+        <button class="btn btn--ghost btn--sm" type="button" data-modal-open="new-leaf-modal">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-          Add leaf
+          낱장 끼우기
         </button>
       </div>
     </div>
 
-    <!-- ============= COLUMN 2: In the Scriptorium ============= -->
-    <div class="kanban-col" role="region" aria-label="In the Scriptorium column">
+    <!-- ============= 열 2: 필사 중 ============= -->
+    <div class="kanban-col" role="region" aria-label="필사 중 열">
       <div class="kanban-col__header">
         <span class="kanban-col__title">
           <span class="col-dot col-dot--in-progress" aria-hidden="true"></span>
-          In the Scriptorium
+          필사 중
         </span>
-        <span class="badge badge--warning badge--pill" id="count-scriptorium" aria-label="4 cards in Scriptorium">4</span>
+        <span class="col-folio" aria-hidden="true">fol. II</span>
+        <span class="badge badge--warning badge--pill" id="count-scriptorium" aria-label="'필사 중' 열 4건">4</span>
       </div>
-      <div class="kanban-col__cards" id="col-scriptorium" data-col="scriptorium"
-           role="list" aria-label="In the Scriptorium tasks">
+      <div class="kanban-col__cards" id="col-scriptorium" data-col="scriptorium" role="list" aria-label="필사 중 작업">
 
-        <!-- Card S1 -->
-        <article class="kanban-card"
-                 role="listitem"
-                 draggable="true"
-                 tabindex="0"
-                 data-filter-item
-                 data-card-id="s1"
-                 aria-label="Transcribe the Marginalia of Folio 12r from the Bestiary of Exeter — In Progress">
+        <!-- S1 -->
+        <article class="kanban-card" role="listitem" draggable="true" tabindex="0" data-filter-item data-card-id="s1"
+                 aria-label="어람용 정리의궤 반차도 모사 — 필사 중, 기한 임박, 담당 윤서인">
           <div class="kanban-card__badge-row">
-            <span class="badge badge--accent badge--pill">In Progress</span>
-            <span class="badge">Palaeography</span>
+            <span class="badge badge--accent badge--pill">필사 중</span>
+            <span class="badge">모사</span>
           </div>
-          <p class="kanban-card__title">Transcribe the Marginalia of Folio 12r from the Bestiary of Exeter</p>
-          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
-            Pen-and-ink drawings alongside Old English interlinear glosses. Hairy vellum; handle with silk gloves.
-          </p>
+          <p class="kanban-card__title">『어람용 정리의궤』 도설 — 반차도 모사</p>
+          <p class="text-subtle kanban-card__desc">세필 계선과 인물 채색. 비단 장갑 착용이 필수입니다.</p>
           <div class="kanban-card__meta">
             <div class="kanban-card__meta-left">
-              <div class="avatar avatar--sm" title="Frater Aldric" aria-label="Assigned to Frater Aldric">AL</div>
-              <span class="kanban-card__due kanban-card__due--soon">Kal. Feb.</span>
+              <div class="avatar avatar--sm" title="윤서인" aria-label="담당 윤서인">윤</div>
+              <span class="kanban-card__due kanban-card__due--soon">7월 11일 (임박)</span>
             </div>
             <div class="kanban-card__meta-right">
-              <span class="kanban-card__micro" aria-label="5 comments">
+              <span class="kanban-card__micro" aria-label="의견 5건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 5
               </span>
-              <span class="kanban-card__micro" aria-label="4 attachments">
+              <span class="kanban-card__micro" aria-label="첨부 4건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 4
+              </span>
+              <span class="kanban-card__move" role="group" aria-label="낱장 이동">
+                <button class="card-move" type="button" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+                <button class="card-move" type="button" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
               </span>
             </div>
           </div>
         </article>
 
-        <!-- Card S2 -->
-        <article class="kanban-card kanban-card--danger"
-                 role="listitem"
-                 draggable="true"
-                 tabindex="0"
-                 data-filter-item
-                 data-card-id="s2"
-                 aria-label="Restore the Water-Damaged Psalter, MS.Bodl.33 — In Progress, high priority">
+        <!-- S2 -->
+        <article class="kanban-card kanban-card--danger" role="listitem" draggable="true" tabindex="0" data-filter-item data-card-id="s2"
+                 aria-label="물 얼룩진 시편언해 습해 복원 — 필사 중, 긴급, 기한 지남, 담당 정소민">
           <div class="kanban-card__badge-row">
-            <span class="badge badge--danger badge--pill">Urgent</span>
-            <span class="badge">Conservation</span>
+            <span class="badge badge--danger badge--pill">긴급</span>
+            <span class="badge">복원</span>
           </div>
-          <p class="kanban-card__title">Restore the Water-Damaged Psalter, MS.Bodl.33</p>
-          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
-            Tide marks on quires VI–XII; pigment lifting on the Beatus initial. Humidification required.
-          </p>
+          <p class="kanban-card__title">물 얼룩진 『시편언해』 — 습해 복원</p>
+          <p class="text-subtle kanban-card__desc">6~12첩에 물자국, 금니 들뜸. 가습 평탄화가 필요합니다.</p>
           <div class="kanban-card__meta">
             <div class="kanban-card__meta-left">
-              <div class="avatar avatar--sm" title="Soror Isolde" aria-label="Assigned to Soror Isolde">IS</div>
-              <span class="kanban-card__due kanban-card__due--overdue">Id. Ian. (overdue)</span>
+              <div class="avatar avatar--sm" title="정소민" aria-label="담당 정소민">정</div>
+              <span class="kanban-card__due kanban-card__due--overdue">6월 28일 (지연)</span>
             </div>
             <div class="kanban-card__meta-right">
-              <span class="kanban-card__micro" aria-label="12 comments">
+              <span class="kanban-card__micro" aria-label="의견 12건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 12
               </span>
-              <span class="kanban-card__micro" aria-label="6 attachments">
+              <span class="kanban-card__micro" aria-label="첨부 6건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 6
+              </span>
+              <span class="kanban-card__move" role="group" aria-label="낱장 이동">
+                <button class="card-move" type="button" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+                <button class="card-move" type="button" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
               </span>
             </div>
           </div>
         </article>
 
-        <!-- Card S3 -->
-        <article class="kanban-card"
-                 role="listitem"
-                 draggable="true"
-                 tabindex="0"
-                 data-filter-item
-                 data-card-id="s3"
-                 aria-label="Render Gold Leaf Borders for the December Calendar Page — In Progress">
+        <!-- S3 -->
+        <article class="kanban-card" role="listitem" draggable="true" tabindex="0" data-filter-item data-card-id="s3"
+                 aria-label="12월 월력장 금니 당초문 테두리 — 필사 중, 담당 백가연">
           <div class="kanban-card__badge-row">
-            <span class="badge badge--wax">Illumination</span>
+            <span class="badge badge--wax">금니(金泥)</span>
           </div>
-          <p class="kanban-card__title">Render Gold Leaf Borders for the December Calendar Page</p>
-          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
-            Burnish gold over gesso; acanthus scrollwork in ultramarine. Cf. Book of Hours, Paris school.
-          </p>
+          <p class="kanban-card__title">12월 월력장 — 금니 당초문 테두리</p>
+          <p class="text-subtle kanban-card__desc">아교 위 금박 연마, 군청 당초문. 파리본 기도서 양식을 참조합니다.</p>
           <div class="kanban-card__meta">
             <div class="kanban-card__meta-left">
-              <div class="avatar avatar--sm" title="Soror Rowena" aria-label="Assigned to Soror Rowena">RY</div>
-              <span class="kanban-card__due">XV Kal. Dec.</span>
+              <div class="avatar avatar--sm" title="백가연" aria-label="담당 백가연">백</div>
+              <span class="kanban-card__due">7월 18일</span>
             </div>
             <div class="kanban-card__meta-right">
-              <span class="kanban-card__micro" aria-label="4 comments">
+              <span class="kanban-card__micro" aria-label="의견 4건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 4
               </span>
-              <span class="kanban-card__micro" aria-label="2 attachments">
+              <span class="kanban-card__micro" aria-label="첨부 2건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 2
               </span>
+              <span class="kanban-card__move" role="group" aria-label="낱장 이동">
+                <button class="card-move" type="button" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+                <button class="card-move" type="button" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+              </span>
             </div>
           </div>
         </article>
 
-        <!-- Card S4 -->
-        <article class="kanban-card"
-                 role="listitem"
-                 draggable="true"
-                 tabindex="0"
-                 data-filter-item
-                 data-card-id="s4"
-                 aria-label="Compose Rubricated Chapter Headings for Liber Moralium — In Progress">
+        <!-- S4 -->
+        <article class="kanban-card" role="listitem" draggable="true" tabindex="0" data-filter-item data-card-id="s4"
+                 aria-label="법화경 권7 장 머리 주서 — 필사 중, 기한 임박, 담당 남도현">
           <div class="kanban-card__badge-row">
-            <span class="badge badge--primary badge--pill">Scribal</span>
+            <span class="badge badge--primary badge--pill">주서(朱書)</span>
           </div>
-          <p class="kanban-card__title">Compose Rubricated Chapter Headings for <em>Liber Moralium</em></p>
-          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
-            Red and blue alternating initials; each chapter incipit to be set in uncial script.
-          </p>
+          <p class="kanban-card__title">『법화경』 권7 — 장 머리 주서 넣기</p>
+          <p class="text-subtle kanban-card__desc">붉은 먹으로 품제(品題)를 넣고, 첫 자는 큰 해서로 씁니다.</p>
           <div class="kanban-card__meta">
             <div class="kanban-card__meta-left">
-              <div class="avatar avatar--sm" title="Frater Matthias" aria-label="Assigned to Frater Matthias">MK</div>
-              <span class="kanban-card__due kanban-card__due--soon">III Non. Mar.</span>
+              <div class="avatar avatar--sm" title="남도현" aria-label="담당 남도현">남</div>
+              <span class="kanban-card__due kanban-card__due--soon">7월 8일 (임박)</span>
             </div>
             <div class="kanban-card__meta-right">
-              <span class="kanban-card__micro" aria-label="1 comment">
+              <span class="kanban-card__micro" aria-label="의견 1건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 1
               </span>
+              <span class="kanban-card__move" role="group" aria-label="낱장 이동">
+                <button class="card-move" type="button" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+                <button class="card-move" type="button" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+              </span>
             </div>
           </div>
         </article>
 
       </div>
       <div class="kanban-col__footer">
-        <button class="btn btn--ghost btn--sm" style="width:100%;justify-content:flex-start;" type="button">
+        <button class="btn btn--ghost btn--sm" type="button" data-modal-open="new-leaf-modal">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-          Add leaf
+          낱장 끼우기
         </button>
       </div>
     </div>
 
-    <!-- ============= COLUMN 3: Under Review ============= -->
-    <div class="kanban-col" role="region" aria-label="Under Review column">
+    <!-- ============= 열 3: 교감 중 ============= -->
+    <div class="kanban-col" role="region" aria-label="교감 중 열">
       <div class="kanban-col__header">
         <span class="kanban-col__title">
           <span class="col-dot col-dot--review" aria-hidden="true"></span>
-          Under Review
+          교감(校勘) 중
         </span>
-        <span class="badge badge--primary badge--pill" id="count-review" aria-label="3 cards in Under Review">3</span>
+        <span class="col-folio" aria-hidden="true">fol. III</span>
+        <span class="badge badge--primary badge--pill" id="count-review" aria-label="'교감 중' 열 3건">3</span>
       </div>
-      <div class="kanban-col__cards" id="col-review" data-col="review"
-           role="list" aria-label="Under Review tasks">
+      <div class="kanban-col__cards" id="col-review" data-col="review" role="list" aria-label="교감 중 작업">
 
-        <!-- Card R1 -->
-        <article class="kanban-card kanban-card--success"
-                 role="listitem"
-                 draggable="true"
-                 tabindex="0"
-                 data-filter-item
-                 data-card-id="r1"
-                 aria-label="Collate Variants in the Benedictine Rule, Chapter VII — Under Review">
+        <!-- R1 -->
+        <article class="kanban-card kanban-card--success" role="listitem" draggable="true" tabindex="0" data-filter-item data-card-id="r1"
+                 aria-label="청구영언 이본 대교 제7장 — 교감 중, 담당 윤서인">
           <div class="kanban-card__badge-row">
-            <span class="badge badge--success badge--pill">In Review</span>
-            <span class="badge">Textual Criticism</span>
+            <span class="badge badge--success badge--pill">교감 중</span>
+            <span class="badge">대교(對校)</span>
           </div>
-          <p class="kanban-card__title">Collate Variants in the Benedictine Rule, Chapter VII</p>
-          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
-            Cross-reference seven manuscript witnesses: Sangallensis, Oxoniensis, Cassino, et alii.
-          </p>
+          <p class="kanban-card__title">『청구영언』 이본 대교 — 제7장</p>
+          <p class="text-subtle kanban-card__desc">홍씨본·육당본·연민본 등 일곱 증본을 대조합니다.</p>
           <div class="kanban-card__meta">
             <div class="kanban-card__meta-left">
-              <div class="avatar avatar--sm" title="Frater Aldric" aria-label="Assigned to Frater Aldric">AL</div>
-              <span class="kanban-card__due">Kal. Apr.</span>
+              <div class="avatar avatar--sm" title="윤서인" aria-label="담당 윤서인">윤</div>
+              <span class="kanban-card__due">7월 25일</span>
             </div>
             <div class="kanban-card__meta-right">
-              <span class="kanban-card__micro" aria-label="9 comments">
+              <span class="kanban-card__micro" aria-label="의견 9건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 9
               </span>
-              <span class="kanban-card__micro" aria-label="7 attachments">
+              <span class="kanban-card__micro" aria-label="첨부 7건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 7
               </span>
+              <span class="kanban-card__move" role="group" aria-label="낱장 이동">
+                <button class="card-move" type="button" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+                <button class="card-move" type="button" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+              </span>
             </div>
           </div>
         </article>
 
-        <!-- Card R2 -->
-        <article class="kanban-card"
-                 role="listitem"
-                 draggable="true"
-                 tabindex="0"
-                 data-filter-item
-                 data-card-id="r2"
-                 aria-label="Prepare Critical Edition of the Lapidary of Bishop Marbode — Under Review">
+        <!-- R2 -->
+        <article class="kanban-card" role="listitem" draggable="true" tabindex="0" data-filter-item data-card-id="r2"
+                 aria-label="동의보감 내경편 교감기 초고 — 교감 중, 담당 정소민">
           <div class="kanban-card__badge-row">
-            <span class="badge badge--info badge--pill">In Review</span>
+            <span class="badge badge--info badge--pill">교감 중</span>
           </div>
-          <p class="kanban-card__title">Prepare Critical Edition of the Lapidary of Bishop Marbode</p>
-          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
-            <em>De Lapidibus</em>, ca. MCXI. Comparing Rennes and Paris recensions.
-          </p>
+          <p class="kanban-card__title">『동의보감』 내경편 — 교감기 초고</p>
+          <p class="text-subtle kanban-card__desc">갑술 초간과 을해 중간의 판식 차이를 주기(注記)합니다.</p>
           <div class="kanban-card__meta">
             <div class="kanban-card__meta-left">
-              <div class="avatar avatar--sm" title="Soror Isolde" aria-label="Assigned to Soror Isolde">IS</div>
-              <span class="kanban-card__due">VI Id. Jun.</span>
+              <div class="avatar avatar--sm" title="정소민" aria-label="담당 정소민">정</div>
+              <span class="kanban-card__due">8월 1일</span>
             </div>
             <div class="kanban-card__meta-right">
-              <span class="kanban-card__micro" aria-label="6 comments">
+              <span class="kanban-card__micro" aria-label="의견 6건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 6
               </span>
-              <span class="kanban-card__micro" aria-label="3 attachments">
+              <span class="kanban-card__micro" aria-label="첨부 3건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 3
+              </span>
+              <span class="kanban-card__move" role="group" aria-label="낱장 이동">
+                <button class="card-move" type="button" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+                <button class="card-move" type="button" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
               </span>
             </div>
           </div>
         </article>
 
-        <!-- Card R3 -->
-        <article class="kanban-card kanban-card--danger"
-                 role="listitem"
-                 draggable="true"
-                 tabindex="0"
-                 data-filter-item
-                 data-card-id="r3"
-                 aria-label="Index the Alchemical Receipts in Sloane MS 2628 — Under Review, high priority">
+        <!-- R3 -->
+        <article class="kanban-card kanban-card--danger" role="listitem" draggable="true" tabindex="0" data-filter-item data-card-id="r3"
+                 aria-label="산림경제 구급방 처방 색인 — 교감 중, 긴급, 기한 지남, 담당 남도현">
           <div class="kanban-card__badge-row">
-            <span class="badge badge--danger badge--pill">Urgent</span>
-            <span class="badge">Indexing</span>
+            <span class="badge badge--danger badge--pill">긴급</span>
+            <span class="badge">색인</span>
           </div>
-          <p class="kanban-card__title">Index the Alchemical Receipts in Sloane MS 2628</p>
-          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
-            Receipts for the Philosopher's Stone; coded references to <em>sulphur philosophicum</em>.
-          </p>
+          <p class="kanban-card__title">『산림경제』 구급방 — 처방 색인 작성</p>
+          <p class="text-subtle kanban-card__desc">약재명이 이두와 한글 혼용이라 대조표가 필요합니다.</p>
           <div class="kanban-card__meta">
             <div class="kanban-card__meta-left">
-              <div class="avatar avatar--sm" title="Frater Matthias" aria-label="Assigned to Frater Matthias">MK</div>
-              <span class="kanban-card__due kanban-card__due--overdue">Prid. Non. Ian.</span>
+              <div class="avatar avatar--sm" title="남도현" aria-label="담당 남도현">남</div>
+              <span class="kanban-card__due kanban-card__due--overdue">6월 27일 (지연)</span>
             </div>
             <div class="kanban-card__meta-right">
-              <span class="kanban-card__micro" aria-label="3 comments">
+              <span class="kanban-card__micro" aria-label="의견 3건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 3
               </span>
-              <span class="kanban-card__micro" aria-label="5 attachments">
+              <span class="kanban-card__micro" aria-label="첨부 5건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 5
+              </span>
+              <span class="kanban-card__move" role="group" aria-label="낱장 이동">
+                <button class="card-move" type="button" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+                <button class="card-move" type="button" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
               </span>
             </div>
           </div>
@@ -721,123 +656,117 @@
 
       </div>
       <div class="kanban-col__footer">
-        <button class="btn btn--ghost btn--sm" style="width:100%;justify-content:flex-start;" type="button">
+        <button class="btn btn--ghost btn--sm" type="button" data-modal-open="new-leaf-modal">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-          Add leaf
+          낱장 끼우기
         </button>
       </div>
     </div>
 
-    <!-- ============= COLUMN 4: Illuminated (Done) ============= -->
-    <div class="kanban-col" role="region" aria-label="Illuminated Done column">
+    <!-- ============= 열 4: 완질 (봉인) ============= -->
+    <div class="kanban-col" role="region" aria-label="완질 열">
       <div class="kanban-col__header">
         <span class="kanban-col__title">
           <span class="col-dot col-dot--done" aria-hidden="true"></span>
-          Illuminated
-          <span class="text-subtle" style="font-weight:normal;font-size:var(--text-xs);">(Done)</span>
+          완질(完帙)
+          <span class="text-subtle" style="font-weight:normal;font-size:var(--text-xs);">봉인</span>
         </span>
-        <span class="badge badge--success badge--pill" id="count-done" aria-label="3 cards done">3</span>
+        <span class="col-folio" aria-hidden="true">fol. IV</span>
+        <span class="badge badge--success badge--pill" id="count-done" aria-label="'완질' 열 3건">3</span>
       </div>
-      <div class="kanban-col__cards" id="col-done" data-col="done"
-           role="list" aria-label="Completed illuminated tasks">
+      <div class="kanban-col__cards" id="col-done" data-col="done" role="list" aria-label="완질 작업">
 
-        <!-- Card D1 -->
-        <article class="kanban-card kanban-card--success"
-                 role="listitem"
-                 draggable="true"
-                 tabindex="0"
-                 data-filter-item
-                 data-card-id="d1"
-                 aria-label="Paint the Historiated Initial B for the Breviary of Sarum — Completed">
+        <!-- D1 -->
+        <article class="kanban-card kanban-card--success" role="listitem" draggable="true" tabindex="0" data-filter-item data-card-id="d1"
+                 aria-label="화엄경 변상도 첫 폭 금니 완성 — 완질, 담당 백가연">
+          <span class="wax-seal card-seal" aria-hidden="true">畢</span>
           <div class="kanban-card__badge-row">
-            <span class="badge badge--success badge--pill">Illuminated</span>
-            <span class="badge badge--wax">Illumination</span>
+            <span class="badge badge--success badge--pill">완질</span>
+            <span class="badge badge--wax">금니</span>
           </div>
-          <p class="kanban-card__title">Paint the Historiated Initial B for the Breviary of Sarum</p>
-          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
-            Beatus initial with King David playing the harp; lapis lazuli background, vermillion drapery.
-          </p>
+          <p class="kanban-card__title">『화엄경』 변상도 첫 폭 — 금니 완성</p>
+          <p class="text-subtle kanban-card__desc">감지(紺紙) 바탕에 금니 선묘, 주사(朱砂)로 옷 주름을 올렸습니다.</p>
           <div class="kanban-card__meta">
             <div class="kanban-card__meta-left">
-              <div class="avatar avatar--sm" title="Soror Rowena" aria-label="Assigned to Soror Rowena">RY</div>
-              <span class="kanban-card__due">Completum · IV Kal. Jan.</span>
+              <div class="avatar avatar--sm" title="백가연" aria-label="담당 백가연">백</div>
+              <span class="kanban-card__due">완질 · 6월 24일</span>
             </div>
             <div class="kanban-card__meta-right">
-              <span class="kanban-card__micro" aria-label="11 comments">
+              <span class="kanban-card__micro" aria-label="의견 11건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 11
               </span>
-              <span class="kanban-card__micro" aria-label="8 attachments">
+              <span class="kanban-card__micro" aria-label="첨부 8건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 8
+              </span>
+              <span class="kanban-card__move" role="group" aria-label="낱장 이동">
+                <button class="card-move" type="button" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+                <button class="card-move" type="button" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
               </span>
             </div>
           </div>
         </article>
 
-        <!-- Card D2 -->
-        <article class="kanban-card kanban-card--success"
-                 role="listitem"
-                 draggable="true"
-                 tabindex="0"
-                 data-filter-item
-                 data-card-id="d2"
-                 aria-label="Translate Portions of the Physiologus from Greek — Completed">
+        <!-- D2 -->
+        <article class="kanban-card kanban-card--success" role="listitem" draggable="true" tabindex="0" data-filter-item data-card-id="d2"
+                 aria-label="노걸대언해 상권 대역 초고 완료 — 완질, 담당 윤서인">
+          <span class="wax-seal card-seal" aria-hidden="true">畢</span>
           <div class="kanban-card__badge-row">
-            <span class="badge badge--success badge--pill">Illuminated</span>
-            <span class="badge">Translation</span>
+            <span class="badge badge--success badge--pill">완질</span>
+            <span class="badge">언해</span>
           </div>
-          <p class="kanban-card__title">Translate Portions of the <em>Physiologus</em> from Greek</p>
-          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
-            Chapters I–XIV rendered into Vulgate Latin. Chapters on the pelican and the phoenix completed.
-          </p>
+          <p class="kanban-card__title">『노걸대언해』 상권 — 대역 초고 완료</p>
+          <p class="text-subtle kanban-card__desc">제1~14장 언해를 마치고 발문 초역까지 끝냈습니다.</p>
           <div class="kanban-card__meta">
             <div class="kanban-card__meta-left">
-              <div class="avatar avatar--sm" title="Frater Aldric" aria-label="Assigned to Frater Aldric">AL</div>
-              <span class="kanban-card__due">Completum · Non. Dec.</span>
+              <div class="avatar avatar--sm" title="윤서인" aria-label="담당 윤서인">윤</div>
+              <span class="kanban-card__due">완질 · 6월 18일</span>
             </div>
             <div class="kanban-card__meta-right">
-              <span class="kanban-card__micro" aria-label="8 comments">
+              <span class="kanban-card__micro" aria-label="의견 8건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 8
               </span>
-              <span class="kanban-card__micro" aria-label="5 attachments">
+              <span class="kanban-card__micro" aria-label="첨부 5건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 5
               </span>
+              <span class="kanban-card__move" role="group" aria-label="낱장 이동">
+                <button class="card-move" type="button" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+                <button class="card-move" type="button" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+              </span>
             </div>
           </div>
         </article>
 
-        <!-- Card D3 -->
-        <article class="kanban-card kanban-card--success"
-                 role="listitem"
-                 draggable="true"
-                 tabindex="0"
-                 data-filter-item
-                 data-card-id="d3"
-                 aria-label="Prepare Digitisation Surrogate of the Necrologium Veronense — Completed">
+        <!-- D3 -->
+        <article class="kanban-card kanban-card--success" role="listitem" draggable="true" tabindex="0" data-filter-item data-card-id="d3"
+                 aria-label="장서각 일지 1908에서 1913 촬영 완료 — 완질, 담당 정소민">
+          <span class="wax-seal card-seal" aria-hidden="true">畢</span>
           <div class="kanban-card__badge-row">
-            <span class="badge badge--success badge--pill">Illuminated</span>
-            <span class="badge">Digitisation</span>
+            <span class="badge badge--success badge--pill">완질</span>
+            <span class="badge">디지털화</span>
           </div>
-          <p class="kanban-card__title">Prepare Digitisation Surrogate of the <em>Necrologium Veronense</em></p>
-          <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-1);">
-            602 folios photographed at 400 ppi under raking light. Metadata encoded in TEI-XML.
-          </p>
+          <p class="kanban-card__title">『장서각 일지』 1908~1913 — 촬영 완료</p>
+          <p class="text-subtle kanban-card__desc">602면을 400ppi 사광(斜光)으로 촬영, 메타데이터는 TEI-XML로 남겼습니다.</p>
           <div class="kanban-card__meta">
             <div class="kanban-card__meta-left">
-              <div class="avatar avatar--sm" title="Soror Isolde" aria-label="Assigned to Soror Isolde">IS</div>
-              <span class="kanban-card__due">Completum · VIII Id. Nov.</span>
+              <div class="avatar avatar--sm" title="정소민" aria-label="담당 정소민">정</div>
+              <span class="kanban-card__due">완질 · 6월 10일</span>
             </div>
             <div class="kanban-card__meta-right">
-              <span class="kanban-card__micro" aria-label="15 comments">
+              <span class="kanban-card__micro" aria-label="의견 15건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 15
               </span>
-              <span class="kanban-card__micro" aria-label="12 attachments">
+              <span class="kanban-card__micro" aria-label="첨부 12건">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                 12
+              </span>
+              <span class="kanban-card__move" role="group" aria-label="낱장 이동">
+                <button class="card-move" type="button" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+                <button class="card-move" type="button" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
               </span>
             </div>
           </div>
@@ -845,9 +774,9 @@
 
       </div>
       <div class="kanban-col__footer">
-        <button class="btn btn--ghost btn--sm" style="width:100%;justify-content:flex-start;" type="button">
+        <button class="btn btn--ghost btn--sm" type="button" data-modal-open="new-leaf-modal">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-          Add leaf
+          낱장 끼우기
         </button>
       </div>
     </div>
@@ -855,75 +784,205 @@
   </div><!-- /.board -->
 </main>
 
-<!-- DnD note -->
+<!-- 이동 안내 라이브 리전 -->
+<p class="sr-only" role="status" aria-live="polite" id="board-status"></p>
+
+<!-- 조작 안내 -->
 <p class="dnd-note" role="note">
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="display:inline;vertical-align:middle;"><path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8zM6 1v3M10 1v3M14 1v3"/></svg>
-  Drag leaves between columns to advance the manuscript through its stages of production.
-  Cards are focusable via keyboard; drag-and-drop requires a pointing device.
+  낱장을 끌어 다음 공정으로 옮기십시오. 키보드로는 각 낱장의 ←·→ 단추로 열을 옮길 수 있으며, 완질에 이르면 밀랍 인장이 찍힙니다.
 </p>
 
-<!-- Footer ornament -->
-<footer style="text-align:center;padding:var(--space-4) var(--space-6);border-top:1px solid var(--color-border);">
+<!-- 콜로폰 -->
+<footer class="board-colophon">
   <div class="fleur" aria-hidden="true"></div>
-  <p class="text-subtle" style="font-size:var(--text-2xs);margin-top:var(--space-2);">
-    <em>Nunc dimittis servum tuum in pace</em> &mdash; Folio·24 Scriptorium &copy; MDCCCXLII
-  </p>
+  <p class="text-subtle">장서각 필사실 작업 대장 · <em>Scriptorium Folio XXIV</em> · 촛불이 다하면 붓을 놓습니다</p>
 </footer>
+
+<!-- ===================== 새 낱장 모달 ===================== -->
+<div class="overlay" id="new-leaf-modal" role="dialog" aria-modal="true" aria-labelledby="leaf-title" aria-hidden="true">
+  <div class="modal">
+    <div class="modal__header">
+      <h2 class="modal__title" id="leaf-title"><span class="fleur" aria-hidden="true"></span> 새 작업 낱장</h2>
+      <button class="modal__close" data-modal-close aria-label="닫기">&times;</button>
+    </div>
+    <div class="modal__body stack">
+      <div class="field" id="leaf-name-field">
+        <label class="label" for="leaf-name">작업명 <span class="req">*</span></label>
+        <input class="input" id="leaf-name" placeholder="예: 『훈몽자회』 범례 — 탈초" autocomplete="off">
+        <p class="hint" id="leaf-name-err" hidden>작업명을 적어야 대장에 올릴 수 있습니다.</p>
+      </div>
+      <div class="field">
+        <label class="label" for="leaf-kind">공정 분류</label>
+        <select class="select" id="leaf-kind">
+          <option>탈초</option>
+          <option>모사</option>
+          <option>금니(金泥)</option>
+          <option>개장(改裝)</option>
+          <option>교감(校勘)</option>
+          <option>디지털화</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="label" for="leaf-assignee">담당</label>
+        <select class="select" id="leaf-assignee">
+          <option>윤서인</option>
+          <option>남도현</option>
+          <option>백가연</option>
+          <option>정소민</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn--ghost" data-modal-close>취소</button>
+      <button class="btn btn--primary" id="leaf-create">접수 대장에 올리기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 새 낱장 템플릿 -->
+<template id="leaf-template">
+  <article class="kanban-card" role="listitem" draggable="true" tabindex="0" data-filter-item>
+    <div class="kanban-card__badge-row">
+      <span class="badge badge--wax leaf-kind"></span>
+    </div>
+    <p class="kanban-card__title"></p>
+    <p class="text-subtle kanban-card__desc">방금 접수된 낱장입니다. 세부 지시는 의견란에 남겨 주십시오.</p>
+    <div class="kanban-card__meta">
+      <div class="kanban-card__meta-left">
+        <div class="avatar avatar--sm leaf-avatar"></div>
+        <span class="kanban-card__due">기한 미정</span>
+      </div>
+      <div class="kanban-card__meta-right">
+        <span class="kanban-card__micro" aria-label="의견 없음">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          0
+        </span>
+        <span class="kanban-card__move" role="group" aria-label="낱장 이동">
+          <button class="card-move" type="button" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+          <button class="card-move" type="button" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+        </span>
+      </div>
+    </div>
+  </article>
+</template>
+
+<!-- ===================== 명령 팔레트 ===================== -->
+<div class="cmdk-overlay" id="cmdk" role="dialog" aria-modal="true" aria-label="명령 팔레트" aria-hidden="true">
+  <div class="cmdk">
+    <div class="cmdk__search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input class="cmdk__input" placeholder="명령을 입력하거나 검색하세요…" aria-label="명령 팔레트 검색" />
+      <kbd>ESC</kbd>
+    </div>
+    <div class="cmdk__list">
+      <div class="cmdk__group-label">이동</div>
+      <div class="cmdk__item" role="option" data-href="../index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5a2 2 0 0 1 2-2h6v18H5a2 2 0 0 1-2-2zM21 5a2 2 0 0 0-2-2h-6v18h6a2 2 0 0 0 2-2z"/></svg> 색인으로 돌아가기</div>
+      <div class="cmdk__item" role="option" data-href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg> 대시보드로 이동</div>
+      <div class="cmdk__item" role="option" data-href="inbox.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg> 서신함으로 이동</div>
+      <div class="cmdk__group-label">동작</div>
+      <div class="cmdk__item" role="option" data-action="toggle-theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg> 테마 전환 (양피지 / 촛불)</div>
+      <div class="cmdk__item" role="option" data-toast-title="지연 작업 점검" data-toast="지연 3건 — 문중 고문서 목록화, 『시편언해』 복원, 『산림경제』 색인. 감독 사서 확인 요망."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> 오늘의 지연 작업 점검</div>
+      <div class="cmdk__item" role="option" data-toast-title="일과 마감" data-toast="오늘 옮겨진 낱장이 대장에 기록되었습니다. 내일 아침 점호 때 다시 펼칩니다."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg> 일과 마감 기록
+      </div>
+      <div class="cmdk__empty" hidden>이 폴리오에서 명령을 찾을 수 없습니다.</div>
+    </div>
+  </div>
+</div>
 
 <script src="../app.js"></script>
 <script>
 /* ========================================================
-   SCRIPTORIUM BOARD — Drag-and-Drop (HTML5 native)
-   No libraries. Vanilla JS only.
+   필사실 보드 — 끌어 옮기기(HTML5) + 키보드 이동 대체 수단
+   완질 열에 이르면 밀랍 인장이 '쿵' 찍힌다 (시그니처 모먼트)
    ======================================================== */
 (function () {
   'use strict';
 
-  let draggedCard = null;
-  let dragSourceCol = null;
-  let placeholder = null;
+  var COLS = ['proposed', 'scriptorium', 'review', 'done'];
+  var COL_NAMES = { proposed: '접수 대장', scriptorium: '필사 중', review: '교감 중', done: '완질' };
+  var countBadgeIds = { proposed: 'count-proposed', scriptorium: 'count-scriptorium', review: 'count-review', done: 'count-done' };
+  var statusEl = document.getElementById('board-status');
+  var REDUCED = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // Column count badge map
-  const countBadgeIds = {
-    'proposed':    'count-proposed',
-    'scriptorium': 'count-scriptorium',
-    'review':      'count-review',
-    'done':        'count-done',
-  };
+  var draggedCard = null, dragSourceCol = null, placeholder = null;
 
-  function getCardList(colEl) {
-    return Array.from(colEl.querySelectorAll('.kanban-card'));
+  function cardTitle(card) {
+    var t = card.querySelector('.kanban-card__title');
+    return t ? t.textContent.trim() : '이름 없는 낱장';
   }
+  function announce(msg) { if (statusEl) statusEl.textContent = msg; }
 
   function updateCount(colEl) {
-    const col = colEl.dataset.col;
-    const badge = document.getElementById(countBadgeIds[col]);
+    var col = colEl.dataset.col;
+    var badge = document.getElementById(countBadgeIds[col]);
     if (!badge) return;
-    const count = getCardList(colEl).length;
+    var count = colEl.querySelectorAll('.kanban-card').length;
     badge.textContent = count;
-    badge.setAttribute('aria-label', count + ' cards in ' + col);
+    badge.setAttribute('aria-label', "'" + COL_NAMES[col] + "' 열 " + count + '건');
   }
 
+  /* 완질 봉인 — 인장 부착/해제 */
+  function sealCard(card, animate) {
+    if (card.querySelector('.card-seal')) return;
+    var s = document.createElement('span');
+    s.className = 'wax-seal card-seal' + (animate && !REDUCED ? ' stamp-in' : '');
+    s.setAttribute('aria-hidden', 'true');
+    s.textContent = '畢';
+    card.appendChild(s);
+  }
+  function unsealCard(card) {
+    var s = card.querySelector('.card-seal');
+    if (s) s.remove();
+  }
+  function afterArrival(card, colEl, viaKeyboard) {
+    var col = colEl.dataset.col;
+    if (col === 'done') {
+      sealCard(card, true);
+      if (window.gothicToast) window.gothicToast({
+        title: '완질 봉인',
+        body: '『' + cardTitle(card).replace(/[『』]/g, '') + '』 — 밀랍 인장으로 봉인되었습니다.',
+        variant: 'success'
+      });
+    } else {
+      unsealCard(card);
+    }
+    announce('『' + cardTitle(card) + '』 낱장을 "' + COL_NAMES[col] + '" 열로 옮겼습니다.');
+  }
+
+  /* ---- 키보드 이동 ---- */
+  function wireMove(card) {
+    Array.prototype.forEach.call(card.querySelectorAll('.card-move'), function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var colEl = card.closest('[data-col]');
+        var i = COLS.indexOf(colEl.dataset.col);
+        var ni = i + (btn.dataset.move === 'next' ? 1 : -1);
+        if (ni < 0 || ni >= COLS.length) { announce('더 옮길 열이 없습니다.'); return; }
+        var target = document.getElementById('col-' + COLS[ni]);
+        target.prepend(card);
+        updateCount(colEl); updateCount(target);
+        afterArrival(card, target, true);
+        btn.focus();
+      });
+    });
+  }
+
+  /* ---- DnD ---- */
   function createPlaceholder() {
-    const ph = document.createElement('div');
+    var ph = document.createElement('div');
     ph.className = 'card-placeholder';
     ph.setAttribute('aria-hidden', 'true');
     return ph;
   }
-
   function getCardAfterCursor(colCards, y) {
-    const cards = Array.from(colCards.querySelectorAll('.kanban-card:not(.dragging)'));
-    return cards.reduce((closest, card) => {
-      const box = card.getBoundingClientRect();
-      const offset = y - box.top - box.height / 2;
-      if (offset < 0 && offset > closest.offset) {
-        return { offset, element: card };
-      }
+    var cards = Array.prototype.slice.call(colCards.querySelectorAll('.kanban-card:not(.dragging)'));
+    return cards.reduce(function (closest, card) {
+      var box = card.getBoundingClientRect();
+      var offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) return { offset: offset, element: card };
       return closest;
     }, { offset: Number.NEGATIVE_INFINITY }).element;
   }
-
-  // ---- Attach events to each card ----
   function initCard(card) {
     card.addEventListener('dragstart', function (e) {
       draggedCard = card;
@@ -931,91 +990,118 @@
       card.classList.add('dragging');
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', card.dataset.cardId || '');
-      // Small delay so the card doesn't vanish under cursor immediately
-      setTimeout(() => { card.style.opacity = '0.45'; }, 0);
-
+      setTimeout(function () { card.style.opacity = '0.45'; }, 0);
       placeholder = createPlaceholder();
     });
-
     card.addEventListener('dragend', function () {
       card.classList.remove('dragging');
       card.style.opacity = '';
-      draggedCard = null;
-      dragSourceCol = null;
-      if (placeholder && placeholder.parentNode) {
-        placeholder.parentNode.removeChild(placeholder);
-      }
+      draggedCard = null; dragSourceCol = null;
+      if (placeholder && placeholder.parentNode) placeholder.parentNode.removeChild(placeholder);
       placeholder = null;
-
-      // Remove drag-over highlights
-      document.querySelectorAll('.kanban-col__cards.drag-over').forEach(function (c) {
-        c.classList.remove('drag-over');
-      });
+      document.querySelectorAll('.kanban-col__cards.drag-over').forEach(function (c) { c.classList.remove('drag-over'); });
     });
+    wireMove(card);
   }
-
-  // ---- Attach events to each column drop zone ----
   function initColumn(colCards) {
     colCards.addEventListener('dragover', function (e) {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
       colCards.classList.add('drag-over');
-
       if (!draggedCard || !placeholder) return;
-
-      const after = getCardAfterCursor(colCards, e.clientY);
-      if (after == null) {
-        colCards.appendChild(placeholder);
-      } else {
-        colCards.insertBefore(placeholder, after);
-      }
+      var after = getCardAfterCursor(colCards, e.clientY);
+      if (after == null) colCards.appendChild(placeholder);
+      else colCards.insertBefore(placeholder, after);
     });
-
     colCards.addEventListener('dragleave', function (e) {
-      // Only remove highlight if leaving the column entirely
-      if (!colCards.contains(e.relatedTarget)) {
-        colCards.classList.remove('drag-over');
-        if (placeholder && placeholder.parentNode === colCards) {
-          // keep placeholder until drop or dragend
-        }
-      }
+      if (!colCards.contains(e.relatedTarget)) colCards.classList.remove('drag-over');
     });
-
     colCards.addEventListener('drop', function (e) {
       e.preventDefault();
       colCards.classList.remove('drag-over');
-
       if (!draggedCard) return;
-
-      const after = getCardAfterCursor(colCards, e.clientY);
-      if (placeholder && placeholder.parentNode) {
-        placeholder.parentNode.removeChild(placeholder);
-      }
-
-      if (after == null) {
-        colCards.appendChild(draggedCard);
-      } else {
-        colCards.insertBefore(draggedCard, after);
-      }
-
-      // Update counts for source and destination columns
+      var after = getCardAfterCursor(colCards, e.clientY);
+      if (placeholder && placeholder.parentNode) placeholder.parentNode.removeChild(placeholder);
+      if (after == null) colCards.appendChild(draggedCard);
+      else colCards.insertBefore(draggedCard, after);
       if (dragSourceCol) updateCount(dragSourceCol);
       updateCount(colCards);
+      afterArrival(draggedCard, colCards, false);
     });
   }
 
-  // ---- Boot ----
+  /* ---- 보기 방식 (보드/목록) ---- */
+  function initViewSwitch() {
+    var board = document.getElementById('board');
+    var scroll = document.querySelector('.board-scroll');
+    document.querySelectorAll('[data-view]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var list = btn.dataset.view === 'list';
+        board.classList.toggle('board--list', list);
+        if (scroll) scroll.classList.toggle('is-list', list);
+      });
+    });
+  }
+
+  /* ---- 새 낱장 등록 (실동작) ---- */
+  function initNewLeaf() {
+    var createBtn = document.getElementById('leaf-create');
+    if (!createBtn) return;
+    var nameInput = document.getElementById('leaf-name');
+    var nameField = document.getElementById('leaf-name-field');
+    var nameErr = document.getElementById('leaf-name-err');
+    var kindSel = document.getElementById('leaf-kind');
+    var whoSel = document.getElementById('leaf-assignee');
+    var modal = document.getElementById('new-leaf-modal');
+    var proposed = document.getElementById('col-proposed');
+    var tpl = document.getElementById('leaf-template');
+
+    nameInput.addEventListener('input', function () {
+      nameField.classList.remove('field--error');
+      nameInput.removeAttribute('aria-invalid');
+      nameErr.hidden = true;
+    });
+
+    createBtn.addEventListener('click', function () {
+      var v = nameInput.value.trim();
+      if (!v) {
+        nameField.classList.add('field--error');
+        nameInput.setAttribute('aria-invalid', 'true');
+        nameErr.hidden = false;
+        nameInput.focus();
+        return;
+      }
+      var card = tpl.content.firstElementChild.cloneNode(true);
+      card.querySelector('.kanban-card__title').textContent = v;
+      card.querySelector('.leaf-kind').textContent = kindSel.value;
+      var who = whoSel.value;
+      var av = card.querySelector('.leaf-avatar');
+      av.textContent = who.charAt(0);
+      av.setAttribute('title', who);
+      av.setAttribute('aria-label', '담당 ' + who);
+      card.setAttribute('aria-label', v + ' — 접수 대장, 담당 ' + who);
+      proposed.prepend(card);
+      initCard(card);
+      updateCount(proposed);
+      announce('『' + v + '』 낱장을 "접수 대장" 열에 올렸습니다.');
+      if (window.gothicToast) window.gothicToast({ title: '접수 완료', body: '『' + v + '』 — ' + who + ' 앞으로 접수 대장에 올렸습니다.', variant: 'success' });
+      /* 모달 닫기 + 입력 초기화 */
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+      nameInput.value = '';
+    });
+  }
+
+  /* ---- 부팅 ---- */
   function init() {
     document.querySelectorAll('.kanban-card').forEach(initCard);
     document.querySelectorAll('.kanban-col__cards').forEach(initColumn);
+    initViewSwitch();
+    initNewLeaf();
   }
-
-  // Run after DOM ready (script is at end of body, but safe guard)
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
 })();
 </script>
 </body>

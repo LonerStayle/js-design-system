@@ -1,9 +1,20 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
+<script>
+/* FOUC 방지 — 저장된 판본을 페인트 전에 적용 (다크 = 캐노니컬 기본) */
+(function () {
+  try {
+    var t = localStorage.getItem('theme-24-mode') || 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) { document.documentElement.setAttribute('data-theme', 'dark'); }
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Memberships &amp; Subscriptions · Folio 24</title>
+<title>멤버십 — 장서각 회원권 · Folio 24</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="../base.css">
 <link rel="stylesheet" href="../components/buttons.css">
 <link rel="stylesheet" href="../components/forms.css">
@@ -14,18 +25,19 @@
 /* ── Pricing Hero ─────────────────────────────────────────── */
 .pricing-hero {
   text-align: center;
-  padding-block: var(--space-12) var(--space-8);
+  padding-block: var(--space-11) var(--space-8);
   max-width: 680px;
   margin-inline: auto;
 }
 .pricing-hero__title {
   font-family: var(--font-display);
   font-size: clamp(2rem, 5vw, 3.2rem);
-  letter-spacing: var(--tracking-wide);
+  letter-spacing: var(--tracking-caps-ko);
   color: var(--color-text-strong);
-  line-height: 1.15;
+  line-height: var(--leading-display-ko);
   margin-bottom: var(--space-4);
 }
+.pricing-hero__title span { display: block; }
 .pricing-hero__lede {
   font-size: var(--text-base);
   color: var(--color-text-muted);
@@ -35,84 +47,103 @@
   margin-bottom: var(--space-7);
 }
 
-/* ── Billing Toggle ───────────────────────────────────────── */
+/* ── Billing Toggle — radius ≤ 4px 관례 준수 ─────────────── */
 .billing-toggle {
   display: inline-flex;
   align-items: center;
   gap: var(--space-3);
-  background: var(--color-surface-raised);
+  background: var(--color-surface-2);
   border: 1px solid var(--color-border);
-  border-radius: 99px;
-  padding: var(--space-1) var(--space-2);
-  position: relative;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
 }
 .billing-toggle__label {
+  font-family: var(--font-display);
   font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  padding: var(--space-1) var(--space-3);
-  color: var(--color-text-muted);
-  cursor: pointer;
+  letter-spacing: var(--tracking-caps-ko);
+  color: var(--color-text-subtle);
   user-select: none;
   transition: color var(--duration-base);
-  border-radius: 99px;
 }
-.billing-toggle__label.is-active {
-  color: var(--color-text-strong);
-}
-.billing-toggle .switch {
-  margin: 0;
-}
+.billing-toggle__label.is-active { color: var(--color-text-strong); }
+.billing-toggle .switch { margin: 0; }
 .annual-save {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+  font-family: var(--font-display);
   font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  color: var(--gold-400);
-  background: color-mix(in srgb, var(--gold-700) 25%, transparent);
-  border: 1px solid color-mix(in srgb, var(--gold-500) 40%, transparent);
-  border-radius: 99px;
+  color: var(--color-accent-soft-fg);
+  background: var(--color-accent-soft);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
   padding: 2px var(--space-2);
-  letter-spacing: var(--tracking-wide);
+  letter-spacing: var(--tracking-caps-ko);
 }
 
-/* ── Plan Cards Grid ──────────────────────────────────────── */
+/* ── Plan Spread — 균등 3열 파기: 특장본이 판형 자체로 크다 ── */
 .plan-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr 1.18fr 1fr;
   gap: var(--space-5);
   align-items: start;
   margin-bottom: var(--space-10);
+  padding-top: var(--space-6);      /* 특장본 돌출·인장 여유 */
+  position: relative;
 }
-@media (max-width: 900px) {
-  .plan-grid {
-    grid-template-columns: 1fr;
-    max-width: 480px;
-    margin-inline: auto;
-  }
+.plan-grid::before {                /* 카드 뒤를 관통하는 골드 이중 괘선 */
+  content: "";
+  position: absolute;
+  left: calc(var(--space-4) * -1);
+  right: calc(var(--space-4) * -1);
+  top: 46%;
+  height: 0;
+  border-top: 1px solid var(--color-rule);
+  box-shadow: 0 4px 0 -1px var(--color-rule);
+  opacity: 0.4;
+  pointer-events: none;
 }
-
-/* ── Plan Card Shared ─────────────────────────────────────── */
 .plan-card {
   position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   height: 100%;
 }
+/* 특장본 — scale()이 아니라 판형 차등: 위로 돌출 + 두터운 패딩 + 촛불 후광 */
 .plan-card--featured {
-  transform: scale(1.03);
   z-index: 2;
+  margin-top: calc(var(--space-6) * -1);
+  padding: var(--space-7) var(--space-6) var(--space-6);
+  box-shadow: var(--shadow-card), var(--glow-candle);
+}
+.plan-card--featured .plan-note {
+  position: absolute;
+  top: calc(var(--space-5) * -1);
+  right: var(--space-4);
+  z-index: 3;
 }
 @media (max-width: 900px) {
-  .plan-card--featured { transform: none; }
+  .plan-grid { grid-template-columns: 1fr; max-width: 480px; margin-inline: auto; }
+  .plan-grid::before { display: none; }
+  .plan-card--featured { margin-top: 0; }
 }
 
 .plan-card__name {
   font-family: var(--font-display);
   font-size: var(--text-2xl);
-  letter-spacing: var(--tracking-wide);
+  letter-spacing: var(--tracking-caps-ko);
   color: var(--color-text-strong);
   margin-bottom: var(--space-1);
+}
+.plan-card__name small {
+  display: block;
+  font-family: var(--font-display);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+  margin-top: 2px;
 }
 .plan-card__price-block {
   display: flex;
@@ -130,7 +161,7 @@
   font-size: clamp(2.2rem, 4vw, 2.8rem);
   font-weight: var(--weight-bold);
   color: var(--color-text-strong);
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums lining-nums;
   line-height: 1;
 }
 .plan-card__period {
@@ -140,7 +171,6 @@
 .plan-card__positioning {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
-  font-style: italic;
   margin-bottom: var(--space-5);
   line-height: var(--leading-relaxed);
 }
@@ -148,7 +178,7 @@
   font-size: var(--text-xs);
   color: var(--color-text-subtle);
   margin-top: var(--space-1);
-  letter-spacing: var(--tracking-wide);
+  letter-spacing: var(--tracking-caps-ko);
 }
 
 /* ── Feature List ─────────────────────────────────────────── */
@@ -170,26 +200,17 @@
   line-height: var(--leading-relaxed);
 }
 .feature-list__item .icon-check {
-  flex: none;
-  width: 16px;
-  height: 16px;
-  margin-top: 2px;
+  flex: none; width: 16px; height: 16px; margin-top: 2px;
   color: var(--gold-400);
 }
 .feature-list__item .icon-cross {
-  flex: none;
-  width: 16px;
-  height: 16px;
-  margin-top: 2px;
+  flex: none; width: 16px; height: 16px; margin-top: 2px;
   color: var(--color-text-subtle);
   opacity: 0.45;
 }
-.feature-list__item--excluded {
-  color: var(--color-text-subtle);
-  opacity: 0.7;
-}
+.feature-list__item--excluded { color: var(--color-text-subtle); opacity: 0.7; }
 
-/* ── Most Chosen Badge position ───────────────────────────── */
+/* ── 인장 뱃지 위치 ───────────────────────────────────────── */
 .plan-card__badge-wrap {
   position: absolute;
   top: -14px;
@@ -199,54 +220,29 @@
   white-space: nowrap;
 }
 
-/* ── Comparison Table Section ─────────────────────────────── */
-.comparison-section {
-  margin-bottom: var(--space-12);
-}
-.comparison-section .table thead th {
-  text-align: center;
-}
-.comparison-section .table thead th:first-child {
-  text-align: left;
-}
-.comparison-section .table tbody td {
-  text-align: center;
-  vertical-align: middle;
-}
-.comparison-section .table tbody td:first-child {
-  text-align: left;
-  font-size: var(--text-sm);
-}
+/* ── Comparison Table ─────────────────────────────────────── */
+.comparison-section { margin-bottom: var(--space-12); }
+.comparison-section .table thead th { text-align: center; }
+.comparison-section .table thead th:first-child { text-align: left; }
+.comparison-section .table tbody td { text-align: center; vertical-align: middle; }
+.comparison-section .table tbody td:first-child { text-align: left; font-size: var(--text-sm); }
 .table-plan-name {
+  font-family: var(--font-display);
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-wider);
-  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps-ko);
   color: var(--color-text-muted);
 }
-.table-plan-name.is-featured {
-  color: var(--color-accent);
-}
-.check-icon {
-  color: var(--gold-400);
-  display: inline-flex;
-  justify-content: center;
-}
-.cross-icon {
-  color: var(--color-text-subtle);
-  opacity: 0.4;
-  display: inline-flex;
-  justify-content: center;
-}
+.table-plan-name.is-featured { color: var(--color-accent); }
+.check-icon { color: var(--gold-400); display: inline-flex; justify-content: center; }
+.cross-icon { color: var(--color-text-subtle); opacity: 0.4; display: inline-flex; justify-content: center; }
+.cell-note { font-size: var(--text-xs); color: var(--color-text-muted); white-space: nowrap; }
 
-/* ── FAQ Accordion spacing ────────────────────────────────── */
+/* ── FAQ ──────────────────────────────────────────────────── */
 .faq-section {
   max-width: 720px;
   margin-inline: auto;
   margin-bottom: var(--space-12);
-}
-.faq-section .accordion {
-  background: transparent;
 }
 
 /* ── Final CTA Banner ─────────────────────────────────────── */
@@ -258,11 +254,15 @@
   overflow: hidden;
 }
 .cta-banner__title {
-  font-family: var(--font-display);
-  font-size: clamp(1.6rem, 3vw, 2.4rem);
-  letter-spacing: var(--tracking-wide);
-  color: var(--color-text-strong);
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
   margin-bottom: var(--space-3);
+}
+.cta-banner__caption {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-caps-ko);
+  color: var(--color-text-subtle);
+  margin-bottom: var(--space-4);
 }
 .cta-banner__body {
   font-size: var(--text-base);
@@ -273,42 +273,49 @@
   line-height: var(--leading-relaxed);
 }
 
-/* ── Footer ───────────────────────────────────────────────── */
+/* ── Footer — 콜로폰 ──────────────────────────────────────── */
 .page-footer {
   text-align: center;
   padding-block: var(--space-8);
-  border-top: 1px solid var(--color-border-subtle);
+  border-top: 2px solid var(--color-rule);
   color: var(--color-text-subtle);
-  font-size: var(--text-xs);
-  letter-spacing: var(--tracking-wide);
+}
+.page-footer .colophon__meta {
+  margin-top: var(--space-3);
+  font-family: var(--font-display);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps-ko);
 }
 </style>
 </head>
 <body>
-<a class="skip-link" href="#main">Skip to content</a>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
 
 <!-- ═══════════════════════ NAVBAR ═══════════════════════ -->
-<nav class="navbar" aria-label="Primary">
+<nav class="navbar" aria-label="주요 내비게이션">
   <a class="navbar__brand" href="../index.html">
     <span class="mark" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 5a2 2 0 0 1 2-2h6v18H5a2 2 0 0 1-2-2zM21 5a2 2 0 0 0-2-2h-6v18h6a2 2 0 0 0 2-2z"/></svg></span>
     <span>Folio<span class="text-accent">·</span>24</span>
   </a>
   <div class="navbar__nav">
-    <a class="nav-link" href="dashboard.html">Dashboard</a>
-    <a class="nav-link" href="kanban.html">Board</a>
-    <a class="nav-link" href="inbox.html">Letters</a>
-    <a class="nav-link" href="article.html">Reading Room</a>
-    <a class="nav-link is-active" href="pricing.html" aria-current="page">Memberships</a>
+    <a class="nav-link" href="dashboard.html">대시보드</a>
+    <a class="nav-link" href="kanban.html">칸반</a>
+    <a class="nav-link" href="inbox.html">서신함</a>
+    <a class="nav-link" href="article.html">리딩 룸</a>
+    <a class="nav-link is-active" href="pricing.html" aria-current="page">멤버십</a>
   </div>
   <span class="navbar__spacer"></span>
   <div class="navbar__actions">
-    <button class="btn btn--ghost btn--sm" data-cmdk-open aria-label="Open command palette">
+    <button class="btn btn--ghost btn--sm" data-cmdk-open aria-label="명령 팔레트 열기">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
       <kbd>⌘K</kbd>
     </button>
     <button class="btn btn--secondary btn--sm" data-theme-toggle aria-pressed="false">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-      <span data-theme-label>Parchment</span>
+      <span data-theme-label>양피지</span>
+    </button>
+    <button class="btn btn--icon btn--ghost nav-toggle" data-nav-toggle aria-label="내비게이션 열기" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
     </button>
   </div>
 </nav>
@@ -321,77 +328,78 @@
     <div class="pricing-hero" data-reveal>
       <p class="eyebrow eyebrow--center">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-        Bibliotheca Folio XXIV — Membership Tiers
+        장서각 회원권 · Bibliotheca Folio XXIV
       </p>
-      <h1 class="pricing-hero__title">Choose Your Station<br>in the Library</h1>
+      <h1 class="pricing-hero__title"><span>서가에서</span><span>당신의 자리를 고르십시오</span></h1>
       <p class="pricing-hero__lede">
-        Every scholar deserves access to the stacks. From the curious dilettante seeking their first folio,
-        to the seasoned Curator who safeguards the collection entire — find the membership that suits your vocation.
+        학문에는 저마다의 보폭이 있습니다. 첫 폴리오 앞에 선 서생부터
+        서고 전체를 맡아 돌보는 수석 사서까지 —
+        소명에 맞는 회원권을 준비해 두었습니다.
       </p>
 
       <!-- Billing Toggle -->
       <div style="display:flex; flex-direction:column; align-items:center; gap:var(--space-3)">
-        <div class="billing-toggle" role="group" aria-label="Billing period">
-          <span class="billing-toggle__label is-active" id="label-monthly" aria-hidden="true">Monthly</span>
-          <label class="switch" aria-label="Switch to annual billing">
+        <div class="billing-toggle" role="group" aria-label="결제 주기 선택">
+          <span class="billing-toggle__label is-active" id="label-monthly">월간 결제</span>
+          <label class="switch" aria-label="연간 결제로 전환">
             <input type="checkbox" data-pricing-toggle>
             <span class="track"><span class="thumb"></span></span>
           </label>
-          <span class="billing-toggle__label" id="label-annual" aria-hidden="true">Annual</span>
+          <span class="billing-toggle__label" id="label-annual">연간 결제</span>
         </div>
         <span class="annual-save" data-annual-note hidden>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-          Save 2 months — <em>Gratis</em>
+          두 달 무료 — 열 달 값으로 열두 달
         </span>
       </div>
     </div>
 
-    <!-- ═══════════ PLAN CARDS ═══════════ -->
+    <!-- ═══════════ PLAN SPREAD ═══════════ -->
     <div class="plan-grid" data-reveal>
 
-      <!-- ── SCHOLAR (Free / Entry) ── -->
-      <div class="plan-card card card--hover" data-reveal>
+      <!-- ── 서생 (무료) ── -->
+      <div class="plan-card card card--hover">
         <div class="card__header" style="flex-direction:column; gap:var(--space-1); align-items:flex-start;">
-          <p class="plan-card__name">Scholar</p>
+          <p class="plan-card__name">서생 <small lang="la">Scholar</small></p>
           <div class="plan-card__price-block">
-            <span class="plan-card__currency">£</span>
+            <span class="plan-card__currency">₩</span>
             <span class="plan-card__price-num" data-price="0" data-price-annual="0">0</span>
-            <span class="plan-card__period" data-price-period>/ month</span>
+            <span class="plan-card__period" data-price-period>/ 월</span>
           </div>
-          <p class="plan-card__reader-note text-subtle">Per individual reader · No card required</p>
+          <p class="plan-card__reader-note text-subtle">1인 기준 · 카드 등록 없이 시작</p>
         </div>
         <div class="card__body">
           <p class="plan-card__positioning">
-            For the newly arrived reader who pauses, breathless, before the great oak doors of the stacks for the first time.
+            참나무 문 앞에 처음 선 이를 위한 자리입니다. 열람은 오늘부터, 부담은 없습니다.
           </p>
-          <ul class="feature-list" aria-label="Scholar tier features">
+          <ul class="feature-list" aria-label="서생 회원권 혜택">
             <li class="feature-list__item">
               <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              Access to the Open Stacks (General Collection)
+              일반 서가(개가식) 열람
             </li>
             <li class="feature-list__item">
               <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              Up to 5 annotations per folio
+              폴리오당 방주(주석) 5건
             </li>
             <li class="feature-list__item">
               <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              Weekly curated dispatch — <em>The Broadsheet</em>
+              주간 소식지 《장서각 통신》
             </li>
             <li class="feature-list__item">
               <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              Reading history &amp; bookmarks (30 folios)
+              열람 이력과 서표 30장
             </li>
             <li class="feature-list__item feature-list__item--excluded">
               <svg class="icon-cross" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              Rare Manuscripts &amp; Restricted Collection
+              희귀본 서고 (14–17세기)
             </li>
             <li class="feature-list__item feature-list__item--excluded">
               <svg class="icon-cross" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              Symposium &amp; Lecture recordings
+              강연·담화 기록 열람
             </li>
             <li class="feature-list__item feature-list__item--excluded">
               <svg class="icon-cross" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              Institutional borrowing privileges
+              상호대차
             </li>
           </ul>
         </div>
@@ -399,66 +407,65 @@
           <button
             class="btn btn--secondary btn--block"
             data-toast
-            data-toast-title="Welcome, Scholar"
-            data-toast-variant="success"
-            aria-label="Begin as Scholar — free membership">
-            Begin as Scholar
+            data-toast-title="입적 완료"
+            data-toast="서생 열람증을 발급했습니다. 일반 서가가 열렸습니다."
+            data-toast-variant="success">
+            서생으로 시작
           </button>
-          <p class="plan-card__reader-note text-center">
-            <em>No obligation · Cancel at any season</em>
-          </p>
+          <p class="plan-card__reader-note text-center">의무 없음 · 언제든 떠나셔도 됩니다</p>
         </div>
       </div>
 
-      <!-- ── FELLOW (Featured) ── -->
-      <div class="plan-card plan-card--featured card card--illuminated" style="position:relative;" data-reveal>
+      <!-- ── 연구원 (특장본) ── -->
+      <div class="plan-card plan-card--featured card illuminated frame-corners">
         <div class="plan-card__badge-wrap">
-          <span class="badge badge--wax" aria-label="Most chosen tier">
+          <span class="badge badge--wax">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-            Most Chosen
+            가장 많이 택한 판
           </span>
         </div>
+        <span class="margin-note margin-note--sm plan-note">이 판이 가장 알차게 짜였습니다 — 사서 씀</span>
         <div class="card__header" style="flex-direction:column; gap:var(--space-1); align-items:flex-start;">
-          <p class="plan-card__name">Fellow</p>
+          <p class="plan-card__name">연구원 <small lang="la">Fellow</small></p>
           <div class="plan-card__price-block">
-            <span class="plan-card__currency">£</span>
-            <span class="plan-card__price-num" data-price="12" data-price-annual="120">12</span>
-            <span class="plan-card__period" data-price-period>/ month</span>
+            <span class="plan-card__currency">₩</span>
+            <span class="plan-card__price-num" data-price="14,000" data-price-annual="140,000">14,000</span>
+            <span class="plan-card__period" data-price-period>/ 월</span>
           </div>
-          <p class="plan-card__reader-note text-subtle">Per reader · billed as you choose · VAT inclusive</p>
+          <p class="plan-card__reader-note text-subtle">1인 기준 · 부가세 포함 · 언제든 해지</p>
         </div>
         <div class="card__body">
           <p class="plan-card__positioning">
-            For the dedicated Fellow who has earned a carrel of their own and whose marginalia illuminate every page.
+            자기 열람석을 가진 학인을 위한 자리입니다. 페이지마다 남긴 방주가 서고의 불을 밝힙니다.
           </p>
-          <ul class="feature-list" aria-label="Fellow tier features">
+          <ul class="feature-list" aria-label="연구원 회원권 혜택">
             <li class="feature-list__item">
               <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              <strong>Everything in Scholar</strong>, plus:
+              <span><strong>서생의 전부</strong>, 그리고 —</span>
             </li>
             <li class="feature-list__item">
               <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              Access to the Restricted Alcoves (XIV–XVII century)
+              희귀본 서고 열람 (14–17세기)
             </li>
             <li class="feature-list__item">
               <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              Unlimited annotations &amp; private commonplace book
+              방주 무제한 + 개인 초록집(抄錄集)
             </li>
             <li class="feature-list__item">
               <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              Full symposium archive &amp; live lecture tickets
+              강연 전체 기록과 실황 입장권
             </li>
             <li class="feature-list__item">
               <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              Advanced search &amp; cross-reference engine
+              교차 검색·상호참조 엔진
             </li>
             <li class="feature-list__item">
               <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              Interlibrary loan — up to 8 items concurrent
+              상호대차 — 동시 8권
             </li>
             <li class="feature-list__item feature-list__item--excluded">
               <svg class="icon-cross" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              Access to the Vaulted Scriptorium
+              필사실(Scriptorium) 출입
             </li>
           </ul>
         </div>
@@ -466,60 +473,59 @@
           <button
             class="btn btn--primary btn--block"
             data-toast
-            data-toast-title="Fellowship Granted"
+            data-toast-title="입적 완료"
+            data-toast="연구원 열람증을 준비하고 있습니다. 서신으로 안내드리겠습니다."
             data-toast-variant="success"
-            aria-label="Become a Fellow — £12 per month">
-            Become a Fellow
+            aria-label="연구원으로 입적 — 월 14,000원">
+            연구원으로 입적
           </button>
-          <p class="plan-card__reader-note text-center">
-            <em>7-day grace period · Cancel before renewal</em>
-          </p>
+          <p class="plan-card__reader-note text-center">7일 유예 · 갱신 전 해지 가능</p>
         </div>
       </div>
 
-      <!-- ── CURATOR (Premium) ── -->
-      <div class="plan-card card card--hover card--accent-top" data-reveal>
+      <!-- ── 수석 사서 ── -->
+      <div class="plan-card card card--hover card--accent-top">
         <div class="card__header" style="flex-direction:column; gap:var(--space-1); align-items:flex-start;">
-          <p class="plan-card__name">Curator</p>
+          <p class="plan-card__name">수석 사서 <small lang="la">Curator</small></p>
           <div class="plan-card__price-block">
-            <span class="plan-card__currency">£</span>
-            <span class="plan-card__price-num" data-price="29" data-price-annual="290">29</span>
-            <span class="plan-card__period" data-price-period>/ month</span>
+            <span class="plan-card__currency">₩</span>
+            <span class="plan-card__price-num" data-price="32,000" data-price-annual="320,000">32,000</span>
+            <span class="plan-card__period" data-price-period>/ 월</span>
           </div>
-          <p class="plan-card__reader-note text-subtle">Per reader · institutional pricing available</p>
+          <p class="plan-card__reader-note text-subtle">1인 기준 · 기관 요금 별도 문의</p>
         </div>
         <div class="card__body">
           <p class="plan-card__positioning">
-            For the Curator who tends the collection as a sacred trust — with full dominion over the Scriptorium and its darkest shelves.
+            서고를 신탁처럼 돌보는 이를 위한 자리입니다. 필사실의 가장 깊은 서가까지 열립니다.
           </p>
-          <ul class="feature-list" aria-label="Curator tier features">
+          <ul class="feature-list" aria-label="수석 사서 회원권 혜택">
             <li class="feature-list__item">
               <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              <strong>Everything in Fellow</strong>, plus:
+              <span><strong>연구원의 전부</strong>, 그리고 —</span>
             </li>
             <li class="feature-list__item">
               <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              Access to the Vaulted Scriptorium — all centuries
+              필사실 출입 — 전 세기
             </li>
             <li class="feature-list__item">
               <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              Facsimile download rights (personal scholarship)
+              영인본 내려받기 (개인 연구 한정)
             </li>
             <li class="feature-list__item">
               <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              Curated acquisition requests (3 per quarter)
+              수서 신청 — 분기 3건
             </li>
             <li class="feature-list__item">
               <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              Dedicated Archivist correspondence channel
+              전담 사서 서신 채널
             </li>
             <li class="feature-list__item">
               <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              Early access to digitised incunabula
+              전산화 초기간행본 우선 열람
             </li>
             <li class="feature-list__item">
               <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              Annual invitation to the Founders' Colloquium
+              창립 기념 담화 — 연 1회 초청
             </li>
           </ul>
         </div>
@@ -527,232 +533,220 @@
           <button
             class="btn btn--secondary btn--block"
             data-toast
-            data-toast-title="Curator's Key Requested"
+            data-toast-title="신청 접수"
+            data-toast="수석 사서 열쇠는 심사 후 밀랍 봉인으로 전달됩니다."
             data-toast-variant="info"
-            aria-label="Claim the Curator's key — £29 per month">
-            Claim the Curator's Key
+            aria-label="수석 사서 열쇠 신청 — 월 32,000원">
+            수석 사서 열쇠 신청
           </button>
-          <p class="plan-card__reader-note text-center">
-            <em>Institutional &amp; multi-seat enquiries welcome</em>
-          </p>
+          <p class="plan-card__reader-note text-center">기관·다좌석 문의 환영</p>
         </div>
       </div>
     </div><!-- /plan-grid -->
 
-    <!-- ═══════════ FEATURE COMPARISON TABLE ═══════════ -->
+    <!-- ═══════════ 혜택 비교표 ═══════════ -->
     <section class="comparison-section section-sm" aria-labelledby="comparison-heading" data-reveal>
       <div class="ornate-rule mb-6" aria-hidden="true"></div>
-      <h2 id="comparison-heading" class="eyebrow eyebrow--center mb-6">Full Feature Comparison</h2>
+      <h2 id="comparison-heading" class="eyebrow eyebrow--center mb-6">혜택 전체 비교</h2>
 
       <div class="table-wrap">
-        <table class="table" role="table" aria-label="Feature comparison across membership tiers">
+        <table class="table" aria-label="회원권 등급별 혜택 비교">
           <thead>
             <tr>
-              <th scope="col" style="text-align:left; width:38%;">Feature</th>
+              <th scope="col" style="text-align:left; width:38%;">혜택</th>
               <th scope="col">
-                <span class="table-plan-name">Scholar</span><br>
-                <small class="text-subtle" style="font-size:var(--text-xs);">£0 / mo</small>
+                <span class="table-plan-name">서생</span><br>
+                <small class="text-subtle" style="font-size:var(--text-xs);">₩0 / 월</small>
               </th>
               <th scope="col">
-                <span class="table-plan-name is-featured">Fellow</span><br>
-                <small class="text-subtle" style="font-size:var(--text-xs);">£12 / mo</small>
+                <span class="table-plan-name is-featured">연구원</span><br>
+                <small class="text-subtle" style="font-size:var(--text-xs);">₩14,000 / 월</small>
               </th>
               <th scope="col">
-                <span class="table-plan-name">Curator</span><br>
-                <small class="text-subtle" style="font-size:var(--text-xs);">£29 / mo</small>
+                <span class="table-plan-name">수석 사서</span><br>
+                <small class="text-subtle" style="font-size:var(--text-xs);">₩32,000 / 월</small>
               </th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>Open Stacks (General Collection)</td>
-              <td><span class="check-icon" aria-label="Included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
-              <td><span class="check-icon" aria-label="Included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
-              <td><span class="check-icon" aria-label="Included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
+              <td>일반 서가(개가식) 열람</td>
+              <td><span class="check-icon" aria-label="포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
+              <td><span class="check-icon" aria-label="포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
+              <td><span class="check-icon" aria-label="포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
             </tr>
             <tr>
-              <td>Weekly curated dispatch</td>
-              <td><span class="check-icon" aria-label="Included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
-              <td><span class="check-icon" aria-label="Included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
-              <td><span class="check-icon" aria-label="Included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
+              <td>주간 소식지 《장서각 통신》</td>
+              <td><span class="check-icon" aria-label="포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
+              <td><span class="check-icon" aria-label="포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
+              <td><span class="check-icon" aria-label="포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
             </tr>
             <tr>
-              <td>Annotations</td>
-              <td><span class="text-muted" style="font-size:var(--text-xs);">5 per folio</span></td>
-              <td><span class="text-muted" style="font-size:var(--text-xs);">Unlimited</span></td>
-              <td><span class="text-muted" style="font-size:var(--text-xs);">Unlimited</span></td>
+              <td>방주(주석)</td>
+              <td><span class="cell-note">폴리오당 5건</span></td>
+              <td><span class="cell-note">무제한</span></td>
+              <td><span class="cell-note">무제한</span></td>
             </tr>
             <tr>
-              <td>Restricted Alcoves (XIV–XVII c.)</td>
-              <td><span class="cross-icon" aria-label="Not included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
-              <td><span class="check-icon" aria-label="Included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
-              <td><span class="check-icon" aria-label="Included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
+              <td>희귀본 서고 (14–17세기)</td>
+              <td><span class="cross-icon" aria-label="미포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
+              <td><span class="check-icon" aria-label="포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
+              <td><span class="check-icon" aria-label="포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
             </tr>
             <tr>
-              <td>Symposium &amp; lecture archive</td>
-              <td><span class="cross-icon" aria-label="Not included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
-              <td><span class="check-icon" aria-label="Included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
-              <td><span class="check-icon" aria-label="Included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
+              <td>강연·담화 기록</td>
+              <td><span class="cross-icon" aria-label="미포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
+              <td><span class="check-icon" aria-label="포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
+              <td><span class="check-icon" aria-label="포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
             </tr>
             <tr>
-              <td>Interlibrary loan</td>
-              <td><span class="cross-icon" aria-label="Not included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
-              <td><span class="text-muted" style="font-size:var(--text-xs);">Up to 8 items</span></td>
-              <td><span class="text-muted" style="font-size:var(--text-xs);">Unlimited</span></td>
+              <td>상호대차</td>
+              <td><span class="cross-icon" aria-label="미포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
+              <td><span class="cell-note">동시 8권</span></td>
+              <td><span class="cell-note">무제한</span></td>
             </tr>
             <tr>
-              <td>Vaulted Scriptorium access</td>
-              <td><span class="cross-icon" aria-label="Not included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
-              <td><span class="cross-icon" aria-label="Not included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
-              <td><span class="check-icon" aria-label="Included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
+              <td>필사실(Scriptorium) 출입</td>
+              <td><span class="cross-icon" aria-label="미포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
+              <td><span class="cross-icon" aria-label="미포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
+              <td><span class="check-icon" aria-label="포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
             </tr>
             <tr>
-              <td>Facsimile download rights</td>
-              <td><span class="cross-icon" aria-label="Not included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
-              <td><span class="cross-icon" aria-label="Not included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
-              <td><span class="check-icon" aria-label="Included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
+              <td>영인본 내려받기</td>
+              <td><span class="cross-icon" aria-label="미포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
+              <td><span class="cross-icon" aria-label="미포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
+              <td><span class="check-icon" aria-label="포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
             </tr>
             <tr>
-              <td>Acquisition requests</td>
-              <td><span class="cross-icon" aria-label="Not included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
-              <td><span class="cross-icon" aria-label="Not included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
-              <td><span class="text-muted" style="font-size:var(--text-xs);">3 per quarter</span></td>
+              <td>수서 신청</td>
+              <td><span class="cross-icon" aria-label="미포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
+              <td><span class="cross-icon" aria-label="미포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
+              <td><span class="cell-note">분기 3건</span></td>
             </tr>
             <tr>
-              <td>Dedicated Archivist channel</td>
-              <td><span class="cross-icon" aria-label="Not included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
-              <td><span class="cross-icon" aria-label="Not included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
-              <td><span class="check-icon" aria-label="Included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
+              <td>전담 사서 서신 채널</td>
+              <td><span class="cross-icon" aria-label="미포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
+              <td><span class="cross-icon" aria-label="미포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
+              <td><span class="check-icon" aria-label="포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
             </tr>
             <tr>
-              <td>Annual Founders' Colloquium invitation</td>
-              <td><span class="cross-icon" aria-label="Not included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
-              <td><span class="cross-icon" aria-label="Not included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
-              <td><span class="check-icon" aria-label="Included"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
+              <td>창립 기념 담화 초청</td>
+              <td><span class="cross-icon" aria-label="미포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
+              <td><span class="cross-icon" aria-label="미포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></td>
+              <td><span class="check-icon" aria-label="포함"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span></td>
             </tr>
           </tbody>
         </table>
       </div>
     </section>
 
-    <!-- ═══════════ FAQ / ACCORDION ═══════════ -->
+    <!-- ═══════════ 자주 묻는 질문 ═══════════ -->
     <section class="faq-section section-sm" aria-labelledby="faq-heading" data-reveal>
       <div class="ornate-rule mb-6" aria-hidden="true"></div>
-      <h2 id="faq-heading" class="eyebrow eyebrow--center mb-6">Frequently Asked Questions</h2>
-      <p class="text-center text-muted mb-6" style="font-style:italic; font-size:var(--text-sm);">
-        <em>Quod nescis, quaere — What thou knowest not, enquire.</em>
+      <h2 id="faq-heading" class="eyebrow eyebrow--center mb-6">자주 묻는 질문</h2>
+      <p class="text-center text-muted mb-6" style="font-size:var(--text-sm);">
+        <em lang="la">Quod nescis, quaere</em> — 모르는 것은 물어보십시오.
       </p>
 
-      <div class="accordion" data-accordion data-accordion-single role="list">
+      <div class="accordion" data-accordion data-accordion-single>
 
-        <div class="accordion__item" role="listitem">
-          <button class="accordion__trigger" aria-expanded="false" data-accordion-trigger>
-            <span>May one advance from Scholar to Fellow without losing one's annotations and commonplace notes?</span>
-            <svg class="accordion__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div class="accordion__panel" role="region" aria-hidden="true">
-            <div class="accordion__panel-inner">
-              Indeed — all marginalia, bookmarks, and the contents of your private commonplace book are preserved in their entirety upon elevation to any higher tier. Your accumulated scholarship belongs to you; the Library merely grants you further dominion over its stacks. Upgrading takes effect immediately upon confirmation of your new membership, with any unused portion of the previous billing period credited to your account in the form of extended tenure.
-            </div>
-          </div>
+        <div class="accordion__item">
+          <h3><button class="accordion__trigger" aria-expanded="false" aria-controls="faq1">
+            서생에서 연구원으로 올라가면, 그동안 남긴 방주와 초록집은 어떻게 됩니까?
+            <span class="accordion__icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span>
+          </button></h3>
+          <div class="accordion__panel" id="faq1"><div class="accordion__panel-inner">
+            전부 그대로 보존됩니다. 방주, 서표, 개인 초록집의 내용은 상위 등급으로 올라갈 때 한 글자도 잃지 않고 이관됩니다. 쌓아 올린 학문은 회원 본인의 것이며, 장서각은 다만 더 깊은 서가의 문을 열어 드릴 뿐입니다. 등급 변경은 확인 즉시 적용되고, 이전 결제 기간의 남은 몫은 이용 기간 연장으로 정산해 드립니다.
+          </div></div>
         </div>
 
-        <div class="accordion__item" role="listitem">
-          <button class="accordion__trigger" aria-expanded="false" data-accordion-trigger>
-            <span>What precisely distinguishes the Restricted Alcoves from the General Open Stacks?</span>
-            <svg class="accordion__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div class="accordion__panel" role="region" aria-hidden="true">
-            <div class="accordion__panel-inner">
-              The Open Stacks contain the greater body of the modern and late-modern collection — works published from the XVIII century onward, scholarly journals, critical editions, and contemporary monographs. The Restricted Alcoves house materials of considerably greater antiquity and fragility: illuminated manuscripts, incunabula (those printed before the year MD, i.e. 1500), rare cartographical atlases, alchemical treatises, and the ecclesiastical correspondences of the XIII and XIV centuries. Access requires a Fellow or Curator membership to ensure proper scholarly custody of these irreplaceable works.
-            </div>
-          </div>
+        <div class="accordion__item">
+          <h3><button class="accordion__trigger" aria-expanded="false" aria-controls="faq2">
+            희귀본 서고는 일반 서가와 무엇이 다릅니까?
+            <span class="accordion__icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span>
+          </button></h3>
+          <div class="accordion__panel" id="faq2"><div class="accordion__panel-inner">
+            일반 서가에는 18세기 이후의 근·현대 장서 — 학술지, 교감본, 현대 연구서가 꽂혀 있습니다. 희귀본 서고에는 그보다 훨씬 오래되고 상하기 쉬운 자료가 보관됩니다. 채식 필사본, 1500년 이전의 초기간행본, 옛 지도첩, 연금술 논고, 그리고 13–14세기의 서간들입니다. 이 대체 불가능한 자료들을 학문적 책임 아래 다루기 위해, 열람에는 연구원 이상의 회원권이 필요합니다.
+          </div></div>
         </div>
 
-        <div class="accordion__item" role="listitem">
-          <button class="accordion__trigger" aria-expanded="false" data-accordion-trigger>
-            <span>Is annual billing truly a wiser economy, or merely a stratagem of the Exchequer?</span>
-            <svg class="accordion__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div class="accordion__panel" role="region" aria-hidden="true">
-            <div class="accordion__panel-inner">
-              We confess no trickery. Annual billing is offered at the equivalent of ten monthly instalments — meaning you receive the equivalent of two months' membership entirely gratis. For the Scholar, of course, the matter is of no financial consequence. For the Fellow, this represents a saving of £24 per annum; for the Curator, a saving of £58. One may think of it as the Library's gratitude for your sustained patronage and your confidence in us across the full academic year. Annual memberships are issued a single invoice and renew automatically unless cancelled prior to the renewal date.
-            </div>
-          </div>
+        <div class="accordion__item">
+          <h3><button class="accordion__trigger" aria-expanded="false" aria-controls="faq3">
+            연간 결제가 정말 유리합니까, 아니면 회계 담당 사서의 계략입니까?
+            <span class="accordion__icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span>
+          </button></h3>
+          <div class="accordion__panel" id="faq3"><div class="accordion__panel-inner">
+            계략은 없습니다. 연간 결제는 열 달 값으로 열두 달을 드리는 방식입니다. 연구원은 연 ₩28,000, 수석 사서는 연 ₩64,000을 아끼시게 됩니다. 한 해 내내 서가를 믿고 맡겨 주신 데 대한 장서각의 답례라 여겨 주십시오. 연간 회원권은 청구서가 한 번만 발행되며, 갱신일 전에 해지하지 않으시면 자동으로 갱신됩니다.
+          </div></div>
         </div>
 
-        <div class="accordion__item" role="listitem">
-          <button class="accordion__trigger" aria-expanded="false" data-accordion-trigger>
-            <span>Do you extend institutional or collegiate rates for academies, seminaries, and learned societies?</span>
-            <svg class="accordion__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div class="accordion__panel" role="region" aria-hidden="true">
-            <div class="accordion__panel-inner">
-              We do, and warmly encourage such arrangements. Institutions wishing to provide access for their students, fellows, or faculty members — whether a college of the ancient universities, a learned society, a seminary, or an independent research institute — are invited to address their enquiries directly to our Archivist via the correspondence channel. Institutional arrangements typically begin at ten seats and include bespoke onboarding, SAML / SSO integration, consolidated invoicing, and a dedicated liaison. Discounts are negotiated individually; however, they are genuinely substantial.
-            </div>
-          </div>
+        <div class="accordion__item">
+          <h3><button class="accordion__trigger" aria-expanded="false" aria-controls="faq4">
+            학교나 연구기관을 위한 단체 요금이 있습니까?
+            <span class="accordion__icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span>
+          </button></h3>
+          <div class="accordion__panel" id="faq4"><div class="accordion__panel-inner">
+            있습니다. 대학과 연구소, 학회 등 소속 연구자들에게 열람권을 제공하고자 하는 기관은 전담 사서 서신 채널로 문의해 주십시오. 기관 계약은 통상 10석부터 시작하며, 도입 안내와 SSO 연동, 통합 청구, 전담 사서 배정이 포함됩니다. 할인율은 규모에 따라 개별 협의하되, 인색하게 굴지는 않습니다.
+          </div></div>
         </div>
 
-        <div class="accordion__item" role="listitem">
-          <button class="accordion__trigger" aria-expanded="false" data-accordion-trigger>
-            <span>What becomes of one's membership upon the conclusion of their subscription — does the Library seal its doors absolutely?</span>
-            <svg class="accordion__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div class="accordion__panel" role="region" aria-hidden="true">
-            <div class="accordion__panel-inner">
-              Upon expiry, your membership reverts gracefully to the Scholar tier — the Library's outer doors remain open to you always. Access to the Alcoves, Scriptorium, and any tier-specific collections is suspended, but your reading history, bookmarks, and up to 500 annotations are preserved indefinitely in your account. Any facsimiles already downloaded remain in your possession. Should you choose to return — and the Library hopes sincerely that you shall — your full commonplace book and annotation history will be restored immediately upon resubscription.
-            </div>
-          </div>
+        <div class="accordion__item">
+          <h3><button class="accordion__trigger" aria-expanded="false" aria-controls="faq5">
+            해지하면 어떻게 됩니까 — 장서각이 문을 아주 걸어 잠급니까?
+            <span class="accordion__icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span>
+          </button></h3>
+          <div class="accordion__panel" id="faq5"><div class="accordion__panel-inner">
+            회원권이 만료되면 서생 등급으로 조용히 내려갑니다 — 장서각의 바깥문은 언제나 열려 있습니다. 희귀본 서고와 필사실 출입은 중지되지만, 열람 이력과 서표, 그리고 방주 500건까지는 계정에 무기한 보존됩니다. 이미 내려받으신 영인본은 계속 소장하실 수 있습니다. 다시 돌아오시면 — 장서각은 진심으로 그러시길 바랍니다만 — 초록집과 방주 전체가 즉시 복원됩니다.
+          </div></div>
         </div>
 
-        <div class="accordion__item" role="listitem">
-          <button class="accordion__trigger" aria-expanded="false" data-accordion-trigger>
-            <span>What is the nature of the Founders' Colloquium, and how does one conduct oneself therein?</span>
-            <svg class="accordion__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <div class="accordion__panel" role="region" aria-hidden="true">
-            <div class="accordion__panel-inner">
-              The Founders' Colloquium is an annual gathering — held each October in proximity to the feast of St. Jerome, patron of scholars — at which Curator members are invited to convene in person or via our private correspondence salon. The occasion comprises: a reading of selected acquisitions from the preceding year, a philosophical discourse led by an invited Fellow of the Bodleian or Bibliothèque nationale, the annual report of the Library's Acquisitions Committee, and a candlelit supper during which members may address the Curators on matters of collection development. Dress is appropriately scholarly. Latin is welcomed but not obligatory.
-            </div>
-          </div>
+        <div class="accordion__item">
+          <h3><button class="accordion__trigger" aria-expanded="false" aria-controls="faq6">
+            창립 기념 담화는 어떤 자리입니까?
+            <span class="accordion__icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></span>
+          </button></h3>
+          <div class="accordion__panel" id="faq6"><div class="accordion__panel-inner">
+            매년 10월, 학자들의 수호성인 히에로니무스 축일 즈음에 열리는 연례 모임입니다. 수석 사서 회원을 직접 또는 서신 담화실로 초청합니다. 지난 한 해의 주요 입수 장서 낭독, 초청 연사의 강연, 수서위원회의 연차 보고, 그리고 촛불 아래의 만찬으로 이어집니다. 만찬 자리에서는 서고 운영에 관해 사서들에게 직접 의견을 내실 수 있습니다. 복장은 단정하게, 라틴어는 환영하되 필수는 아닙니다.
+          </div></div>
         </div>
 
       </div>
     </section>
 
-    <!-- ═══════════ FINAL CTA BANNER ═══════════ -->
+    <!-- ═══════════ 마무리 CTA ═══════════ -->
     <section class="section-sm" aria-labelledby="cta-heading" data-reveal>
       <div class="ornate-rule mb-8" aria-hidden="true"></div>
-      <div class="cta-banner card card--illuminated frame-corners">
-        <div class="fleur fleur--lg mb-4" aria-hidden="true"></div>
+      <div class="cta-banner card illuminated frame-corners">
+        <div class="fleur fleur--lg mb-4" aria-hidden="true" style="margin-inline:auto;"></div>
         <h2 id="cta-heading" class="cta-banner__title">
-          <em class="blackletter gold-gradient">Lege, Scripsit, Memento.</em>
+          <span class="blackletter gold-gradient" lang="la">Lege · Scribe · Memento</span>
         </h2>
-        <p style="font-size:var(--text-xs); letter-spacing:var(--tracking-widest); color:var(--color-text-subtle); text-transform:uppercase; margin-bottom:var(--space-4);">Read, Write, Remember.</p>
+        <p class="cta-banner__caption">읽고, 쓰고, 기억하십시오</p>
         <p class="cta-banner__body">
-          The Library does not merely store knowledge — it cultivates the conditions under which scholarship is made possible.
-          Begin today as a Scholar, and may the stacks reveal to you what the wider world has long forgotten.
+          장서각은 지식을 쌓아 두는 곳이 아니라, 학문이 가능해지는 조건을 돌보는 곳입니다.
+          오늘은 서생으로 시작하십시오 — 서가는 세상이 오래 잊고 지낸 것을 먼저 보여드릴 것입니다.
         </p>
         <div class="cluster" style="justify-content:center; gap:var(--space-3);">
           <button
             class="btn btn--primary btn--lg"
             data-toast
-            data-toast-title="Welcome to the Library"
-            data-toast-variant="success"
-            aria-label="Open your Scholar account — free">
-            Open Your Scholar Account
+            data-toast-title="입적 완료"
+            data-toast="서생 열람증을 발급했습니다. 일반 서가가 열렸습니다."
+            data-toast-variant="success">
+            서생 계정 만들기
           </button>
           <button
             class="btn btn--gold btn--lg"
             data-toast
-            data-toast-title="Fellow Enquiry Received"
+            data-toast-title="입적 문의 접수"
+            data-toast="연구원 입적 안내를 서신으로 보내 드리겠습니다."
             data-toast-variant="info"
-            aria-label="Begin your Fellowship — £12 per month">
-            Begin a Fellowship — £12 / mo
+            aria-label="연구원으로 입적 — 월 14,000원">
+            연구원으로 입적 — 월 ₩14,000
           </button>
         </div>
-        <p class="text-subtle mt-4" style="font-size:var(--text-xs); font-style:italic;">
-          Established MDCCCXCVI · Oxford · All memberships governed by the Statutes of the Library
+        <p class="text-subtle mt-4" style="font-size:var(--text-xs);">
+          창립 1896 · 모든 회원권은 장서각 규약을 따릅니다
         </p>
       </div>
     </section>
@@ -760,16 +754,50 @@
   </div><!-- /container -->
 </main>
 
-<!-- ═══════════════════════ FOOTER ═══════════════════════ -->
-<footer class="page-footer" role="contentinfo">
-  <div class="fleur fleur--lg mb-4" style="margin-inline:auto;" aria-hidden="true"></div>
-  <p>
-    <a href="../index.html" class="text-accent" style="text-decoration:none;">&larr; Return to Folio·24 Index</a>
-    &nbsp;&middot;&nbsp;
-    <span class="text-subtle">Bibliotheca Folio XXIV &copy; MMXXVI &middot; Omnia jura reservantur</span>
-  </p>
+<!-- ═══════════════════════ FOOTER — 콜로폰 ═══════════════════════ -->
+<footer class="page-footer">
+  <div class="container">
+    <div class="fleur fleur--lg" aria-hidden="true" style="margin-inline:auto; margin-bottom:var(--space-3);"></div>
+    <p class="blackletter" style="font-size:var(--text-2xl);">Folio · XXIV</p>
+    <p style="margin-top:var(--space-2);">회원권 요람(要覽) — 서생 · 연구원 · 수석 사서 · <a href="../index.html">서가로 돌아가기</a></p>
+    <p class="colophon__meta">장서각 간행 · 초판 MMXXVI · 촛불 아래에서 조판</p>
+  </div>
 </footer>
 
+<!-- ═══════════════════════ COMMAND PALETTE ═══════════════════════ -->
+<div class="cmdk-overlay" id="cmdk" role="dialog" aria-modal="true" aria-label="명령 팔레트" aria-hidden="true">
+  <div class="cmdk">
+    <div class="cmdk__search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input class="cmdk__input" placeholder="명령을 입력하거나 검색하세요…" aria-label="명령 팔레트 검색" />
+      <kbd>ESC</kbd>
+    </div>
+    <div class="cmdk__list">
+      <div class="cmdk__group-label">이동</div>
+      <div class="cmdk__item" role="option" data-href="../index.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg> 열람실(홈)로 돌아가기</div>
+      <div class="cmdk__item" role="option" data-href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg> 대시보드로 이동 <span class="cmdk__hint">페이지 I</span></div>
+      <div class="cmdk__item" role="option" data-href="onboarding.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg> 입적 절차 시작하기 <span class="cmdk__hint">페이지 VII</span></div>
+      <div class="cmdk__group-label">동작</div>
+      <div class="cmdk__item" role="option" data-action="toggle-theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg> 테마 전환 (양피지 / 촛불)</div>
+      <div class="cmdk__item" role="option" data-toast-title="상담 예약" data-toast="회원권 상담을 예약해 두었습니다. 사서가 서신으로 연락드리겠습니다."><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> 회원권 상담 예약하기</div>
+      <div class="cmdk__empty" hidden>이 폴리오에서 명령을 찾을 수 없습니다.</div>
+    </div>
+  </div>
+</div>
+
 <script src="../app.js"></script>
+<script>
+/* 결제 주기 라벨 활성 상태 동기화 */
+(function () {
+  var t = document.querySelector('[data-pricing-toggle]');
+  var m = document.getElementById('label-monthly');
+  var a = document.getElementById('label-annual');
+  if (!t) return;
+  t.addEventListener('change', function () {
+    if (m) m.classList.toggle('is-active', !t.checked);
+    if (a) a.classList.toggle('is-active', t.checked);
+  });
+})();
+</script>
 </body>
 </html>
