@@ -1,9 +1,21 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>404 Page Not Found — BAUHAUS</title>
+<title>404 · 잘못된 시간에 도착한 페이지 — BAUHAUS</title>
+<script>
+  /* FOUC guard — resolve theme + mark js before first paint (key matches app.js) */
+  (function () {
+    try {
+      var t = localStorage.getItem('bauhaus-theme');
+      if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+    document.documentElement.classList.add('js');
+  })();
+</script>
+<noscript><style>[data-reveal]{opacity:1 !important;transform:none !important;}</style></noscript>
 <link rel="stylesheet" href="../tokens.css" />
 <link rel="stylesheet" href="../semantic.css" />
 <link rel="stylesheet" href="../base.css" />
@@ -18,110 +30,77 @@
 <style>
   /* ── 404 hero ── */
   .hero-404 {
-    padding: var(--space-16) var(--space-6) var(--space-12);
+    padding: var(--space-14) var(--space-6) var(--space-12);
     text-align: center;
     position: relative;
-    overflow: hidden;
+    overflow: clip;
   }
 
-  /* geometric 404 composition */
+  /* geometric 404 composition — 4 · clock · 4 */
   .geo-404 {
     position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 200px;
-    width: 100%;
-    max-width: 600px;
-    margin: 0 auto var(--space-8);
+    gap: clamp(var(--space-2), 3vw, var(--space-6));
+    margin: 0 auto var(--space-9);
+    max-width: 100%;
   }
-  .geo-404__number {
-    font-family: var(--font-display);
-    font-size: clamp(6rem, 18vw, 10rem);
-    font-weight: 900;
-    letter-spacing: -0.04em;
-    color: var(--black);
+  .geo-digit { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+  .geo-num {
     position: relative;
     z-index: 2;
+    font-family: var(--font-display);
+    font-size: clamp(4rem, 15vw, 8.5rem);
+    font-weight: var(--weight-black);
+    letter-spacing: -0.04em;
     line-height: 1;
+    color: var(--color-text);
     user-select: none;
   }
-  /* big blue circle behind left "4" */
-  .geo-bg-circle {
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 160px;
-    height: 160px;
-    background: var(--blue-500);
-    border-radius: 50%;
-    border: 3px solid var(--black);
-    z-index: 1;
-  }
-  /* red square behind "0" */
-  .geo-bg-square {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 130px;
-    height: 130px;
-    background: var(--red-500);
-    border: 3px solid var(--black);
-    z-index: 1;
-  }
-  /* yellow triangle behind right "4" */
-  .geo-bg-triangle {
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 0;
-    height: 0;
-    border-left: 90px solid transparent;
-    border-right: 90px solid transparent;
-    border-bottom: 160px solid var(--yellow-400);
-    z-index: 1;
-    /* triangle doesn't take a CSS border-outline, so simulate with drop-shadow */
-    filter: drop-shadow(0 0 0 3px var(--black));
-  }
-  /* floating decorative shapes */
-  .deco-shape {
-    position: absolute;
-    pointer-events: none;
-    z-index: 0;
-  }
+  .geo-back { position: absolute; z-index: 1; top: 50%; left: 50%; transform: translate(-50%, -50%); border: var(--border-3) solid var(--color-border); }
+  .geo-back--circle { width: clamp(4.5rem, 15vw, 8.5rem); height: clamp(4.5rem, 15vw, 8.5rem); border-radius: var(--radius-full); background: var(--blue-500); }
+  .geo-back--square { width: clamp(4rem, 13vw, 7.5rem); height: clamp(4rem, 13vw, 7.5rem); background: var(--red-500); }
+
+  /* the "0" is a real, running Bauhaus wall clock */
+  .geo-clock { width: clamp(7rem, 24vw, 12.5rem); flex-shrink: 0; }
+  .clock { width: 100%; height: auto; }
+  .clock__frame { fill: none; stroke: var(--color-border); }
+  .clock__rim   { fill: var(--color-surface); stroke: var(--color-border); }
+  .clock__mark-red  { fill: var(--red-500); }
+  .clock__mark-blue { fill: var(--blue-500); }
+  .clock__accent    { fill: var(--yellow-400); }
+  .clock__hand      { fill: var(--color-border); }
+  .clock__second    { fill: var(--red-500); }
+  .clock__pin       { fill: var(--color-border); }
+  .clock__pin-dot   { fill: var(--color-surface); }
+  .clock__sweep { transform-box: view-box; transform-origin: 100px 100px; }
   @media (prefers-reduced-motion: no-preference) {
-    .deco-shape--float {
-      animation: floatY 6s ease-in-out infinite;
-    }
-    .deco-shape--spin {
-      animation: spinSlow 12s linear infinite;
-    }
+    .clock__sweep { animation: bauhaus-spin 10s linear infinite; }
   }
-  @keyframes floatY {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-12px); }
+
+  /* floating decorative shapes (aria-hidden) */
+  .deco-shape { position: absolute; pointer-events: none; z-index: 0; }
+  @media (prefers-reduced-motion: no-preference) {
+    .deco-shape--float { animation: floatY 6s ease-in-out infinite; }
+    .deco-shape--spin  { animation: spinSlow 14s linear infinite; }
   }
-  @keyframes spinSlow {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
+  @keyframes floatY { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+  @keyframes spinSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
   .hero-404__title {
     font-family: var(--font-display);
     font-size: clamp(1.5rem, 4vw, 2.5rem);
-    font-weight: 900;
-    letter-spacing: var(--tracking-wide);
-    text-transform: uppercase;
+    font-weight: var(--weight-black);
+    letter-spacing: var(--tracking-tight);
     margin-bottom: var(--space-3);
   }
   .hero-404__desc {
     color: var(--color-text-muted);
     font-size: var(--text-lg);
-    max-width: 36rem;
-    margin: 0 auto var(--space-6);
-    line-height: var(--leading-relaxed);
+    max-width: 34rem;
+    margin: 0 auto var(--space-7);
+    line-height: var(--leading-body-ko);
   }
   .hero-404__actions {
     display: flex;
@@ -131,11 +110,7 @@
     gap: var(--space-3);
     margin-bottom: var(--space-6);
   }
-  .hero-404__search {
-    width: 100%;
-    max-width: 26rem;
-    margin: 0 auto;
-  }
+  .hero-404__search { width: 100%; max-width: 26rem; margin: 0 auto; }
 
   /* ── empty states section ── */
   .section-empty {
@@ -143,304 +118,152 @@
     max-width: 1200px;
     margin: 0 auto;
   }
-  .section-empty__header {
-    margin-bottom: var(--space-8);
-  }
+  .section-empty__header { margin-bottom: var(--space-8); }
   .section-empty__grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: var(--space-6);
   }
 
-  /* empty-state art variations */
-  .art--search {
-    position: relative;
-    width: 100px;
-    height: 80px;
-  }
-  .art--search .mag-circle {
-    position: absolute;
-    left: 10px;
-    top: 0;
-    width: 54px;
-    height: 54px;
-    border-radius: 50%;
-    border: 5px solid var(--black);
-    background: var(--yellow-300, #f9d74b);
-  }
-  .art--search .mag-handle {
-    position: absolute;
-    left: 54px;
-    top: 46px;
-    width: 30px;
-    height: 6px;
-    background: var(--black);
-    transform: rotate(45deg);
-    transform-origin: left center;
-    border-radius: 0;
-  }
-  .art--search .art-sq {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    width: 22px;
-    height: 22px;
-    background: var(--blue-500);
-    border: 2px solid var(--black);
-  }
+  /* empty-state art variations — outlines use theme-aware border color */
+  .art--search { position: relative; width: 100px; height: 80px; }
+  .art--search .mag-circle { position: absolute; left: 10px; top: 0; width: 54px; height: 54px; border-radius: 50%; border: 5px solid var(--color-border); background: var(--yellow-300); }
+  .art--search .mag-handle { position: absolute; left: 54px; top: 46px; width: 30px; height: 6px; background: var(--color-border); transform: rotate(45deg); transform-origin: left center; }
+  .art--search .art-sq { position: absolute; right: 0; bottom: 0; width: 22px; height: 22px; background: var(--blue-500); border: 2px solid var(--color-border); }
 
-  .art--inbox {
-    position: relative;
-    width: 100px;
-    height: 80px;
-  }
-  .art--inbox .env-body {
-    position: absolute;
-    left: 10px;
-    top: 16px;
-    width: 80px;
-    height: 52px;
-    background: var(--blue-100, #dce8ff);
-    border: 3px solid var(--black);
-  }
-  .art--inbox .env-flap {
-    position: absolute;
-    left: 10px;
-    top: 16px;
-    width: 0;
-    height: 0;
-    border-left: 40px solid transparent;
-    border-right: 40px solid transparent;
-    border-top: 28px solid var(--blue-500);
-  }
-  .art--inbox .check-circle {
-    position: absolute;
-    right: 0;
-    top: 0;
-    width: 28px;
-    height: 28px;
-    background: var(--blue-500);
-    border-radius: 50%;
-    border: 2px solid var(--black);
-  }
+  .art--inbox { position: relative; width: 100px; height: 80px; }
+  .art--inbox .env-body { position: absolute; left: 10px; top: 16px; width: 80px; height: 52px; background: var(--blue-100); border: 3px solid var(--color-border); }
+  .art--inbox .env-flap { position: absolute; left: 10px; top: 16px; width: 0; height: 0; border-left: 40px solid transparent; border-right: 40px solid transparent; border-top: 28px solid var(--blue-500); }
+  .art--inbox .check-circle { position: absolute; right: 0; top: 0; width: 28px; height: 28px; background: var(--blue-500); border-radius: 50%; border: 2px solid var(--color-border); }
 
-  .art--projects {
-    position: relative;
-    width: 100px;
-    height: 80px;
-  }
-  .art--projects .proj-sq-big {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 64px;
-    height: 64px;
-    background: var(--yellow-400);
-    border: 3px solid var(--black);
-  }
-  .art--projects .proj-plus-v {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 4px;
-    height: 32px;
-    background: var(--black);
-  }
-  .art--projects .proj-plus-h {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 32px;
-    height: 4px;
-    background: var(--black);
-  }
-  .art--projects .proj-tri {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    width: 0;
-    height: 0;
-    border-left: 18px solid transparent;
-    border-right: 18px solid transparent;
-    border-bottom: 30px solid var(--red-500);
-  }
+  .art--projects { position: relative; width: 100px; height: 80px; }
+  .art--projects .proj-sq-big { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 64px; height: 64px; background: var(--yellow-400); border: 3px solid var(--color-border); }
+  .art--projects .proj-plus-v { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 4px; height: 32px; background: var(--color-border); }
+  .art--projects .proj-plus-h { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 32px; height: 4px; background: var(--color-border); }
+  .art--projects .proj-tri { position: absolute; right: 0; bottom: 0; width: 0; height: 0; border-left: 18px solid transparent; border-right: 18px solid transparent; border-bottom: 30px solid var(--red-500); }
 
-  .art--chart {
-    position: relative;
-    width: 100px;
-    height: 80px;
-    display: flex;
-    align-items: flex-end;
-    gap: 6px;
-    padding-bottom: 4px;
-    border-bottom: 3px solid var(--black);
-  }
-  .art--chart .bar-empty {
-    flex: 1;
-    background: var(--color-border, #d0d0d0);
-    border: 2px solid var(--black);
-    border-radius: 0;
-    opacity: 0.3;
-  }
+  .art--chart { position: relative; width: 100px; height: 80px; display: flex; align-items: flex-end; gap: 6px; padding-bottom: 4px; border-bottom: 3px solid var(--color-border); }
+  .art--chart .bar-empty { flex: 1; background: var(--color-surface-3); border: 2px solid var(--color-border); opacity: 0.55; }
   .art--chart .bar-empty:nth-child(1) { height: 50%; }
   .art--chart .bar-empty:nth-child(2) { height: 70%; }
   .art--chart .bar-empty:nth-child(3) { height: 35%; }
   .art--chart .bar-empty:nth-child(4) { height: 60%; }
-  .art--chart .q-mark {
-    position: absolute;
-    right: 2px;
-    top: 2px;
-    font-family: var(--font-display);
-    font-size: 1.8rem;
-    font-weight: 900;
-    color: var(--black);
-    opacity: 0.15;
-    line-height: 1;
-  }
+  .art--chart .q-mark { position: absolute; right: 2px; top: 2px; font-family: var(--font-display); font-size: 1.8rem; font-weight: var(--weight-black); color: var(--color-text); opacity: 0.18; line-height: 1; }
 
   /* error mini-cards */
-  .section-errors {
-    padding: var(--space-8) var(--space-6) var(--space-12);
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-  .error-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: var(--space-5);
-    margin-top: var(--space-6);
-  }
-  .error-mini {
-    display: flex;
-    align-items: center;
-    gap: var(--space-4);
-  }
-  .error-mini__code {
-    font-family: var(--font-display);
-    font-size: 2.5rem;
-    font-weight: 900;
-    line-height: 1;
-    flex-shrink: 0;
-  }
-  .error-mini__shapes {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    flex-shrink: 0;
-  }
+  .section-errors { padding: var(--space-8) var(--space-6) var(--space-13); max-width: 1200px; margin: 0 auto; }
+  .error-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-5); margin-top: var(--space-6); }
+  .error-mini { display: flex; align-items: center; gap: var(--space-4); }
+  .error-mini__code { font-family: var(--font-display); font-size: 2.5rem; font-weight: var(--weight-black); line-height: 1; flex-shrink: 0; }
+  .error-mini__shapes { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
 
-  /* container utility if missing */
-  .page-wrap {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 var(--space-4);
-  }
+  .page-wrap { max-width: 1200px; margin: 0 auto; padding: 0 var(--space-4); }
 
   @media (max-width: 640px) {
-    .hero-404__actions {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .geo-bg-circle { width: 100px; height: 100px; }
-    .geo-bg-square { width: 90px; height: 90px; }
-    .geo-bg-triangle {
-      border-left-width: 60px;
-      border-right-width: 60px;
-      border-bottom-width: 110px;
-    }
-    .geo-404 { height: 140px; }
+    .hero-404 { padding-top: var(--space-11); }
+    .hero-404__actions { flex-direction: column; align-items: stretch; }
   }
 </style>
 </head>
 <body>
-<a href="#main" class="sr-only">Skip to content</a>
+<a href="#main" class="sr-only">본문으로 건너뛰기</a>
 
 <!-- ═══════════════════════════════════════════════════════
      NAVBAR
 ═══════════════════════════════════════════════════════ -->
 <header class="navbar no-print">
-  <a class="navbar__brand" href="../index.html">
-    <span class="logomark"><span class="mark"><i></i><i></i><i></i></span> BAUHAUS</span>
+  <a class="navbar__brand" href="../index.html" aria-label="Bauhaus 홈">
+    <span class="logomark"><span class="mark" aria-hidden="true"><i></i><i></i><i></i></span> BAUHAUS</span>
   </a>
-  <nav class="navbar__nav" aria-label="Primary">
-    <a class="navbar__link" href="../index.html">Home</a>
-    <a class="navbar__link is-active" href="#">404</a>
+  <nav class="navbar__nav" id="primary-nav" aria-label="주요 메뉴">
+    <a class="navbar__link" href="../index.html">홈</a>
+    <a class="navbar__link is-active" href="404.html" aria-current="page">404</a>
   </nav>
   <span class="navbar__spacer"></span>
   <div class="navbar__actions">
-    <button class="btn-icon" data-theme-toggle aria-label="Toggle theme" aria-pressed="false">
-      <span class="ico ico-gear"></span>
-    </button>
-    <span class="avatar avatar--sm avatar--blue">U</span>
+    <button class="theme-toggle" data-theme-toggle aria-label="테마 전환" aria-pressed="false"><span class="theme-toggle__shape" aria-hidden="true"></span></button>
+    <span class="avatar avatar--sm avatar--blue" aria-label="사용자 아바타: 정하람">하람</span>
+    <button class="btn-icon navbar__toggle" data-nav-toggle aria-controls="primary-nav" aria-expanded="false" aria-label="메뉴 열기"><span class="ico ico-menu"></span></button>
   </div>
 </header>
 
 <main id="main">
 
   <!-- ═══════════════════════════════════════════════════════
-       HERO — 404 GEOMETRIC COMPOSITION
+       HERO — 404 GEOMETRIC COMPOSITION (running clock)
   ═══════════════════════════════════════════════════════ -->
-  <section class="hero-404" aria-labelledby="hero-title">
+  <section class="hero-404" data-scene="lost" aria-labelledby="hero-title">
 
     <!-- floating decorative shapes (aria-hidden) -->
-    <span class="deco-shape deco-shape--float" aria-hidden="true"
-      style="left:4%; top:18%; opacity:0.18;">
+    <span class="deco-shape deco-shape--float" aria-hidden="true" style="left:4%; top:18%; opacity:0.18;">
       <span class="shape shape-circle fill-red" style="width:48px;height:48px;"></span>
     </span>
-    <span class="deco-shape deco-shape--spin" aria-hidden="true"
-      style="left:9%; bottom:12%; opacity:0.14;">
+    <span class="deco-shape deco-shape--spin" aria-hidden="true" style="left:9%; bottom:12%; opacity:0.14;">
       <span class="shape shape-square fill-yellow" style="width:36px;height:36px;"></span>
     </span>
-    <span class="deco-shape deco-shape--float" aria-hidden="true"
-      style="right:6%; top:14%; opacity:0.15;" style="animation-delay:2s;">
+    <span class="deco-shape deco-shape--float" aria-hidden="true" style="right:6%; top:14%; opacity:0.15; animation-delay:2s;">
       <span class="shape shape-triangle tri-blue"></span>
     </span>
-    <span class="deco-shape deco-shape--float" aria-hidden="true"
-      style="right:12%; bottom:16%; opacity:0.12;">
+    <span class="deco-shape deco-shape--float" aria-hidden="true" style="right:12%; bottom:16%; opacity:0.12; animation-delay:1s;">
       <span class="shape shape-circle fill-yellow" style="width:28px;height:28px;"></span>
     </span>
-    <span class="deco-shape" aria-hidden="true"
-      style="left:50%; top:6%; transform:translateX(-50%); opacity:0.08;">
-      <span class="shape shape-square fill-black" style="width:20px;height:20px;"></span>
-    </span>
 
-    <!-- geometric 404 -->
-    <div class="geo-404" role="img" aria-label="404 error illustration">
-      <span class="geo-bg-circle" aria-hidden="true"></span>
-      <span class="geo-bg-square" aria-hidden="true"></span>
-      <span class="geo-bg-triangle" aria-hidden="true"></span>
-      <span class="geo-404__number" aria-hidden="true">404</span>
+    <!-- geometric 404: 4 · running clock · 4 -->
+    <div class="geo-404" role="img" aria-label="숫자 4, 멈추지 않고 돌아가는 바우하우스 시계, 숫자 4 — 404 오류">
+      <span class="geo-digit" aria-hidden="true">
+        <span class="geo-back geo-back--circle"></span>
+        <span class="geo-num">4</span>
+      </span>
+      <span class="geo-clock" aria-hidden="true">
+        <svg class="clock" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <rect class="clock__frame" x="8" y="8" width="184" height="184" stroke-width="3"/>
+          <circle class="clock__rim" cx="100" cy="100" r="76" stroke-width="4"/>
+          <!-- hour markers: squares (12·6 red, 3·9 blue) -->
+          <rect class="clock__mark-red"  x="93" y="30" width="14" height="14"/>
+          <rect class="clock__mark-red"  x="93" y="156" width="14" height="14"/>
+          <rect class="clock__mark-blue" x="156" y="93" width="14" height="14"/>
+          <rect class="clock__mark-blue" x="30" y="93" width="14" height="14"/>
+          <!-- yellow accent triangle at 12 -->
+          <polygon class="clock__accent" points="100,26 112,48 88,48"/>
+          <!-- hour hand → pointing near 10 -->
+          <rect class="clock__hand" x="97" y="60" width="6" height="44" transform="rotate(-62 100 100)"/>
+          <!-- minute hand → pointing near 2 -->
+          <rect class="clock__hand" x="98" y="44" width="4" height="60" transform="rotate(58 100 100)"/>
+          <!-- second hand → the part that actually sweeps -->
+          <g class="clock__sweep">
+            <rect class="clock__second" x="98.5" y="30" width="3" height="76"/>
+            <circle class="clock__second" cx="100" cy="118" r="5"/>
+          </g>
+          <circle class="clock__pin" cx="100" cy="100" r="7"/>
+          <circle class="clock__pin-dot" cx="100" cy="100" r="2.5"/>
+        </svg>
+      </span>
+      <span class="geo-digit" aria-hidden="true">
+        <span class="geo-back geo-back--square"></span>
+        <span class="geo-num">4</span>
+      </span>
     </div>
 
-    <h1 class="hero-404__title" id="hero-title">Page Not Found</h1>
+    <h1 class="hero-404__title" id="hero-title">잘못된 시간에 도착했습니다</h1>
     <p class="hero-404__desc">
-      The page you're looking for took a wrong turn at the Bauhaus workshop.
-      It may have been moved, deleted, or never existed in the first place.
+      주소가 바뀌었거나, 삭제되었거나, 처음부터 존재하지 않았습니다.
+      시계는 계속 돌아갑니다. 아래에서 다시 길을 찾으세요.
     </p>
 
     <div class="hero-404__actions">
       <a href="../index.html" class="btn btn-primary btn-lg">
-        <span class="ico ico-home"></span> Back to Home
+        <span class="ico ico-home"></span> 홈으로
       </a>
-      <button class="btn btn-ghost btn-lg" onclick="history.back()">
-        <span class="ico ico-arrow-l"></span> Go Back
+      <button class="btn btn-ghost btn-lg" id="go-back-btn">
+        <span class="ico ico-arrow-l"></span> 이전 페이지
       </button>
     </div>
 
     <div class="hero-404__search">
       <div class="searchbar">
         <span class="ico ico-search" aria-hidden="true"></span>
-        <input
-          class="input"
-          type="search"
-          placeholder="Search the site…"
-          aria-label="Search the site"
-          id="site-search"
-        />
-        <button class="btn-icon searchbar__clear" aria-label="Clear search">
+        <input class="input" type="search" placeholder="사이트에서 검색…" aria-label="사이트 검색" id="site-search" />
+        <button class="btn-icon searchbar__clear" aria-label="검색어 지우기">
           <span class="ico ico-x"></span>
         </button>
       </div>
@@ -450,93 +273,86 @@
   <!-- ═══════════════════════════════════════════════════════
        DIVIDER
   ═══════════════════════════════════════════════════════ -->
-  <div class="page-wrap">
-    <hr class="rule-thick" />
-  </div>
+  <div class="page-wrap"><hr class="rule-thick" /></div>
 
   <!-- ═══════════════════════════════════════════════════════
        EMPTY STATES SECTION
   ═══════════════════════════════════════════════════════ -->
   <section class="section-empty" aria-labelledby="empty-section-title">
-    <div class="section-empty__header">
-      <p class="eyebrow uppercase-wide">Design System Demo</p>
-      <h2 id="empty-section-title" style="font-family:var(--font-display);font-size:clamp(1.5rem,4vw,2rem);font-weight:900;letter-spacing:var(--tracking-wide);text-transform:uppercase;margin-bottom:var(--space-2);">
-        Empty States
+    <div class="section-empty__header" data-reveal>
+      <p class="eyebrow">빈 화면도 설계한다</p>
+      <h2 id="empty-section-title" style="font-family:var(--font-display);font-size:clamp(1.5rem,4vw,2rem);font-weight:var(--weight-black);letter-spacing:var(--tracking-tight);margin-bottom:var(--space-2);">
+        빈 상태 패턴
       </h2>
       <p class="text-muted" style="max-width:36rem;">
-        Every blank canvas is an opportunity. Here's how BAUHAUS handles moments where content hasn't arrived yet — with geometry and purpose.
+        콘텐츠가 도착하기 전의 화면도 하나의 장면입니다. 도형과 목적으로 채웁니다.
       </p>
     </div>
 
     <div class="section-empty__grid" data-stagger>
 
-      <!-- ── 1. No Results Found ── -->
+      <!-- 1. 검색 결과 없음 -->
       <div class="card bordered">
         <div class="card__body">
           <div class="empty-state">
-            <div class="empty-state__art" role="img" aria-label="Search illustration">
+            <div class="empty-state__art" role="img" aria-label="검색 일러스트">
               <div class="art--search" aria-hidden="true">
                 <div class="mag-circle"></div>
                 <div class="mag-handle"></div>
                 <div class="art-sq"></div>
               </div>
             </div>
-            <p class="empty-state__title">No results found</p>
+            <p class="empty-state__title">검색 결과가 없습니다</p>
             <p class="empty-state__desc">
-              We searched high and low but couldn't find anything matching
-              <strong>"bauhaus chair"</strong>. Try different keywords or clear the filters.
+              <strong>‘바우하우스 의자’</strong>와 일치하는 항목을 찾지 못했습니다. 다른 키워드를 쓰거나 필터를 초기화하세요.
             </p>
             <div class="flex gap-2 flex-wrap" style="justify-content:center;">
               <button class="btn btn-primary" id="retry-search-btn">
-                <span class="ico ico-search"></span> Try Again
+                <span class="ico ico-search"></span> 다시 검색
               </button>
-              <button class="btn btn-ghost" id="clear-filters-btn">
-                Clear Filters
-              </button>
+              <button class="btn btn-ghost" id="clear-filters-btn">필터 초기화</button>
             </div>
             <div class="inline-note inline-note--info" style="margin-top:var(--space-2);">
               <span class="inline-note__shape" aria-hidden="true"></span>
-              Tip: Use fewer keywords for broader results.
+              키워드를 줄이면 더 넓게 검색됩니다.
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ── 2. Empty Inbox ── -->
+      <!-- 2. 받은 편지함 비었음 -->
       <div class="card bordered">
         <div class="card__body">
           <div class="empty-state">
-            <div class="empty-state__art" role="img" aria-label="Empty inbox illustration">
+            <div class="empty-state__art" role="img" aria-label="빈 편지함 일러스트">
               <div class="art--inbox" aria-hidden="true">
                 <div class="env-body"></div>
                 <div class="env-flap"></div>
                 <div class="check-circle"></div>
               </div>
             </div>
-            <p class="empty-state__title">You're all caught up!</p>
+            <p class="empty-state__title">모두 확인했습니다</p>
             <p class="empty-state__desc">
-              Your inbox is spotless. No unread messages, no pending replies —
-              just the satisfying silence of zero notifications.
+              읽지 않은 메일도, 답장을 기다리는 메일도 없습니다. 받은 편지함이 깨끗합니다.
             </p>
             <button class="btn btn-primary"
-              data-toast
-              data-toast-variant="success"
-              data-toast-title="Message composed"
-              data-toast-text="Your new message has been drafted.">
-              <span class="ico ico-mail"></span> Compose Message
+              data-toast data-toast-variant="success"
+              data-toast-title="새 메일을 작성합니다"
+              data-toast-text="임시보관함에 초안을 저장했습니다.">
+              <span class="ico ico-mail"></span> 메일 작성
             </button>
             <p class="text-muted" style="font-size:var(--text-xs);margin-top:var(--space-1);">
-              Last checked: Today at 9:41 AM
+              마지막 확인: 오늘 오전 9:41
             </p>
           </div>
         </div>
       </div>
 
-      <!-- ── 3. No Projects Yet ── -->
+      <!-- 3. 프로젝트 없음 -->
       <div class="card bordered">
         <div class="card__body">
           <div class="empty-state">
-            <div class="empty-state__art" role="img" aria-label="No projects illustration">
+            <div class="empty-state__art" role="img" aria-label="프로젝트 없음 일러스트">
               <div class="art--projects" aria-hidden="true">
                 <div class="proj-sq-big"></div>
                 <div class="proj-plus-v"></div>
@@ -544,23 +360,22 @@
                 <div class="proj-tri"></div>
               </div>
             </div>
-            <p class="empty-state__title">No projects yet</p>
+            <p class="empty-state__title">아직 프로젝트가 없습니다</p>
             <p class="empty-state__desc">
-              Your workspace is a blank slate. Create your first project to start
-              organizing tasks, collaborating with your team, and shipping work.
+              첫 프로젝트를 만들어 작업을 정리하고 팀과 함께 시작하세요.
             </p>
             <button class="btn btn-primary" data-open-modal="modal-new-project">
-              <span class="ico ico-plus"></span> Create First Project
+              <span class="ico ico-plus"></span> 첫 프로젝트 만들기
             </button>
           </div>
         </div>
       </div>
 
-      <!-- ── 4. No Data / Chart Empty ── -->
+      <!-- 4. 데이터 없음 -->
       <div class="card bordered">
         <div class="card__body">
           <div class="empty-state">
-            <div class="empty-state__art" role="img" aria-label="Empty chart illustration">
+            <div class="empty-state__art" role="img" aria-label="빈 차트 일러스트">
               <div class="art--chart" aria-hidden="true">
                 <div class="bar-empty"></div>
                 <div class="bar-empty"></div>
@@ -569,17 +384,15 @@
                 <span class="q-mark">?</span>
               </div>
             </div>
-            <p class="empty-state__title">No data yet</p>
+            <p class="empty-state__title">표시할 데이터가 없습니다</p>
             <p class="empty-state__desc">
-              Your analytics dashboard is waiting for data. Connect a source to
-              start seeing metrics, trends, and actionable insights.
+              데이터 소스를 연결하면 지표와 추이가 이곳에 나타납니다.
             </p>
             <button class="btn btn-primary"
-              data-toast
-              data-toast-variant="info"
-              data-toast-title="Opening integrations…"
-              data-toast-text="Redirecting to the data source connector.">
-              <span class="ico ico-chart"></span> Connect a Data Source
+              data-toast data-toast-variant="info"
+              data-toast-title="연동 화면을 엽니다"
+              data-toast-text="데이터 소스 연결 화면으로 이동합니다.">
+              <span class="ico ico-chart"></span> 데이터 소스 연결
             </button>
           </div>
         </div>
@@ -594,85 +407,82 @@
   <section class="section-errors" aria-labelledby="error-section-title">
     <div class="page-wrap" style="padding:0;">
       <hr class="rule" />
-      <div style="margin-top:var(--space-8);">
-        <p class="eyebrow uppercase-wide">Error Patterns</p>
-        <h2 id="error-section-title" style="font-family:var(--font-display);font-size:var(--text-xl);font-weight:900;text-transform:uppercase;letter-spacing:var(--tracking-wide);margin-bottom:var(--space-6);">
-          Other Error States
+      <div style="margin-top:var(--space-8);" data-reveal>
+        <p class="eyebrow">다른 오류 패턴</p>
+        <h2 id="error-section-title" style="font-family:var(--font-display);font-size:var(--text-xl);font-weight:var(--weight-black);letter-spacing:var(--tracking-tight);margin-bottom:var(--space-6);">
+          그 밖의 오류 상태
         </h2>
       </div>
       <div class="error-grid">
 
-        <!-- 500 Internal Server Error -->
+        <!-- 500 -->
         <div class="card card--bar-red bordered">
           <div class="card__body">
             <div class="error-mini">
-              <span class="error-mini__code" style="color:var(--red-500);">500</span>
+              <span class="error-mini__code" style="color:var(--color-danger);">500</span>
               <div class="error-mini__shapes" aria-hidden="true">
                 <span class="shape shape-square fill-red" style="width:20px;height:20px;"></span>
                 <span class="shape shape-circle fill-black" style="width:14px;height:14px;"></span>
               </div>
               <div style="flex:1;min-width:0;">
-                <p style="font-family:var(--font-display);font-weight:700;margin-bottom:2px;">Internal Server Error</p>
+                <p style="font-family:var(--font-display);font-weight:var(--weight-bold);margin-bottom:2px;">서버 내부 오류</p>
                 <p class="text-muted" style="font-size:var(--text-sm);line-height:var(--leading-snug);">
-                  Something broke on our end. Our engineers have been notified.
+                  서버에서 문제가 발생했습니다. 담당 엔지니어에게 자동으로 전달됐습니다.
                 </p>
               </div>
             </div>
             <div class="alert alert--danger" style="margin-top:var(--space-4);">
               <span class="alert__icon" aria-hidden="true"></span>
               <div class="alert__body">
-                <p class="alert__title">Server unavailable</p>
+                <p class="alert__title">서버에 연결할 수 없습니다</p>
                 <p class="alert__text">
-                  Error ID: <span class="mono">ERR-0x7F2A</span> — Please try again in a few minutes or contact
-                  <a href="mailto:support@bauhaus.design">support@bauhaus.design</a>.
+                  오류 번호 <span class="mono">ERR-0x7F2A</span> — 잠시 후 다시 시도하거나
+                  <a class="link" href="mailto:support@bauhaus.design">support@bauhaus.design</a>으로 문의하세요.
                 </p>
               </div>
             </div>
             <div style="margin-top:var(--space-4);">
               <button class="btn btn-danger btn-sm"
-                data-toast
-                data-toast-variant="danger"
-                data-toast-title="Retrying…"
-                data-toast-text="Attempting to reconnect to the server.">
-                <span class="ico ico-arrow-r"></span> Retry Request
+                data-toast data-toast-variant="danger"
+                data-toast-title="다시 시도합니다"
+                data-toast-text="서버에 재연결을 시도하고 있습니다.">
+                <span class="ico ico-arrow-r"></span> 다시 시도
               </button>
             </div>
           </div>
         </div>
 
-        <!-- 403 Forbidden -->
+        <!-- 403 -->
         <div class="card card--bar-yellow bordered">
           <div class="card__body">
             <div class="error-mini">
-              <span class="error-mini__code" style="color:var(--black);">403</span>
+              <span class="error-mini__code" style="color:var(--color-text);">403</span>
               <div class="error-mini__shapes" aria-hidden="true">
                 <span class="shape shape-triangle tri-yellow"></span>
                 <span class="shape shape-square fill-black" style="width:14px;height:14px;"></span>
               </div>
               <div style="flex:1;min-width:0;">
-                <p style="font-family:var(--font-display);font-weight:700;margin-bottom:2px;">Access Forbidden</p>
+                <p style="font-family:var(--font-display);font-weight:var(--weight-bold);margin-bottom:2px;">접근 권한 없음</p>
                 <p class="text-muted" style="font-size:var(--text-sm);line-height:var(--leading-snug);">
-                  You don't have permission to view this resource.
+                  이 리소스를 볼 수 있는 권한이 없습니다.
                 </p>
               </div>
             </div>
             <div class="alert alert--warning" style="margin-top:var(--space-4);">
               <span class="alert__icon" aria-hidden="true"></span>
               <div class="alert__body">
-                <p class="alert__title">Permission denied</p>
+                <p class="alert__title">권한이 거부되었습니다</p>
                 <p class="alert__text">
-                  Your account role (<span class="mono">viewer</span>) is not authorized to access
-                  <span class="mono">/admin/billing</span>. Contact your workspace admin to request access.
+                  현재 계정 등급(<span class="mono">뷰어</span>)으로는 <span class="mono">/admin/billing</span>에 접근할 수 없습니다. 워크스페이스 관리자에게 권한을 요청하세요.
                 </p>
               </div>
             </div>
             <div style="margin-top:var(--space-4);">
               <button class="btn btn-secondary btn-sm"
-                data-toast
-                data-toast-variant="warning"
-                data-toast-title="Access request sent"
-                data-toast-text="Your admin will be notified of your request.">
-                <span class="ico ico-user"></span> Request Access
+                data-toast data-toast-variant="warning"
+                data-toast-title="접근 요청을 보냈습니다"
+                data-toast-text="관리자에게 권한 요청이 전달됩니다.">
+                <span class="ico ico-user"></span> 권한 요청
               </button>
             </div>
           </div>
@@ -685,46 +495,39 @@
 </main>
 
 <!-- ═══════════════════════════════════════════════════════
-     MODAL — New Project
+     MODAL — 새 프로젝트
 ═══════════════════════════════════════════════════════ -->
 <div class="modal" id="modal-new-project" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modal-new-project-title">
   <div class="modal__dialog modal__dialog--sm">
     <div class="modal__header">
-      <h2 class="modal__title" id="modal-new-project-title">New Project</h2>
-      <button class="btn-icon modal__close" data-close-modal aria-label="Close modal">
+      <h2 class="modal__title" id="modal-new-project-title">새 프로젝트</h2>
+      <button class="btn-icon modal__close" data-close-modal aria-label="닫기">
         <span class="ico ico-x"></span>
       </button>
     </div>
     <div class="modal__body">
       <p class="text-muted" style="margin-bottom:var(--space-4);font-size:var(--text-sm);">
-        Give your project a name to get started. You can add teammates and tasks after creation.
+        프로젝트 이름을 입력하면 시작됩니다. 팀원과 작업은 생성 후 추가할 수 있습니다.
       </p>
       <div class="field">
-        <label class="field__label req" for="project-name-input">Project Name</label>
-        <input
-          class="input"
-          type="text"
-          id="project-name-input"
-          placeholder="e.g. Bauhaus Rebrand 2026"
-          maxlength="64"
-          autocomplete="off"
-        />
-        <span class="field__help">Up to 64 characters. You can rename this later.</span>
+        <label class="field__label req" for="project-name-input">프로젝트 이름</label>
+        <input class="input" type="text" id="project-name-input" placeholder="예: 여름 캠페인 리브랜딩" maxlength="64" autocomplete="off" />
+        <span class="field__help">최대 64자. 나중에 이름을 바꿀 수 있습니다.</span>
       </div>
       <div class="field" style="margin-top:var(--space-4);">
-        <label class="field__label" for="project-color-input">Colour Tag</label>
+        <label class="field__label" for="project-color-input">색상 태그</label>
         <select class="select" id="project-color-input">
-          <option value="blue">Blue</option>
-          <option value="red">Red</option>
-          <option value="yellow">Yellow (Accent)</option>
-          <option value="black">Black</option>
+          <option value="blue">파랑</option>
+          <option value="red">빨강</option>
+          <option value="yellow">노랑 (강조)</option>
+          <option value="black">검정</option>
         </select>
       </div>
     </div>
     <div class="modal__footer">
-      <button class="btn btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn btn-ghost" data-close-modal>취소</button>
       <button class="btn btn-primary" id="create-project-btn">
-        <span class="ico ico-plus"></span> Create Project
+        <span class="ico ico-plus"></span> 프로젝트 만들기
       </button>
     </div>
   </div>
@@ -732,7 +535,13 @@
 
 <script src="../app.js"></script>
 <script>
-  // Wire "Create Project" button in modal → close modal + fire success toast
+  // "이전 페이지" — history-based back (inline handler avoided; wired via listener)
+  document.getElementById('go-back-btn')?.addEventListener('click', function () {
+    if (window.history.length > 1) window.history.back();
+    else window.location.href = '../index.html';
+  });
+
+  // "프로젝트 만들기" — validate → close modal + success toast
   document.getElementById('create-project-btn')?.addEventListener('click', function () {
     const nameInput = document.getElementById('project-name-input');
     const name = nameInput?.value.trim();
@@ -741,19 +550,12 @@
       nameInput?.setAttribute('aria-invalid', 'true');
       return;
     }
-    // close modal
     const modal = document.getElementById('modal-new-project');
-    if (modal && window.Bauhaus?.closeModal) {
-      window.Bauhaus.closeModal(modal);
-    } else {
-      modal?.classList.remove('is-open');
-      modal?.setAttribute('aria-hidden', 'true');
-    }
-    // fire toast
+    if (window.Bauhaus?.closeModal) window.Bauhaus.closeModal(modal);
     if (window.Bauhaus?.toast) {
       window.Bauhaus.toast({
-        title: 'Project created!',
-        text: `"${name}" is ready. Add your first task to get started.`,
+        title: '프로젝트를 만들었습니다',
+        text: `‘${name}’ 프로젝트가 준비됐습니다. 첫 작업을 추가해 보세요.`,
         variant: 'success'
       });
     }
@@ -761,31 +563,12 @@
     nameInput.removeAttribute('aria-invalid');
   });
 
-  // Searchbar clear wiring (supplement app.js in case)
-  document.querySelectorAll('.searchbar').forEach(function (bar) {
-    const input = bar.querySelector('input');
-    const clearBtn = bar.querySelector('.searchbar__clear');
-    if (!input || !clearBtn) return;
-    input.addEventListener('input', function () {
-      bar.classList.toggle('has-value', input.value.length > 0);
-    });
-    clearBtn.addEventListener('click', function () {
-      input.value = '';
-      bar.classList.remove('has-value');
-      input.focus();
-    });
-  });
-
-  // Retry / Clear Filters demo
+  // 빈 상태 데모 버튼
   document.getElementById('retry-search-btn')?.addEventListener('click', function () {
-    if (window.Bauhaus?.toast) {
-      window.Bauhaus.toast({ title: 'Searching…', text: 'Re-running your last query.', variant: 'info' });
-    }
+    window.Bauhaus?.toast({ title: '다시 검색합니다', text: '마지막 검색어로 재검색합니다.', variant: 'info' });
   });
   document.getElementById('clear-filters-btn')?.addEventListener('click', function () {
-    if (window.Bauhaus?.toast) {
-      window.Bauhaus.toast({ title: 'Filters cleared', text: 'All filters have been reset.', variant: 'success' });
-    }
+    window.Bauhaus?.toast({ title: '필터를 초기화했습니다', text: '모든 필터가 해제됐습니다.', variant: 'success' });
   });
 </script>
 </body>

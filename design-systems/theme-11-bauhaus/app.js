@@ -153,12 +153,12 @@
    * ----------------------------------------------------------------------- */
   function toastRegion() {
     let r = $('.toast-region');
-    if (!r) { r = document.createElement('div'); r.className = 'toast-region'; r.setAttribute('role', 'region'); r.setAttribute('aria-label', 'Notifications'); document.body.appendChild(r); }
+    if (!r) { r = document.createElement('div'); r.className = 'toast-region'; r.setAttribute('role', 'region'); r.setAttribute('aria-label', '알림'); document.body.appendChild(r); }
     return r;
   }
   function toast(opts) {
     opts = opts || {};
-    const { title = 'Notification', text = '', variant = 'info', duration = 4000 } = typeof opts === 'string' ? { title: opts } : opts;
+    const { title = '알림', text = '', variant = 'info', duration = 4000 } = typeof opts === 'string' ? { title: opts } : opts;
     const region = toastRegion();
     const el = document.createElement('div');
     el.className = 'toast toast--' + variant;
@@ -167,7 +167,7 @@
       '<span class="toast__bar"></span>' +
       '<div class="toast__body"><div class="toast__title"></div>' +
       (text ? '<div class="toast__text"></div>' : '') + '</div>' +
-      '<button class="toast__close btn-icon btn-sm" aria-label="Dismiss"><span class="ico ico-x ico-sm"></span></button>';
+      '<button class="toast__close btn-icon btn-sm" aria-label="닫기"><span class="ico ico-x ico-sm"></span></button>';
     el.querySelector('.toast__title').textContent = title;
     if (text) el.querySelector('.toast__text').textContent = text;
     region.appendChild(el);
@@ -180,7 +180,7 @@
     document.addEventListener('click', (e) => {
       const t = e.target.closest('[data-toast]');
       if (!t) return;
-      toast({ title: t.getAttribute('data-toast-title') || 'Saved', text: t.getAttribute('data-toast-text') || '', variant: t.getAttribute('data-toast-variant') || 'info' });
+      toast({ title: t.getAttribute('data-toast-title') || '저장됨', text: t.getAttribute('data-toast-text') || '', variant: t.getAttribute('data-toast-variant') || 'info' });
     });
   }
 
@@ -330,7 +330,7 @@
     if (action === 'toggle-theme') { const cur = document.documentElement.getAttribute('data-theme'); setTheme(cur === 'dark' ? 'light' : 'dark'); }
     else if (action === 'toast') toast({ title: item.textContent.trim(), variant: 'info' });
     else if (href) window.location.href = href;
-    else toast({ title: 'Action: ' + item.textContent.trim(), variant: 'info' });
+    else toast({ title: '실행: ' + item.textContent.trim(), variant: 'info' });
   }
 
   /* ----------------------------------------------------------------------- *
@@ -409,7 +409,7 @@
         if (!text.trim()) return;
         const chip = document.createElement('span');
         chip.className = 'chip';
-        chip.innerHTML = '<span></span><button class="chip__remove" aria-label="Remove"><span class="ico ico-x ico-sm"></span></button>';
+        chip.innerHTML = '<span></span><button class="chip__remove" aria-label="제거"><span class="ico ico-x ico-sm"></span></button>';
         chip.querySelector('span').textContent = text.trim();
         ci.insertBefore(chip, field);
       };
@@ -505,7 +505,7 @@
       const slides = $$('.carousel__slide', car);
       const dotsWrap = $('.carousel__dots', car);
       let idx = 0;
-      if (dotsWrap && !dotsWrap.children.length) slides.forEach((_, i) => { const d = document.createElement('button'); d.className = 'carousel__dot'; d.setAttribute('aria-label', 'Slide ' + (i + 1)); dotsWrap.appendChild(d); });
+      if (dotsWrap && !dotsWrap.children.length) slides.forEach((_, i) => { const d = document.createElement('button'); d.className = 'carousel__dot'; d.setAttribute('aria-label', (i + 1) + '번 슬라이드'); dotsWrap.appendChild(d); });
       const dots = $$('.carousel__dot', car);
       const go = (n) => { idx = (n + slides.length) % slides.length; track.style.transform = 'translateX(' + (-idx * 100) + '%)'; dots.forEach((d, i) => d.classList.toggle('is-active', i === idx)); };
       on($('.carousel__btn--next', car), 'click', () => go(idx + 1));
@@ -523,8 +523,8 @@
   /* ----------------------------------------------------------------------- *
    * CALENDAR                                                                 *
    * ----------------------------------------------------------------------- */
-  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const DOW = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+  const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  const DOW = ['월','화','수','목','금','토','일'];
   function initCalendars() {
     $$('[data-calendar]').forEach((cal) => {
       let view = new Date();
@@ -536,9 +536,9 @@
         const days = new Date(y, m + 1, 0).getDate();
         const prevDays = new Date(y, m, 0).getDate();
         const today = new Date();
-        let html = '<div class="calendar__head"><button class="btn-icon btn-sm" data-cal-prev aria-label="Prev month"><span class="ico ico-arrow-l ico-sm"></span></button>';
-        html += '<div class="calendar__month">' + MONTHS[m] + ' ' + y + '</div>';
-        html += '<button class="btn-icon btn-sm" data-cal-next aria-label="Next month"><span class="ico ico-arrow-r ico-sm"></span></button></div>';
+        let html = '<div class="calendar__head"><button class="btn-icon btn-sm" data-cal-prev aria-label="이전 달"><span class="ico ico-arrow-l ico-sm"></span></button>';
+        html += '<div class="calendar__month">' + y + '년 ' + MONTHS[m] + '</div>';
+        html += '<button class="btn-icon btn-sm" data-cal-next aria-label="다음 달"><span class="ico ico-arrow-r ico-sm"></span></button></div>';
         html += '<div class="calendar__grid">';
         DOW.forEach((d) => html += '<div class="calendar__dow">' + d + '</div>');
         for (let i = 0; i < first; i++) html += '<div class="calendar__day is-muted">' + (prevDays - first + i + 1) + '</div>';
@@ -579,7 +579,7 @@
       on(wiz, 'click', (e) => {
         if (e.target.closest('[data-wizard-next]')) { cur = Math.min(cur + 1, panels.length - 1); render(); }
         else if (e.target.closest('[data-wizard-prev]')) { cur = Math.max(cur - 1, 0); render(); }
-        else if (e.target.closest('[data-wizard-done]')) { toast({ title: 'Setup complete!', text: 'Welcome aboard.', variant: 'success' }); }
+        else if (e.target.closest('[data-wizard-done]')) { toast({ title: '설정을 완료했어요', text: '반가워요 · 이제 함께 시작해요.', variant: 'success' }); }
       });
       render();
     });
@@ -632,6 +632,26 @@
   }
 
   /* ----------------------------------------------------------------------- *
+   * NAVBAR mobile disclosure (marketing nav — no sidebar)                    *
+   * ----------------------------------------------------------------------- */
+  function initNavbar() {
+    document.addEventListener('click', (e) => {
+      const t = e.target.closest('[data-nav-toggle]');
+      if (t) {
+        const nav = t.closest('.navbar') || $('.navbar');
+        if (!nav) return;
+        const open = nav.classList.toggle('is-nav-open');
+        t.setAttribute('aria-expanded', String(open));
+        return;
+      }
+      if (e.target.closest('.navbar__nav a')) {
+        const nav = $('.navbar.is-nav-open');
+        if (nav) { nav.classList.remove('is-nav-open'); const tg = $('[data-nav-toggle]', nav); if (tg) tg.setAttribute('aria-expanded', 'false'); }
+      }
+    });
+  }
+
+  /* ----------------------------------------------------------------------- *
    * COPY to clipboard                                                        *
    * ----------------------------------------------------------------------- */
   function initCopy() {
@@ -640,8 +660,8 @@
       if (!btn) return;
       let text = btn.getAttribute('data-copy');
       if (!text) { const block = btn.closest('.codeblock'); const code = block && $('code', block); text = code ? code.textContent : ''; }
-      if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => toast({ title: 'Copied to clipboard', variant: 'success', duration: 1800 }));
-      else toast({ title: 'Copied', variant: 'success', duration: 1800 });
+      if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => toast({ title: '클립보드에 복사했어요', variant: 'success', duration: 1800 }));
+      else toast({ title: '복사했어요', variant: 'success', duration: 1800 });
     });
   }
 
@@ -675,10 +695,27 @@
   }
 
   /* ----------------------------------------------------------------------- *
+   * SCROLL REVEAL — one shared IntersectionObserver, effect via CSS.          *
+   * JS-off leaves content visible (html.js gate); reduced-motion = instant.   *
+   * ----------------------------------------------------------------------- */
+  function initReveal() {
+    const els = $$('[data-reveal]');
+    if (!els.length) return;
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce || !('IntersectionObserver' in window)) { els.forEach((el) => el.classList.add('is-in')); return; }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); } });
+    }, { threshold: 0.14, rootMargin: '0px 0px -8% 0px' });
+    els.forEach((el) => io.observe(el));
+  }
+
+  /* ----------------------------------------------------------------------- *
    * INIT                                                                     *
    * ----------------------------------------------------------------------- */
   function init() {
+    document.documentElement.classList.add('js');
     initTheme();
+    initReveal();
     initOverlays();
     initToasts();
     initTabs();
@@ -698,6 +735,7 @@
     initRings();
     initSegmented();
     initSidebar();
+    initNavbar();
     initCopy();
     initContextMenu();
     initRatings();

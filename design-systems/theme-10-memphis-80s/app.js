@@ -32,7 +32,7 @@
     $$("[data-theme-toggle]").forEach((b) => {
       b.setAttribute("aria-pressed", String(mode === "dark"));
       const lbl = b.querySelector("[data-theme-label]");
-      if (lbl) lbl.textContent = mode === "dark" ? "Dark" : "Light";
+      if (lbl) lbl.textContent = mode === "dark" ? "다크" : "라이트";
     });
   };
   Memphis.toggleTheme = function () {
@@ -102,7 +102,7 @@
     scrim.hidden = false;
     lockScroll();
     const dialog = $(".modal", scrim) || scrim;
-    const focusEl = $("[autofocus]", scrim) || $(FOCUSABLE, scrim);
+    const focusEl = $("[data-autofocus]", scrim) || $("[autofocus]", scrim) || $(FOCUSABLE, scrim);
     if (focusEl) focusEl.focus();
     scrim._keyHandler = function (e) {
       if (e.key === "Escape") Memphis.closeModal(scrim);
@@ -168,7 +168,7 @@
    * ===================================================================== */
   function toastRegion() {
     let r = $(".toast-region");
-    if (!r) { r = document.createElement("div"); r.className = "toast-region"; r.setAttribute("role", "region"); r.setAttribute("aria-label", "Notifications"); document.body.appendChild(r); }
+    if (!r) { r = document.createElement("div"); r.className = "toast-region"; r.setAttribute("role", "region"); r.setAttribute("aria-label", "알림"); document.body.appendChild(r); }
     return r;
   }
   const TOAST_ICON = {
@@ -190,7 +190,7 @@
         (opts.title ? '<div class="toast__title">' + escapeHtml(opts.title) + "</div>" : "") +
         (opts.text ? '<div class="toast__text">' + escapeHtml(opts.text) + "</div>" : "") +
       "</div>" +
-      '<button class="toast__close" aria-label="Dismiss">✕</button>';
+      '<button class="toast__close" aria-label="닫기">✕</button>';
     region.appendChild(el);
     const close = () => {
       el.classList.add("is-leaving");
@@ -205,7 +205,7 @@
   function initToastTriggers() {
     $$("[data-toast]").forEach((t) => on(t, "click", () => {
       Memphis.toast({
-        title: t.getAttribute("data-toast-title") || "Heads up!",
+        title: t.getAttribute("data-toast-title") || "알려드려요",
         text: t.getAttribute("data-toast-text") || "",
         variant: t.getAttribute("data-toast") || "info",
       });
@@ -354,7 +354,7 @@
         g.hidden = !vis;
       });
       let empty = $(".cmdk__empty", list);
-      if (!any) { if (!empty) { empty = document.createElement("div"); empty.className = "cmdk__empty"; empty.textContent = "No results — try something louder."; list.appendChild(empty); } empty.hidden = false; }
+      if (!any) { if (!empty) { empty = document.createElement("div"); empty.className = "cmdk__empty"; empty.setAttribute("role", "status"); empty.setAttribute("aria-live", "polite"); empty.textContent = "결과가 없어요 — 더 요란하게 검색해 보세요."; list.appendChild(empty); } empty.hidden = false; }
       else if (empty) empty.hidden = true;
       active = 0; setActive(0);
     }
@@ -380,7 +380,7 @@
       close();
       const label = (it.querySelector(".cmdk__label") || it).textContent.trim();
       if (it.dataset.href) window.location.href = it.dataset.href;
-      else Memphis.toast({ title: "Command", text: label, variant: "info" });
+      else Memphis.toast({ title: "명령 실행", text: label, variant: "info" });
     }));
   }
 
@@ -415,7 +415,7 @@
       const updateCount = () => {
         const n = $$('tbody [data-row-check]:checked', table).length;
         const c = $('[data-selected-count]', wrap);
-        if (c) c.textContent = n ? n + " selected" : "";
+        if (c) c.textContent = n ? n + "개 선택됨" : "";
         $$("tbody tr", table).forEach((tr) => {
           const cb = $('[data-row-check]', tr);
           tr.classList.toggle("is-selected", !!(cb && cb.checked));
@@ -457,15 +457,26 @@
         slides.forEach((_, i) => {
           const d = document.createElement("button");
           d.className = "carousel__dot" + (i === 0 ? " is-active" : "");
-          d.setAttribute("aria-label", "Slide " + (i + 1));
+          d.type = "button";
+          d.setAttribute("aria-label", (i + 1) + "번 슬라이드");
+          if (i === 0) d.setAttribute("aria-current", "true");
           on(d, "click", () => go(i));
+          on(d, "keydown", (e) => {
+            if (e.key === "ArrowRight") { e.preventDefault(); go(idx + 1); focusDot(); }
+            else if (e.key === "ArrowLeft") { e.preventDefault(); go(idx - 1); focusDot(); }
+          });
           dotsWrap.appendChild(d);
         });
       }
+      function focusDot() { if (dotsWrap) { const a = $(".carousel__dot.is-active", dotsWrap); if (a) a.focus(); } }
       function go(n) {
         idx = (n + slides.length) % slides.length;
         track.style.transform = "translateX(" + (-idx * 100) + "%)";
-        if (dotsWrap) $$(".carousel__dot", dotsWrap).forEach((d, i) => d.classList.toggle("is-active", i === idx));
+        if (dotsWrap) $$(".carousel__dot", dotsWrap).forEach((d, i) => {
+          const on_ = i === idx;
+          d.classList.toggle("is-active", on_);
+          if (on_) d.setAttribute("aria-current", "true"); else d.removeAttribute("aria-current");
+        });
       }
       on($(".carousel__btn--next", car), "click", () => go(idx + 1));
       on($(".carousel__btn--prev", car), "click", () => go(idx - 1));
@@ -536,7 +547,7 @@
         text = text.trim(); if (!text) return;
         const chip = document.createElement("span");
         chip.className = "chip";
-        chip.innerHTML = escapeHtml(text) + ' <button type="button" aria-label="Remove ' + escapeHtml(text) + '">✕</button>';
+        chip.innerHTML = escapeHtml(text) + ' <button type="button" aria-label="' + escapeHtml(text) + ' 제거">✕</button>';
         ci.insertBefore(chip, input);
         on($("button", chip), "click", () => chip.remove());
       };
@@ -553,12 +564,44 @@
    * ===================================================================== */
   function initSegmented() {
     $$("[data-segmented]").forEach((seg) => {
+      if (!seg.getAttribute("role")) seg.setAttribute("role", "radiogroup");
       const opts = $$(".segmented__option", seg);
-      opts.forEach((o) => on(o, "click", () => {
-        opts.forEach((x) => x.setAttribute("aria-selected", "false"));
-        o.setAttribute("aria-selected", "true");
-        seg.dispatchEvent(new CustomEvent("segmented:change", { detail: { value: o.dataset.value } }));
-      }));
+      if (!opts.length) return;
+      // Derive the initial choice from whatever legacy attribute the markup used…
+      let current = opts.findIndex((o) =>
+        o.getAttribute("aria-checked") === "true" ||
+        o.getAttribute("aria-selected") === "true" ||
+        o.classList.contains("is-active"));
+      if (current < 0) current = 0;
+      // …then re-express the whole group as a valid radiogroup (kills the invalid
+      // plain-button + aria-selected combo flagged in the audit).
+      const paint = (idx) => {
+        opts.forEach((o, i) => {
+          o.setAttribute("role", "radio");
+          o.removeAttribute("aria-selected");
+          o.setAttribute("aria-checked", String(i === idx));
+          o.tabIndex = i === idx ? 0 : -1;
+          o.classList.toggle("is-active", i === idx);
+        });
+      };
+      const choose = (idx, focus) => {
+        current = (idx + opts.length) % opts.length;
+        paint(current);
+        if (focus) opts[current].focus();
+        seg.dispatchEvent(new CustomEvent("segmented:change", { detail: { value: opts[current].dataset.value } }));
+      };
+      paint(current);   // silent on load — never fires segmented:change
+      opts.forEach((o, i) => {
+        on(o, "click", () => choose(i, false));
+        on(o, "keydown", (e) => {
+          let n = null;
+          if (e.key === "ArrowRight" || e.key === "ArrowDown") n = current + 1;
+          else if (e.key === "ArrowLeft" || e.key === "ArrowUp") n = current - 1;
+          else if (e.key === "Home") n = 0;
+          else if (e.key === "End") n = opts.length - 1;
+          if (n !== null) { e.preventDefault(); choose(n, true); }
+        });
+      });
     });
   }
 
@@ -578,7 +621,7 @@
       const close = () => { menu.hidden = true; control.setAttribute("aria-expanded", "false"); };
       const render = () => {
         const chosen = $$('.select__option[aria-selected="true"]', menu).map((o) => o.textContent.trim());
-        if (!chosen.length) { valueEl.textContent = valueEl.getAttribute("data-placeholder") || "Select…"; valueEl.classList.add("is-placeholder"); }
+        if (!chosen.length) { valueEl.textContent = valueEl.getAttribute("data-placeholder") || "선택하세요…"; valueEl.classList.add("is-placeholder"); }
         else { valueEl.textContent = multi ? chosen.join(", ") : chosen[0]; valueEl.classList.remove("is-placeholder"); }
       };
       on(control, "click", () => (menu.hidden ? open() : close()));
@@ -600,8 +643,7 @@
   /* ===================================================================== *
    * CALENDAR / DATEPICKER                                                *
    * ===================================================================== */
-  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  const DOW = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+  const DOW = ["일", "월", "화", "수", "목", "금", "토"];
   function buildCalendar(cal, onPick) {
     let view = new Date();
     view.setDate(1);
@@ -613,9 +655,9 @@
       const today = new Date();
       let html =
         '<div class="calendar__head">' +
-          '<button class="calendar__nav" data-cal="-1" aria-label="Previous month">‹</button>' +
-          '<span class="calendar__title">' + MONTHS[m] + " " + y + "</span>" +
-          '<button class="calendar__nav" data-cal="1" aria-label="Next month">›</button>' +
+          '<button class="calendar__nav" data-cal="-1" aria-label="이전 달">‹</button>' +
+          '<span class="calendar__title">' + y + "년 " + (m + 1) + "월</span>" +
+          '<button class="calendar__nav" data-cal="1" aria-label="다음 달">›</button>' +
         "</div><div class=\"calendar__grid\">";
       DOW.forEach((d) => (html += '<div class="calendar__dow">' + d + "</div>"));
       for (let i = 0; i < first; i++) html += '<div class="calendar__day is-muted"></div>';
@@ -643,7 +685,7 @@
       const cal = $("[data-calendar-host]", dp) || pop;
       if (!cal) return;
       buildCalendar(cal, (date) => {
-        input.value = (date.getMonth() + 1) + "/" + date.getDate() + "/" + date.getFullYear();
+        input.value = date.getFullYear() + ". " + (date.getMonth() + 1) + ". " + date.getDate() + ".";
         pop.hidden = true;
       });
       on(input, "click", () => (pop.hidden = !pop.hidden));
@@ -662,7 +704,7 @@
         Array.from(files).forEach((f) => {
           const item = document.createElement("div");
           item.className = "file-item";
-          item.innerHTML = '<span aria-hidden="true">📄</span><div class="grow"><div style="font-weight:600">' + escapeHtml(f.name) + '</div><div class="file-item__bar"><span style="width:100%"></span></div></div><button class="btn btn--ghost btn--sm btn--icon" aria-label="Remove">✕</button>';
+          item.innerHTML = '<span class="file-item__ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span><div class="grow"><div style="font-weight:600">' + escapeHtml(f.name) + '</div><div class="file-item__bar"><span style="width:100%"></span></div></div><button class="btn btn--ghost btn--sm btn--icon" aria-label="파일 제거">✕</button>';
           on($("button", item), "click", () => item.remove());
           list.appendChild(item);
         });
@@ -685,7 +727,7 @@
       const sel = btn.getAttribute("data-copy");
       const src = sel ? document.querySelector(sel) : btn.closest(".codeblock") && $(".codeblock pre", btn.closest(".codeblock"));
       const text = src ? src.textContent : "";
-      const done = () => { const o = btn.textContent; btn.textContent = "Copied!"; setTimeout(() => (btn.textContent = o), 1400); };
+      const done = () => { const o = btn.textContent; btn.textContent = "복사됨!"; setTimeout(() => (btn.textContent = o), 1400); };
       if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, done); else done();
     }));
   }
@@ -697,7 +739,7 @@
     $$("[data-price-toggle]").forEach((tg) => {
       const update = (yearly) => {
         $$("[data-price]").forEach((p) => { p.textContent = yearly ? p.getAttribute("data-yearly") : p.getAttribute("data-monthly"); });
-        $$("[data-price-period]").forEach((p) => (p.textContent = yearly ? "/yr" : "/mo"));
+        $$("[data-price-period]").forEach((p) => (p.textContent = yearly ? "/년" : "/월"));
         $$("[data-price-note]").forEach((n) => (n.hidden = !yearly));
       };
       if (tg.matches('input[type="checkbox"]')) on(tg, "change", () => update(tg.checked));
@@ -725,7 +767,7 @@
       on($("[data-wizard-next]", wz), "click", () => show(cur + 1));
       on($("[data-wizard-prev]", wz), "click", () => show(cur - 1));
       const fin = $("[data-wizard-finish]", wz);
-      if (fin) on(fin, "click", () => Memphis.toast({ title: "All set!", text: "Onboarding complete — welcome aboard.", variant: "success" }));
+      if (fin) on(fin, "click", () => Memphis.toast({ title: "준비 끝!", text: "설정을 모두 마쳤어요 — 이제 요란하게 시작해요.", variant: "success" }));
       show(0);
     });
   }
@@ -783,7 +825,85 @@
     $$("[data-reveal]").forEach((el, i) => {
       el.classList.add("reveal");
       el.style.setProperty("--reveal-delay", (i % 12) * 60 + "ms");
+      /* each element settles from a slightly different tilt — springy, not a uniform fade */
+      el.style.setProperty("--reveal-rot", (i % 2 ? 1.6 : -1.6) + "deg");
     });
+  }
+
+  /* ===================================================================== *
+   * SIGNATURE MOTION — CONFETTI BURST on primary press                    *
+   * The theme's one-liner: pressing a primary button flings Memphis shapes *
+   * out of it. Fully gated on reduced-motion (never spawns).              *
+   * ===================================================================== */
+  const BURST_SHAPES = [
+    "--shape-squiggle", "--shape-triangle", "--shape-halfcircle", "--shape-dot",
+    "--shape-ring", "--shape-zigzag", "--shape-star", "--shape-blob", "--shape-cross",
+  ];
+  function confettiLayer() {
+    let l = document.getElementById("confetti-layer");
+    if (!l) { l = document.createElement("div"); l.id = "confetti-layer"; l.setAttribute("aria-hidden", "true"); document.body.appendChild(l); }
+    return l;
+  }
+  Memphis.burst = function (x, y, n) {
+    if (reduceMotion) return;
+    const layer = confettiLayer();
+    n = n || 7;
+    for (let i = 0; i < n; i++) {
+      const bit = document.createElement("span");
+      bit.className = "confetti-bit";
+      bit.style.backgroundImage = "var(" + BURST_SHAPES[Math.floor(Math.random() * BURST_SHAPES.length)] + ")";
+      bit.style.left = x + "px";
+      bit.style.top = y + "px";
+      bit.style.setProperty("--sz", (18 + Math.random() * 26).toFixed(0) + "px");
+      const ang = (Math.PI * 2 * i) / n + (Math.random() - 0.5);
+      const dist = 60 + Math.random() * 90;
+      bit.style.setProperty("--dx", (Math.cos(ang) * dist).toFixed(1) + "px");
+      bit.style.setProperty("--dy", (Math.sin(ang) * dist - 30).toFixed(1) + "px");   /* slight upward bias */
+      bit.style.setProperty("--rot", (Math.random() * 540 - 270).toFixed(0) + "deg");
+      bit.style.setProperty("--dur", (520 + Math.random() * 260).toFixed(0) + "ms");
+      layer.appendChild(bit);
+      setTimeout(() => bit.remove(), 900);
+    }
+  };
+  function initConfetti() {
+    if (reduceMotion) return;
+    on(document, "click", (e) => {
+      const t = e.target.closest("[data-confetti], .btn--primary");
+      if (!t || t.disabled || t.classList.contains("is-disabled")) return;
+      let x = e.clientX, y = e.clientY;
+      if (!x && !y) { const r = t.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top + r.height / 2; }
+      Memphis.burst(x, y, 7);
+    });
+  }
+
+  /* ===================================================================== *
+   * HERO CURSOR-REPEL — scattered shapes dodge the pointer (playful)      *
+   * ===================================================================== */
+  function initHeroRepel() {
+    if (reduceMotion) return;
+    const hero = $(".hero");
+    if (!hero) return;
+    const decos = $$(".deco", hero);
+    if (!decos.length) return;
+    const R = 150;
+    const reset = () => decos.forEach((d) => { d.style.translate = "0px 0px"; });
+    on(hero, "pointermove", (e) => {
+      const r = hero.getBoundingClientRect();
+      const mx = e.clientX - r.left, my = e.clientY - r.top;
+      decos.forEach((d) => {
+        const dr = d.getBoundingClientRect();
+        const cx = dr.left - r.left + dr.width / 2, cy = dr.top - r.top + dr.height / 2;
+        const dx = cx - mx, dy = cy - my;
+        const dist = Math.hypot(dx, dy) || 1;
+        if (dist < R) {
+          const push = (1 - dist / R) * 28;
+          d.style.translate = (dx / dist * push).toFixed(1) + "px " + (dy / dist * push).toFixed(1) + "px";
+        } else {
+          d.style.translate = "0px 0px";
+        }
+      });
+    });
+    on(hero, "pointerleave", reset);
   }
 
   /* utils ------------------------------------------------------------- */
@@ -823,6 +943,8 @@
     initProgress();
     initPopovers();
     initReveal();
+    initConfetti();
+    initHeroRepel();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

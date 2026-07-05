@@ -1,9 +1,21 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Inbox — BAUHAUS</title>
+<title>받은 편지함 — BAUHAUS</title>
+<script>
+  /* FOUC guard — resolve theme + mark js before first paint (key matches app.js) */
+  (function () {
+    try {
+      var t = localStorage.getItem('bauhaus-theme');
+      if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+    document.documentElement.classList.add('js');
+  })();
+</script>
+<noscript><style>[data-reveal]{opacity:1 !important;transform:none !important;}</style></noscript>
 <link rel="stylesheet" href="../tokens.css" />
 <link rel="stylesheet" href="../semantic.css" />
 <link rel="stylesheet" href="../base.css" />
@@ -17,12 +29,7 @@
 <link rel="stylesheet" href="../components/navigation.css" />
 <style>
   /* ── Inbox layout ── */
-  .inbox-shell {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
-  }
+  .inbox-shell { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
   .inbox-body {
     flex: 1;
     display: grid;
@@ -34,325 +41,137 @@
   /* LEFT pane */
   .inbox-folders {
     border-right: 2px solid var(--color-border);
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    padding: var(--space-4) 0;
-    background: var(--color-surface);
+    display: flex; flex-direction: column; overflow-y: auto;
+    padding: var(--space-4) 0; background: var(--color-surface);
   }
-  .inbox-folders__compose {
-    padding: 0 var(--space-4) var(--space-4);
-  }
+  .inbox-folders__compose { padding: 0 var(--space-4) var(--space-4); }
   .inbox-folders__section {
     padding: var(--space-3) var(--space-4) var(--space-1);
-    font-size: var(--text-xs);
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+    font-size: var(--text-xs); font-weight: 700;
+    letter-spacing: var(--tracking-caps-ko); text-transform: uppercase;
     color: var(--color-text-muted);
   }
-  .folder-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
+  .folder-list { list-style: none; margin: 0; padding: 0; }
   .folder-list__item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-4);
-    cursor: pointer;
-    font-size: var(--text-sm);
-    font-weight: 500;
-    color: var(--color-text);
-    transition: background 0.12s;
-    user-select: none;
+    display: flex; align-items: center; gap: var(--space-2);
+    padding: var(--space-2) var(--space-4); cursor: pointer;
+    font-size: var(--text-sm); font-weight: 500; color: var(--color-text);
+    transition: background 0.12s; user-select: none;
   }
-  .folder-list__item:hover {
-    background: var(--color-surface-raised);
-  }
-  .folder-list__item.is-active {
-    background: var(--color-primary);
-    color: var(--color-text-on-primary);
-  }
-  .folder-list__item.is-active .ico {
-    color: var(--color-text-on-primary);
-  }
-  .folder-list__name {
-    flex: 1;
-  }
+  .folder-list__item:hover { background: var(--color-surface-2); }
+  .folder-list__item.is-active { background: var(--color-primary); color: var(--color-text-on-primary); }
+  .folder-list__item.is-active .ico { color: var(--color-text-on-primary); }
+  .folder-list__item:focus-visible { outline: var(--ring-width) solid var(--color-ring); outline-offset: -3px; }
+  .folder-list__name { flex: 1; }
 
-  /* Label dots */
-  .label-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    display: inline-block;
-    flex-shrink: 0;
-  }
-  .label-dot--red   { background: var(--color-red, #E63027); }
-  .label-dot--yellow { background: var(--color-yellow, #F7C200); border: 1px solid #cca800; }
-  .label-dot--blue  { background: var(--color-blue, #1E4FCC); }
+  /* Label dots — token-driven */
+  .label-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .label-dot--red    { background: var(--red-500); }
+  .label-dot--yellow { background: var(--yellow-400); border: 1px solid var(--yellow-600); }
+  .label-dot--blue   { background: var(--blue-500); }
 
   /* MIDDLE pane */
-  .inbox-list {
-    border-right: 2px solid var(--color-border);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    background: var(--color-bg);
-  }
+  .inbox-list { border-right: 2px solid var(--color-border); display: flex; flex-direction: column; overflow: hidden; background: var(--color-bg); }
   .inbox-list__toolbar {
     padding: var(--space-3) var(--space-3) var(--space-2);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-    border-bottom: 2px solid var(--color-border);
-    background: var(--color-surface);
+    display: flex; flex-direction: column; gap: var(--space-2);
+    border-bottom: 2px solid var(--color-border); background: var(--color-surface);
   }
-  .inbox-list__messages {
-    flex: 1;
-    overflow-y: auto;
-  }
+  .inbox-list__messages { flex: 1; overflow-y: auto; }
 
   /* Message list items */
   .msg-item {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--space-3);
+    display: flex; align-items: flex-start; gap: var(--space-3);
     padding: var(--space-3) var(--space-3);
     border-bottom: 1px solid var(--color-border);
-    cursor: pointer;
-    transition: background 0.1s;
-    position: relative;
+    cursor: pointer; transition: background 0.1s; position: relative;
   }
-  .msg-item:hover {
-    background: var(--color-surface-raised);
-  }
-  .msg-item.is-active {
-    background: var(--color-primary);
-    color: var(--color-text-on-primary);
-  }
+  .msg-item:hover { background: var(--color-surface-2); }
+  .msg-item:focus-visible { outline: var(--ring-width) solid var(--color-ring); outline-offset: -3px; }
+  .msg-item.is-active { background: var(--color-primary); color: var(--color-text-on-primary); }
   .msg-item.is-active .msg-item__sender,
   .msg-item.is-active .msg-item__subject,
   .msg-item.is-active .msg-item__preview,
-  .msg-item.is-active .msg-item__time {
-    color: var(--color-text-on-primary) !important;
-  }
-  .msg-item__avatar {
-    flex-shrink: 0;
-    margin-top: 2px;
-  }
-  .msg-item__body {
-    flex: 1;
-    min-width: 0;
-  }
-  .msg-item__row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-2);
-  }
-  .msg-item__sender {
-    font-size: var(--text-sm);
-    font-weight: 600;
-    color: var(--color-text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .msg-item__time {
-    font-size: var(--text-xs);
-    color: var(--color-text-muted);
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-  .msg-item__subject {
-    font-size: var(--text-sm);
-    color: var(--color-text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-top: 1px;
-  }
-  .msg-item__subject.is-unread {
-    font-weight: 700;
-  }
-  .msg-item__preview {
-    font-size: var(--text-xs);
-    color: var(--color-text-muted);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-top: 2px;
-  }
-  .msg-item__trail {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: var(--space-1);
-    flex-shrink: 0;
-  }
-  .unread-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--color-primary);
-    display: inline-block;
-  }
-  .msg-item.is-active .unread-dot {
-    background: #fff;
-  }
-  .star-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    line-height: 1;
-    color: var(--color-text-muted);
-  }
-  .star-btn.is-starred {
-    color: #F7C200;
-  }
-  .msg-item.is-active .star-btn {
-    color: rgba(255,255,255,0.7);
-  }
-  .msg-item.is-active .star-btn.is-starred {
-    color: #F7C200;
-  }
+  .msg-item.is-active .msg-item__time { color: var(--color-text-on-primary) !important; }
+  .msg-item__avatar { flex-shrink: 0; margin-top: 2px; }
+  .msg-item__body { flex: 1; min-width: 0; }
+  .msg-item__row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+  .msg-item__sender { font-size: var(--text-sm); font-weight: 600; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .msg-item__time { font-size: var(--text-xs); color: var(--color-text-muted); white-space: nowrap; flex-shrink: 0; }
+  .msg-item__subject { font-size: var(--text-sm); color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+  .msg-item__subject.is-unread { font-weight: 700; }
+  .msg-item__preview { font-size: var(--text-xs); color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+  .msg-item__trail { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-1); flex-shrink: 0; }
+  .unread-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-primary); display: inline-block; }
+  .msg-item.is-active .unread-dot { background: var(--color-text-on-primary); }
+  .star-btn { background: none; border: none; cursor: pointer; padding: 2px; line-height: 1; color: var(--color-text-muted); }
+  .star-btn:focus-visible { outline: var(--ring-width) solid var(--color-ring); outline-offset: 1px; }
+  .star-btn.is-starred { color: var(--yellow-400); }
+  .msg-item.is-active .star-btn { color: var(--color-text-on-primary); opacity: 0.75; }
+  .msg-item.is-active .star-btn.is-starred { color: var(--yellow-400); opacity: 1; }
 
   /* RIGHT reading pane */
-  .inbox-reading {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    background: var(--color-bg);
-  }
-  .reading-header {
-    padding: var(--space-5) var(--space-6) var(--space-4);
-    border-bottom: 2px solid var(--color-border);
-    background: var(--color-surface);
-  }
-  .reading-subject {
-    font-size: var(--text-xl);
-    font-weight: 800;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    margin-bottom: var(--space-3);
-    line-height: 1.2;
-  }
-  .reading-meta {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    flex-wrap: wrap;
-  }
-  .reading-sender-info {
-    flex: 1;
-    min-width: 0;
-  }
-  .reading-sender-name {
-    font-weight: 700;
-    font-size: var(--text-sm);
-  }
-  .reading-sender-email {
-    font-size: var(--text-xs);
-    color: var(--color-text-muted);
-  }
-  .reading-time {
-    font-size: var(--text-xs);
-    color: var(--color-text-muted);
-    white-space: nowrap;
-  }
-  .reading-actions {
-    display: flex;
-    gap: var(--space-1);
-    flex-shrink: 0;
-  }
-  .reading-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: var(--space-6);
-  }
-  .reading-body p {
-    margin-bottom: var(--space-4);
-    line-height: 1.7;
-    color: var(--color-text);
-  }
-  .reading-reply {
-    border-top: 2px solid var(--color-border);
-    padding: var(--space-4) var(--space-5);
-    background: var(--color-surface);
-  }
-  .reading-reply__toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: var(--space-2);
-  }
-  .reading-reply__tools {
-    display: flex;
-    gap: var(--space-1);
-  }
+  .inbox-reading { display: flex; flex-direction: column; overflow: hidden; background: var(--color-bg); }
+  .reading-header { padding: var(--space-5) var(--space-6) var(--space-4); border-bottom: 2px solid var(--color-border); background: var(--color-surface); }
+  .reading-subject { font-size: var(--text-xl); font-weight: 800; letter-spacing: var(--tracking-tight); margin-bottom: var(--space-3); line-height: 1.25; }
+  .reading-meta { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+  .reading-sender-info { flex: 1; min-width: 0; }
+  .reading-sender-name { font-weight: 700; font-size: var(--text-sm); }
+  .reading-sender-email { font-size: var(--text-xs); color: var(--color-text-muted); }
+  .reading-time { font-size: var(--text-xs); color: var(--color-text-muted); white-space: nowrap; }
+  .reading-actions { display: flex; gap: var(--space-1); flex-shrink: 0; }
+  .reading-body { flex: 1; overflow-y: auto; padding: var(--space-6); }
+  .reading-body p { margin-bottom: var(--space-4); line-height: var(--leading-body-ko); color: var(--color-text); }
+  .reading-reply { border-top: 2px solid var(--color-border); padding: var(--space-4) var(--space-5); background: var(--color-surface); }
+  .reading-reply__toolbar { display: flex; align-items: center; justify-content: space-between; margin-top: var(--space-2); }
+  .reading-reply__tools { display: flex; gap: var(--space-1); }
 
   /* Responsive */
   @media (max-width: 900px) {
-    .inbox-body {
-      grid-template-columns: 200px minmax(240px,1fr) 1fr;
-    }
+    .inbox-body { grid-template-columns: 200px minmax(240px,1fr) 1fr; }
   }
+  /* stack + keep folders reachable as a horizontal strip */
   @media (max-width: 700px) {
-    .inbox-body {
-      grid-template-columns: 1fr;
-      grid-template-rows: auto 1fr;
-      overflow-y: auto;
-    }
+    .inbox-body { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; overflow-y: auto; }
     .inbox-folders {
-      display: none;
+      flex-direction: row; align-items: center; gap: var(--space-2);
+      overflow-x: auto; overflow-y: hidden;
+      padding: var(--space-2) var(--space-3);
+      border-right: none; border-bottom: 2px solid var(--color-border);
     }
-    .inbox-list {
-      border-right: none;
-      border-bottom: 2px solid var(--color-border);
-      max-height: 45vh;
-    }
-    .inbox-reading {
-      min-height: 50vh;
-    }
+    .inbox-folders__compose, .inbox-folders__section { display: none; }
+    .inbox-folders .folder-list { display: flex; flex-direction: row; gap: var(--space-2); flex-wrap: nowrap; }
+    .inbox-folders .folder-list__item { white-space: nowrap; border: var(--border-2) solid var(--color-border); padding: var(--space-1) var(--space-3); }
+    .inbox-list { border-right: none; border-bottom: 2px solid var(--color-border); max-height: 45vh; }
+    .inbox-reading { min-height: 60vh; }
   }
   @media (max-width: 480px) {
-    .reading-header {
-      padding: var(--space-4);
-    }
-    .reading-body {
-      padding: var(--space-4);
-    }
-    .reading-reply {
-      padding: var(--space-3) var(--space-4);
-    }
+    .reading-header { padding: var(--space-4); }
+    .reading-body { padding: var(--space-4); }
+    .reading-reply { padding: var(--space-3) var(--space-4); }
   }
 </style>
 </head>
 <body>
-<a href="#main" class="sr-only">Skip to content</a>
+<a href="#main" class="sr-only">본문으로 건너뛰기</a>
 
 <div class="inbox-shell">
 
   <!-- NAVBAR -->
   <header class="navbar no-print">
-    <a class="navbar__brand" href="../index.html"><span class="logomark"><span class="mark"><i></i><i></i><i></i></span> BAUHAUS</span></a>
-    <nav class="navbar__nav" aria-label="Primary">
-      <a class="navbar__link" href="../index.html">Home</a>
-      <a class="navbar__link is-active" href="#">Inbox</a>
+    <a class="navbar__brand" href="../index.html" aria-label="Bauhaus 홈"><span class="logomark"><span class="mark" aria-hidden="true"><i></i><i></i><i></i></span> BAUHAUS</span></a>
+    <nav class="navbar__nav" id="primary-nav" aria-label="주요 메뉴">
+      <a class="navbar__link" href="../index.html">홈</a>
+      <a class="navbar__link is-active" href="inbox.html" aria-current="page">받은 편지함</a>
     </nav>
     <span class="navbar__spacer"></span>
     <div class="navbar__actions">
-      <button class="btn btn-primary btn-sm" data-open-modal="compose-modal" aria-label="Compose new email">
-        <span class="ico ico-plus"></span> Compose
+      <button class="btn btn-primary btn-sm" data-open-modal="compose-modal" aria-label="새 메일 작성">
+        <span class="ico ico-plus"></span> 쓰기
       </button>
-      <button class="btn-icon" data-theme-toggle aria-label="Toggle theme" aria-pressed="false">
-        <span class="ico ico-gear"></span>
-      </button>
-      <span class="avatar avatar--sm avatar--blue">MK</span>
+      <button class="theme-toggle" data-theme-toggle aria-label="테마 전환" aria-pressed="false"><span class="theme-toggle__shape" aria-hidden="true"></span></button>
+      <span class="avatar avatar--sm avatar--blue" aria-label="사용자 아바타: 정하람">하람</span>
+      <button class="btn-icon navbar__toggle" data-nav-toggle aria-controls="primary-nav" aria-expanded="false" aria-label="메뉴 열기"><span class="ico ico-menu"></span></button>
     </div>
   </header>
 
@@ -360,75 +179,75 @@
   <div class="inbox-body" id="main">
 
     <!-- LEFT PANE: Folders -->
-    <aside class="inbox-folders" aria-label="Folders">
+    <aside class="inbox-folders" aria-label="폴더">
       <div class="inbox-folders__compose">
         <button class="btn btn-primary btn-block" data-open-modal="compose-modal">
-          <span class="ico ico-plus"></span> Compose
+          <span class="ico ico-plus"></span> 메일 쓰기
         </button>
       </div>
 
-      <div class="inbox-folders__section">Folders</div>
+      <div class="inbox-folders__section">폴더</div>
       <ul class="folder-list" role="list">
-        <li class="folder-list__item is-active" role="listitem" tabindex="0">
+        <li class="folder-list__item is-active" role="listitem" tabindex="0" aria-current="page">
           <span class="ico ico-mail"></span>
-          <span class="folder-list__name">Inbox</span>
+          <span class="folder-list__name">받은 편지함</span>
           <span class="badge badge--blue">12</span>
         </li>
         <li class="folder-list__item" role="listitem" tabindex="0">
           <span class="ico ico-star"></span>
-          <span class="folder-list__name">Starred</span>
+          <span class="folder-list__name">별표</span>
         </li>
         <li class="folder-list__item" role="listitem" tabindex="0">
           <span class="ico ico-arrow-r"></span>
-          <span class="folder-list__name">Sent</span>
+          <span class="folder-list__name">보낸 편지함</span>
         </li>
         <li class="folder-list__item" role="listitem" tabindex="0">
           <span class="ico ico-grid"></span>
-          <span class="folder-list__name">Drafts</span>
+          <span class="folder-list__name">임시보관</span>
           <span class="badge badge--black">3</span>
         </li>
         <li class="folder-list__item" role="listitem" tabindex="0">
           <span class="ico ico-chart"></span>
-          <span class="folder-list__name">Archive</span>
+          <span class="folder-list__name">아카이브</span>
         </li>
         <li class="folder-list__item" role="listitem" tabindex="0">
           <span class="ico ico-trash"></span>
-          <span class="folder-list__name">Trash</span>
+          <span class="folder-list__name">휴지통</span>
         </li>
         <li class="folder-list__item" role="listitem" tabindex="0">
           <span class="ico ico-x"></span>
-          <span class="folder-list__name">Spam</span>
+          <span class="folder-list__name">스팸</span>
         </li>
       </ul>
 
-      <div class="inbox-folders__section">Labels</div>
+      <div class="inbox-folders__section">라벨</div>
       <ul class="folder-list" role="list">
         <li class="folder-list__item" role="listitem" tabindex="0">
           <span class="label-dot label-dot--red"></span>
-          <span class="folder-list__name">Work</span>
+          <span class="folder-list__name">업무</span>
         </li>
         <li class="folder-list__item" role="listitem" tabindex="0">
           <span class="label-dot label-dot--yellow"></span>
-          <span class="folder-list__name">Personal</span>
+          <span class="folder-list__name">개인</span>
         </li>
         <li class="folder-list__item" role="listitem" tabindex="0">
           <span class="label-dot label-dot--blue"></span>
-          <span class="folder-list__name">Design</span>
+          <span class="folder-list__name">디자인</span>
         </li>
       </ul>
     </aside>
 
     <!-- MIDDLE PANE: Message list -->
-    <section class="inbox-list" aria-label="Messages">
+    <section class="inbox-list" aria-label="메시지 목록">
       <div class="inbox-list__toolbar">
         <div class="searchbar">
           <span class="ico ico-search"></span>
-          <input type="search" class="input pad-left" placeholder="Search mail…" aria-label="Search messages" />
-          <button class="searchbar__clear" aria-label="Clear search"><span class="ico ico-x ico-sm"></span></button>
+          <input type="search" class="input pad-left" placeholder="메일 검색…" aria-label="메시지 검색" />
+          <button class="searchbar__clear" aria-label="검색어 지우기"><span class="ico ico-x ico-sm"></span></button>
         </div>
-        <div class="segmented" role="group" aria-label="Filter messages">
-          <button class="segmented__option" aria-pressed="true" data-value="all">All</button>
-          <button class="segmented__option" aria-pressed="false" data-value="unread">Unread</button>
+        <div class="segmented" role="group" aria-label="메시지 필터">
+          <button class="segmented__option" aria-pressed="true" data-value="all">전체</button>
+          <button class="segmented__option" aria-pressed="false" data-value="unread">안읽음</button>
         </div>
       </div>
 
@@ -436,265 +255,165 @@
 
         <!-- Message 1 — ACTIVE, unread -->
         <div class="msg-item is-active" role="listitem" tabindex="0"
-          data-msg-id="1"
-          data-sender="Sophie Laurent"
-          data-email="s.laurent@studio-arc.com"
-          data-time="Today, 10:42 AM"
-          data-subject="Q3 Design Review — Feedback Required"
-          data-avatar-color="red"
-          data-avatar-initials="SL"
-          data-body="msg-body-1">
-          <div class="msg-item__avatar">
-            <span class="avatar avatar--sm avatar--red">SL</span>
-          </div>
+          data-msg-id="1" data-sender="김서연" data-email="seoyeon.kim@modular.studio"
+          data-time="오늘 오전 10:42" data-subject="3분기 디자인 리뷰 — 피드백 요청"
+          data-avatar-color="red" data-avatar-initials="서연" data-body="msg-body-1">
+          <div class="msg-item__avatar"><span class="avatar avatar--sm avatar--red">서연</span></div>
           <div class="msg-item__body">
-            <div class="msg-item__row">
-              <span class="msg-item__sender">Sophie Laurent</span>
-              <span class="msg-item__time">10:42 AM</span>
-            </div>
-            <div class="msg-item__subject is-unread">Q3 Design Review — Feedback Required</div>
-            <div class="msg-item__preview">Hi team, I've attached the revised component specs from this week's review session…</div>
+            <div class="msg-item__row"><span class="msg-item__sender">김서연</span><span class="msg-item__time">오전 10:42</span></div>
+            <div class="msg-item__subject is-unread">3분기 디자인 리뷰 — 피드백 요청</div>
+            <div class="msg-item__preview">안녕하세요, 팀 여러분. 이번 주 3분기 디자인 리뷰의 컴포넌트 명세 개정본을 첨부합니다…</div>
           </div>
           <div class="msg-item__trail">
-            <button class="star-btn is-starred" aria-label="Starred"><span class="ico ico-star ico-sm"></span></button>
-            <span class="unread-dot" aria-label="Unread"></span>
+            <button class="star-btn is-starred" aria-label="별표 표시됨"><span class="ico ico-star ico-sm"></span></button>
+            <span class="unread-dot" aria-label="안읽음"></span>
           </div>
         </div>
 
         <!-- Message 2 — unread -->
         <div class="msg-item" role="listitem" tabindex="0"
-          data-msg-id="2"
-          data-sender="Marcus Webb"
-          data-email="marcus@devteam.io"
-          data-time="Today, 9:15 AM"
-          data-subject="Sprint 24 Kickoff — Action Items"
-          data-avatar-color="blue"
-          data-avatar-initials="MW"
-          data-body="msg-body-2">
-          <div class="msg-item__avatar">
-            <span class="avatar avatar--sm avatar--blue">MW</span>
-          </div>
+          data-msg-id="2" data-sender="박준혁" data-email="junhyuk.park@modular.studio"
+          data-time="오늘 오전 9:15" data-subject="스프린트 24 킥오프 — 액션 아이템"
+          data-avatar-color="blue" data-avatar-initials="준혁" data-body="msg-body-2">
+          <div class="msg-item__avatar"><span class="avatar avatar--sm avatar--blue">준혁</span></div>
           <div class="msg-item__body">
-            <div class="msg-item__row">
-              <span class="msg-item__sender">Marcus Webb</span>
-              <span class="msg-item__time">9:15 AM</span>
-            </div>
-            <div class="msg-item__subject is-unread">Sprint 24 Kickoff — Action Items</div>
-            <div class="msg-item__preview">Following our standup, here are the confirmed action items for each pod…</div>
+            <div class="msg-item__row"><span class="msg-item__sender">박준혁</span><span class="msg-item__time">오전 9:15</span></div>
+            <div class="msg-item__subject is-unread">스프린트 24 킥오프 — 액션 아이템</div>
+            <div class="msg-item__preview">월요일 스탠드업에 이어 스프린트 24 확정 액션 아이템을 정리했습니다…</div>
           </div>
           <div class="msg-item__trail">
-            <button class="star-btn" aria-label="Not starred"><span class="ico ico-star ico-sm"></span></button>
-            <span class="unread-dot" aria-label="Unread"></span>
+            <button class="star-btn" aria-label="별표 없음"><span class="ico ico-star ico-sm"></span></button>
+            <span class="unread-dot" aria-label="안읽음"></span>
           </div>
         </div>
 
         <!-- Message 3 -->
         <div class="msg-item" role="listitem" tabindex="0"
-          data-msg-id="3"
-          data-sender="Nadia Okonkwo"
-          data-email="n.okonkwo@brandlab.co"
-          data-time="Yesterday"
-          data-subject="Re: Bauhaus Typography Scale"
-          data-avatar-color="black"
-          data-avatar-initials="NO"
-          data-body="msg-body-3">
-          <div class="msg-item__avatar">
-            <span class="avatar avatar--sm avatar--black">NO</span>
-          </div>
+          data-msg-id="3" data-sender="이도현" data-email="dohyun.lee@modular.studio"
+          data-time="어제" data-subject="Re: 바우하우스 타입 스케일"
+          data-avatar-color="black" data-avatar-initials="도현" data-body="msg-body-3">
+          <div class="msg-item__avatar"><span class="avatar avatar--sm avatar--black">도현</span></div>
           <div class="msg-item__body">
-            <div class="msg-item__row">
-              <span class="msg-item__sender">Nadia Okonkwo</span>
-              <span class="msg-item__time">Yesterday</span>
-            </div>
-            <div class="msg-item__subject">Re: Bauhaus Typography Scale</div>
-            <div class="msg-item__preview">Agreed — the display sizes feel right but the body tracking at 14px needs a tweak…</div>
+            <div class="msg-item__row"><span class="msg-item__sender">이도현</span><span class="msg-item__time">어제</span></div>
+            <div class="msg-item__subject">Re: 바우하우스 타입 스케일</div>
+            <div class="msg-item__preview">디스플레이 크기는 적절합니다. 다만 본문 14px 자간을 조금 손봐야 할 것 같습니다…</div>
           </div>
           <div class="msg-item__trail">
-            <button class="star-btn is-starred" aria-label="Starred"><span class="ico ico-star ico-sm"></span></button>
+            <button class="star-btn is-starred" aria-label="별표 표시됨"><span class="ico ico-star ico-sm"></span></button>
           </div>
         </div>
 
         <!-- Message 4 — unread -->
         <div class="msg-item" role="listitem" tabindex="0"
-          data-msg-id="4"
-          data-sender="Lena Fischer"
-          data-email="lena.fischer@grid-works.de"
-          data-time="Yesterday"
-          data-subject="Component Token Audit Complete"
-          data-avatar-color="yellow"
-          data-avatar-initials="LF"
-          data-body="msg-body-4">
-          <div class="msg-item__avatar">
-            <span class="avatar avatar--sm avatar--yellow">LF</span>
-          </div>
+          data-msg-id="4" data-sender="최유나" data-email="yuna.choi@modular.studio"
+          data-time="어제" data-subject="컴포넌트 토큰 감사 완료"
+          data-avatar-color="yellow" data-avatar-initials="유나" data-body="msg-body-4">
+          <div class="msg-item__avatar"><span class="avatar avatar--sm avatar--yellow" style="color:var(--black);">유나</span></div>
           <div class="msg-item__body">
-            <div class="msg-item__row">
-              <span class="msg-item__sender">Lena Fischer</span>
-              <span class="msg-item__time">Yesterday</span>
-            </div>
-            <div class="msg-item__subject is-unread">Component Token Audit Complete</div>
-            <div class="msg-item__preview">I've finished mapping all 47 semantic tokens to their primitive counterparts. See attached spreadsheet…</div>
+            <div class="msg-item__row"><span class="msg-item__sender">최유나</span><span class="msg-item__time">어제</span></div>
+            <div class="msg-item__subject is-unread">컴포넌트 토큰 감사 완료</div>
+            <div class="msg-item__preview">시맨틱 토큰 47개를 원시 토큰과 모두 매핑했습니다. 첨부 시트를 확인해 주세요…</div>
           </div>
           <div class="msg-item__trail">
-            <button class="star-btn" aria-label="Not starred"><span class="ico ico-star ico-sm"></span></button>
-            <span class="unread-dot" aria-label="Unread"></span>
+            <button class="star-btn" aria-label="별표 없음"><span class="ico ico-star ico-sm"></span></button>
+            <span class="unread-dot" aria-label="안읽음"></span>
           </div>
         </div>
 
         <!-- Message 5 -->
         <div class="msg-item" role="listitem" tabindex="0"
-          data-msg-id="5"
-          data-sender="James Okafor"
-          data-email="james@uxcraft.co"
-          data-time="Mon"
-          data-subject="Accessibility Checklist — WCAG 2.2"
-          data-avatar-color="red"
-          data-avatar-initials="JO"
-          data-body="msg-body-5">
-          <div class="msg-item__avatar">
-            <span class="avatar avatar--sm avatar--red">JO</span>
-          </div>
+          data-msg-id="5" data-sender="정민석" data-email="minseok@a11ylab.kr"
+          data-time="월요일" data-subject="접근성 체크리스트 — WCAG 2.2"
+          data-avatar-color="red" data-avatar-initials="민석" data-body="msg-body-5">
+          <div class="msg-item__avatar"><span class="avatar avatar--sm avatar--red">민석</span></div>
           <div class="msg-item__body">
-            <div class="msg-item__row">
-              <span class="msg-item__sender">James Okafor</span>
-              <span class="msg-item__time">Mon</span>
-            </div>
-            <div class="msg-item__subject">Accessibility Checklist — WCAG 2.2</div>
-            <div class="msg-item__preview">Sharing the updated checklist we discussed. Focus indicators and color contrast flagged…</div>
+            <div class="msg-item__row"><span class="msg-item__sender">정민석</span><span class="msg-item__time">월</span></div>
+            <div class="msg-item__subject">접근성 체크리스트 — WCAG 2.2</div>
+            <div class="msg-item__preview">지난주 전체 회의에서 논의한 접근성 체크리스트를 공유합니다. 포커스와 대비를 표시…</div>
           </div>
           <div class="msg-item__trail">
-            <button class="star-btn" aria-label="Not starred"><span class="ico ico-star ico-sm"></span></button>
+            <button class="star-btn" aria-label="별표 없음"><span class="ico ico-star ico-sm"></span></button>
           </div>
         </div>
 
         <!-- Message 6 -->
         <div class="msg-item" role="listitem" tabindex="0"
-          data-msg-id="6"
-          data-sender="Priya Sharma"
-          data-email="priya.sharma@indiestudio.in"
-          data-time="Mon"
-          data-subject="New Figma Library Sync Request"
-          data-avatar-color="blue"
-          data-avatar-initials="PS"
-          data-body="msg-body-6">
-          <div class="msg-item__avatar">
-            <span class="avatar avatar--sm avatar--blue">PS</span>
-          </div>
+          data-msg-id="6" data-sender="한소희" data-email="sohee.han@modular.studio"
+          data-time="월요일" data-subject="새 Figma 라이브러리 동기화 요청"
+          data-avatar-color="blue" data-avatar-initials="소희" data-body="msg-body-6">
+          <div class="msg-item__avatar"><span class="avatar avatar--sm avatar--blue">소희</span></div>
           <div class="msg-item__body">
-            <div class="msg-item__row">
-              <span class="msg-item__sender">Priya Sharma</span>
-              <span class="msg-item__time">Mon</span>
-            </div>
-            <div class="msg-item__subject">New Figma Library Sync Request</div>
-            <div class="msg-item__preview">I've published the latest component set to the shared library. Can you accept and verify?</div>
+            <div class="msg-item__row"><span class="msg-item__sender">한소희</span><span class="msg-item__time">월</span></div>
+            <div class="msg-item__subject">새 Figma 라이브러리 동기화 요청</div>
+            <div class="msg-item__preview">최신 컴포넌트 세트를 공유 라이브러리에 게시했습니다. 적용하고 확인해 주세요.</div>
           </div>
           <div class="msg-item__trail">
-            <button class="star-btn" aria-label="Not starred"><span class="ico ico-star ico-sm"></span></button>
+            <button class="star-btn" aria-label="별표 없음"><span class="ico ico-star ico-sm"></span></button>
           </div>
         </div>
 
         <!-- Message 7 — unread -->
         <div class="msg-item" role="listitem" tabindex="0"
-          data-msg-id="7"
-          data-sender="Design Systems HQ"
-          data-email="news@ds-weekly.com"
-          data-time="Sun"
-          data-subject="DS Weekly — Issue #119"
-          data-avatar-color="black"
-          data-avatar-initials="DS"
-          data-body="msg-body-7">
-          <div class="msg-item__avatar">
-            <span class="avatar avatar--sm avatar--black">DS</span>
-          </div>
+          data-msg-id="7" data-sender="디자인 위클리" data-email="news@designweekly.kr"
+          data-time="일요일" data-subject="디자인 위클리 — 119호"
+          data-avatar-color="black" data-avatar-initials="위클" data-body="msg-body-7">
+          <div class="msg-item__avatar"><span class="avatar avatar--sm avatar--black">위클</span></div>
           <div class="msg-item__body">
-            <div class="msg-item__row">
-              <span class="msg-item__sender">Design Systems HQ</span>
-              <span class="msg-item__time">Sun</span>
-            </div>
-            <div class="msg-item__subject is-unread">DS Weekly — Issue #119</div>
-            <div class="msg-item__preview">This week: CSS custom properties in 2025, new ARIA patterns, token naming best practices…</div>
+            <div class="msg-item__row"><span class="msg-item__sender">디자인 위클리</span><span class="msg-item__time">일</span></div>
+            <div class="msg-item__subject is-unread">디자인 위클리 — 119호</div>
+            <div class="msg-item__preview">이번 주: 2026년의 CSS 커스텀 프로퍼티, 새 ARIA 패턴, 토큰 이름 짓기…</div>
           </div>
           <div class="msg-item__trail">
-            <button class="star-btn" aria-label="Not starred"><span class="ico ico-star ico-sm"></span></button>
-            <span class="unread-dot" aria-label="Unread"></span>
+            <button class="star-btn" aria-label="별표 없음"><span class="ico ico-star ico-sm"></span></button>
+            <span class="unread-dot" aria-label="안읽음"></span>
           </div>
         </div>
 
         <!-- Message 8 -->
         <div class="msg-item" role="listitem" tabindex="0"
-          data-msg-id="8"
-          data-sender="Thomas Braun"
-          data-email="t.braun@archhaus.com"
-          data-time="Sat"
-          data-subject="Re: Modular Grid System Proposal"
-          data-avatar-color="yellow"
-          data-avatar-initials="TB"
-          data-body="msg-body-8">
-          <div class="msg-item__avatar">
-            <span class="avatar avatar--sm avatar--yellow">TB</span>
-          </div>
+          data-msg-id="8" data-sender="오세훈" data-email="sehun.oh@modular.studio"
+          data-time="토요일" data-subject="Re: 모듈러 그리드 시스템 제안"
+          data-avatar-color="yellow" data-avatar-initials="세훈" data-body="msg-body-8">
+          <div class="msg-item__avatar"><span class="avatar avatar--sm avatar--yellow" style="color:var(--black);">세훈</span></div>
           <div class="msg-item__body">
-            <div class="msg-item__row">
-              <span class="msg-item__sender">Thomas Braun</span>
-              <span class="msg-item__time">Sat</span>
-            </div>
-            <div class="msg-item__subject">Re: Modular Grid System Proposal</div>
-            <div class="msg-item__preview">I love the 12-col base but I think we should explore a 4-col fallback for mobile…</div>
+            <div class="msg-item__row"><span class="msg-item__sender">오세훈</span><span class="msg-item__time">토</span></div>
+            <div class="msg-item__subject">Re: 모듈러 그리드 시스템 제안</div>
+            <div class="msg-item__preview">12컬럼 기반은 좋습니다. 다만 모바일용 4컬럼 폴백을 검토했으면 합니다…</div>
           </div>
           <div class="msg-item__trail">
-            <button class="star-btn" aria-label="Not starred"><span class="ico ico-star ico-sm"></span></button>
+            <button class="star-btn" aria-label="별표 없음"><span class="ico ico-star ico-sm"></span></button>
           </div>
         </div>
 
         <!-- Message 9 -->
         <div class="msg-item" role="listitem" tabindex="0"
-          data-msg-id="9"
-          data-sender="Clara Hoffmann"
-          data-email="clara@designops.eu"
-          data-time="Fri"
-          data-subject="Q2 Retrospective Notes"
-          data-avatar-color="red"
-          data-avatar-initials="CH"
-          data-body="msg-body-9">
-          <div class="msg-item__avatar">
-            <span class="avatar avatar--sm avatar--red">CH</span>
-          </div>
+          data-msg-id="9" data-sender="윤채원" data-email="chaewon.yoon@modular.studio"
+          data-time="금요일" data-subject="2분기 회고 노트"
+          data-avatar-color="red" data-avatar-initials="채원" data-body="msg-body-9">
+          <div class="msg-item__avatar"><span class="avatar avatar--sm avatar--red">채원</span></div>
           <div class="msg-item__body">
-            <div class="msg-item__row">
-              <span class="msg-item__sender">Clara Hoffmann</span>
-              <span class="msg-item__time">Fri</span>
-            </div>
-            <div class="msg-item__subject">Q2 Retrospective Notes</div>
-            <div class="msg-item__preview">Notes from Friday's retro are now in Notion. Key wins: token adoption up 40%, docs coverage…</div>
+            <div class="msg-item__row"><span class="msg-item__sender">윤채원</span><span class="msg-item__time">금</span></div>
+            <div class="msg-item__subject">2분기 회고 노트</div>
+            <div class="msg-item__preview">금요일 회고 노트를 노션에 올렸습니다. 토큰 도입률 40% 상승, 문서 커버리지…</div>
           </div>
           <div class="msg-item__trail">
-            <button class="star-btn" aria-label="Not starred"><span class="ico ico-star ico-sm"></span></button>
+            <button class="star-btn" aria-label="별표 없음"><span class="ico ico-star ico-sm"></span></button>
           </div>
         </div>
 
         <!-- Message 10 -->
         <div class="msg-item" role="listitem" tabindex="0"
-          data-msg-id="10"
-          data-sender="Alex Chen"
-          data-email="alex.chen@pixelstudio.io"
-          data-time="Thu"
-          data-subject="Dark Mode — Final Sign-Off Needed"
-          data-avatar-color="blue"
-          data-avatar-initials="AC"
-          data-body="msg-body-10">
-          <div class="msg-item__avatar">
-            <span class="avatar avatar--sm avatar--blue">AC</span>
-          </div>
+          data-msg-id="10" data-sender="강태민" data-email="taemin.kang@modular.studio"
+          data-time="목요일" data-subject="다크 모드 — 최종 승인 필요"
+          data-avatar-color="blue" data-avatar-initials="태민" data-body="msg-body-10">
+          <div class="msg-item__avatar"><span class="avatar avatar--sm avatar--blue">태민</span></div>
           <div class="msg-item__body">
-            <div class="msg-item__row">
-              <span class="msg-item__sender">Alex Chen</span>
-              <span class="msg-item__time">Thu</span>
-            </div>
-            <div class="msg-item__subject">Dark Mode — Final Sign-Off Needed</div>
-            <div class="msg-item__preview">The dark theme palette is ready for review. All contrast ratios pass WCAG AA. Awaiting…</div>
+            <div class="msg-item__row"><span class="msg-item__sender">강태민</span><span class="msg-item__time">목</span></div>
+            <div class="msg-item__subject">다크 모드 — 최종 승인 필요</div>
+            <div class="msg-item__preview">다크 모드 팔레트가 검토 준비를 마쳤습니다. 모든 대비가 WCAG AA를 통과합니다…</div>
           </div>
           <div class="msg-item__trail">
-            <button class="star-btn" aria-label="Not starred"><span class="ico ico-star ico-sm"></span></button>
+            <button class="star-btn" aria-label="별표 없음"><span class="ico ico-star ico-sm"></span></button>
           </div>
         </div>
 
@@ -702,28 +421,28 @@
     </section>
 
     <!-- RIGHT PANE: Reading pane -->
-    <main class="inbox-reading" id="reading-pane" aria-label="Reading pane">
+    <main class="inbox-reading" id="reading-pane" aria-label="읽기 창">
       <div class="reading-header">
-        <h1 class="reading-subject" id="reading-subject">Q3 Design Review — Feedback Required</h1>
+        <h1 class="reading-subject" id="reading-subject">3분기 디자인 리뷰 — 피드백 요청</h1>
         <div class="reading-meta">
-          <span class="avatar avatar--sm avatar--red" id="reading-avatar">SL</span>
+          <span class="avatar avatar--sm avatar--red" id="reading-avatar">서연</span>
           <div class="reading-sender-info">
-            <div class="reading-sender-name" id="reading-sender-name">Sophie Laurent</div>
-            <div class="reading-sender-email" id="reading-sender-email">s.laurent@studio-arc.com</div>
+            <div class="reading-sender-name" id="reading-sender-name">김서연</div>
+            <div class="reading-sender-email" id="reading-sender-email">seoyeon.kim@modular.studio</div>
           </div>
-          <span class="reading-time" id="reading-time">Today, 10:42 AM</span>
+          <span class="reading-time" id="reading-time">오늘 오전 10:42</span>
           <div class="reading-actions">
-            <button class="btn-icon" aria-label="Star this email"><span class="ico ico-star"></span></button>
-            <button class="btn-icon" aria-label="Reply"><span class="ico ico-arrow-r"></span></button>
+            <button class="btn-icon" aria-label="별표"><span class="ico ico-star"></span></button>
+            <button class="btn-icon" aria-label="답장"><span class="ico ico-arrow-r"></span></button>
             <div class="menu">
-              <button class="btn-icon" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-label="More options">
+              <button class="btn-icon" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-label="더보기">
                 <span class="ico ico-dots"></span>
               </button>
               <div class="menu__panel" hidden role="menu">
-                <button class="menu__item"><span class="ico ico-arrow-l ico-sm"></span> Forward</button>
-                <button class="menu__item"><span class="ico ico-chart ico-sm"></span> Archive</button>
+                <button class="menu__item" role="menuitem"><span class="ico ico-arrow-l ico-sm"></span> 전달</button>
+                <button class="menu__item" role="menuitem"><span class="ico ico-chart ico-sm"></span> 아카이브</button>
                 <div class="menu__sep"></div>
-                <button class="menu__item menu__item--danger"><span class="ico ico-trash ico-sm"></span> Delete</button>
+                <button class="menu__item menu__item--danger" role="menuitem"><span class="ico ico-trash ico-sm"></span> 삭제</button>
               </div>
             </div>
           </div>
@@ -733,98 +452,95 @@
       <div class="reading-body" id="reading-body">
         <!-- Hidden body templates -->
         <div id="msg-body-1" class="reading-body-content">
-          <p>Hi team,</p>
-          <p>I've attached the revised component specifications from this week's Q3 design review session. We covered a lot of ground — button states, form field variants, and the updated color token mapping from the Bauhaus audit.</p>
-          <p>Key feedback from the review:</p>
-          <p><strong>1. Primary buttons</strong> — The flat shadow offset should remain at 3px across all breakpoints. No gradient, ever. The Bauhaus principle of honest materials applies here too.</p>
-          <p><strong>2. Form inputs</strong> — Error states need both a color change (red border) and a shape cue (the error icon). Relying on color alone fails WCAG 1.4.1. I've added the inline-note component to the field error pattern.</p>
-          <p><strong>3. Typography</strong> — The display class at 64px feels strong on desktop. On mobile (< 480px), cap it at 40px. The Jost typeface handles the weight well at both sizes.</p>
-          <p>Please review the attached specs by end of day Thursday and leave your comments in Figma. I'll consolidate everything before the Friday handoff to engineering.</p>
-          <p>Looking forward to your thoughts,<br><strong>Sophie</strong></p>
+          <p>안녕하세요, 팀 여러분.</p>
+          <p>이번 주 3분기 디자인 리뷰에서 논의한 컴포넌트 명세 개정본을 첨부합니다. 버튼 상태, 폼 필드 변형, 그리고 바우하우스 색상 토큰 매핑까지 폭넓게 다뤘습니다.</p>
+          <p>리뷰의 핵심 피드백입니다.</p>
+          <p><strong>1. 기본 버튼</strong> — 플랫 오프셋 그림자는 모든 화면에서 3px로 유지합니다. 그라디언트는 쓰지 않습니다. 정직한 재료라는 바우하우스 원칙은 여기에도 적용됩니다.</p>
+          <p><strong>2. 폼 입력</strong> — 오류 상태는 색상(빨강 테두리)과 도형(오류 아이콘)을 함께 써야 합니다. 색상만으로는 WCAG 1.4.1을 통과하지 못합니다.</p>
+          <p><strong>3. 타이포그래피</strong> — 디스플레이 64px는 데스크톱에서 좋습니다. 모바일(480px 미만)에서는 40px로 낮춥니다. Jost는 두 크기 모두에서 웨이트를 잘 소화합니다.</p>
+          <p>목요일 업무 종료 전까지 첨부 명세를 검토하고 Figma에 의견을 남겨 주세요. 금요일 개발 핸드오프 전에 정리하겠습니다.</p>
+          <p>의견 기다리겠습니다.<br><strong>김서연 · 아트 디렉터</strong></p>
         </div>
         <div id="msg-body-2" class="reading-body-content" hidden>
-          <p>Hi all,</p>
-          <p>Following our Monday standup, here are the confirmed action items for Sprint 24. Each pod lead is responsible for updating Jira before EOD Wednesday.</p>
-          <p><strong>Design Pod (Sophie, Lena):</strong> Finalize component token audit, publish Figma library update, review WCAG checklist with James.</p>
-          <p><strong>Frontend Pod (Alex, Thomas):</strong> Implement dark mode theme switch, wire up accordion and tabs with data-attributes, complete carousel autoplay fix.</p>
-          <p><strong>Ops Pod (Clara, Priya):</strong> Update Notion documentation for all new components, schedule Q3 retrospective, coordinate with stakeholders on sign-off.</p>
-          <p>Velocity target this sprint: 48 points. We're tracking well — last sprint we hit 52. Let's keep the momentum.</p>
-          <p>Stand-up is at 9:30 AM daily. See you there.<br><strong>Marcus</strong></p>
+          <p>안녕하세요.</p>
+          <p>월요일 스탠드업에 이어 스프린트 24 확정 액션 아이템을 정리했습니다. 각 파드 리드는 수요일 업무 종료 전까지 지라를 갱신해 주세요.</p>
+          <p><strong>디자인 파드(서연·유나):</strong> 컴포넌트 토큰 감사 마무리, Figma 라이브러리 갱신, 접근성 체크리스트 검토.</p>
+          <p><strong>프론트엔드 파드(태민·세훈):</strong> 다크 모드 전환 구현, 아코디언·탭 data-attribute 연결, 캐러셀 자동재생 수정.</p>
+          <p><strong>운영 파드(채원·소희):</strong> 신규 컴포넌트 문서화, 2분기 회고 일정 조율, 승인 협의.</p>
+          <p>이번 스프린트 목표는 48포인트입니다. 지난 스프린트에 52를 달성했으니 흐름을 이어 갑시다.</p>
+          <p>스탠드업은 매일 오전 9:30입니다.<br><strong>박준혁 · 개발 리드</strong></p>
         </div>
         <div id="msg-body-3" class="reading-body-content" hidden>
-          <p>Hi,</p>
-          <p>Agreed — the display sizes feel right but I think the body tracking at 14px needs a small tweak. Currently it's at 0.01em which creates a slight heaviness on the smaller scale. I'd suggest dropping it to 0 for body text and reserving letter-spacing for eyebrow labels and uppercase headings.</p>
-          <p>Also, the Jost typeface doesn't ship with a true italic variant — we're relying on the browser to synthesize it. Should we address this in the font stack fallback?</p>
-          <p>Happy to jump on a quick call to walk through the scale together if that's easier.<br><strong>Nadia</strong></p>
+          <p>안녕하세요.</p>
+          <p>디스플레이 크기는 지금이 적절합니다. 다만 본문 14px 자간을 조금 손봐야 할 것 같습니다. 현재 0.01em인데 작은 크기에서 약간 무겁게 보입니다. 본문은 0으로 낮추고, 자간은 아이브로우 라벨과 대문자 헤딩에만 남기는 편이 좋겠습니다.</p>
+          <p>그리고 Jost는 진짜 이탤릭을 제공하지 않아 브라우저 합성에 의존하고 있습니다. 폰트 스택 폴백에서 이 부분을 정리할까요?</p>
+          <p>스케일을 함께 훑고 싶으면 짧게 통화해도 좋습니다.<br><strong>이도현 · 타입 디자이너</strong></p>
         </div>
         <div id="msg-body-4" class="reading-body-content" hidden>
-          <p>Hi,</p>
-          <p>I've finished mapping all 47 semantic tokens to their primitive counterparts. The attached spreadsheet covers color, spacing, radius, shadow, and typography tokens across both light and dark themes.</p>
-          <p>Highlights from the audit:</p>
-          <p>— 6 tokens were duplicated and have been consolidated.<br>— 3 radius tokens referenced hardcoded px values instead of the scale variables.<br>— The `--color-surface-raised` token was missing from dark theme entirely.</p>
-          <p>All issues have been logged in the design-tokens GitHub repo as issues. I'll begin the PR for the fixes tomorrow morning.</p>
-          <p>Let me know if you spot anything I missed.<br><strong>Lena</strong></p>
+          <p>안녕하세요.</p>
+          <p>시맨틱 토큰 47개를 원시 토큰과 모두 매핑했습니다. 첨부 시트에 색상·간격·라운드·그림자·타이포 토큰을 라이트/다크 양쪽으로 정리했습니다.</p>
+          <p>감사 요약입니다.</p>
+          <p>— 중복 토큰 6개를 통합했습니다.<br>— 라운드 토큰 3개가 스케일 변수 대신 하드코딩 px를 참조하고 있었습니다.<br>— <span class="mono">--color-surface-raised</span> 토큰이 다크 테마에 누락돼 있었습니다.</p>
+          <p>모든 항목을 저장소 이슈로 등록했습니다. 내일 오전에 수정 PR을 시작하겠습니다.</p>
+          <p>놓친 부분이 있으면 알려 주세요.<br><strong>최유나 · 디자인 시스템</strong></p>
         </div>
         <div id="msg-body-5" class="reading-body-content" hidden>
-          <p>Hey,</p>
-          <p>Sharing the updated WCAG 2.2 checklist we discussed at last week's all-hands. I've gone through each component in the current design system and flagged issues.</p>
-          <p><strong>Focus indicators:</strong> The default browser outline is being suppressed in base.css without an equivalent replacement. This fails 2.4.11 (Focus Appearance). We need a visible 2px offset ring on all interactive elements.</p>
-          <p><strong>Color contrast:</strong> Yellow backgrounds with white text are a hard fail at 1.07:1. Confirmed the design spec now mandates black text on yellow (`--color-text-on-accent`). Good.</p>
-          <p><strong>Touch targets:</strong> Several icon buttons are 32×32px — below the WCAG 2.2 minimum of 24×24px. The `.btn-icon` class needs a minimum 44×44px clickable area via padding.</p>
-          <p>Full annotated checklist attached. Happy to do a walk-through session.<br><strong>James</strong></p>
+          <p>안녕하세요.</p>
+          <p>지난주 전체 회의에서 논의한 WCAG 2.2 체크리스트 갱신본을 공유합니다. 현재 디자인 시스템의 각 컴포넌트를 점검하고 이슈를 표시했습니다.</p>
+          <p><strong>포커스 표시:</strong> base.css에서 기본 아웃라인을 대체 없이 제거하고 있습니다. 2.4.11을 통과하려면 모든 인터랙티브 요소에 2px 오프셋 링이 필요합니다.</p>
+          <p><strong>색상 대비:</strong> 노랑 배경 위 흰 텍스트는 1.07:1로 명백한 실패입니다. 이제 명세가 노랑 위 검정 텍스트를 강제하도록 확정됐습니다. 좋습니다.</p>
+          <p><strong>터치 영역:</strong> 일부 아이콘 버튼이 32×32px로 최소 24×24px에 걸쳐 있습니다. 여유 있게 44×44px 클릭 영역을 권장합니다.</p>
+          <p>전체 주석 체크리스트를 첨부합니다.<br><strong>정민석 · 접근성 QA</strong></p>
         </div>
         <div id="msg-body-6" class="reading-body-content" hidden>
-          <p>Hi,</p>
-          <p>I've published the latest component set to the Figma shared library (v2.4.1). The update includes all the changes from the Q3 review plus the token audit fixes.</p>
-          <p>To accept the library update in your Figma files: open the Assets panel → Libraries → find "BAUHAUS Design System" → click "Review Update" → accept all changes.</p>
-          <p>Please do this before Thursday so the engineering handoff uses the correct specs. If you run into any detached instances, ping me directly and I'll help resolve them.</p>
-          <p>Thanks,<br><strong>Priya</strong></p>
+          <p>안녕하세요.</p>
+          <p>최신 컴포넌트 세트를 Figma 공유 라이브러리(v2.4.1)에 게시했습니다. 3분기 리뷰 변경 사항과 토큰 감사 수정본이 모두 반영돼 있습니다.</p>
+          <p>업데이트 적용 방법: 에셋 패널 → 라이브러리 → ‘BAUHAUS 디자인 시스템’ → ‘업데이트 검토’ → 전체 적용.</p>
+          <p>목요일 개발 핸드오프가 올바른 명세를 쓰도록 그 전에 적용해 주세요. 인스턴스가 분리되면 바로 알려 주세요.</p>
+          <p>감사합니다.<br><strong>한소희 · 프로덕트</strong></p>
         </div>
         <div id="msg-body-7" class="reading-body-content" hidden>
-          <p><strong>Design Systems Weekly — Issue #119</strong></p>
-          <p>This week's top picks from the design systems community:</p>
-          <p><strong>CSS Custom Properties in 2025:</strong> A deep dive into using @property for animation-friendly tokens, typed custom properties, and inheritance control. Finally, robust design tokens in pure CSS.</p>
-          <p><strong>New ARIA Patterns:</strong> APG has released updated patterns for combobox, listbox, and tree components. The new combobox pattern deprecates the role="combobox" on the container — worth auditing your current implementations.</p>
-          <p><strong>Token Naming Best Practices:</strong> Nathan Curtis on why semantic token names should express intent, not appearance. `--color-action-primary` beats `--color-blue-600` every time.</p>
-          <p>See you next week.<br><strong>DS Weekly</strong></p>
+          <p><strong>디자인 위클리 — 119호</strong></p>
+          <p>이번 주 디자인 시스템 커뮤니티에서 고른 소식입니다.</p>
+          <p><strong>2026년의 CSS 커스텀 프로퍼티:</strong> @property로 애니메이션 가능한 타입드 토큰과 상속 제어를 다룹니다. 순수 CSS로 견고한 디자인 토큰을 만드는 법.</p>
+          <p><strong>새 ARIA 패턴:</strong> APG가 combobox·listbox·tree 패턴을 갱신했습니다. 컨테이너의 role="combobox"를 폐기하는 방향이니 현재 구현을 점검해 볼 만합니다.</p>
+          <p><strong>토큰 이름 짓기:</strong> 시맨틱 토큰 이름은 겉모습이 아니라 의도를 담아야 합니다. <span class="mono">--color-action-primary</span>가 <span class="mono">--color-blue-600</span>보다 낫습니다.</p>
+          <p>다음 주에 뵙겠습니다.<br><strong>디자인 위클리</strong></p>
         </div>
         <div id="msg-body-8" class="reading-body-content" hidden>
-          <p>Hey,</p>
-          <p>I love the 12-column base — it gives us the asymmetric layout freedom that's core to the Bauhaus aesthetic. But I think we should seriously explore a 4-column fallback for mobile.</p>
-          <p>12 columns at 375px with 16px gutters leaves only about 17px per column — barely usable. A 4-column grid at mobile gives us proper breathing room and still supports the modular structure.</p>
-          <p>I've mocked up a few screens at both breakpoints. The 4-col version looks much cleaner and stays true to the rational, geometric approach. Happy to share the Figma file if useful.</p>
-          <p>What do you think?<br><strong>Thomas</strong></p>
+          <p>안녕하세요.</p>
+          <p>12컬럼 기반은 정말 좋습니다. 바우하우스 미학의 핵심인 비대칭 레이아웃 자유를 줍니다. 다만 모바일용 4컬럼 폴백을 진지하게 검토했으면 합니다.</p>
+          <p>375px에서 16px 여백으로 12컬럼을 쓰면 컬럼당 17px 남짓이라 거의 못 씁니다. 모바일 4컬럼은 여백이 충분하고 모듈러 구조도 유지합니다.</p>
+          <p>두 브레이크포인트로 몇 화면을 그려 봤습니다. 4컬럼 쪽이 훨씬 깔끔하고 합리적·기하학적 접근에도 맞습니다. 필요하면 Figma 파일을 공유하겠습니다.</p>
+          <p>어떻게 생각하세요?<br><strong>오세훈 · 그리드 설계</strong></p>
         </div>
         <div id="msg-body-9" class="reading-body-content" hidden>
-          <p>Hi team,</p>
-          <p>Notes from Friday's retrospective are now live in Notion (link below). Here are the key highlights:</p>
-          <p><strong>Wins:</strong> Token adoption is up 40% across the org. Documentation coverage hit 78% — our highest ever. The new data-attribute pattern for JS interactions is being used consistently by frontend.</p>
-          <p><strong>Pain points:</strong> Figma → code handoff still has friction around spacing tokens. The component contribution process needs clearer guidelines for external contributors.</p>
-          <p><strong>Next steps:</strong> I'll draft a contribution guide by next Wednesday. Sophie will create a spacing token visual reference in Figma. Marcus will set up a bi-weekly sync between design and frontend leads.</p>
-          <p>Great sprint everyone.<br><strong>Clara</strong></p>
+          <p>안녕하세요, 팀 여러분.</p>
+          <p>금요일 회고 노트를 노션에 올렸습니다(아래 링크). 핵심만 정리합니다.</p>
+          <p><strong>잘된 점:</strong> 토큰 도입률이 조직 전반에서 40% 늘었습니다. 문서 커버리지는 역대 최고인 78%에 도달했습니다. data-attribute 인터랙션 패턴이 프론트엔드에서 일관되게 쓰이고 있습니다.</p>
+          <p><strong>아쉬운 점:</strong> Figma에서 코드로 넘길 때 간격 토큰 마찰이 남아 있습니다. 외부 기여자를 위한 컴포넌트 기여 절차가 더 명확해야 합니다.</p>
+          <p><strong>다음 단계:</strong> 수요일까지 기여 가이드 초안을 작성하겠습니다. 서연 님이 간격 토큰 시각 레퍼런스를 만들고, 준혁 님이 디자인·프론트엔드 격주 싱크를 마련합니다.</p>
+          <p>이번 스프린트 수고 많았습니다.<br><strong>윤채원 · 디자인 옵스</strong></p>
         </div>
         <div id="msg-body-10" class="reading-body-content" hidden>
-          <p>Hi,</p>
-          <p>The dark mode palette is ready for final review and sign-off. All 47 semantic tokens have been mapped to their dark-theme counterparts and every combination passes WCAG AA contrast (4.5:1 for normal text, 3:1 for large text).</p>
-          <p>The one area I'd flag for attention: the `--color-yellow` on dark backgrounds. I've desaturated it slightly to #E6B400 in dark mode — this maintains readability while preserving the Bauhaus primary palette feel. The original #F7C200 was too close to white at dark background luminance levels.</p>
-          <p>Figma prototype with light/dark toggle is ready for your review. Click "Approve" in the Figma comment thread once you're satisfied and I'll merge the PR.</p>
-          <p>Thanks,<br><strong>Alex</strong></p>
+          <p>안녕하세요.</p>
+          <p>다크 모드 팔레트가 최종 검토·승인 준비를 마쳤습니다. 시맨틱 토큰 47개를 다크 대응값으로 모두 매핑했고, 모든 조합이 WCAG AA 대비(본문 4.5:1, 큰 텍스트 3:1)를 통과합니다.</p>
+          <p>한 가지 짚을 부분은 다크 배경 위 노랑입니다. 다크 모드에서 <span class="mono">#E6B400</span>으로 살짝 낮췄습니다. 가독성을 지키면서 바우하우스 기본 팔레트 느낌을 유지합니다. 원래 <span class="mono">#F7C200</span>은 다크 배경 밝기에서 흰색에 너무 가까웠습니다.</p>
+          <p>라이트/다크 토글이 있는 Figma 프로토타입이 준비됐습니다. 검토 후 승인해 주시면 PR을 병합하겠습니다.</p>
+          <p>감사합니다.<br><strong>강태민 · 프론트엔드</strong></p>
         </div>
       </div>
 
       <div class="reading-reply">
-        <textarea class="textarea" rows="3" placeholder="Write a reply…" aria-label="Reply body"></textarea>
+        <textarea class="textarea" rows="3" placeholder="답장을 입력하세요…" aria-label="답장 내용"></textarea>
         <div class="reading-reply__toolbar">
           <div class="reading-reply__tools">
-            <button class="btn-icon" aria-label="Attach file"><span class="ico ico-upload"></span></button>
-            <button class="btn-icon" aria-label="Insert link"><span class="ico ico-info"></span></button>
-            <button class="btn-icon" aria-label="Format text"><span class="ico ico-grid"></span></button>
+            <button class="btn-icon" aria-label="파일 첨부"><span class="ico ico-upload"></span></button>
+            <button class="btn-icon" aria-label="링크 삽입"><span class="ico ico-info"></span></button>
+            <button class="btn-icon" aria-label="서식"><span class="ico ico-grid"></span></button>
           </div>
-          <button class="btn btn-primary btn-sm" id="send-reply-btn"
-            data-toast-title="Reply sent"
-            data-toast-text="Your reply has been delivered."
-            data-toast-variant="success">
-            <span class="ico ico-mail"></span> Send
+          <button class="btn btn-primary btn-sm" id="send-reply-btn">
+            <span class="ico ico-mail"></span> 보내기
           </button>
         </div>
       </div>
@@ -837,31 +553,31 @@
 <div class="modal" id="compose-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="compose-modal-title">
   <div class="modal__dialog modal__dialog--lg">
     <div class="modal__header">
-      <span class="modal__title" id="compose-modal-title">New Message</span>
-      <button class="modal__close" data-close-modal aria-label="Close compose">
+      <span class="modal__title" id="compose-modal-title">새 메시지</span>
+      <button class="modal__close" data-close-modal aria-label="작성 창 닫기">
         <span class="ico ico-x"></span>
       </button>
     </div>
     <div class="modal__body">
       <div class="field">
-        <label class="field__label req" for="compose-to">To</label>
+        <label class="field__label req" for="compose-to">받는 사람</label>
         <div class="chipinput" data-chipinput>
-          <input class="chipinput__field" id="compose-to" type="text" placeholder="Add recipients…" aria-label="Recipients" />
+          <input class="chipinput__field" id="compose-to" type="text" placeholder="받는 사람을 추가하세요…" aria-label="받는 사람" />
         </div>
       </div>
       <div class="field">
-        <label class="field__label" for="compose-subject">Subject</label>
-        <input class="input" id="compose-subject" type="text" placeholder="Subject…" aria-label="Email subject" />
+        <label class="field__label" for="compose-subject">제목</label>
+        <input class="input" id="compose-subject" type="text" placeholder="제목…" aria-label="메일 제목" />
       </div>
       <div class="field">
-        <label class="field__label" for="compose-body">Message</label>
-        <textarea class="textarea" id="compose-body" rows="8" placeholder="Write your message…" aria-label="Message body"></textarea>
+        <label class="field__label" for="compose-body">내용</label>
+        <textarea class="textarea" id="compose-body" rows="8" placeholder="메시지를 작성하세요…" aria-label="메일 본문"></textarea>
       </div>
     </div>
     <div class="modal__footer">
-      <button class="btn btn-ghost" data-close-modal>Discard</button>
+      <button class="btn btn-ghost" data-close-modal>취소</button>
       <button class="btn btn-primary" id="compose-send-btn">
-        <span class="ico ico-mail"></span> Send Message
+        <span class="ico ico-mail"></span> 메일 보내기
       </button>
     </div>
   </div>
@@ -870,17 +586,10 @@
 <!-- Inline JS: message selection + reading pane update -->
 <script>
 (function () {
-  var avatarColorMap = {
-    red:    'avatar--red',
-    yellow: 'avatar--yellow',
-    blue:   'avatar--blue',
-    black:  'avatar--black'
-  };
+  var avatarColorMap = { red: 'avatar--red', yellow: 'avatar--yellow', blue: 'avatar--blue', black: 'avatar--black' };
 
   function showBody(bodyId) {
-    document.querySelectorAll('.reading-body-content').forEach(function (el) {
-      el.hidden = true;
-    });
+    document.querySelectorAll('.reading-body-content').forEach(function (el) { el.hidden = true; });
     var target = document.getElementById(bodyId);
     if (target) target.hidden = false;
   }
@@ -894,87 +603,85 @@
     var initials = item.dataset.avatarInitials || '?';
     var bodyId   = item.dataset.body      || '';
 
-    document.getElementById('reading-subject').textContent   = subject;
-    document.getElementById('reading-sender-name').textContent = sender;
+    document.getElementById('reading-subject').textContent      = subject;
+    document.getElementById('reading-sender-name').textContent  = sender;
     document.getElementById('reading-sender-email').textContent = email;
-    document.getElementById('reading-time').textContent      = time;
+    document.getElementById('reading-time').textContent         = time;
 
     var avatarEl = document.getElementById('reading-avatar');
     if (avatarEl) {
       avatarEl.textContent = initials;
-      // Remove all color classes then add the right one
       Object.values(avatarColorMap).forEach(function (cls) { avatarEl.classList.remove(cls); });
       avatarEl.classList.add(avatarColorMap[color] || 'avatar--blue');
+      // yellow avatar needs black text (never white on yellow)
+      avatarEl.style.color = color === 'yellow' ? 'var(--black)' : '';
     }
 
     if (bodyId) showBody(bodyId);
   }
 
-  // Wire message list items
   var msgList = document.getElementById('msg-list');
   if (msgList) {
     msgList.addEventListener('click', function (e) {
       var item = e.target.closest('.msg-item');
       if (!item) return;
 
-      // Star button — toggle only, don't switch message
+      // Star button — toggle only
       if (e.target.closest('.star-btn')) {
         var starBtn = e.target.closest('.star-btn');
         starBtn.classList.toggle('is-starred');
         var isStarred = starBtn.classList.contains('is-starred');
-        starBtn.setAttribute('aria-label', isStarred ? 'Starred' : 'Not starred');
+        starBtn.setAttribute('aria-label', isStarred ? '별표 표시됨' : '별표 없음');
         return;
       }
 
-      // Mark active
-      msgList.querySelectorAll('.msg-item').forEach(function (el) {
-        el.classList.remove('is-active');
-      });
+      msgList.querySelectorAll('.msg-item').forEach(function (el) { el.classList.remove('is-active'); });
       item.classList.add('is-active');
 
-      // Remove unread dot on open
       var dot = item.querySelector('.unread-dot');
       if (dot) dot.remove();
       var subjectEl = item.querySelector('.msg-item__subject');
       if (subjectEl) subjectEl.classList.remove('is-unread');
 
       updateReadingPane(item);
+
+      // On narrow screens, bring the reading pane into view
+      if (window.matchMedia('(max-width: 700px)').matches) {
+        var pane = document.getElementById('reading-pane');
+        if (pane) pane.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     });
 
-    // Keyboard navigation
     msgList.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' || e.key === ' ') {
         var item = e.target.closest('.msg-item');
-        if (item) item.click();
+        if (item) { e.preventDefault(); item.click(); }
       }
     });
   }
 
-  // Compose send button
+  // Compose send
   var composeSendBtn = document.getElementById('compose-send-btn');
   if (composeSendBtn) {
     composeSendBtn.addEventListener('click', function () {
-      // Close modal
       var modal = document.getElementById('compose-modal');
-      if (modal) {
-        modal.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = '';
-      }
-      // Trigger toast via Bauhaus
+      if (window.Bauhaus && window.Bauhaus.closeModal) window.Bauhaus.closeModal(modal);
       if (window.Bauhaus && window.Bauhaus.toast) {
-        window.Bauhaus.toast({ title: 'Message sent', text: 'Your message has been delivered.', variant: 'success' });
+        window.Bauhaus.toast({ title: '메일을 보냈습니다', text: '보낸 편지함에서 확인할 수 있습니다.', variant: 'success' });
       }
+      ['compose-subject', 'compose-body', 'compose-to'].forEach(function (id) {
+        var el = document.getElementById(id); if (el) el.value = '';
+      });
     });
   }
 
-  // Send reply button
+  // Send reply
   var sendReplyBtn = document.getElementById('send-reply-btn');
   if (sendReplyBtn) {
     sendReplyBtn.addEventListener('click', function () {
       if (window.Bauhaus && window.Bauhaus.toast) {
-        window.Bauhaus.toast({ title: 'Reply sent', text: 'Your reply has been delivered.', variant: 'success' });
+        window.Bauhaus.toast({ title: '답장을 보냈습니다', text: '메시지가 전달됐습니다.', variant: 'success' });
       }
-      // Clear reply textarea
       var replyArea = document.querySelector('.reading-reply .textarea');
       if (replyArea) replyArea.value = '';
     });
@@ -982,9 +689,7 @@
 
   // Initialise reading pane with first active message
   var firstActive = msgList && msgList.querySelector('.msg-item.is-active');
-  if (firstActive) {
-    showBody(firstActive.dataset.body || '');
-  }
+  if (firstActive) showBody(firstActive.dataset.body || '');
 })();
 </script>
 

@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Kanban Board — BAUHAUS</title>
+<script>(function(){try{var t=localStorage.getItem('bauhaus-theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}document.documentElement.classList.add('js');})();</script>
+<noscript><style>[data-reveal]{opacity:1!important;transform:none!important;}</style></noscript>
+<title>칸반 보드 — BAUHAUS</title>
 <link rel="stylesheet" href="../tokens.css" />
 <link rel="stylesheet" href="../semantic.css" />
 <link rel="stylesheet" href="../base.css" />
@@ -25,13 +27,12 @@
     gap: var(--space-3);
     flex-wrap: wrap;
     padding-bottom: var(--space-5);
-    border-bottom: var(--border-3) solid var(--black);
+    border-bottom: var(--border-3) solid var(--color-border);
   }
   .board-toolbar__title {
     font-family: var(--font-display);
     font-size: var(--text-xl);
     font-weight: var(--weight-bold);
-    text-transform: uppercase;
     letter-spacing: var(--tracking-wide);
     margin-right: var(--space-2);
   }
@@ -48,7 +49,7 @@
   .kanban-col {
     flex: 0 0 280px;
     min-width: 260px;
-    border: var(--border-3) solid var(--black);
+    border: var(--border-3) solid var(--color-border);
     background: var(--color-surface);
     display: flex;
     flex-direction: column;
@@ -58,7 +59,7 @@
     align-items: center;
     gap: var(--space-2);
     padding: var(--space-3) var(--space-3) var(--space-3) 0;
-    border-bottom: var(--border-2) solid var(--black);
+    border-bottom: var(--border-2) solid var(--color-border);
     background: var(--color-surface-2);
   }
   .kanban-col__bar {
@@ -69,14 +70,13 @@
   .kanban-col__bar.is-gray { background: var(--color-text-muted); }
   .kanban-col__bar.is-blue { background: var(--blue-500); }
   .kanban-col__bar.is-yellow { background: var(--yellow-400); }
-  .kanban-col__bar.is-green { background: #22a06b; }
+  .kanban-col__bar.is-ink { background: var(--color-text); }   /* theme-aware done bar (no green — DNA) */
 
   .kanban-col__name {
     font-family: var(--font-display);
     font-size: var(--text-sm);
     font-weight: var(--weight-bold);
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-wider);
+    letter-spacing: var(--tracking-wide);
     flex: 1;
   }
   .kanban-col__body {
@@ -109,15 +109,17 @@
   .kanban-col__add:hover {
     background: var(--color-accent);
     color: var(--black);
-    border-color: var(--black);
+    border-color: var(--color-border);
     border-style: solid;
   }
+  .kanban-col__add:focus-visible { outline: var(--ring-width) solid var(--color-ring); outline-offset: 2px; }
 
   /* ── Kanban card extras ── */
   .kanban-card {
     cursor: grab;
     user-select: none;
   }
+  .kanban-card.is-dragging { opacity: 0.5; }
   .kanban-card__badges {
     display: flex;
     flex-wrap: wrap;
@@ -137,6 +139,9 @@
   .kanban-card__meta-icons .ico {
     font-size: 12px;
   }
+  /* keyboard/pointer column-move controls (DnD alternative — a11y) */
+  .kanban-card__move { display: flex; gap: var(--space-1); }
+  .kanban-card__move .btn-icon { width: 1.5rem; height: 1.5rem; }
 
   /* ── Priority radio colors ── */
   .priority-group {
@@ -152,7 +157,7 @@
     font-size: var(--text-sm);
     font-weight: var(--weight-semibold);
   }
-  .priority-radio input { display: none; }
+  .priority-radio input { position: absolute; opacity: 0; width: 0; height: 0; }
   .priority-radio__dot {
     width: 16px;
     height: 16px;
@@ -173,9 +178,10 @@
     transition: opacity var(--duration-fast);
   }
   .priority-radio input:checked + .priority-radio__dot::after { opacity: 1; }
-  .priority-radio.pr-high { color: var(--red-500); }
-  .priority-radio.pr-med  { color: var(--yellow-400); filter: brightness(0.8); }
-  .priority-radio.pr-low  { color: var(--blue-500); }
+  .priority-radio input:focus-visible + .priority-radio__dot { outline: var(--ring-width) solid var(--color-ring); outline-offset: 2px; }
+  .priority-radio.pr-high { color: var(--red-600); }
+  .priority-radio.pr-med  { color: var(--yellow-700); }
+  .priority-radio.pr-low  { color: var(--blue-600); }
 
   /* ── Mobile sidebar backdrop ── */
   .sidebar-backdrop {
@@ -187,6 +193,9 @@
   }
   .sidebar-backdrop.is-open { display: block; }
 
+  /* app-shell burger only where the sidebar is off-canvas (no dead control on desktop) */
+  @media (min-width: 881px) { .navbar [data-sidebar-mobile] { display: none; } }
+
   @media (max-width: 767px) {
     .board-toolbar__title { font-size: var(--text-lg); }
     .kanban-col { flex: 0 0 240px; }
@@ -195,51 +204,42 @@
 </style>
 </head>
 <body>
-<a href="#main" class="sr-only">Skip to content</a>
+<a href="#main" class="sr-only">본문으로 건너뛰기</a>
 
 <!-- ═══ APP SHELL ═══ -->
 <div class="app-shell">
 
   <!-- SIDEBAR -->
-  <aside class="sidebar" id="sidebar" aria-label="Application navigation">
+  <aside class="sidebar" id="sidebar" aria-label="앱 내비게이션">
     <div class="sidebar__head">
-      <a href="../index.html" aria-label="BAUHAUS home">
-        <span class="logomark"><span class="mark"><i></i><i></i><i></i></span> BAUHAUS</span>
+      <a href="../index.html" aria-label="Bauhaus 홈">
+        <span class="logomark"><span class="mark" aria-hidden="true"><i></i><i></i><i></i></span> BAUHAUS</span>
       </a>
     </div>
-    <nav class="sidebar__nav" aria-label="Sidebar">
-      <span class="sidebar__group-label">Main</span>
-      <a class="nav-link" href="../index.html">
-        <span class="ico ico-home"></span>
-        <span class="nav-link__text">Dashboard</span>
+    <nav class="sidebar__nav" aria-label="사이드바">
+      <span class="sidebar__group-label">메인</span>
+      <a class="nav-link" href="dashboard.html">
+        <span class="ico ico-home" aria-hidden="true"></span>
+        <span class="nav-link__text">대시보드</span>
       </a>
-      <a class="nav-link is-active" href="#">
-        <span class="ico ico-grid"></span>
-        <span class="nav-link__text">Board</span>
-      </a>
-      <a class="nav-link" href="#">
-        <span class="ico ico-calendar"></span>
-        <span class="nav-link__text">Timeline</span>
-      </a>
-      <a class="nav-link" href="#">
-        <span class="ico ico-chart"></span>
-        <span class="nav-link__text">Reports</span>
-        <span class="badge badge--blue nav-link__badge">New</span>
+      <a class="nav-link is-active" href="kanban.html" aria-current="page">
+        <span class="ico ico-grid" aria-hidden="true"></span>
+        <span class="nav-link__text">보드</span>
       </a>
 
-      <span class="sidebar__group-label">Team</span>
-      <a class="nav-link" href="#">
-        <span class="ico ico-user"></span>
-        <span class="nav-link__text">Members</span>
+      <span class="sidebar__group-label">팀</span>
+      <a class="nav-link" href="profile.html">
+        <span class="ico ico-user" aria-hidden="true"></span>
+        <span class="nav-link__text">멤버</span>
       </a>
-      <a class="nav-link" href="#">
-        <span class="ico ico-gear"></span>
-        <span class="nav-link__text">Settings</span>
+      <a class="nav-link" href="settings.html">
+        <span class="ico ico-gear" aria-hidden="true"></span>
+        <span class="nav-link__text">설정</span>
       </a>
     </nav>
     <div class="sidebar__foot">
-      <button class="btn btn-ghost btn-block btn-sm" data-sidebar-toggle aria-label="Collapse sidebar">
-        <span class="ico ico-arrow-l ico-sm"></span> Collapse
+      <button class="btn btn-ghost btn-block btn-sm" data-sidebar-toggle aria-label="사이드바 접기">
+        <span class="ico ico-arrow-l ico-sm" aria-hidden="true"></span> 접기
       </button>
     </div>
   </aside>
@@ -252,29 +252,27 @@
 
     <!-- NAVBAR -->
     <header class="navbar no-print">
-      <button class="btn-icon" data-sidebar-mobile aria-label="Open menu" aria-expanded="false" aria-controls="sidebar">
-        <span class="ico ico-menu"></span>
+      <button class="btn-icon" data-sidebar-mobile aria-label="메뉴 열기" aria-expanded="false" aria-controls="sidebar">
+        <span class="ico ico-menu" aria-hidden="true"></span>
       </button>
-      <a class="navbar__brand" href="../index.html" aria-label="BAUHAUS home">
-        <span class="logomark"><span class="mark"><i></i><i></i><i></i></span> BAUHAUS</span>
+      <a class="navbar__brand" href="../index.html" aria-label="Bauhaus 홈">
+        <span class="logomark"><span class="mark" aria-hidden="true"><i></i><i></i><i></i></span> BAUHAUS</span>
       </a>
-      <nav class="navbar__nav" aria-label="Primary">
-        <a class="navbar__link" href="../index.html">Home</a>
-        <a class="navbar__link is-active" href="#">Board</a>
+      <nav class="navbar__nav" aria-label="주요 메뉴">
+        <a class="navbar__link" href="../index.html">홈</a>
+        <a class="navbar__link is-active" href="kanban.html" aria-current="page">보드</a>
       </nav>
       <span class="navbar__spacer"></span>
       <div class="navbar__actions">
-        <button class="btn-icon" data-theme-toggle aria-label="Toggle theme" aria-pressed="false">
-          <span class="ico ico-gear"></span>
-        </button>
-        <div class="avatar-group" aria-label="Active team members">
-          <span class="avatar avatar--blue avatar--sm" title="Sarah K.">SK</span>
-          <span class="avatar avatar--red avatar--sm" title="Mark T.">MT</span>
-          <span class="avatar avatar--yellow avatar--sm" title="Jin L." style="color:var(--black)">JL</span>
-          <span class="avatar avatar--black avatar--sm avatar--more" title="2 more">+2</span>
+        <button class="theme-toggle" data-theme-toggle aria-label="테마 전환" aria-pressed="false"><span class="theme-toggle__shape" aria-hidden="true"></span></button>
+        <div class="avatar-group" aria-label="활성 팀원">
+          <span class="avatar avatar--blue avatar--sm" title="김서연 · 디자인 시스템 리드">김</span>
+          <span class="avatar avatar--red avatar--sm" title="박지훈 · 프론트엔드">박</span>
+          <span class="avatar avatar--yellow avatar--sm" title="한예리 · 프로덕트 디자이너" style="color:var(--black)">한</span>
+          <span class="avatar avatar--black avatar--sm avatar--more" title="외 2명">+2</span>
         </div>
-        <button class="btn btn-primary btn-sm" data-open-modal="modal-new-task" aria-label="Create new task">
-          <span class="ico ico-plus ico-sm"></span> New task
+        <button class="btn btn-primary btn-sm" data-open-modal="modal-new-task">
+          <span class="ico ico-plus ico-sm" aria-hidden="true"></span> 새 작업
         </button>
       </div>
     </header>
@@ -284,509 +282,441 @@
       <div class="board-page">
 
         <!-- BOARD TOOLBAR -->
-        <div class="board-toolbar" role="toolbar" aria-label="Board controls">
+        <div class="board-toolbar" role="toolbar" aria-label="보드 컨트롤">
           <div>
-            <p class="eyebrow">Product Team · Q3 2025</p>
-            <h1 class="board-toolbar__title">Product Roadmap</h1>
+            <p class="eyebrow">프로덕트팀 · 2026 3분기</p>
+            <h1 class="board-toolbar__title">제품 로드맵</h1>
           </div>
 
-          <div class="avatar-group" aria-label="Board members">
-            <span class="avatar avatar--blue avatar--sm" title="Sarah Kim">SK</span>
-            <span class="avatar avatar--red avatar--sm" title="Mark Torres">MT</span>
-            <span class="avatar avatar--yellow avatar--sm" title="Jin Lee" style="color:var(--black)">JL</span>
-            <span class="avatar avatar--black avatar--sm" title="Priya N.">PN</span>
-            <span class="avatar avatar--sm avatar--more" title="1 more">+1</span>
+          <div class="avatar-group" aria-label="보드 멤버">
+            <span class="avatar avatar--blue avatar--sm" title="김서연">김</span>
+            <span class="avatar avatar--red avatar--sm" title="박지훈">박</span>
+            <span class="avatar avatar--yellow avatar--sm" title="한예리" style="color:var(--black)">한</span>
+            <span class="avatar avatar--black avatar--sm" title="오세훈">오</span>
+            <span class="avatar avatar--sm avatar--more" title="외 1명">+1</span>
           </div>
 
-          <div class="segmented" role="group" aria-label="View mode">
-            <button class="segmented__option" aria-pressed="false" data-value="list" aria-label="List view">
-              <span class="ico ico-grid ico-sm"></span>
+          <div class="segmented" role="group" aria-label="보기 방식">
+            <button class="segmented__option" aria-pressed="false" data-value="list" aria-label="목록 보기">
+              <span class="ico ico-grid ico-sm" aria-hidden="true"></span>
             </button>
-            <button class="segmented__option" aria-pressed="true" data-value="board" aria-label="Board view">
-              <span class="ico ico-chart ico-sm"></span>
+            <button class="segmented__option" aria-pressed="true" data-value="board" aria-label="보드 보기">
+              <span class="ico ico-chart ico-sm" aria-hidden="true"></span>
             </button>
-            <button class="segmented__option" aria-pressed="false" data-value="timeline" aria-label="Timeline view">
-              <span class="ico ico-calendar ico-sm"></span>
+            <button class="segmented__option" aria-pressed="false" data-value="timeline" aria-label="타임라인 보기">
+              <span class="ico ico-calendar ico-sm" aria-hidden="true"></span>
             </button>
           </div>
 
           <div class="board-toolbar__spacer"></div>
 
-          <button class="btn btn-secondary btn-sm" data-open-drawer="drawer-filter" aria-label="Open filter panel">
-            <span class="ico ico-filter ico-sm"></span> Filter
+          <button class="btn btn-secondary btn-sm" data-open-drawer="drawer-filter">
+            <span class="ico ico-filter ico-sm" aria-hidden="true"></span> 필터
           </button>
-          <button class="btn btn-primary btn-sm" data-open-modal="modal-new-task" aria-label="Create new task">
-            <span class="ico ico-plus ico-sm"></span> New task
+          <button class="btn btn-primary btn-sm" data-open-modal="modal-new-task">
+            <span class="ico ico-plus ico-sm" aria-hidden="true"></span> 새 작업
           </button>
         </div>
 
-        <!-- KANBAN BOARD -->
-        <div class="kanban-board" role="region" aria-label="Kanban board" data-stagger>
+        <!-- live region for keyboard column-move announcements -->
+        <div id="kanban-live" class="sr-only" role="status" aria-live="polite"></div>
 
-          <!-- COL: BACKLOG -->
-          <section class="kanban-col" aria-label="Backlog column" data-col="backlog">
+        <!-- KANBAN BOARD -->
+        <div class="kanban-board" role="region" aria-label="칸반 보드" data-stagger>
+
+          <!-- COL: 백로그 -->
+          <section class="kanban-col" aria-label="백로그 열" data-col="backlog">
             <div class="kanban-col__header">
               <div class="kanban-col__bar is-gray" aria-hidden="true"></div>
-              <span class="kanban-col__name">Backlog</span>
-              <span class="badge badge--black" aria-label="4 tasks in Backlog">4</span>
-              <div class="menu">
-                <button class="btn-icon btn-round" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-label="Backlog column options">
-                  <span class="ico ico-dots"></span>
-                </button>
-                <div class="menu__panel menu__panel--right" hidden role="menu">
-                  <button class="menu__item" role="menuitem"><span class="ico ico-plus"></span> Add card</button>
-                  <button class="menu__item" role="menuitem"><span class="ico ico-star"></span> Sort by priority</button>
-                  <div class="menu__sep" role="separator"></div>
-                  <button class="menu__item menu__item--danger" role="menuitem"><span class="ico ico-trash"></span> Clear column</button>
-                </div>
-              </div>
+              <span class="kanban-col__name">백로그</span>
+              <span class="badge" aria-label="백로그 작업 4개">4</span>
             </div>
 
             <div class="kanban-col__body" id="col-backlog" data-droptarget="backlog">
               <!-- CARD 1 -->
-              <article class="kanban-card" draggable="true" data-card-id="card-1" aria-label="Dark mode support task">
-                <div class="kanban-card__bar is-blue" aria-label="Low priority"></div>
+              <article class="kanban-card" draggable="true" data-card-id="card-1" aria-label="작업: 모든 컴포넌트 다크 모드 토큰 적용">
+                <div class="kanban-card__bar is-blue" aria-hidden="true"></div>
                 <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
-                  <span class="status status--progress"><span class="status__shape"></span> Planned</span>
-                  <div class="menu">
-                    <button class="btn-icon" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-label="Card options" style="width:20px;height:20px;font-size:12px;">
-                      <span class="ico ico-dots ico-sm"></span>
-                    </button>
-                    <div class="menu__panel menu__panel--right" hidden role="menu">
-                      <button class="menu__item" role="menuitem"><span class="ico ico-star"></span> Edit</button>
-                      <button class="menu__item menu__item--danger" role="menuitem"><span class="ico ico-trash"></span> Delete</button>
-                    </div>
+                  <span class="status status--progress"><span class="status__shape" aria-hidden="true"></span> 예정</span>
+                  <div class="kanban-card__move" role="group" aria-label="카드 이동">
+                    <button class="btn-icon btn-sm" type="button" data-move="prev" aria-label="이전 열로 이동" disabled><span class="ico ico-arrow-l ico-sm" aria-hidden="true"></span></button>
+                    <button class="btn-icon btn-sm" type="button" data-move="next" aria-label="다음 열로 이동"><span class="ico ico-arrow-r ico-sm" aria-hidden="true"></span></button>
                   </div>
                 </div>
-                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">Dark mode support for all components</p>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">모든 컴포넌트 다크 모드 토큰 적용</p>
                 <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
-                  <span class="badge badge--blue">Design System</span>
+                  <span class="badge badge--blue">디자인 시스템</span>
                   <span class="badge">UX</span>
                 </div>
                 <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
-                  <div class="avatar-wrap">
-                    <span class="avatar avatar--blue avatar--sm" title="Sarah Kim" aria-label="Assigned to Sarah Kim">SK</span>
-                  </div>
+                  <span class="avatar avatar--blue avatar--sm" title="김서연" aria-label="담당자 김서연">김</span>
                   <div class="kanban-card__meta-icons">
                     <span class="ico ico-calendar ico-sm" aria-hidden="true"></span>
-                    <time datetime="2025-08-15">Aug 15</time>
+                    <time datetime="2026-07-22">7월 22일</time>
                     <span class="ico ico-mail ico-sm" aria-hidden="true"></span>
-                    <span aria-label="3 comments">3</span>
+                    <span aria-label="댓글 3개">3</span>
                   </div>
                 </div>
               </article>
 
               <!-- CARD 2 -->
-              <article class="kanban-card" draggable="true" data-card-id="card-2" aria-label="Onboarding flow redesign task">
-                <div class="kanban-card__bar is-yellow" aria-label="Medium priority"></div>
+              <article class="kanban-card" draggable="true" data-card-id="card-2" aria-label="작업: 온보딩 3단계 위저드 재설계">
+                <div class="kanban-card__bar is-yellow" aria-hidden="true"></div>
                 <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
-                  <span class="status status--blocked"><span class="status__shape"></span> Blocked</span>
-                  <div class="menu">
-                    <button class="btn-icon" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-label="Card options" style="width:20px;height:20px;">
-                      <span class="ico ico-dots ico-sm"></span>
-                    </button>
-                    <div class="menu__panel menu__panel--right" hidden role="menu">
-                      <button class="menu__item" role="menuitem"><span class="ico ico-star"></span> Edit</button>
-                      <button class="menu__item menu__item--danger" role="menuitem"><span class="ico ico-trash"></span> Delete</button>
-                    </div>
+                  <span class="status status--blocked"><span class="status__shape" aria-hidden="true"></span> 차단됨</span>
+                  <div class="kanban-card__move" role="group" aria-label="카드 이동">
+                    <button class="btn-icon btn-sm" type="button" data-move="prev" aria-label="이전 열로 이동" disabled><span class="ico ico-arrow-l ico-sm" aria-hidden="true"></span></button>
+                    <button class="btn-icon btn-sm" type="button" data-move="next" aria-label="다음 열로 이동"><span class="ico ico-arrow-r ico-sm" aria-hidden="true"></span></button>
                   </div>
                 </div>
-                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">Onboarding flow redesign — step 3 wizard</p>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">온보딩 3단계 위저드 재설계</p>
                 <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
-                  <span class="badge badge--warning">Blocked</span>
-                  <span class="badge">Product</span>
+                  <span class="badge badge--warning">보통</span>
+                  <span class="badge">프로덕트</span>
                 </div>
                 <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
-                  <span class="avatar avatar--yellow avatar--sm" title="Jin Lee" style="color:var(--black)" aria-label="Assigned to Jin Lee">JL</span>
+                  <span class="avatar avatar--yellow avatar--sm" title="한예리" style="color:var(--black)" aria-label="담당자 한예리">한</span>
                   <div class="kanban-card__meta-icons">
                     <span class="ico ico-calendar ico-sm" aria-hidden="true"></span>
-                    <time datetime="2025-08-22">Aug 22</time>
+                    <time datetime="2026-07-25">7월 25일</time>
                     <span class="ico ico-upload ico-sm" aria-hidden="true"></span>
-                    <span aria-label="2 attachments">2</span>
+                    <span aria-label="첨부 2개">2</span>
                   </div>
                 </div>
               </article>
 
               <!-- CARD 3 -->
-              <article class="kanban-card" draggable="true" data-card-id="card-3" aria-label="Token audit task">
-                <div class="kanban-card__bar is-blue" aria-label="Low priority"></div>
+              <article class="kanban-card" draggable="true" data-card-id="card-3" aria-label="작업: 간격·타이포 스케일 토큰 감사">
+                <div class="kanban-card__bar is-blue" aria-hidden="true"></div>
                 <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
-                  <span class="status status--progress"><span class="status__shape"></span> Planned</span>
+                  <span class="status status--progress"><span class="status__shape" aria-hidden="true"></span> 예정</span>
+                  <div class="kanban-card__move" role="group" aria-label="카드 이동">
+                    <button class="btn-icon btn-sm" type="button" data-move="prev" aria-label="이전 열로 이동" disabled><span class="ico ico-arrow-l ico-sm" aria-hidden="true"></span></button>
+                    <button class="btn-icon btn-sm" type="button" data-move="next" aria-label="다음 열로 이동"><span class="ico ico-arrow-r ico-sm" aria-hidden="true"></span></button>
+                  </div>
                 </div>
-                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">Token audit — spacing & typography scale</p>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">간격·타이포 스케일 토큰 감사</p>
                 <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
-                  <span class="badge badge--blue">Tokens</span>
+                  <span class="badge badge--blue">토큰</span>
                 </div>
                 <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
-                  <span class="avatar avatar--black avatar--sm" title="Priya N." aria-label="Assigned to Priya N.">PN</span>
+                  <span class="avatar avatar--black avatar--sm" title="오세훈" aria-label="담당자 오세훈">오</span>
                   <div class="kanban-card__meta-icons">
                     <span class="ico ico-calendar ico-sm" aria-hidden="true"></span>
-                    <time datetime="2025-09-01">Sep 1</time>
+                    <time datetime="2026-08-01">8월 1일</time>
                     <span class="ico ico-mail ico-sm" aria-hidden="true"></span>
-                    <span aria-label="1 comment">1</span>
+                    <span aria-label="댓글 1개">1</span>
                   </div>
                 </div>
               </article>
 
               <!-- CARD 4 -->
-              <article class="kanban-card" draggable="true" data-card-id="card-4" aria-label="Accessibility audit task">
-                <div class="kanban-card__bar is-red" aria-label="High priority"></div>
+              <article class="kanban-card" draggable="true" data-card-id="card-4" aria-label="작업: WCAG 2.2 AA 접근성 전수 점검">
+                <div class="kanban-card__bar is-red" aria-hidden="true"></div>
                 <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
-                  <span class="status status--blocked"><span class="status__shape"></span> High</span>
+                  <span class="status status--progress"><span class="status__shape" aria-hidden="true"></span> 예정</span>
+                  <div class="kanban-card__move" role="group" aria-label="카드 이동">
+                    <button class="btn-icon btn-sm" type="button" data-move="prev" aria-label="이전 열로 이동" disabled><span class="ico ico-arrow-l ico-sm" aria-hidden="true"></span></button>
+                    <button class="btn-icon btn-sm" type="button" data-move="next" aria-label="다음 열로 이동"><span class="ico ico-arrow-r ico-sm" aria-hidden="true"></span></button>
+                  </div>
                 </div>
-                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">Full WCAG 2.2 AA accessibility audit</p>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">WCAG 2.2 AA 접근성 전수 점검</p>
                 <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
-                  <span class="badge badge--danger">High</span>
-                  <span class="badge">A11y</span>
+                  <span class="badge badge--danger">높음</span>
+                  <span class="badge">접근성</span>
                 </div>
                 <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
-                  <span class="avatar avatar--red avatar--sm" title="Mark Torres" aria-label="Assigned to Mark Torres">MT</span>
+                  <span class="avatar avatar--red avatar--sm" title="박지훈" aria-label="담당자 박지훈">박</span>
                   <div class="kanban-card__meta-icons">
                     <span class="ico ico-calendar ico-sm" aria-hidden="true"></span>
-                    <time datetime="2025-07-30">Jul 30</time>
+                    <time datetime="2026-07-15">7월 15일</time>
                     <span class="ico ico-mail ico-sm" aria-hidden="true"></span>
-                    <span aria-label="5 comments">5</span>
+                    <span aria-label="댓글 5개">5</span>
                   </div>
                 </div>
               </article>
             </div>
 
-            <button class="kanban-col__add" data-open-modal="modal-new-task" aria-label="Add card to Backlog">
-              <span class="ico ico-plus ico-sm" aria-hidden="true"></span> Add card
+            <button class="kanban-col__add" data-open-modal="modal-new-task" aria-label="백로그에 카드 추가">
+              <span class="ico ico-plus ico-sm" aria-hidden="true"></span> 카드 추가
             </button>
           </section>
 
-          <!-- COL: IN PROGRESS -->
-          <section class="kanban-col" aria-label="In Progress column" data-col="inprogress">
+          <!-- COL: 진행 중 -->
+          <section class="kanban-col" aria-label="진행 중 열" data-col="inprogress">
             <div class="kanban-col__header">
               <div class="kanban-col__bar is-blue" aria-hidden="true"></div>
-              <span class="kanban-col__name">In Progress</span>
-              <span class="badge badge--blue" aria-label="3 tasks in progress">3</span>
-              <div class="menu">
-                <button class="btn-icon btn-round" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-label="In Progress column options">
-                  <span class="ico ico-dots"></span>
-                </button>
-                <div class="menu__panel menu__panel--right" hidden role="menu">
-                  <button class="menu__item" role="menuitem"><span class="ico ico-plus"></span> Add card</button>
-                  <button class="menu__item" role="menuitem"><span class="ico ico-star"></span> Sort by priority</button>
-                  <div class="menu__sep" role="separator"></div>
-                  <button class="menu__item menu__item--danger" role="menuitem"><span class="ico ico-trash"></span> Clear column</button>
-                </div>
-              </div>
+              <span class="kanban-col__name">진행 중</span>
+              <span class="badge badge--blue" aria-label="진행 중 작업 3개">3</span>
             </div>
 
             <div class="kanban-col__body" id="col-inprogress" data-droptarget="inprogress">
               <!-- CARD 5 -->
-              <article class="kanban-card" draggable="true" data-card-id="card-5" aria-label="Component library v2 task">
-                <div class="kanban-card__bar is-red" aria-label="High priority"></div>
+              <article class="kanban-card" draggable="true" data-card-id="card-5" aria-label="작업: 컴포넌트 라이브러리 v2 — 버튼 변형">
+                <div class="kanban-card__bar is-red" aria-hidden="true"></div>
                 <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
-                  <span class="status status--progress"><span class="status__shape"></span> Active</span>
-                  <div class="menu">
-                    <button class="btn-icon" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-label="Card options" style="width:20px;height:20px;">
-                      <span class="ico ico-dots ico-sm"></span>
-                    </button>
-                    <div class="menu__panel menu__panel--right" hidden role="menu">
-                      <button class="menu__item" role="menuitem"><span class="ico ico-star"></span> Edit</button>
-                      <button class="menu__item menu__item--danger" role="menuitem"><span class="ico ico-trash"></span> Delete</button>
-                    </div>
+                  <span class="status status--progress"><span class="status__shape" aria-hidden="true"></span> 진행</span>
+                  <div class="kanban-card__move" role="group" aria-label="카드 이동">
+                    <button class="btn-icon btn-sm" type="button" data-move="prev" aria-label="이전 열로 이동"><span class="ico ico-arrow-l ico-sm" aria-hidden="true"></span></button>
+                    <button class="btn-icon btn-sm" type="button" data-move="next" aria-label="다음 열로 이동"><span class="ico ico-arrow-r ico-sm" aria-hidden="true"></span></button>
                   </div>
                 </div>
-                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">Component library v2 — button variants</p>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">컴포넌트 라이브러리 v2 — 버튼 변형</p>
                 <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
-                  <span class="badge badge--danger">High</span>
-                  <span class="badge badge--blue">Design System</span>
+                  <span class="badge badge--danger">높음</span>
+                  <span class="badge badge--blue">디자인 시스템</span>
                 </div>
                 <div style="padding: var(--space-2);">
-                  <div class="progress" aria-label="Progress: 60%">
-                    <div class="progress__fill" style="width:60%;" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
+                  <div class="progress" aria-label="진행률 60%">
+                    <div class="progress__fill" style="width:60%;" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" aria-label="버튼 변형 진행률"></div>
                   </div>
-                  <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:4px;">60% complete</p>
+                  <p style="font-size:var(--text-xs);color:var(--color-text-muted);margin-top:4px;">60% 완료</p>
                 </div>
                 <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
-                  <span class="avatar avatar--blue avatar--sm" title="Sarah Kim" aria-label="Assigned to Sarah Kim">SK</span>
+                  <span class="avatar avatar--blue avatar--sm" title="김서연" aria-label="담당자 김서연">김</span>
                   <div class="kanban-card__meta-icons">
                     <span class="ico ico-calendar ico-sm" aria-hidden="true"></span>
-                    <time datetime="2025-07-25">Jul 25</time>
+                    <time datetime="2026-07-12">7월 12일</time>
                     <span class="ico ico-mail ico-sm" aria-hidden="true"></span>
-                    <span aria-label="8 comments">8</span>
+                    <span aria-label="댓글 8개">8</span>
                   </div>
                 </div>
               </article>
 
               <!-- CARD 6 -->
-              <article class="kanban-card" draggable="true" data-card-id="card-6" aria-label="API rate limiting task">
-                <div class="kanban-card__bar is-yellow" aria-label="Medium priority"></div>
+              <article class="kanban-card" draggable="true" data-card-id="card-6" aria-label="작업: API 사용량·쿼터 대시보드">
+                <div class="kanban-card__bar is-yellow" aria-hidden="true"></div>
                 <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
-                  <span class="status status--progress"><span class="status__shape"></span> Active</span>
+                  <span class="status status--progress"><span class="status__shape" aria-hidden="true"></span> 진행</span>
+                  <div class="kanban-card__move" role="group" aria-label="카드 이동">
+                    <button class="btn-icon btn-sm" type="button" data-move="prev" aria-label="이전 열로 이동"><span class="ico ico-arrow-l ico-sm" aria-hidden="true"></span></button>
+                    <button class="btn-icon btn-sm" type="button" data-move="next" aria-label="다음 열로 이동"><span class="ico ico-arrow-r ico-sm" aria-hidden="true"></span></button>
+                  </div>
                 </div>
-                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">API rate limiting &amp; quota dashboard</p>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">API 사용량·쿼터 대시보드</p>
                 <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
-                  <span class="badge badge--warning">Medium</span>
-                  <span class="badge">Backend</span>
+                  <span class="badge badge--warning">보통</span>
+                  <span class="badge">백엔드</span>
                 </div>
                 <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
-                  <span class="avatar avatar--red avatar--sm" title="Mark Torres" aria-label="Assigned to Mark Torres">MT</span>
+                  <span class="avatar avatar--red avatar--sm" title="박지훈" aria-label="담당자 박지훈">박</span>
                   <div class="kanban-card__meta-icons">
                     <span class="ico ico-calendar ico-sm" aria-hidden="true"></span>
-                    <time datetime="2025-07-28">Jul 28</time>
+                    <time datetime="2026-07-14">7월 14일</time>
                     <span class="ico ico-upload ico-sm" aria-hidden="true"></span>
-                    <span aria-label="4 attachments">4</span>
+                    <span aria-label="첨부 4개">4</span>
                   </div>
                 </div>
               </article>
 
               <!-- CARD 7 -->
-              <article class="kanban-card" draggable="true" data-card-id="card-7" aria-label="Mobile nav redesign task">
-                <div class="kanban-card__bar is-blue" aria-label="Low priority"></div>
+              <article class="kanban-card" draggable="true" data-card-id="card-7" aria-label="작업: 모바일 하단 내비게이션 재설계">
+                <div class="kanban-card__bar is-blue" aria-hidden="true"></div>
                 <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
-                  <span class="status status--progress"><span class="status__shape"></span> Active</span>
+                  <span class="status status--progress"><span class="status__shape" aria-hidden="true"></span> 진행</span>
+                  <div class="kanban-card__move" role="group" aria-label="카드 이동">
+                    <button class="btn-icon btn-sm" type="button" data-move="prev" aria-label="이전 열로 이동"><span class="ico ico-arrow-l ico-sm" aria-hidden="true"></span></button>
+                    <button class="btn-icon btn-sm" type="button" data-move="next" aria-label="다음 열로 이동"><span class="ico ico-arrow-r ico-sm" aria-hidden="true"></span></button>
+                  </div>
                 </div>
-                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">Mobile navigation bottom bar redesign</p>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">모바일 하단 내비게이션 재설계</p>
                 <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
-                  <span class="badge badge--blue">Mobile</span>
+                  <span class="badge badge--blue">모바일</span>
                   <span class="badge">UX</span>
                 </div>
                 <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
-                  <span class="avatar avatar--yellow avatar--sm" title="Jin Lee" style="color:var(--black)" aria-label="Assigned to Jin Lee">JL</span>
+                  <span class="avatar avatar--yellow avatar--sm" title="한예리" style="color:var(--black)" aria-label="담당자 한예리">한</span>
                   <div class="kanban-card__meta-icons">
                     <span class="ico ico-calendar ico-sm" aria-hidden="true"></span>
-                    <time datetime="2025-08-05">Aug 5</time>
+                    <time datetime="2026-07-18">7월 18일</time>
                     <span class="ico ico-mail ico-sm" aria-hidden="true"></span>
-                    <span aria-label="2 comments">2</span>
+                    <span aria-label="댓글 2개">2</span>
                   </div>
                 </div>
               </article>
             </div>
 
-            <button class="kanban-col__add" data-open-modal="modal-new-task" aria-label="Add card to In Progress">
-              <span class="ico ico-plus ico-sm" aria-hidden="true"></span> Add card
+            <button class="kanban-col__add" data-open-modal="modal-new-task" aria-label="진행 중에 카드 추가">
+              <span class="ico ico-plus ico-sm" aria-hidden="true"></span> 카드 추가
             </button>
           </section>
 
-          <!-- COL: REVIEW -->
-          <section class="kanban-col" aria-label="Review column" data-col="review">
+          <!-- COL: 검토 -->
+          <section class="kanban-col" aria-label="검토 열" data-col="review">
             <div class="kanban-col__header">
               <div class="kanban-col__bar is-yellow" aria-hidden="true"></div>
-              <span class="kanban-col__name">Review</span>
-              <span class="badge badge--warning" aria-label="3 tasks in review">3</span>
-              <div class="menu">
-                <button class="btn-icon btn-round" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-label="Review column options">
-                  <span class="ico ico-dots"></span>
-                </button>
-                <div class="menu__panel menu__panel--right" hidden role="menu">
-                  <button class="menu__item" role="menuitem"><span class="ico ico-plus"></span> Add card</button>
-                  <button class="menu__item" role="menuitem"><span class="ico ico-star"></span> Sort by priority</button>
-                  <div class="menu__sep" role="separator"></div>
-                  <button class="menu__item menu__item--danger" role="menuitem"><span class="ico ico-trash"></span> Clear column</button>
-                </div>
-              </div>
+              <span class="kanban-col__name">검토</span>
+              <span class="badge badge--warning" aria-label="검토 작업 3개">3</span>
             </div>
 
             <div class="kanban-col__body" id="col-review" data-droptarget="review">
               <!-- CARD 8 -->
-              <article class="kanban-card" draggable="true" data-card-id="card-8" aria-label="Figma token export task">
-                <div class="kanban-card__bar is-red" aria-label="High priority"></div>
+              <article class="kanban-card" draggable="true" data-card-id="card-8" aria-label="작업: Figma 토큰 CSS 변수 내보내기 파이프라인">
+                <div class="kanban-card__bar is-red" aria-hidden="true"></div>
                 <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
-                  <span class="status status--progress"><span class="status__shape"></span> Review</span>
-                  <div class="menu">
-                    <button class="btn-icon" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-label="Card options" style="width:20px;height:20px;">
-                      <span class="ico ico-dots ico-sm"></span>
-                    </button>
-                    <div class="menu__panel menu__panel--right" hidden role="menu">
-                      <button class="menu__item" role="menuitem"><span class="ico ico-star"></span> Edit</button>
-                      <button class="menu__item menu__item--danger" role="menuitem"><span class="ico ico-trash"></span> Delete</button>
-                    </div>
+                  <span class="status status--progress"><span class="status__shape" aria-hidden="true"></span> 검토</span>
+                  <div class="kanban-card__move" role="group" aria-label="카드 이동">
+                    <button class="btn-icon btn-sm" type="button" data-move="prev" aria-label="이전 열로 이동"><span class="ico ico-arrow-l ico-sm" aria-hidden="true"></span></button>
+                    <button class="btn-icon btn-sm" type="button" data-move="next" aria-label="다음 열로 이동"><span class="ico ico-arrow-r ico-sm" aria-hidden="true"></span></button>
                   </div>
                 </div>
-                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">Figma token export pipeline to CSS vars</p>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">Figma 토큰을 CSS 변수로 내보내기</p>
                 <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
-                  <span class="badge badge--danger">High</span>
-                  <span class="badge badge--blue">Tokens</span>
+                  <span class="badge badge--danger">높음</span>
+                  <span class="badge badge--blue">토큰</span>
                 </div>
                 <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
-                  <span class="avatar avatar--black avatar--sm" title="Priya N." aria-label="Assigned to Priya N.">PN</span>
+                  <span class="avatar avatar--black avatar--sm" title="오세훈" aria-label="담당자 오세훈">오</span>
                   <div class="kanban-card__meta-icons">
                     <span class="ico ico-calendar ico-sm" aria-hidden="true"></span>
-                    <time datetime="2025-07-22">Jul 22</time>
+                    <time datetime="2026-07-10">7월 10일</time>
                     <span class="ico ico-mail ico-sm" aria-hidden="true"></span>
-                    <span aria-label="6 comments">6</span>
+                    <span aria-label="댓글 6개">6</span>
                   </div>
                 </div>
               </article>
 
               <!-- CARD 9 -->
-              <article class="kanban-card" draggable="true" data-card-id="card-9" aria-label="Search component task">
-                <div class="kanban-card__bar is-yellow" aria-label="Medium priority"></div>
+              <article class="kanban-card" draggable="true" data-card-id="card-9" aria-label="작업: 키보드 내비게이션 검색 컴포넌트">
+                <div class="kanban-card__bar is-yellow" aria-hidden="true"></div>
                 <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
-                  <span class="status status--progress"><span class="status__shape"></span> Review</span>
+                  <span class="status status--progress"><span class="status__shape" aria-hidden="true"></span> 검토</span>
+                  <div class="kanban-card__move" role="group" aria-label="카드 이동">
+                    <button class="btn-icon btn-sm" type="button" data-move="prev" aria-label="이전 열로 이동"><span class="ico ico-arrow-l ico-sm" aria-hidden="true"></span></button>
+                    <button class="btn-icon btn-sm" type="button" data-move="next" aria-label="다음 열로 이동"><span class="ico ico-arrow-r ico-sm" aria-hidden="true"></span></button>
+                  </div>
                 </div>
-                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">Search component with keyboard navigation</p>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">키보드 내비게이션 검색 컴포넌트</p>
                 <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
-                  <span class="badge badge--warning">Medium</span>
-                  <span class="badge">Component</span>
+                  <span class="badge badge--warning">보통</span>
+                  <span class="badge">컴포넌트</span>
                 </div>
                 <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
-                  <span class="avatar avatar--blue avatar--sm" title="Sarah Kim" aria-label="Assigned to Sarah Kim">SK</span>
+                  <span class="avatar avatar--blue avatar--sm" title="김서연" aria-label="담당자 김서연">김</span>
                   <div class="kanban-card__meta-icons">
                     <span class="ico ico-calendar ico-sm" aria-hidden="true"></span>
-                    <time datetime="2025-07-24">Jul 24</time>
+                    <time datetime="2026-07-11">7월 11일</time>
                     <span class="ico ico-upload ico-sm" aria-hidden="true"></span>
-                    <span aria-label="3 attachments">3</span>
+                    <span aria-label="첨부 3개">3</span>
                   </div>
                 </div>
               </article>
 
               <!-- CARD 10 -->
-              <article class="kanban-card" draggable="true" data-card-id="card-10" aria-label="Email notification system task">
-                <div class="kanban-card__bar is-blue" aria-label="Low priority"></div>
+              <article class="kanban-card" draggable="true" data-card-id="card-10" aria-label="작업: 이메일 알림 다이제스트 시스템">
+                <div class="kanban-card__bar is-blue" aria-hidden="true"></div>
                 <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
-                  <span class="status status--progress"><span class="status__shape"></span> Review</span>
+                  <span class="status status--progress"><span class="status__shape" aria-hidden="true"></span> 검토</span>
+                  <div class="kanban-card__move" role="group" aria-label="카드 이동">
+                    <button class="btn-icon btn-sm" type="button" data-move="prev" aria-label="이전 열로 이동"><span class="ico ico-arrow-l ico-sm" aria-hidden="true"></span></button>
+                    <button class="btn-icon btn-sm" type="button" data-move="next" aria-label="다음 열로 이동"><span class="ico ico-arrow-r ico-sm" aria-hidden="true"></span></button>
+                  </div>
                 </div>
-                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">Email notification digest system</p>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0;">이메일 알림 다이제스트 시스템</p>
                 <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
-                  <span class="badge">Backend</span>
-                  <span class="badge badge--blue">Infra</span>
+                  <span class="badge">백엔드</span>
+                  <span class="badge badge--blue">인프라</span>
                 </div>
                 <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
-                  <span class="avatar avatar--red avatar--sm" title="Mark Torres" aria-label="Assigned to Mark Torres">MT</span>
+                  <span class="avatar avatar--red avatar--sm" title="박지훈" aria-label="담당자 박지훈">박</span>
                   <div class="kanban-card__meta-icons">
                     <span class="ico ico-calendar ico-sm" aria-hidden="true"></span>
-                    <time datetime="2025-07-26">Jul 26</time>
+                    <time datetime="2026-07-13">7월 13일</time>
                     <span class="ico ico-mail ico-sm" aria-hidden="true"></span>
-                    <span aria-label="4 comments">4</span>
+                    <span aria-label="댓글 4개">4</span>
                   </div>
                 </div>
               </article>
             </div>
 
-            <button class="kanban-col__add" data-open-modal="modal-new-task" aria-label="Add card to Review">
-              <span class="ico ico-plus ico-sm" aria-hidden="true"></span> Add card
+            <button class="kanban-col__add" data-open-modal="modal-new-task" aria-label="검토에 카드 추가">
+              <span class="ico ico-plus ico-sm" aria-hidden="true"></span> 카드 추가
             </button>
           </section>
 
-          <!-- COL: DONE -->
-          <section class="kanban-col" aria-label="Done column" data-col="done">
+          <!-- COL: 완료 -->
+          <section class="kanban-col" aria-label="완료 열" data-col="done">
             <div class="kanban-col__header">
-              <div class="kanban-col__bar is-green" aria-hidden="true"></div>
-              <span class="kanban-col__name">Done</span>
-              <span class="badge badge--success" aria-label="5 tasks done">5</span>
-              <div class="menu">
-                <button class="btn-icon btn-round" data-menu-toggle aria-expanded="false" aria-haspopup="true" aria-label="Done column options">
-                  <span class="ico ico-dots"></span>
-                </button>
-                <div class="menu__panel menu__panel--right" hidden role="menu">
-                  <button class="menu__item" role="menuitem"><span class="ico ico-plus"></span> Add card</button>
-                  <button class="menu__item" role="menuitem"><span class="ico ico-star"></span> Sort by priority</button>
-                  <div class="menu__sep" role="separator"></div>
-                  <button class="menu__item menu__item--danger" role="menuitem"><span class="ico ico-trash"></span> Archive all</button>
-                </div>
-              </div>
+              <div class="kanban-col__bar is-ink" aria-hidden="true"></div>
+              <span class="kanban-col__name">완료</span>
+              <span class="badge badge--black" aria-label="완료 작업 3개">3</span>
             </div>
 
             <div class="kanban-col__body" id="col-done" data-droptarget="done">
               <!-- CARD 11 -->
-              <article class="kanban-card" draggable="true" data-card-id="card-11" aria-label="Color token system task — done" style="opacity:0.75;">
-                <div class="kanban-card__bar is-blue" aria-label="Low priority"></div>
+              <article class="kanban-card" draggable="true" data-card-id="card-11" aria-label="완료된 작업: 색상 토큰 시스템 시맨틱 레이어" style="opacity:0.7;">
+                <div class="kanban-card__bar is-blue" aria-hidden="true"></div>
                 <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
-                  <span class="status status--done"><span class="status__shape"></span> Done</span>
+                  <span class="status status--done"><span class="status__shape" aria-hidden="true"></span> 완료</span>
+                  <div class="kanban-card__move" role="group" aria-label="카드 이동">
+                    <button class="btn-icon btn-sm" type="button" data-move="prev" aria-label="이전 열로 이동"><span class="ico ico-arrow-l ico-sm" aria-hidden="true"></span></button>
+                    <button class="btn-icon btn-sm" type="button" data-move="next" aria-label="다음 열로 이동" disabled><span class="ico ico-arrow-r ico-sm" aria-hidden="true"></span></button>
+                  </div>
                 </div>
-                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0; text-decoration: line-through; color: var(--color-text-muted);">Color token system — semantic layer</p>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0; text-decoration: line-through; color: var(--color-text-muted);">색상 토큰 시스템 — 시맨틱 레이어</p>
                 <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
-                  <span class="badge badge--success">Done</span>
-                  <span class="badge badge--blue">Tokens</span>
+                  <span class="badge badge--blue">토큰</span>
                 </div>
                 <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
-                  <span class="avatar avatar--blue avatar--sm" title="Sarah Kim" aria-label="Assigned to Sarah Kim">SK</span>
+                  <span class="avatar avatar--blue avatar--sm" title="김서연" aria-label="담당자 김서연">김</span>
                   <div class="kanban-card__meta-icons">
                     <span class="ico ico-check ico-sm" aria-hidden="true"></span>
-                    <time datetime="2025-07-10">Jul 10</time>
+                    <time datetime="2026-06-28">6월 28일</time>
                   </div>
                 </div>
               </article>
 
               <!-- CARD 12 -->
-              <article class="kanban-card" draggable="true" data-card-id="card-12" aria-label="Grid system task — done" style="opacity:0.75;">
-                <div class="kanban-card__bar is-yellow" aria-label="Medium priority"></div>
+              <article class="kanban-card" draggable="true" data-card-id="card-12" aria-label="완료된 작업: 12컬럼 그리드 시스템 구현" style="opacity:0.7;">
+                <div class="kanban-card__bar is-yellow" aria-hidden="true"></div>
                 <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
-                  <span class="status status--done"><span class="status__shape"></span> Done</span>
+                  <span class="status status--done"><span class="status__shape" aria-hidden="true"></span> 완료</span>
+                  <div class="kanban-card__move" role="group" aria-label="카드 이동">
+                    <button class="btn-icon btn-sm" type="button" data-move="prev" aria-label="이전 열로 이동"><span class="ico ico-arrow-l ico-sm" aria-hidden="true"></span></button>
+                    <button class="btn-icon btn-sm" type="button" data-move="next" aria-label="다음 열로 이동" disabled><span class="ico ico-arrow-r ico-sm" aria-hidden="true"></span></button>
+                  </div>
                 </div>
-                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0; text-decoration: line-through; color: var(--color-text-muted);">12-column grid system implementation</p>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0; text-decoration: line-through; color: var(--color-text-muted);">12컬럼 그리드 시스템 구현</p>
                 <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
-                  <span class="badge badge--success">Done</span>
+                  <span class="badge">레이아웃</span>
                 </div>
                 <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
-                  <span class="avatar avatar--yellow avatar--sm" title="Jin Lee" style="color:var(--black)" aria-label="Assigned to Jin Lee">JL</span>
+                  <span class="avatar avatar--yellow avatar--sm" title="한예리" style="color:var(--black)" aria-label="담당자 한예리">한</span>
                   <div class="kanban-card__meta-icons">
                     <span class="ico ico-check ico-sm" aria-hidden="true"></span>
-                    <time datetime="2025-07-14">Jul 14</time>
+                    <time datetime="2026-06-25">6월 25일</time>
                   </div>
                 </div>
               </article>
 
               <!-- CARD 13 -->
-              <article class="kanban-card" draggable="true" data-card-id="card-13" aria-label="Typography scale task — done" style="opacity:0.75;">
-                <div class="kanban-card__bar is-blue" aria-label="Low priority"></div>
+              <article class="kanban-card" draggable="true" data-card-id="card-13" aria-label="완료된 작업: 도형 알파벳 원 삼각형 사각형 호" style="opacity:0.7;">
+                <div class="kanban-card__bar is-red" aria-hidden="true"></div>
                 <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
-                  <span class="status status--done"><span class="status__shape"></span> Done</span>
-                </div>
-                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0; text-decoration: line-through; color: var(--color-text-muted);">Typography scale — Jost variable font setup</p>
-                <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
-                  <span class="badge badge--success">Done</span>
-                  <span class="badge">Type</span>
-                </div>
-                <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
-                  <span class="avatar avatar--black avatar--sm" title="Priya N." aria-label="Assigned to Priya N.">PN</span>
-                  <div class="kanban-card__meta-icons">
-                    <span class="ico ico-check ico-sm" aria-hidden="true"></span>
-                    <time datetime="2025-07-17">Jul 17</time>
+                  <span class="status status--done"><span class="status__shape" aria-hidden="true"></span> 완료</span>
+                  <div class="kanban-card__move" role="group" aria-label="카드 이동">
+                    <button class="btn-icon btn-sm" type="button" data-move="prev" aria-label="이전 열로 이동"><span class="ico ico-arrow-l ico-sm" aria-hidden="true"></span></button>
+                    <button class="btn-icon btn-sm" type="button" data-move="next" aria-label="다음 열로 이동" disabled><span class="ico ico-arrow-r ico-sm" aria-hidden="true"></span></button>
                   </div>
                 </div>
-              </article>
-
-              <!-- CARD 14 -->
-              <article class="kanban-card" draggable="true" data-card-id="card-14" aria-label="Shape alphabet task — done" style="opacity:0.75;">
-                <div class="kanban-card__bar is-red" aria-label="High priority"></div>
-                <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
-                  <span class="status status--done"><span class="status__shape"></span> Done</span>
-                </div>
-                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0; text-decoration: line-through; color: var(--color-text-muted);">Shape alphabet: circle, triangle, arc, square</p>
+                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0; text-decoration: line-through; color: var(--color-text-muted);">도형 알파벳 — 원·삼각형·사각형·호</p>
                 <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
-                  <span class="badge badge--success">Done</span>
-                  <span class="badge badge--blue">Shapes</span>
+                  <span class="badge badge--blue">도형</span>
                 </div>
                 <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
-                  <span class="avatar avatar--red avatar--sm" title="Mark Torres" aria-label="Assigned to Mark Torres">MT</span>
+                  <span class="avatar avatar--red avatar--sm" title="박지훈" aria-label="담당자 박지훈">박</span>
                   <div class="kanban-card__meta-icons">
                     <span class="ico ico-check ico-sm" aria-hidden="true"></span>
-                    <time datetime="2025-07-20">Jul 20</time>
+                    <time datetime="2026-06-22">6월 22일</time>
                     <span class="ico ico-mail ico-sm" aria-hidden="true"></span>
-                    <span aria-label="11 comments">11</span>
-                  </div>
-                </div>
-              </article>
-
-              <!-- CARD 15 -->
-              <article class="kanban-card" draggable="true" data-card-id="card-15" aria-label="Button variants task — done" style="opacity:0.75;">
-                <div class="kanban-card__bar is-blue" aria-label="Low priority"></div>
-                <div class="kanban-card__top" style="padding: var(--space-2) var(--space-2) 0;">
-                  <span class="status status--done"><span class="status__shape"></span> Done</span>
-                </div>
-                <p class="kanban-card__title" style="padding: var(--space-1) var(--space-2) 0; text-decoration: line-through; color: var(--color-text-muted);">Button component — all 8 variants</p>
-                <div class="kanban-card__badges" style="padding: 0 var(--space-2);">
-                  <span class="badge badge--success">Done</span>
-                </div>
-                <div class="kanban-card__meta" style="padding: 0 var(--space-2) var(--space-2);">
-                  <span class="avatar avatar--blue avatar--sm" title="Sarah Kim" aria-label="Assigned to Sarah Kim">SK</span>
-                  <div class="kanban-card__meta-icons">
-                    <span class="ico ico-check ico-sm" aria-hidden="true"></span>
-                    <time datetime="2025-07-21">Jul 21</time>
+                    <span aria-label="댓글 11개">11</span>
                   </div>
                 </div>
               </article>
             </div>
 
-            <button class="kanban-col__add" data-open-modal="modal-new-task" aria-label="Add card to Done">
-              <span class="ico ico-plus ico-sm" aria-hidden="true"></span> Add card
+            <button class="kanban-col__add" data-open-modal="modal-new-task" aria-label="완료에 카드 추가">
+              <span class="ico ico-plus ico-sm" aria-hidden="true"></span> 카드 추가
             </button>
           </section>
 
@@ -802,16 +732,16 @@
 <!-- /app-shell -->
 
 
-<!-- ═══ MODAL: NEW TASK ═══ -->
+<!-- ═══ MODAL: 새 작업 ═══ -->
 <div class="modal" id="modal-new-task" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modal-new-task-title">
   <div class="modal__dialog modal__dialog--lg">
     <div class="modal__header">
       <h2 class="modal__title" id="modal-new-task-title">
         <span class="shape shape-square fill-blue" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:8px;" aria-hidden="true"></span>
-        Create New Task
+        새 작업 만들기
       </h2>
-      <button class="btn-icon modal__close" data-close-modal aria-label="Close modal">
-        <span class="ico ico-x"></span>
+      <button class="btn-icon modal__close" data-close-modal aria-label="닫기">
+        <span class="ico ico-x" aria-hidden="true"></span>
       </button>
     </div>
     <div class="modal__body">
@@ -819,132 +749,133 @@
         <div class="grid-2" style="gap:var(--space-4);">
           <!-- Title -->
           <div class="field" style="grid-column:1/-1;">
-            <label class="field__label req" for="task-title">Task Title</label>
-            <input class="input" id="task-title" name="title" type="text" placeholder="e.g. Implement dark mode tokens" required autocomplete="off" />
-            <p class="field__help">Describe the task clearly in one line.</p>
+            <label class="field__label req" for="task-title">작업 제목</label>
+            <input class="input" id="task-title" name="title" type="text" placeholder="예: 다크 모드 토큰 정리" required autocomplete="off" aria-describedby="err-task-title" />
+            <p class="field__error" id="err-task-title" role="alert" hidden>제목을 입력해 주세요.</p>
+            <p class="field__help">한 줄로 작업을 명확하게 적어 주세요.</p>
           </div>
 
           <!-- Status -->
           <div class="field">
-            <label class="field__label" for="task-status">Status</label>
+            <label class="field__label" for="task-status">상태</label>
             <select class="select" id="task-status" name="status">
-              <option value="backlog">Backlog</option>
-              <option value="inprogress">In Progress</option>
-              <option value="review">Review</option>
-              <option value="done">Done</option>
+              <option value="backlog">백로그</option>
+              <option value="inprogress">진행 중</option>
+              <option value="review">검토</option>
+              <option value="done">완료</option>
             </select>
           </div>
 
           <!-- Assignee -->
           <div class="field">
-            <label class="field__label" for="task-assignee">Assignee</label>
+            <label class="field__label" for="task-assignee">담당자</label>
             <select class="select" id="task-assignee" name="assignee">
-              <option value="">Unassigned</option>
-              <option value="sk">Sarah Kim</option>
-              <option value="mt">Mark Torres</option>
-              <option value="jl">Jin Lee</option>
-              <option value="pn">Priya Nair</option>
-              <option value="ra">Raj Anand</option>
+              <option value="">미지정</option>
+              <option value="kim">김서연</option>
+              <option value="park">박지훈</option>
+              <option value="han">한예리</option>
+              <option value="oh">오세훈</option>
+              <option value="jung">정도현</option>
             </select>
           </div>
 
           <!-- Priority -->
           <div class="field" style="grid-column:1/-1;">
-            <span class="field__label" id="priority-group-label">Priority</span>
-            <div class="priority-group" role="group" aria-labelledby="priority-group-label">
+            <span class="field__label" id="priority-group-label">우선순위</span>
+            <div class="priority-group" role="radiogroup" aria-labelledby="priority-group-label">
               <label class="priority-radio pr-high">
                 <input type="radio" name="priority" value="high" />
                 <span class="priority-radio__dot" aria-hidden="true"></span>
-                High
+                높음
               </label>
               <label class="priority-radio pr-med">
                 <input type="radio" name="priority" value="medium" checked />
                 <span class="priority-radio__dot" aria-hidden="true"></span>
-                Medium
+                보통
               </label>
               <label class="priority-radio pr-low">
                 <input type="radio" name="priority" value="low" />
                 <span class="priority-radio__dot" aria-hidden="true"></span>
-                Low
+                낮음
               </label>
             </div>
           </div>
 
           <!-- Due Date -->
           <div class="field">
-            <label class="field__label" for="task-due">Due Date</label>
+            <label class="field__label" for="task-due">마감일</label>
             <input class="input" id="task-due" name="due" type="date" />
           </div>
 
           <!-- Labels -->
           <div class="field">
-            <label class="field__label" for="task-label">Label</label>
+            <label class="field__label" for="task-label">라벨</label>
             <select class="select" id="task-label" name="label">
-              <option value="">None</option>
-              <option value="design-system">Design System</option>
-              <option value="ux">UX</option>
-              <option value="backend">Backend</option>
-              <option value="mobile">Mobile</option>
-              <option value="tokens">Tokens</option>
-              <option value="a11y">A11y</option>
-              <option value="infra">Infra</option>
+              <option value="">없음</option>
+              <option value="디자인 시스템">디자인 시스템</option>
+              <option value="UX">UX</option>
+              <option value="백엔드">백엔드</option>
+              <option value="모바일">모바일</option>
+              <option value="토큰">토큰</option>
+              <option value="접근성">접근성</option>
+              <option value="인프라">인프라</option>
             </select>
           </div>
 
           <!-- Description -->
           <div class="field" style="grid-column:1/-1;">
-            <label class="field__label" for="task-desc">Description</label>
-            <textarea class="textarea" id="task-desc" name="description" rows="3" placeholder="Add more context, acceptance criteria, or links..."></textarea>
+            <label class="field__label" for="task-desc">설명</label>
+            <textarea class="textarea" id="task-desc" name="description" rows="3" placeholder="배경, 완료 조건, 참고 링크를 적어 주세요…"></textarea>
           </div>
         </div>
       </form>
     </div>
     <div class="modal__footer">
-      <button class="btn btn-ghost" data-close-modal>Cancel</button>
+      <button class="btn btn-ghost" data-close-modal>취소</button>
       <button class="btn btn-primary" id="btn-create-task" type="button">
-        <span class="ico ico-plus ico-sm"></span> Create Task
+        <span class="ico ico-plus ico-sm" aria-hidden="true"></span> 작업 만들기
       </button>
     </div>
   </div>
 </div>
 
 
-<!-- ═══ DRAWER: FILTER ═══ -->
+<!-- ═══ DRAWER: 필터 ═══ -->
 <div class="drawer" id="drawer-filter" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="drawer-filter-title">
   <div class="drawer__header">
-    <h2 class="drawer__title" id="drawer-filter-title">Filter Board</h2>
-    <button class="btn-icon" data-close-drawer aria-label="Close filter panel">
-      <span class="ico ico-x"></span>
+    <h2 class="drawer__title" id="drawer-filter-title">보드 필터</h2>
+    <button class="btn-icon" data-close-drawer aria-label="필터 닫기">
+      <span class="ico ico-x" aria-hidden="true"></span>
     </button>
   </div>
   <div class="drawer__body">
     <div class="stack">
 
       <div class="field">
-        <label class="field__label" for="filter-search">Search tasks</label>
+        <label class="field__label" for="filter-search">작업 검색</label>
         <div class="searchbar">
           <span class="ico ico-search" aria-hidden="true"></span>
-          <input class="input" id="filter-search" type="search" placeholder="Search by title..." />
+          <input class="input" id="filter-search" type="search" placeholder="제목으로 검색…" />
         </div>
       </div>
 
       <div class="field">
-        <span class="field__label" id="filter-priority-label">Priority</span>
+        <span class="field__label" id="filter-priority-label">우선순위</span>
         <div class="stack" style="gap:var(--space-2);" role="group" aria-labelledby="filter-priority-label">
           <label class="checkbox">
             <input type="checkbox" checked />
             <span class="checkbox__box" aria-hidden="true"></span>
-            <span class="badge badge--danger" style="margin-left:4px;">High</span>
+            <span class="badge badge--danger" style="margin-left:4px;">높음</span>
           </label>
           <label class="checkbox">
             <input type="checkbox" checked />
             <span class="checkbox__box" aria-hidden="true"></span>
-            <span class="badge badge--warning" style="margin-left:4px;">Medium</span>
+            <span class="badge badge--warning" style="margin-left:4px;">보통</span>
           </label>
           <label class="checkbox">
             <input type="checkbox" checked />
             <span class="checkbox__box" aria-hidden="true"></span>
-            <span class="badge badge--blue" style="margin-left:4px;">Low</span>
+            <span class="badge badge--blue" style="margin-left:4px;">낮음</span>
           </label>
         </div>
       </div>
@@ -952,31 +883,31 @@
       <div class="rule"></div>
 
       <div class="field">
-        <span class="field__label" id="filter-assignee-label">Assignee</span>
+        <span class="field__label" id="filter-assignee-label">담당자</span>
         <div class="stack" style="gap:var(--space-2);" role="group" aria-labelledby="filter-assignee-label">
           <label class="checkbox">
             <input type="checkbox" checked />
             <span class="checkbox__box" aria-hidden="true"></span>
-            <span class="avatar avatar--blue avatar--sm" style="margin-left:6px;" aria-hidden="true">SK</span>
-            Sarah Kim
+            <span class="avatar avatar--blue avatar--sm" style="margin-left:6px;" aria-hidden="true">김</span>
+            김서연
           </label>
           <label class="checkbox">
             <input type="checkbox" checked />
             <span class="checkbox__box" aria-hidden="true"></span>
-            <span class="avatar avatar--red avatar--sm" style="margin-left:6px;" aria-hidden="true">MT</span>
-            Mark Torres
+            <span class="avatar avatar--red avatar--sm" style="margin-left:6px;" aria-hidden="true">박</span>
+            박지훈
           </label>
           <label class="checkbox">
             <input type="checkbox" checked />
             <span class="checkbox__box" aria-hidden="true"></span>
-            <span class="avatar avatar--yellow avatar--sm" style="margin-left:6px;color:var(--black);" aria-hidden="true">JL</span>
-            Jin Lee
+            <span class="avatar avatar--yellow avatar--sm" style="margin-left:6px;color:var(--black);" aria-hidden="true">한</span>
+            한예리
           </label>
           <label class="checkbox">
             <input type="checkbox" checked />
             <span class="checkbox__box" aria-hidden="true"></span>
-            <span class="avatar avatar--black avatar--sm" style="margin-left:6px;" aria-hidden="true">PN</span>
-            Priya Nair
+            <span class="avatar avatar--black avatar--sm" style="margin-left:6px;" aria-hidden="true">오</span>
+            오세훈
           </label>
         </div>
       </div>
@@ -984,17 +915,17 @@
       <div class="rule"></div>
 
       <div class="field">
-        <span class="field__label" id="filter-label-label">Labels</span>
+        <span class="field__label" id="filter-label-label">라벨</span>
         <div class="flex flex-wrap gap-2" role="group" aria-labelledby="filter-label-label" style="gap:var(--space-2);">
           <label class="checkbox">
             <input type="checkbox" checked />
             <span class="checkbox__box" aria-hidden="true"></span>
-            Design System
+            디자인 시스템
           </label>
           <label class="checkbox">
             <input type="checkbox" checked />
             <span class="checkbox__box" aria-hidden="true"></span>
-            Tokens
+            토큰
           </label>
           <label class="checkbox">
             <input type="checkbox" checked />
@@ -1004,17 +935,17 @@
           <label class="checkbox">
             <input type="checkbox" checked />
             <span class="checkbox__box" aria-hidden="true"></span>
-            Backend
+            백엔드
           </label>
           <label class="checkbox">
             <input type="checkbox" checked />
             <span class="checkbox__box" aria-hidden="true"></span>
-            Mobile
+            모바일
           </label>
           <label class="checkbox">
             <input type="checkbox" checked />
             <span class="checkbox__box" aria-hidden="true"></span>
-            A11y
+            접근성
           </label>
         </div>
       </div>
@@ -1022,28 +953,36 @@
       <div class="rule"></div>
 
       <div class="field">
-        <label class="field__label" for="filter-due-from">Due date range</label>
+        <label class="field__label" for="filter-due-from">마감일 범위</label>
         <div class="flex gap-2" style="gap:var(--space-2);flex-wrap:wrap;">
-          <input class="input input-sm" id="filter-due-from" type="date" aria-label="Filter from date" style="flex:1;" />
-          <input class="input input-sm" id="filter-due-to" type="date" aria-label="Filter to date" style="flex:1;" />
+          <input class="input input-sm" id="filter-due-from" type="date" aria-label="시작 날짜" style="flex:1;" />
+          <input class="input input-sm" id="filter-due-to" type="date" aria-label="종료 날짜" style="flex:1;" />
         </div>
       </div>
 
     </div>
   </div>
   <div class="drawer__footer">
-    <button class="btn btn-ghost btn-sm">Reset</button>
-    <button class="btn btn-primary btn-sm" data-close-drawer>Apply Filters</button>
+    <button class="btn btn-ghost btn-sm">초기화</button>
+    <button class="btn btn-primary btn-sm" data-close-drawer>필터 적용</button>
   </div>
 </div>
 
 
-<!-- ═══ INLINE DRAG-AND-DROP SCRIPT ═══ -->
+<!-- ═══ BOARD INTERACTION SCRIPT (DnD + keyboard column-move + new task) ═══ -->
 <script>
 (function () {
   'use strict';
 
+  var COLS = ['backlog', 'inprogress', 'review', 'done'];
+  var COL_NAMES = { backlog: '백로그', inprogress: '진행 중', review: '검토', done: '완료' };
+
   var dragging = null;
+
+  function announce(msg) {
+    var live = document.getElementById('kanban-live');
+    if (live) live.textContent = msg;
+  }
 
   function getDropTarget(el) {
     while (el) {
@@ -1053,6 +992,32 @@
     return null;
   }
 
+  function updateCounts() {
+    document.querySelectorAll('[data-droptarget]').forEach(function (col) {
+      var count = col.querySelectorAll('[data-card-id]').length;
+      var colEl = col.closest('.kanban-col');
+      if (!colEl) return;
+      var badge = colEl.querySelector('.kanban-col__header .badge');
+      var colKey = col.getAttribute('data-droptarget');
+      if (badge) {
+        badge.textContent = count;
+        badge.setAttribute('aria-label', COL_NAMES[colKey] + ' 작업 ' + count + '개');
+      }
+    });
+  }
+
+  // keep a card's move buttons disabled at the board edges
+  function syncMoveButtons(card) {
+    var body = card.closest('[data-droptarget]');
+    if (!body) return;
+    var i = COLS.indexOf(body.getAttribute('data-droptarget'));
+    var prev = card.querySelector('[data-move="prev"]');
+    var next = card.querySelector('[data-move="next"]');
+    if (prev) prev.disabled = i <= 0;
+    if (next) next.disabled = i >= COLS.length - 1;
+  }
+
+  // ─── Drag and drop ───
   document.addEventListener('dragstart', function (e) {
     var card = e.target.closest('[data-card-id]');
     if (!card) return;
@@ -1063,13 +1028,8 @@
   });
 
   document.addEventListener('dragend', function () {
-    if (dragging) {
-      dragging.classList.remove('is-dragging');
-      dragging = null;
-    }
-    document.querySelectorAll('.drag-over').forEach(function (el) {
-      el.classList.remove('drag-over');
-    });
+    if (dragging) { dragging.classList.remove('is-dragging'); dragging = null; }
+    document.querySelectorAll('.drag-over').forEach(function (el) { el.classList.remove('drag-over'); });
   });
 
   document.addEventListener('dragover', function (e) {
@@ -1077,19 +1037,14 @@
     if (!target || !dragging) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    document.querySelectorAll('.drag-over').forEach(function (el) {
-      if (el !== target) el.classList.remove('drag-over');
-    });
+    document.querySelectorAll('.drag-over').forEach(function (el) { if (el !== target) el.classList.remove('drag-over'); });
     target.classList.add('drag-over');
   });
 
   document.addEventListener('dragleave', function (e) {
     var target = getDropTarget(e.target);
     if (!target) return;
-    // Only remove if we actually left the drop target
-    if (!target.contains(e.relatedTarget)) {
-      target.classList.remove('drag-over');
-    }
+    if (!target.contains(e.relatedTarget)) target.classList.remove('drag-over');
   });
 
   document.addEventListener('drop', function (e) {
@@ -1097,141 +1052,177 @@
     if (!target || !dragging) return;
     e.preventDefault();
     target.classList.remove('drag-over');
-
-    // Find the card element to insert before (if dropping on a card)
     var overCard = e.target.closest('[data-card-id]');
-    if (overCard && overCard !== dragging) {
-      target.insertBefore(dragging, overCard);
-    } else {
-      target.appendChild(dragging);
-    }
-
-    // Update column badge counts
+    if (overCard && overCard !== dragging) target.insertBefore(dragging, overCard);
+    else target.appendChild(dragging);
+    syncMoveButtons(dragging);
     updateCounts();
   });
 
-  function updateCounts() {
-    document.querySelectorAll('[data-droptarget]').forEach(function (col) {
-      var count = col.querySelectorAll('[data-card-id]').length;
-      var colEl = col.closest('.kanban-col');
-      if (!colEl) return;
-      var badge = colEl.querySelector('.kanban-col__header .badge');
-      if (badge) badge.textContent = count;
-    });
-  }
+  // ─── Keyboard / pointer column move (DnD alternative) ───
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-move]');
+    if (!btn || btn.disabled) return;
+    var card = btn.closest('[data-card-id]');
+    var body = card && card.closest('[data-droptarget]');
+    if (!card || !body) return;
+    var dir = btn.getAttribute('data-move');
+    var i = COLS.indexOf(body.getAttribute('data-droptarget'));
+    var ni = dir === 'next' ? i + 1 : i - 1;
+    if (ni < 0 || ni >= COLS.length) return;
+    var dest = document.getElementById('col-' + COLS[ni]);
+    if (!dest) return;
+    dest.appendChild(card);
+    syncMoveButtons(card);
+    updateCounts();
+    var titleEl = card.querySelector('.kanban-card__title');
+    var title = titleEl ? titleEl.textContent.trim() : '카드';
+    announce('“' + title + '” 카드를 ' + COL_NAMES[COLS[ni]] + ' 열로 옮겼습니다.');
+    // keep focus on a usable move button of the relocated card
+    var focusBtn = card.querySelector('[data-move="' + dir + '"]');
+    if (!focusBtn || focusBtn.disabled) focusBtn = card.querySelector('[data-move]:not([disabled])');
+    if (focusBtn) focusBtn.focus();
+  });
 
-  // ─── New task form submit ───
-  var btnCreate = document.getElementById('btn-create-task');
-  if (btnCreate) {
-    btnCreate.addEventListener('click', function () {
-      var form = document.getElementById('new-task-form');
-      var titleEl = document.getElementById('task-title');
-      if (!titleEl.value.trim()) {
-        titleEl.focus();
-        titleEl.classList.add('is-error');
-        return;
-      }
-      titleEl.classList.remove('is-error');
-
-      // Close modal via app.js convention
-      var modal = document.getElementById('modal-new-task');
-      if (modal) {
-        modal.classList.remove('is-open');
-        modal.setAttribute('aria-hidden', 'true');
-        document.body.classList.remove('modal-open');
-      }
-
-      // Append new card to chosen column
-      var status = document.getElementById('task-status').value;
-      var priority = document.querySelector('input[name="priority"]:checked');
-      var priorityVal = priority ? priority.value : 'medium';
-      var assignee = document.getElementById('task-assignee').value;
-      var due = document.getElementById('task-due').value;
-      var label = document.getElementById('task-label').value;
-      var title = titleEl.value.trim();
-
-      var barClass = priorityVal === 'high' ? 'is-red' : (priorityVal === 'low' ? 'is-blue' : 'is-yellow');
-      var badgeClass = priorityVal === 'high' ? 'badge--danger' : (priorityVal === 'low' ? 'badge--blue' : 'badge--warning');
-      var badgeText = priorityVal.charAt(0).toUpperCase() + priorityVal.slice(1);
-
-      var assigneeMap = { sk: 'SK', mt: 'MT', jl: 'JL', pn: 'PN', ra: 'RA' };
-      var avatarColorMap = { sk: 'blue', mt: 'red', jl: 'yellow', pn: 'black', ra: 'blue' };
-      var avatarInitials = assignee ? (assigneeMap[assignee] || '') : '';
-      var avatarColor = assignee ? (avatarColorMap[assignee] || 'black') : 'black';
-
-      var newId = 'card-new-' + Date.now();
-      var card = document.createElement('article');
-      card.className = 'kanban-card';
-      card.draggable = true;
-      card.dataset.cardId = newId;
-      card.setAttribute('aria-label', title + ' task');
-      card.innerHTML =
-        '<div class="kanban-card__bar ' + barClass + '" aria-label="' + badgeText + ' priority"></div>' +
-        '<div class="kanban-card__top" style="padding:var(--space-2) var(--space-2) 0;">' +
-          '<span class="status status--progress"><span class="status__shape"></span> New</span>' +
-        '</div>' +
-        '<p class="kanban-card__title" style="padding:var(--space-1) var(--space-2) 0;">' + escapeHtml(title) + '</p>' +
-        '<div class="kanban-card__badges" style="padding:0 var(--space-2);">' +
-          '<span class="badge ' + badgeClass + '">' + badgeText + '</span>' +
-          (label ? '<span class="badge">' + escapeHtml(label) + '</span>' : '') +
-        '</div>' +
-        '<div class="kanban-card__meta" style="padding:0 var(--space-2) var(--space-2);">' +
-          (avatarInitials ? '<span class="avatar avatar--' + avatarColor + ' avatar--sm"' + (avatarColor === 'yellow' ? ' style="color:var(--black)"' : '') + '>' + avatarInitials + '</span>' : '') +
-          '<div class="kanban-card__meta-icons">' +
-            (due ? '<span class="ico ico-calendar ico-sm" aria-hidden="true"></span><time>' + due + '</time>' : '') +
-          '</div>' +
-        '</div>';
-
-      var colId = 'col-' + status;
-      var colBody = document.getElementById(colId);
-      if (colBody) colBody.appendChild(card);
-
-      form.reset();
-      updateCounts();
-
-      // Fire toast
-      if (window.Bauhaus && window.Bauhaus.toast) {
-        window.Bauhaus.toast({ title: 'Task created', text: '"' + title + '" added to ' + status, variant: 'success' });
-      }
-    });
-  }
+  // ─── New task form ───
+  var TEAM = {
+    kim:  { name: '김서연', ini: '김', color: 'blue' },
+    park: { name: '박지훈', ini: '박', color: 'red' },
+    han:  { name: '한예리', ini: '한', color: 'yellow' },
+    oh:   { name: '오세훈', ini: '오', color: 'black' },
+    jung: { name: '정도현', ini: '정', color: 'blue' }
+  };
+  var PRIORITY = {
+    high:   { bar: 'is-red',    badge: 'badge--danger',  label: '높음' },
+    medium: { bar: 'is-yellow', badge: 'badge--warning', label: '보통' },
+    low:    { bar: 'is-blue',   badge: 'badge--blue',    label: '낮음' }
+  };
 
   function escapeHtml(str) {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  // ─── Segmented view switch ───
-  document.querySelectorAll('.segmented').forEach(function (seg) {
-    seg.querySelectorAll('.segmented__option').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        seg.querySelectorAll('.segmented__option').forEach(function (b) { b.setAttribute('aria-pressed', 'false'); });
-        btn.setAttribute('aria-pressed', 'true');
-      });
-    });
-  });
+  var btnCreate = document.getElementById('btn-create-task');
+  if (btnCreate) {
+    btnCreate.addEventListener('click', function () {
+      var form = document.getElementById('new-task-form');
+      var titleEl = document.getElementById('task-title');
+      var errEl = document.getElementById('err-task-title');
+      if (!titleEl.value.trim()) {
+        titleEl.classList.add('is-invalid');
+        titleEl.setAttribute('aria-invalid', 'true');
+        if (errEl) errEl.hidden = false;
+        titleEl.focus();
+        return;
+      }
+      titleEl.classList.remove('is-invalid');
+      titleEl.removeAttribute('aria-invalid');
+      if (errEl) errEl.hidden = true;
 
-  // ─── Mobile sidebar backdrop ───
+      if (window.Bauhaus && window.Bauhaus.closeModal) {
+        window.Bauhaus.closeModal(document.getElementById('modal-new-task'));
+      }
+
+      var status = document.getElementById('task-status').value;
+      var priorityInput = document.querySelector('input[name="priority"]:checked');
+      var pr = PRIORITY[priorityInput ? priorityInput.value : 'medium'] || PRIORITY.medium;
+      var assigneeKey = document.getElementById('task-assignee').value;
+      var member = assigneeKey ? TEAM[assigneeKey] : null;
+      var due = document.getElementById('task-due').value;
+      var label = document.getElementById('task-label').value;
+      var title = titleEl.value.trim();
+
+      var atFirst = COLS.indexOf(status) <= 0;
+      var atLast = COLS.indexOf(status) >= COLS.length - 1;
+
+      var avatarHtml = member
+        ? '<span class="avatar avatar--' + member.color + ' avatar--sm"' + (member.color === 'yellow' ? ' style="color:var(--black)"' : '') + ' title="' + member.name + '" aria-label="담당자 ' + member.name + '">' + member.ini + '</span>'
+        : '';
+      var dueHtml = due
+        ? '<span class="ico ico-calendar ico-sm" aria-hidden="true"></span><time datetime="' + due + '">' + formatDue(due) + '</time>'
+        : '';
+
+      var card = document.createElement('article');
+      card.className = 'kanban-card';
+      card.draggable = true;
+      card.dataset.cardId = 'card-new-' + Date.now();
+      card.setAttribute('aria-label', '작업: ' + title);
+      card.innerHTML =
+        '<div class="kanban-card__bar ' + pr.bar + '" aria-hidden="true"></div>' +
+        '<div class="kanban-card__top" style="padding:var(--space-2) var(--space-2) 0;">' +
+          '<span class="status status--progress"><span class="status__shape" aria-hidden="true"></span> 신규</span>' +
+          '<div class="kanban-card__move" role="group" aria-label="카드 이동">' +
+            '<button class="btn-icon btn-sm" type="button" data-move="prev" aria-label="이전 열로 이동"' + (atFirst ? ' disabled' : '') + '><span class="ico ico-arrow-l ico-sm" aria-hidden="true"></span></button>' +
+            '<button class="btn-icon btn-sm" type="button" data-move="next" aria-label="다음 열로 이동"' + (atLast ? ' disabled' : '') + '><span class="ico ico-arrow-r ico-sm" aria-hidden="true"></span></button>' +
+          '</div>' +
+        '</div>' +
+        '<p class="kanban-card__title" style="padding:var(--space-1) var(--space-2) 0;">' + escapeHtml(title) + '</p>' +
+        '<div class="kanban-card__badges" style="padding:0 var(--space-2);">' +
+          '<span class="badge ' + pr.badge + '">' + pr.label + '</span>' +
+          (label ? '<span class="badge">' + escapeHtml(label) + '</span>' : '') +
+        '</div>' +
+        '<div class="kanban-card__meta" style="padding:0 var(--space-2) var(--space-2);">' +
+          avatarHtml +
+          '<div class="kanban-card__meta-icons">' + dueHtml + '</div>' +
+        '</div>';
+
+      var colBody = document.getElementById('col-' + status);
+      if (colBody) colBody.appendChild(card);
+
+      form.reset();
+      updateCounts();
+
+      if (window.Bauhaus && window.Bauhaus.toast) {
+        window.Bauhaus.toast({
+          title: '작업을 추가했습니다',
+          text: '“' + title + '” · ' + COL_NAMES[status] + ' 열에 추가',
+          variant: 'success'
+        });
+      }
+    });
+  }
+
+  function formatDue(iso) {
+    var parts = iso.split('-');
+    if (parts.length !== 3) return iso;
+    return Number(parts[1]) + '월 ' + Number(parts[2]) + '일';
+  }
+
+  // clear the title error as the user types
+  var titleField = document.getElementById('task-title');
+  if (titleField) {
+    titleField.addEventListener('input', function () {
+      if (titleField.value.trim()) {
+        titleField.classList.remove('is-invalid');
+        titleField.removeAttribute('aria-invalid');
+        var errEl = document.getElementById('err-task-title');
+        if (errEl) errEl.hidden = true;
+      }
+    });
+  }
+
+  // ─── Mobile sidebar (sole owner — capture + stopPropagation prevents app.js double-toggle) ───
   var backdrop = document.getElementById('sidebar-backdrop');
+  document.addEventListener('click', function (e) {
+    var trigger = e.target.closest('[data-sidebar-mobile]');
+    if (!trigger) return;
+    e.stopPropagation();
+    var sidebar = document.getElementById('sidebar');
+    if (!sidebar) return;
+    var open = sidebar.classList.toggle('is-mobile-open');
+    trigger.setAttribute('aria-expanded', String(open));
+    if (backdrop) backdrop.classList.toggle('is-open', open);
+  }, true);
+
   if (backdrop) {
     backdrop.addEventListener('click', function () {
       var sidebar = document.getElementById('sidebar');
       if (sidebar) sidebar.classList.remove('is-mobile-open');
       backdrop.classList.remove('is-open');
-      var mobileBtn = document.querySelector('[data-sidebar-mobile]');
-      if (mobileBtn) mobileBtn.setAttribute('aria-expanded', 'false');
+      var b = document.querySelector('[data-sidebar-mobile]');
+      if (b) b.setAttribute('aria-expanded', 'false');
     });
   }
-
-  // Extend sidebar-mobile toggle to show backdrop
-  document.addEventListener('click', function (e) {
-    if (e.target.closest('[data-sidebar-mobile]')) {
-      var sidebar = document.getElementById('sidebar');
-      if (!sidebar) return;
-      var isOpen = sidebar.classList.toggle('is-mobile-open');
-      e.target.closest('[data-sidebar-mobile]').setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-      if (backdrop) backdrop.classList.toggle('is-open', isOpen);
-    }
-  }, true);
 
 })();
 </script>

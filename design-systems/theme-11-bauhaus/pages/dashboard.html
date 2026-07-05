@@ -1,9 +1,21 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Analytics Dashboard — BAUHAUS</title>
+<title>분석 대시보드 — BAUHAUS</title>
+<script>
+  /* FOUC guard — resolve theme + mark js before first paint (key matches app.js) */
+  (function () {
+    try {
+      var t = localStorage.getItem('bauhaus-theme');
+      if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+    document.documentElement.classList.add('js');
+  })();
+</script>
+<noscript><style>[data-reveal]{opacity:1 !important;transform:none !important;}</style></noscript>
 <link rel="stylesheet" href="../tokens.css" />
 <link rel="stylesheet" href="../semantic.css" />
 <link rel="stylesheet" href="../base.css" />
@@ -25,7 +37,7 @@
     flex-wrap: wrap;
     margin-bottom: var(--space-7);
     padding-bottom: var(--space-5);
-    border-bottom: var(--border-3) solid var(--black);
+    border-bottom: var(--border-3) solid var(--color-border);
   }
   .page-header__left { display: flex; flex-direction: column; gap: var(--space-1); }
   .page-header__right { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
@@ -33,58 +45,44 @@
     font-family: var(--font-display);
     font-size: var(--text-3xl);
     font-weight: var(--weight-black);
-    letter-spacing: var(--tracking-tighter);
-    text-transform: uppercase;
-    line-height: 1;
+    letter-spacing: var(--tracking-tight);
+    line-height: 1.05;
   }
+
+  /* Hero stat — asymmetric bento anchor */
+  .statcard--hero { justify-content: flex-start; gap: var(--space-2); }
+  .statcard--hero .statcard__value { font-size: clamp(2.75rem, 6vw, var(--text-6xl)); }
+  .statcard__context { color: var(--color-text-muted); font-size: var(--text-sm); line-height: var(--leading-snug); margin-top: var(--space-1); }
+  /* small satellite stats — subordinate to the hero, never overflow the narrow cell */
+  .statcard--sm .statcard__value { font-size: var(--text-2xl); }
 
   /* Bar chart */
   .bar-chart {
     display: flex;
     align-items: flex-end;
-    gap: var(--space-2);
-    height: 180px;
+    gap: var(--space-3);
+    height: 200px;
     padding-bottom: var(--space-6);
     position: relative;
   }
-  .bar-chart__bar-wrap {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-1);
-    flex: 1;
-  }
+  .bar-chart__bar-wrap { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: var(--space-1); flex: 1; height: 100%; }
   .bar-chart__bar {
     width: 100%;
     background: var(--blue-500);
-    border: var(--border-2) solid var(--black);
+    border: var(--border-2) solid var(--color-border);
     min-height: 4px;
     transition: opacity 0.2s;
   }
   .bar-chart__bar:hover { opacity: 0.75; }
-  .bar-chart__bar--red { background: var(--red-500); }
   .bar-chart__bar--yellow { background: var(--yellow-400); }
-  .bar-chart__label {
-    font-size: var(--text-2xs);
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-wide);
-    color: var(--color-text-muted);
-    font-weight: var(--weight-bold);
-    font-family: var(--font-display);
-    text-align: center;
-  }
-  .bar-chart__grid-lines {
-    position: absolute;
-    inset: 0 0 var(--space-6) 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    pointer-events: none;
-  }
-  .bar-chart__grid-line {
-    border-top: 1px dashed var(--color-divider);
-    width: 100%;
-  }
+  .bar-chart__label { position: absolute; top: 100%; left: 0; right: 0; padding-top: var(--space-1); font-size: var(--text-2xs); letter-spacing: var(--tracking-wide); color: var(--color-text-muted); font-weight: var(--weight-bold); font-family: var(--font-display); text-align: center; }
+  .bar-chart__grid-lines { position: absolute; inset: 0 0 var(--space-6) 0; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
+  .bar-chart__grid-line { border-top: 1px dashed var(--color-divider); width: 100%; }
+
+  .chart-legend { display: inline-flex; align-items: center; gap: var(--space-4); font-size: var(--text-xs); color: var(--color-text-muted); flex-wrap: wrap; }
+  .legend-dot { width: 11px; height: 11px; border: var(--border-2) solid var(--color-border); display: inline-block; margin-right: 5px; vertical-align: middle; }
+  .legend-dot--blue { background: var(--blue-500); }
+  .legend-dot--yellow { background: var(--yellow-400); }
 
   /* KPI section */
   .kpi-block { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); padding: var(--space-4) 0; }
@@ -95,28 +93,25 @@
 
   /* Drawer filter content */
   .filter-section { margin-bottom: var(--space-5); }
-  .filter-section__title { font-family: var(--font-display); font-weight: var(--weight-bold); font-size: var(--text-sm); text-transform: uppercase; letter-spacing: var(--tracking-wide); margin-bottom: var(--space-3); }
+  .filter-section__title { font-family: var(--font-display); font-weight: var(--weight-bold); font-size: var(--text-sm); text-transform: uppercase; letter-spacing: var(--tracking-caps-ko); margin-bottom: var(--space-3); }
   .filter-checks { display: flex; flex-direction: column; gap: var(--space-2); }
+  .date-range-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+  @media (max-width: 480px) { .date-range-grid { grid-template-columns: 1fr; } }
 
   /* Section spacers */
   .section-gap { margin-top: var(--space-6); }
 
-  /* Navbar breadcrumb area */
-  .navbar__breadcrumb-area {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-  }
+  .navbar__breadcrumb-area { display: flex; flex-direction: column; gap: var(--space-1); }
 
   @media (max-width: 640px) {
     .page-header { flex-direction: column; align-items: flex-start; }
     .page-title { font-size: var(--text-2xl); }
-    .bar-chart { height: 120px; }
+    .bar-chart { height: 150px; }
   }
 </style>
 </head>
 <body>
-<a href="#main" class="sr-only">Skip to content</a>
+<a href="#main" class="sr-only">본문으로 건너뛰기</a>
 
 <!-- SCRIM (shared) -->
 <div class="scrim" data-shared-scrim></div>
@@ -125,53 +120,53 @@
 <div class="app-shell">
 
   <!-- SIDEBAR -->
-  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+  <aside class="sidebar" id="sidebar" aria-label="주요 내비게이션">
     <div class="sidebar__head">
-      <span class="logomark"><span class="mark"><i></i><i></i><i></i></span> BAUHAUS</span>
+      <span class="logomark"><span class="mark" aria-hidden="true"><i></i><i></i><i></i></span> BAUHAUS</span>
     </div>
-    <nav class="sidebar__nav" aria-label="Sidebar">
-      <span class="sidebar__group-label">Main</span>
+    <nav class="sidebar__nav" aria-label="사이드바">
+      <span class="sidebar__group-label">메인</span>
       <a class="nav-link is-active" href="dashboard.html" aria-current="page">
         <span class="ico ico-chart"></span>
-        <span class="nav-link__text">Dashboard</span>
+        <span class="nav-link__text">대시보드</span>
       </a>
-      <a class="nav-link" href="#">
+      <a class="nav-link" href="kanban.html">
         <span class="ico ico-grid"></span>
-        <span class="nav-link__text">Projects</span>
+        <span class="nav-link__text">프로젝트</span>
         <span class="badge badge--red badge--round nav-link__badge">3</span>
       </a>
-      <a class="nav-link" href="#">
+      <a class="nav-link" href="profile.html">
         <span class="ico ico-user"></span>
-        <span class="nav-link__text">Customers</span>
+        <span class="nav-link__text">고객</span>
       </a>
-      <a class="nav-link" href="#">
+      <a class="nav-link" href="product.html">
         <span class="ico ico-cart"></span>
-        <span class="nav-link__text">Orders</span>
+        <span class="nav-link__text">주문</span>
         <span class="badge badge--yellow nav-link__badge">12</span>
       </a>
-      <span class="sidebar__group-label">Reports</span>
-      <a class="nav-link" href="#">
+      <span class="sidebar__group-label">리포트</span>
+      <a class="nav-link" href="dashboard.html">
         <span class="ico ico-chart"></span>
-        <span class="nav-link__text">Analytics</span>
+        <span class="nav-link__text">분석</span>
       </a>
-      <a class="nav-link" href="#">
+      <a class="nav-link" href="dashboard.html">
         <span class="ico ico-star"></span>
-        <span class="nav-link__text">Performance</span>
+        <span class="nav-link__text">성과</span>
       </a>
-      <span class="sidebar__group-label">System</span>
-      <a class="nav-link" href="#">
+      <span class="sidebar__group-label">시스템</span>
+      <a class="nav-link" href="settings.html">
         <span class="ico ico-gear"></span>
-        <span class="nav-link__text">Settings</span>
+        <span class="nav-link__text">설정</span>
       </a>
-      <a class="nav-link" href="#">
+      <a class="nav-link" href="inbox.html">
         <span class="ico ico-bell"></span>
-        <span class="nav-link__text">Notifications</span>
+        <span class="nav-link__text">알림</span>
         <span class="badge badge--red badge--round nav-link__badge">5</span>
       </a>
     </nav>
     <div class="sidebar__foot">
-      <button class="btn btn-ghost btn-block btn-sm" data-sidebar-toggle aria-label="Collapse sidebar">
-        <span class="ico ico-arrow-l ico-sm"></span> Collapse
+      <button class="btn btn-ghost btn-block btn-sm" data-sidebar-toggle aria-label="사이드바 접기">
+        <span class="ico ico-arrow-l ico-sm"></span> 접기
       </button>
     </div>
   </aside>
@@ -181,29 +176,24 @@
 
     <!-- NAVBAR -->
     <header class="navbar no-print">
-      <button class="btn-icon" data-sidebar-mobile aria-label="Open navigation menu">
+      <button class="btn-icon" data-sidebar-mobile aria-label="내비게이션 메뉴 열기">
         <span class="ico ico-menu"></span>
       </button>
       <div class="navbar__breadcrumb-area">
-        <nav class="breadcrumb" aria-label="Breadcrumb">
-          <span class="breadcrumb__item"><a href="../index.html">Home</a></span>
+        <nav class="breadcrumb" aria-label="현재 위치">
+          <span class="breadcrumb__item"><a href="../index.html">홈</a></span>
           <span class="breadcrumb__sep" aria-hidden="true"></span>
-          <span class="breadcrumb__item"><a href="#">Analytics</a></span>
+          <span class="breadcrumb__item"><a href="dashboard.html">분석</a></span>
           <span class="breadcrumb__sep" aria-hidden="true"></span>
-          <span class="breadcrumb__item is-current" aria-current="page">Overview</span>
+          <span class="breadcrumb__item is-current" aria-current="page">개요</span>
         </nav>
       </div>
       <span class="navbar__spacer"></span>
       <div class="navbar__actions">
-        <button class="btn btn-ghost btn-sm" aria-label="Search or run command" title="Search (⌘K)">
-          <span class="ico ico-search ico-sm"></span> Search
-        </button>
-        <button class="btn-icon" data-theme-toggle aria-label="Toggle light/dark theme" aria-pressed="false">
-          <span class="ico ico-gear"></span>
-        </button>
+        <button class="theme-toggle" data-theme-toggle aria-label="테마 전환" aria-pressed="false"><span class="theme-toggle__shape" aria-hidden="true"></span></button>
         <div class="avatar-wrap">
-          <span class="avatar avatar--sm avatar--blue" aria-label="User avatar: Alex Kim">AK</span>
-          <span class="dot online" aria-label="Online"></span>
+          <span class="avatar avatar--sm avatar--blue" aria-label="사용자 아바타: 정하람">하람</span>
+          <span class="dot online" aria-label="온라인"></span>
         </div>
       </div>
     </header>
@@ -214,221 +204,177 @@
       <!-- PAGE HEADER -->
       <div class="page-header">
         <div class="page-header__left">
-          <span class="eyebrow">Analytics</span>
-          <h1 class="page-title">Overview</h1>
+          <span class="eyebrow">분석 · 2026년 상반기</span>
+          <h1 class="page-title">개요</h1>
         </div>
         <div class="page-header__right">
-          <!-- Segmented date-range control -->
-          <div class="segmented" role="group" aria-label="Date range">
-            <button class="segmented__option" aria-pressed="false" data-value="day">Day</button>
-            <button class="segmented__option" aria-pressed="false" data-value="week">Week</button>
-            <button class="segmented__option is-active" aria-pressed="true" data-value="month">Month</button>
-            <button class="segmented__option" aria-pressed="false" data-value="year">Year</button>
+          <div class="segmented" role="group" aria-label="기간 선택">
+            <button class="segmented__option" aria-pressed="false" data-value="day">일</button>
+            <button class="segmented__option" aria-pressed="false" data-value="week">주</button>
+            <button class="segmented__option" aria-pressed="true" data-value="month">월</button>
+            <button class="segmented__option" aria-pressed="false" data-value="year">연도</button>
           </div>
-          <!-- Export button triggers success toast -->
           <button class="btn btn-primary"
-                  data-toast
-                  data-toast-variant="success"
-                  data-toast-title="Export Started"
-                  data-toast-text="Your analytics report is being generated and will be ready shortly.">
-            <span class="ico ico-upload ico-sm"></span> Export
+                  data-toast data-toast-variant="success"
+                  data-toast-title="내보내기를 시작했습니다"
+                  data-toast-text="리포트를 생성 중입니다. 준비되면 알려드립니다.">
+            <span class="ico ico-upload ico-sm"></span> 내보내기
           </button>
         </div>
       </div>
 
-      <!-- STAT CARDS ROW -->
+      <!-- STAT CARDS — asymmetric bento -->
       <div class="grid" data-stagger>
 
-        <!-- Revenue -->
-        <div class="col-6 lg:col-3 md:col-6">
-          <div class="statcard card-hover">
+        <!-- Revenue — hero cell -->
+        <div class="col-6 lg:col-12 md:col-12">
+          <div class="statcard statcard--hero card-hover">
             <span class="statcard__shape">
               <span class="shape shape-circle fill-blue" aria-hidden="true"></span>
             </span>
-            <div class="statcard__label">Revenue</div>
-            <div class="statcard__value">$48.2K</div>
-            <div class="statcard__delta is-up" aria-label="Up 12.4% from last period">+12.4%</div>
+            <div class="statcard__label">6월 매출</div>
+            <div class="statcard__value">₩4.82억</div>
+            <div class="statcard__delta is-up" aria-label="전월 대비 18.2% 상승">+18.2%</div>
+            <div class="statcard__context">여름 캠페인 마감 주간 · 상반기 최고 매출</div>
           </div>
         </div>
 
-        <!-- Active Users -->
-        <div class="col-6 lg:col-3 md:col-6">
-          <div class="statcard card-hover">
-            <span class="statcard__shape">
-              <span class="shape shape-square fill-red" aria-hidden="true"></span>
-            </span>
-            <div class="statcard__label">Active Users</div>
-            <div class="statcard__value">8,420</div>
-            <div class="statcard__delta is-up" aria-label="Up 3.1% from last period">+3.1%</div>
-          </div>
-        </div>
-
-        <!-- Orders -->
-        <div class="col-6 lg:col-3 md:col-6">
-          <div class="statcard card-hover">
+        <!-- Orders — the outlier -->
+        <div class="col-2 lg:col-4 md:col-6">
+          <div class="statcard statcard--sm card-hover">
             <span class="statcard__shape">
               <span class="shape shape-triangle tri-yellow" aria-hidden="true"></span>
             </span>
-            <div class="statcard__label">Orders</div>
-            <div class="statcard__value">1,259</div>
-            <div class="statcard__delta is-down" aria-label="Down 2.4% from last period">-2.4%</div>
+            <div class="statcard__label">주문</div>
+            <div class="statcard__value">1,259건</div>
+            <div class="statcard__delta is-down" aria-label="전월 대비 2.4% 감소">-2.4%</div>
+          </div>
+        </div>
+
+        <!-- Active users -->
+        <div class="col-2 lg:col-4 md:col-6">
+          <div class="statcard statcard--sm card-hover">
+            <span class="statcard__shape">
+              <span class="shape shape-square fill-red" aria-hidden="true"></span>
+            </span>
+            <div class="statcard__label">활성 사용자</div>
+            <div class="statcard__value">8,420명</div>
+            <div class="statcard__delta is-up" aria-label="전월 대비 3.1% 상승">+3.1%</div>
           </div>
         </div>
 
         <!-- Conversion -->
-        <div class="col-6 lg:col-3 md:col-6">
-          <div class="statcard card-hover">
+        <div class="col-2 lg:col-4 md:col-6">
+          <div class="statcard statcard--sm card-hover">
             <span class="statcard__shape">
               <span class="shape shape-arc fill-black" aria-hidden="true"></span>
             </span>
-            <div class="statcard__label">Conversion</div>
+            <div class="statcard__label">전환율</div>
             <div class="statcard__value">3.8%</div>
-            <div class="statcard__delta is-up" aria-label="Up 0.6% from last period">+0.6%</div>
+            <div class="statcard__delta is-up" aria-label="전월 대비 0.6%포인트 상승">+0.6%p</div>
           </div>
         </div>
 
       </div><!-- /stat cards -->
 
       <!-- CHARTS ROW -->
-      <div class="grid section-gap">
+      <div class="grid section-gap" data-reveal>
 
-        <!-- Revenue by Month - Bar Chart -->
+        <!-- Revenue by Month -->
         <div class="col-12 lg:col-8">
           <div class="card">
             <div class="card__header">
               <div>
-                <div class="card__title">Revenue by Month</div>
-                <div class="card__subtitle">Jan – Dec 2024 · USD thousands</div>
+                <div class="card__title">월별 매출</div>
+                <div class="card__subtitle">2026년 상반기 · 단위 억 원</div>
               </div>
-              <div class="flex items-center gap-3">
-                <span class="inline-flex items-center gap-2" style="font-size:var(--text-xs); color:var(--color-text-muted);">
-                  <span style="width:10px;height:10px;background:var(--blue-500);border:2px solid var(--black);display:inline-block;"></span> Revenue
-                  <span style="width:10px;height:10px;background:var(--red-500);border:2px solid var(--black);display:inline-block;"></span> Peak
-                  <span style="width:10px;height:10px;background:var(--yellow-400);border:2px solid var(--black);display:inline-block;"></span> Highlight
-                </span>
+              <div class="chart-legend">
+                <span><span class="legend-dot legend-dot--blue"></span>월 매출</span>
+                <span><span class="legend-dot legend-dot--yellow"></span>여름 캠페인 (6월)</span>
               </div>
             </div>
             <div class="card__body">
-              <div class="bar-chart" role="img" aria-label="Bar chart showing monthly revenue from January to December 2024">
-                <!-- Grid lines (decorative) -->
+              <div class="bar-chart" role="img" aria-label="2026년 상반기 월별 매출 막대 차트 — 1월 3.12억에서 6월 4.82억으로 상승, 6월이 여름 캠페인으로 최고치">
                 <div class="bar-chart__grid-lines" aria-hidden="true">
                   <div class="bar-chart__grid-line"></div>
                   <div class="bar-chart__grid-line"></div>
                   <div class="bar-chart__grid-line"></div>
                   <div class="bar-chart__grid-line"></div>
                 </div>
-                <!-- Jan -->
                 <div class="bar-chart__bar-wrap">
-                  <div class="bar-chart__bar" style="height:55%" title="January: $26.4K"></div>
-                  <span class="bar-chart__label">Jan</span>
+                  <div class="bar-chart__bar" style="height:65%" title="1월: ₩3.12억"></div>
+                  <span class="bar-chart__label">1월</span>
                 </div>
-                <!-- Feb -->
                 <div class="bar-chart__bar-wrap">
-                  <div class="bar-chart__bar" style="height:62%" title="February: $29.8K"></div>
-                  <span class="bar-chart__label">Feb</span>
+                  <div class="bar-chart__bar" style="height:71%" title="2월: ₩3.44억"></div>
+                  <span class="bar-chart__label">2월</span>
                 </div>
-                <!-- Mar -->
                 <div class="bar-chart__bar-wrap">
-                  <div class="bar-chart__bar" style="height:71%" title="March: $34.1K"></div>
-                  <span class="bar-chart__label">Mar</span>
+                  <div class="bar-chart__bar" style="height:77%" title="3월: ₩3.71억"></div>
+                  <span class="bar-chart__label">3월</span>
                 </div>
-                <!-- Apr -->
                 <div class="bar-chart__bar-wrap">
-                  <div class="bar-chart__bar" style="height:58%" title="April: $27.9K"></div>
-                  <span class="bar-chart__label">Apr</span>
+                  <div class="bar-chart__bar" style="height:74%" title="4월: ₩3.58억"></div>
+                  <span class="bar-chart__label">4월</span>
                 </div>
-                <!-- May -->
                 <div class="bar-chart__bar-wrap">
-                  <div class="bar-chart__bar" style="height:80%" title="May: $38.4K"></div>
-                  <span class="bar-chart__label">May</span>
+                  <div class="bar-chart__bar" style="height:85%" title="5월: ₩4.08억"></div>
+                  <span class="bar-chart__label">5월</span>
                 </div>
-                <!-- Jun - highlighted yellow -->
                 <div class="bar-chart__bar-wrap">
-                  <div class="bar-chart__bar bar-chart__bar--yellow" style="height:88%" title="June: $42.3K (Q2 peak)"></div>
-                  <span class="bar-chart__label">Jun</span>
-                </div>
-                <!-- Jul -->
-                <div class="bar-chart__bar-wrap">
-                  <div class="bar-chart__bar" style="height:76%" title="July: $36.5K"></div>
-                  <span class="bar-chart__label">Jul</span>
-                </div>
-                <!-- Aug -->
-                <div class="bar-chart__bar-wrap">
-                  <div class="bar-chart__bar" style="height:82%" title="August: $39.4K"></div>
-                  <span class="bar-chart__label">Aug</span>
-                </div>
-                <!-- Sep -->
-                <div class="bar-chart__bar-wrap">
-                  <div class="bar-chart__bar" style="height:90%" title="September: $43.2K"></div>
-                  <span class="bar-chart__label">Sep</span>
-                </div>
-                <!-- Oct -->
-                <div class="bar-chart__bar-wrap">
-                  <div class="bar-chart__bar" style="height:95%" title="October: $45.6K"></div>
-                  <span class="bar-chart__label">Oct</span>
-                </div>
-                <!-- Nov - peak red -->
-                <div class="bar-chart__bar-wrap">
-                  <div class="bar-chart__bar bar-chart__bar--red" style="height:100%" title="November: $48.2K (all-time high)"></div>
-                  <span class="bar-chart__label">Nov</span>
-                </div>
-                <!-- Dec -->
-                <div class="bar-chart__bar-wrap">
-                  <div class="bar-chart__bar" style="height:78%" title="December: $37.4K"></div>
-                  <span class="bar-chart__label">Dec</span>
+                  <div class="bar-chart__bar bar-chart__bar--yellow" style="height:100%" title="6월: ₩4.82억 (여름 캠페인 · 상반기 최고)"></div>
+                  <span class="bar-chart__label">6월</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- KPI / Progress Ring + Progress Bars -->
+        <!-- Goal Completion -->
         <div class="col-12 lg:col-4">
           <div class="card" style="height:100%;">
             <div class="card__header">
-              <div class="card__title">Goal Completion</div>
+              <div class="card__title">목표 달성</div>
             </div>
             <div class="card__body">
               <div class="kpi-block">
-                <!-- Progress Ring: 72% -->
-                <div class="progress-ring" data-ring="72" aria-label="Goal completion 72%">
+                <div class="progress-ring" data-ring="72" role="img" aria-label="연간 목표 달성률 72%">
                   <svg width="96" height="96" role="presentation">
                     <circle class="progress-ring__track" cx="48" cy="48" r="40" stroke-width="8"/>
                     <circle class="progress-ring__bar" cx="48" cy="48" r="40" stroke-width="8"/>
                   </svg>
                   <span class="progress-ring__label" style="font-size:var(--text-xl);">72%</span>
                 </div>
-                <div class="kpi-ring-label">Annual Target Progress</div>
+                <div class="kpi-ring-label">연간 목표 진행률</div>
               </div>
 
               <div class="rule mb-5"></div>
 
-              <!-- Progress bars -->
               <div class="progress-row">
                 <div class="progress-item">
                   <div class="progress-item__header">
-                    <span>Marketing</span>
+                    <span>마케팅</span>
                     <span class="mono">68%</span>
                   </div>
-                  <div class="progress" aria-label="Marketing 68%">
+                  <div class="progress" role="progressbar" aria-valuenow="68" aria-valuemin="0" aria-valuemax="100" aria-label="마케팅 목표 68%">
                     <div class="progress__fill" style="width:68%"></div>
                   </div>
                 </div>
                 <div class="progress-item">
                   <div class="progress-item__header">
-                    <span>Sales</span>
+                    <span>세일즈</span>
                     <span class="mono">84%</span>
                   </div>
-                  <div class="progress" aria-label="Sales 84%">
+                  <div class="progress" role="progressbar" aria-valuenow="84" aria-valuemin="0" aria-valuemax="100" aria-label="세일즈 목표 84%">
                     <div class="progress__fill progress--lg" style="width:84%"></div>
                   </div>
                 </div>
                 <div class="progress-item">
                   <div class="progress-item__header">
-                    <span>Support</span>
+                    <span>고객지원</span>
                     <span class="mono">45%</span>
                   </div>
-                  <div class="progress progress--red" aria-label="Support 45%">
+                  <div class="progress progress--red" role="progressbar" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100" aria-label="고객지원 목표 45%">
                     <div class="progress__fill" style="width:45%"></div>
                   </div>
                 </div>
@@ -440,195 +386,127 @@
       </div><!-- /charts row -->
 
       <!-- TRANSACTIONS TABLE + ACTIVITY -->
-      <div class="grid section-gap">
+      <div class="grid section-gap" data-reveal>
 
-        <!-- Recent Transactions Table -->
+        <!-- Recent Transactions -->
         <div class="col-12 lg:col-8">
           <div class="card" style="padding:0; overflow:hidden;">
             <div class="card__header" style="padding:var(--space-5); padding-bottom:0;">
               <div>
-                <div class="card__title">Recent Transactions</div>
-                <div class="card__subtitle">Last 30 days · 8 of 142 records</div>
+                <div class="card__title">최근 거래</div>
+                <div class="card__subtitle">최근 30일 · 142건 중 8건</div>
               </div>
-              <button class="btn btn-outline btn-sm"
-                      data-open-drawer="filter-drawer"
-                      aria-label="Open filter panel">
-                <span class="ico ico-filter ico-sm"></span> Filter
+              <button class="btn btn-outline btn-sm" data-open-drawer="filter-drawer" aria-label="필터 패널 열기">
+                <span class="ico ico-filter ico-sm"></span> 필터
               </button>
             </div>
-            <!-- Table Toolbar -->
             <div class="table-toolbar">
               <div class="searchbar" style="flex:1; max-width:280px;">
                 <span class="ico ico-search" aria-hidden="true"></span>
-                <input class="input pad-left" type="search" placeholder="Search transactions…" aria-label="Search transactions" />
-                <button class="searchbar__clear" aria-label="Clear search" hidden>
+                <input class="input pad-left" type="search" placeholder="거래 검색…" aria-label="거래 검색" />
+                <button class="searchbar__clear" aria-label="검색어 지우기" hidden>
                   <span class="ico ico-x ico-sm"></span>
                 </button>
               </div>
               <div class="flex items-center gap-2">
                 <span class="text-muted" style="font-size:var(--text-xs);" id="selected-count"></span>
-                <div class="segmented" role="group" aria-label="View mode">
-                  <button class="segmented__option is-active" aria-pressed="true" data-value="all">All</button>
-                  <button class="segmented__option" aria-pressed="false" data-value="done">Done</button>
-                  <button class="segmented__option" aria-pressed="false" data-value="pending">Pending</button>
+                <div class="segmented" role="group" aria-label="보기 방식">
+                  <button class="segmented__option" aria-pressed="true" data-value="all">전체</button>
+                  <button class="segmented__option" aria-pressed="false" data-value="done">완료</button>
+                  <button class="segmented__option" aria-pressed="false" data-value="pending">대기</button>
                 </div>
               </div>
             </div>
-            <!-- Table -->
             <div class="table-wrap">
-              <table class="table" data-table aria-label="Recent transactions">
+              <table class="table" data-table aria-label="최근 거래">
                 <thead>
                   <tr>
-                    <th style="width:2.5rem;">
-                      <label class="checkbox" aria-label="Select all rows">
+                    <th scope="col" style="width:2.5rem;">
+                      <label class="checkbox" aria-label="전체 선택">
                         <input type="checkbox" data-select-all />
                         <span class="checkbox__box"></span>
                       </label>
                     </th>
-                    <th data-sort="text">ID</th>
-                    <th data-sort="text">Customer</th>
-                    <th data-sort="text">Project</th>
-                    <th data-sort="text">Status</th>
-                    <th data-sort="number" class="table__num">Amount</th>
-                    <th data-sort="text">Date</th>
+                    <th scope="col" data-sort="text"><button class="th-sort" type="button">번호</button></th>
+                    <th scope="col" data-sort="text"><button class="th-sort" type="button">고객</button></th>
+                    <th scope="col" data-sort="text"><button class="th-sort" type="button">프로젝트</button></th>
+                    <th scope="col" data-sort="text"><button class="th-sort" type="button">상태</button></th>
+                    <th scope="col" data-sort="number" class="table__num"><button class="th-sort" type="button">금액</button></th>
+                    <th scope="col" data-sort="text"><button class="th-sort" type="button">날짜</button></th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td><label class="checkbox" aria-label="Select row">
-                      <input type="checkbox" data-row-check />
-                      <span class="checkbox__box"></span>
-                    </label></td>
+                    <td><label class="checkbox" aria-label="행 선택"><input type="checkbox" data-row-check /><span class="checkbox__box"></span></label></td>
                     <td class="mono" style="color:var(--color-text-muted);">#TXN-0091</td>
-                    <td>
-                      <div class="flex items-center gap-2">
-                        <span class="avatar avatar--sm avatar--red">SA</span>
-                        <span>Sarah Alderton</span>
-                      </div>
-                    </td>
-                    <td>Brand Redesign</td>
-                    <td><span class="status status--done"><span class="status__shape"></span>Done</span></td>
-                    <td class="table__num" data-value="4200">$4,200.00</td>
-                    <td class="text-muted mono">2024-11-28</td>
+                    <td><div class="flex items-center gap-2"><span class="avatar avatar--sm avatar--red">서연</span><span>김서연</span></div></td>
+                    <td>브랜드 리뉴얼</td>
+                    <td><span class="status status--done"><span class="status__shape"></span>완료</span></td>
+                    <td class="table__num" data-value="12400000">₩1,240만</td>
+                    <td class="text-muted mono">6월 28일</td>
                   </tr>
                   <tr>
-                    <td><label class="checkbox" aria-label="Select row">
-                      <input type="checkbox" data-row-check />
-                      <span class="checkbox__box"></span>
-                    </label></td>
+                    <td><label class="checkbox" aria-label="행 선택"><input type="checkbox" data-row-check /><span class="checkbox__box"></span></label></td>
                     <td class="mono" style="color:var(--color-text-muted);">#TXN-0090</td>
-                    <td>
-                      <div class="flex items-center gap-2">
-                        <span class="avatar avatar--sm avatar--blue">MK</span>
-                        <span>Marcus Kim</span>
-                      </div>
-                    </td>
-                    <td>UI Component Library</td>
-                    <td><span class="status status--progress"><span class="status__shape"></span>In Progress</span></td>
-                    <td class="table__num" data-value="8750">$8,750.00</td>
-                    <td class="text-muted mono">2024-11-27</td>
+                    <td><div class="flex items-center gap-2"><span class="avatar avatar--sm avatar--blue">지훈</span><span>박지훈</span></div></td>
+                    <td>UI 컴포넌트 라이브러리</td>
+                    <td><span class="status status--progress"><span class="status__shape"></span>진행 중</span></td>
+                    <td class="table__num" data-value="38500000">₩3,850만</td>
+                    <td class="text-muted mono">6월 27일</td>
                   </tr>
                   <tr>
-                    <td><label class="checkbox" aria-label="Select row">
-                      <input type="checkbox" data-row-check />
-                      <span class="checkbox__box"></span>
-                    </label></td>
+                    <td><label class="checkbox" aria-label="행 선택"><input type="checkbox" data-row-check /><span class="checkbox__box"></span></label></td>
                     <td class="mono" style="color:var(--color-text-muted);">#TXN-0089</td>
-                    <td>
-                      <div class="flex items-center gap-2">
-                        <span class="avatar avatar--sm avatar--yellow" style="color:var(--black);">PL</span>
-                        <span>Priya Lakshmi</span>
-                      </div>
-                    </td>
-                    <td>E-Commerce Platform</td>
-                    <td><span class="status status--blocked"><span class="status__shape"></span>Blocked</span></td>
-                    <td class="table__num" data-value="12400">$12,400.00</td>
-                    <td class="text-muted mono">2024-11-26</td>
+                    <td><div class="flex items-center gap-2"><span class="avatar avatar--sm avatar--yellow" style="color:var(--black);">하늘</span><span>이하늘</span></div></td>
+                    <td>이커머스 구축</td>
+                    <td><span class="status status--blocked"><span class="status__shape"></span>차단됨</span></td>
+                    <td class="table__num" data-value="27600000">₩2,760만</td>
+                    <td class="text-muted mono">6월 26일</td>
                   </tr>
                   <tr>
-                    <td><label class="checkbox" aria-label="Select row">
-                      <input type="checkbox" data-row-check />
-                      <span class="checkbox__box"></span>
-                    </label></td>
+                    <td><label class="checkbox" aria-label="행 선택"><input type="checkbox" data-row-check /><span class="checkbox__box"></span></label></td>
                     <td class="mono" style="color:var(--color-text-muted);">#TXN-0088</td>
-                    <td>
-                      <div class="flex items-center gap-2">
-                        <span class="avatar avatar--sm avatar--black">JW</span>
-                        <span>James Watson</span>
-                      </div>
-                    </td>
-                    <td>Mobile App Sprint</td>
-                    <td><span class="status status--done"><span class="status__shape"></span>Done</span></td>
-                    <td class="table__num" data-value="6100">$6,100.00</td>
-                    <td class="text-muted mono">2024-11-25</td>
+                    <td><div class="flex items-center gap-2"><span class="avatar avatar--sm avatar--black">도현</span><span>최도현</span></div></td>
+                    <td>모바일 앱 스프린트</td>
+                    <td><span class="status status--done"><span class="status__shape"></span>완료</span></td>
+                    <td class="table__num" data-value="18500000">₩1,850만</td>
+                    <td class="text-muted mono">6월 25일</td>
                   </tr>
                   <tr>
-                    <td><label class="checkbox" aria-label="Select row">
-                      <input type="checkbox" data-row-check />
-                      <span class="checkbox__box"></span>
-                    </label></td>
+                    <td><label class="checkbox" aria-label="행 선택"><input type="checkbox" data-row-check /><span class="checkbox__box"></span></label></td>
                     <td class="mono" style="color:var(--color-text-muted);">#TXN-0087</td>
-                    <td>
-                      <div class="flex items-center gap-2">
-                        <span class="avatar avatar--sm avatar--red">FO</span>
-                        <span>Fatima Okafor</span>
-                      </div>
-                    </td>
-                    <td>CRM Integration</td>
-                    <td><span class="status status--progress"><span class="status__shape"></span>In Progress</span></td>
-                    <td class="table__num" data-value="3350">$3,350.00</td>
-                    <td class="text-muted mono">2024-11-24</td>
+                    <td><div class="flex items-center gap-2"><span class="avatar avatar--sm avatar--red">유진</span><span>정유진</span></div></td>
+                    <td>CRM 연동</td>
+                    <td><span class="status status--progress"><span class="status__shape"></span>진행 중</span></td>
+                    <td class="table__num" data-value="9400000">₩940만</td>
+                    <td class="text-muted mono">6월 24일</td>
                   </tr>
                   <tr>
-                    <td><label class="checkbox" aria-label="Select row">
-                      <input type="checkbox" data-row-check />
-                      <span class="checkbox__box"></span>
-                    </label></td>
+                    <td><label class="checkbox" aria-label="행 선택"><input type="checkbox" data-row-check /><span class="checkbox__box"></span></label></td>
                     <td class="mono" style="color:var(--color-text-muted);">#TXN-0086</td>
-                    <td>
-                      <div class="flex items-center gap-2">
-                        <span class="avatar avatar--sm avatar--blue">TN</span>
-                        <span>Tom Nakamura</span>
-                      </div>
-                    </td>
-                    <td>Data Dashboard</td>
-                    <td><span class="status status--done"><span class="status__shape"></span>Done</span></td>
-                    <td class="table__num" data-value="9200">$9,200.00</td>
-                    <td class="text-muted mono">2024-11-23</td>
+                    <td><div class="flex items-center gap-2"><span class="avatar avatar--sm avatar--blue">서준</span><span>한서준</span></div></td>
+                    <td>데이터 대시보드</td>
+                    <td><span class="status status--done"><span class="status__shape"></span>완료</span></td>
+                    <td class="table__num" data-value="22000000">₩2,200만</td>
+                    <td class="text-muted mono">6월 23일</td>
                   </tr>
                   <tr>
-                    <td><label class="checkbox" aria-label="Select row">
-                      <input type="checkbox" data-row-check />
-                      <span class="checkbox__box"></span>
-                    </label></td>
+                    <td><label class="checkbox" aria-label="행 선택"><input type="checkbox" data-row-check /><span class="checkbox__box"></span></label></td>
                     <td class="mono" style="color:var(--color-text-muted);">#TXN-0085</td>
-                    <td>
-                      <div class="flex items-center gap-2">
-                        <span class="avatar avatar--sm avatar--yellow" style="color:var(--black);">EV</span>
-                        <span>Elena Vasquez</span>
-                      </div>
-                    </td>
-                    <td>API Gateway Setup</td>
-                    <td><span class="status status--blocked"><span class="status__shape"></span>Blocked</span></td>
-                    <td class="table__num" data-value="5600">$5,600.00</td>
-                    <td class="text-muted mono">2024-11-22</td>
+                    <td><div class="flex items-center gap-2"><span class="avatar avatar--sm avatar--yellow" style="color:var(--black);">예린</span><span>오예린</span></div></td>
+                    <td>API 게이트웨이 구축</td>
+                    <td><span class="status status--blocked"><span class="status__shape"></span>차단됨</span></td>
+                    <td class="table__num" data-value="15600000">₩1,560만</td>
+                    <td class="text-muted mono">6월 22일</td>
                   </tr>
                   <tr>
-                    <td><label class="checkbox" aria-label="Select row">
-                      <input type="checkbox" data-row-check />
-                      <span class="checkbox__box"></span>
-                    </label></td>
+                    <td><label class="checkbox" aria-label="행 선택"><input type="checkbox" data-row-check /><span class="checkbox__box"></span></label></td>
                     <td class="mono" style="color:var(--color-text-muted);">#TXN-0084</td>
-                    <td>
-                      <div class="flex items-center gap-2">
-                        <span class="avatar avatar--sm avatar--black">RL</span>
-                        <span>Ryan Lombardi</span>
-                      </div>
-                    </td>
-                    <td>SEO Audit &amp; Report</td>
-                    <td><span class="status status--done"><span class="status__shape"></span>Done</span></td>
-                    <td class="table__num" data-value="2800">$2,800.00</td>
-                    <td class="text-muted mono">2024-11-21</td>
+                    <td><div class="flex items-center gap-2"><span class="avatar avatar--sm avatar--black">재원</span><span>문재원</span></div></td>
+                    <td>SEO 감사 리포트</td>
+                    <td><span class="status status--done"><span class="status__shape"></span>완료</span></td>
+                    <td class="table__num" data-value="6800000">₩680만</td>
+                    <td class="text-muted mono">6월 21일</td>
                   </tr>
                 </tbody>
               </table>
@@ -640,54 +518,54 @@
         <div class="col-12 lg:col-4">
           <div class="card" style="height:100%;">
             <div class="card__header">
-              <div class="card__title">Activity</div>
-              <span class="badge badge--blue">Live</span>
+              <div class="card__title">활동</div>
+              <span class="badge badge--blue">실시간</span>
             </div>
             <div class="card__body">
-              <div class="timeline" aria-label="Recent activity timeline">
+              <div class="timeline" aria-label="최근 활동 타임라인">
 
                 <div class="timeline__item">
                   <div class="timeline__node timeline__node--circle" aria-hidden="true"></div>
                   <div>
-                    <div class="timeline__time">10:42 AM</div>
-                    <div class="timeline__title">Export completed</div>
-                    <div class="timeline__body">November analytics report exported by Alex Kim.</div>
+                    <div class="timeline__time">오전 10:42</div>
+                    <div class="timeline__title">6월 리포트 내보내기 완료</div>
+                    <div class="timeline__body">정하람 님이 상반기 분석 리포트를 내보냈습니다.</div>
                   </div>
                 </div>
 
                 <div class="timeline__item">
                   <div class="timeline__node timeline__node--square" aria-hidden="true"></div>
                   <div>
-                    <div class="timeline__time">09:17 AM</div>
-                    <div class="timeline__title">New project created</div>
-                    <div class="timeline__body">CRM Integration project opened by Fatima Okafor.</div>
+                    <div class="timeline__time">오전 9:17</div>
+                    <div class="timeline__title">새 프로젝트 생성</div>
+                    <div class="timeline__body">정유진 님이 ‘CRM 연동’ 프로젝트를 열었습니다.</div>
                   </div>
                 </div>
 
                 <div class="timeline__item">
                   <div class="timeline__node timeline__node--triangle" aria-hidden="true"></div>
                   <div>
-                    <div class="timeline__time">Yesterday</div>
-                    <div class="timeline__title">Payment blocked</div>
-                    <div class="timeline__body">TXN-0085 flagged for review — API Gateway Setup.</div>
+                    <div class="timeline__time">어제</div>
+                    <div class="timeline__title">결제 보류</div>
+                    <div class="timeline__body">TXN-0089 이커머스 구축 건이 검토 대기로 전환됐습니다.</div>
                   </div>
                 </div>
 
                 <div class="timeline__item">
                   <div class="timeline__node timeline__node--circle" aria-hidden="true"></div>
                   <div>
-                    <div class="timeline__time">Nov 27</div>
-                    <div class="timeline__title">Goal milestone reached</div>
-                    <div class="timeline__body">Sales team hit 84% of Q4 target 3 weeks early.</div>
+                    <div class="timeline__time">6월 27일</div>
+                    <div class="timeline__title">목표 조기 달성</div>
+                    <div class="timeline__body">세일즈 팀이 2분기 목표의 84%를 3주 앞서 달성했습니다.</div>
                   </div>
                 </div>
 
                 <div class="timeline__item">
                   <div class="timeline__node timeline__node--square" aria-hidden="true"></div>
                   <div>
-                    <div class="timeline__time">Nov 26</div>
-                    <div class="timeline__title">New user cohort</div>
-                    <div class="timeline__body">842 new users onboarded from the Nov campaign.</div>
+                    <div class="timeline__time">6월 26일</div>
+                    <div class="timeline__title">신규 코호트 유입</div>
+                    <div class="timeline__body">여름 캠페인으로 신규 사용자 842명이 유입됐습니다.</div>
                   </div>
                 </div>
 
@@ -706,145 +584,96 @@
 <!-- FILTER DRAWER -->
 <div class="drawer" id="filter-drawer" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="filter-drawer-title">
   <div class="drawer__header">
-    <span class="drawer__title" id="filter-drawer-title">Filter Transactions</span>
-    <button class="btn-icon" data-close-drawer aria-label="Close filter panel">
+    <span class="drawer__title" id="filter-drawer-title">거래 필터</span>
+    <button class="btn-icon" data-close-drawer aria-label="필터 패널 닫기">
       <span class="ico ico-x"></span>
     </button>
   </div>
   <div class="drawer__body">
-    <!-- Status filter -->
     <div class="filter-section">
-      <div class="filter-section__title">Status</div>
+      <div class="filter-section__title">상태</div>
       <div class="filter-checks">
         <label class="checkbox">
           <input type="checkbox" checked />
           <span class="checkbox__box"></span>
-          <span class="status status--done" style="margin-left:var(--space-2);"><span class="status__shape"></span>Done</span>
+          <span class="status status--done" style="margin-left:var(--space-2);"><span class="status__shape"></span>완료</span>
         </label>
         <label class="checkbox">
           <input type="checkbox" checked />
           <span class="checkbox__box"></span>
-          <span class="status status--progress" style="margin-left:var(--space-2);"><span class="status__shape"></span>In Progress</span>
+          <span class="status status--progress" style="margin-left:var(--space-2);"><span class="status__shape"></span>진행 중</span>
         </label>
         <label class="checkbox">
           <input type="checkbox" />
           <span class="checkbox__box"></span>
-          <span class="status status--blocked" style="margin-left:var(--space-2);"><span class="status__shape"></span>Blocked</span>
+          <span class="status status--blocked" style="margin-left:var(--space-2);"><span class="status__shape"></span>차단됨</span>
         </label>
       </div>
     </div>
 
     <div class="rule mb-5"></div>
 
-    <!-- Budget / Amount slider -->
     <div class="filter-section">
-      <div class="filter-section__title">Max Amount</div>
+      <div class="filter-section__title">최대 거래액</div>
       <div class="field">
-        <label class="field__label" for="budget-slider">Budget ceiling: <span class="slider__value">$15,000</span></label>
-        <input class="slider" id="budget-slider" type="range" min="0" max="15000" value="15000"
-               data-slider data-prefix="$" aria-label="Maximum transaction amount" />
+        <label class="field__label" for="budget-slider">상한: <span class="slider__value">₩5,000만</span></label>
+        <input class="slider" id="budget-slider" type="range" min="0" max="5000" value="5000"
+               data-slider data-prefix="₩" data-suffix="만" aria-label="최대 거래 금액" />
       </div>
     </div>
 
     <div class="rule mb-5"></div>
 
-    <!-- Date range -->
     <div class="filter-section">
-      <div class="filter-section__title">Date Range</div>
-      <div class="grid" style="grid-template-columns:1fr 1fr; gap:var(--space-3);">
+      <div class="filter-section__title">기간</div>
+      <div class="date-range-grid">
         <div class="field">
-          <label class="field__label" for="date-from">From</label>
-          <input class="input input-sm" id="date-from" type="date" value="2024-11-01" />
+          <label class="field__label" for="date-from">시작</label>
+          <input class="input input-sm" id="date-from" type="date" value="2026-06-01" />
         </div>
         <div class="field">
-          <label class="field__label" for="date-to">To</label>
-          <input class="input input-sm" id="date-to" type="date" value="2024-11-30" />
+          <label class="field__label" for="date-to">종료</label>
+          <input class="input input-sm" id="date-to" type="date" value="2026-06-30" />
         </div>
       </div>
     </div>
 
     <div class="rule mb-5"></div>
 
-    <!-- Project type -->
     <div class="filter-section">
-      <div class="filter-section__title">Project Type</div>
+      <div class="filter-section__title">프로젝트 유형</div>
       <div class="filter-checks">
-        <label class="checkbox">
-          <input type="checkbox" checked />
-          <span class="checkbox__box"></span> Design
-        </label>
-        <label class="checkbox">
-          <input type="checkbox" checked />
-          <span class="checkbox__box"></span> Development
-        </label>
-        <label class="checkbox">
-          <input type="checkbox" checked />
-          <span class="checkbox__box"></span> Marketing
-        </label>
-        <label class="checkbox">
-          <input type="checkbox" />
-          <span class="checkbox__box"></span> Strategy
-        </label>
+        <label class="checkbox"><input type="checkbox" checked /><span class="checkbox__box"></span> 디자인</label>
+        <label class="checkbox"><input type="checkbox" checked /><span class="checkbox__box"></span> 개발</label>
+        <label class="checkbox"><input type="checkbox" checked /><span class="checkbox__box"></span> 마케팅</label>
+        <label class="checkbox"><input type="checkbox" /><span class="checkbox__box"></span> 전략</label>
       </div>
     </div>
   </div>
   <div class="drawer__footer">
     <button class="btn btn-primary"
             data-close-drawer
-            data-toast
-            data-toast-variant="info"
-            data-toast-title="Filters Applied"
-            data-toast-text="Showing results matching your filter criteria.">
-      Apply Filters
+            data-toast data-toast-variant="info"
+            data-toast-title="필터를 적용했습니다"
+            data-toast-text="조건에 맞는 결과를 표시합니다.">
+      필터 적용
     </button>
-    <button class="btn btn-ghost" data-close-drawer>Reset</button>
+    <button class="btn btn-ghost" data-close-drawer>초기화</button>
   </div>
 </div>
 
-<!-- Inline script: segmented date-range behavior + selected-count display -->
+<!-- Inline: selected-count display (segmented + searchbar handled by app.js) -->
 <script>
   (function () {
-    // Segmented date-range: toggle aria-pressed
-    document.querySelectorAll('.segmented').forEach(function (seg) {
-      seg.addEventListener('click', function (e) {
-        var btn = e.target.closest('.segmented__option');
-        if (!btn) return;
-        seg.querySelectorAll('.segmented__option').forEach(function (b) {
-          b.classList.remove('is-active');
-          b.setAttribute('aria-pressed', 'false');
-        });
-        btn.classList.add('is-active');
-        btn.setAttribute('aria-pressed', 'true');
-      });
-    });
-
-    // Selected count display
     function updateSelectedCount() {
       var checked = document.querySelectorAll('[data-row-check]:checked').length;
       var el = document.getElementById('selected-count');
-      if (el) {
-        el.textContent = checked > 0 ? checked + ' selected' : '';
-      }
+      if (el) el.textContent = checked > 0 ? checked + '개 선택' : '';
     }
     document.addEventListener('change', function (e) {
       if (e.target.hasAttribute('data-row-check') || e.target.hasAttribute('data-select-all')) {
         updateSelectedCount();
       }
-    });
-
-    // Searchbar clear button
-    document.querySelectorAll('.searchbar').forEach(function (bar) {
-      var inp = bar.querySelector('input');
-      var clr = bar.querySelector('.searchbar__clear');
-      if (!inp || !clr) return;
-      inp.addEventListener('input', function () {
-        clr.hidden = !inp.value;
-      });
-      clr.addEventListener('click', function () {
-        inp.value = '';
-        clr.hidden = true;
-        inp.focus();
-      });
     });
   })();
 </script>

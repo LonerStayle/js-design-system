@@ -30,7 +30,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   font-feature-settings: 'kern' 1, 'liga' 1;
-  min-height: 100vh;
+  min-height: 100dvh;
   transition: background-color var(--duration-base) var(--ease-standard),
               color var(--duration-base) var(--ease-standard);
 }
@@ -120,18 +120,11 @@ a.link:hover { background: var(--color-accent); color: var(--black); border-colo
   grid-template-columns: repeat(var(--grid-cols), 1fr);
   gap: var(--grid-gap);
 }
-.grid-modular { /* asymmetric Bauhaus rhythm */
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  grid-auto-rows: minmax(var(--module-half), auto);
-  gap: var(--space-4);
-}
 /* column spans */
 .col-1{grid-column:span 1}.col-2{grid-column:span 2}.col-3{grid-column:span 3}
 .col-4{grid-column:span 4}.col-5{grid-column:span 5}.col-6{grid-column:span 6}
 .col-7{grid-column:span 7}.col-8{grid-column:span 8}.col-9{grid-column:span 9}
 .col-10{grid-column:span 10}.col-11{grid-column:span 11}.col-12{grid-column:span 12}
-.row-2{grid-row:span 2}.row-3{grid-row:span 3}
 
 @media (max-width: 1024px) {
   .lg\:col-12{grid-column:span 12}.lg\:col-6{grid-column:span 6}
@@ -139,7 +132,7 @@ a.link:hover { background: var(--color-accent); color: var(--black); border-colo
 }
 @media (max-width: 768px) {
   .md\:col-12{grid-column:span 12}.md\:col-6{grid-column:span 6}
-  .grid, .grid-modular { gap: var(--space-3); }
+  .grid { gap: var(--space-3); }
 }
 @media (max-width: 480px) {
   [class*="col-"]{ grid-column: span 12; }
@@ -238,9 +231,9 @@ a.link:hover { background: var(--color-accent); color: var(--black); border-colo
 .flat-shadow { box-shadow: var(--shadow-flat); }
 .flat-shadow-lg { box-shadow: var(--shadow-flat-lg); }
 
-/* Modular grid texture background */
+/* Modular grid texture background — theme-aware line color (blueprint mode in dark) */
 .grid-texture {
-  background-image: var(--svg-grid-mod);
+  background-image: var(--grid-lines);
   background-size: var(--space-7) var(--space-7);
 }
 
@@ -271,9 +264,16 @@ a.link:hover { background: var(--color-accent); color: var(--black); border-colo
 @keyframes scale-in { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+/* SIGNATURE MOTION — the "stamp": a block drops in from above and slams to rest.
+   Every load-stagger and scroll-reveal in the system is a variation of this one grammar. */
+@keyframes stamp-in {
+  0%   { opacity: 0; transform: translateY(-0.9rem) scale(1.05); }
+  60%  { opacity: 1; transform: translateY(0) scale(0.985); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
 
-.animate-rise { animation: rise var(--duration-slow) var(--ease-standard) both; }
-[data-stagger] > * { animation: rise var(--duration-slow) var(--ease-standard) both; }
+.animate-rise { animation: stamp-in var(--duration-stamp) var(--ease-stamp) both; }
+[data-stagger] > * { animation: stamp-in var(--duration-stamp) var(--ease-stamp) both; }
 [data-stagger] > *:nth-child(1){animation-delay:.04s}
 [data-stagger] > *:nth-child(2){animation-delay:.10s}
 [data-stagger] > *:nth-child(3){animation-delay:.16s}
@@ -290,6 +290,43 @@ a.link:hover { background: var(--color-accent); color: var(--black); border-colo
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ----------------------------------------------------------------------- *
+ * SCROLL REVEAL — one IntersectionObserver engine (app.js) drives these.   *
+ * Only hidden when html.js is present (added by app.js) → JS-off = visible. *
+ * Blocks stamp into place: the scroll variant of the signature grammar.     *
+ * ----------------------------------------------------------------------- */
+html.js [data-reveal] { opacity: 0; transform: translateY(1.4rem); will-change: opacity, transform; }
+html.js [data-reveal].is-in {
+  opacity: 1; transform: none;
+  transition: opacity var(--duration-slow) var(--ease-standard),
+              transform var(--duration-stamp) var(--ease-stamp);
+}
+@media (prefers-reduced-motion: reduce) {
+  html.js [data-reveal] { opacity: 1; transform: none; transition: none; }
+}
+
+/* ----------------------------------------------------------------------- *
+ * HANGUL REFINEMENT LAYER — assumes <html lang="ko"> + display stack order. *
+ * Do Hyeon is a single-weight (400) display face → kill faux-bold smear.    *
+ * ----------------------------------------------------------------------- */
+:lang(ko) { word-break: keep-all; overflow-wrap: break-word; line-break: strict; }
+:lang(ko) p { text-wrap: pretty; }
+:lang(ko) :is(h1, h2, h3, h4, h5, h6) { line-height: var(--leading-heading-ko); }
+:lang(ko) .display { line-height: var(--leading-display-ko); }
+:lang(ko) .lead { line-height: var(--leading-body-ko); }
+/* Do Hyeon has no 700/900 — synthesis:none lets Latin (Jost) keep real bold while
+   Korean stays a clean 400 (hierarchy carried by size + tracking, not weight). */
+:lang(ko) :is(h1, h2, h3, h4, h5, h6, .display, .card__title, .price-card__amount, .statcard__value) {
+  font-synthesis-weight: none;
+}
+:lang(ko) :is(.eyebrow, .btn, .field__label, .navbar__link, .badge, .segmented__option, .tabs__tab) {
+  letter-spacing: var(--tracking-caps-ko);
+}
+:lang(ko) :is(em, i, cite) { font-style: normal; font-weight: var(--weight-semibold); }
+:lang(ko) :is(.table td, .table__num, .statcard__value, .price, .slider__value) {
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 /* Print niceties */

@@ -1,10 +1,22 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>BAUHAUS — 디자인 시스템</title>
 <meta name="description" content="Theme 11 · Bauhaus. 형태는 기능을 따른다. 순수 원색, 기하학적 도형 언어, 모듈형 그리드." />
+<script>
+  /* FOUC guard — resolve theme + mark js before first paint (key matches app.js) */
+  (function () {
+    try {
+      var t = localStorage.getItem('bauhaus-theme');
+      if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+    document.documentElement.classList.add('js');
+  })();
+</script>
+<noscript><style>[data-reveal]{opacity:1 !important;transform:none !important;}</style></noscript>
 <link rel="stylesheet" href="tokens.css" />
 <link rel="stylesheet" href="semantic.css" />
 <link rel="stylesheet" href="base.css" />
@@ -18,24 +30,87 @@
 <link rel="stylesheet" href="components/navigation.css" />
 <style>
   /* index-only layout helpers */
-  .section { padding-block: var(--space-12); border-top: var(--border-3) solid var(--black); }
-  .section__head { display:flex; align-items:flex-end; justify-content:space-between; gap:var(--space-4); margin-bottom:var(--space-8); flex-wrap:wrap; }
-  .section__num { font-family:var(--font-mono); font-size:var(--text-sm); color:var(--color-text-muted); }
-  .swatch-ramp { display:grid; grid-template-columns:repeat(10,1fr); border:var(--border-2) solid var(--black); }
+  .section { position:relative; overflow-x:clip; padding-block: var(--space-12); border-top: var(--border-3) solid var(--color-border); }
+  .section--tight { padding-block: var(--space-9); }
+  .section--air { padding-block: var(--space-14) var(--space-13); }
+  .section__head { position:relative; z-index:1; display:flex; align-items:flex-end; justify-content:space-between; gap:var(--space-4); margin-bottom:var(--space-8); flex-wrap:wrap; }
+  .section__num { font-family:var(--font-mono); font-size:var(--text-sm); color:var(--color-text-muted); text-transform:uppercase; letter-spacing:var(--tracking-wide); }
+  /* oversized outline chapter number bleeding behind the section head */
+  .section__mark { position:absolute; top:calc(var(--space-6) * -1); right:var(--space-2); z-index:0; font-family:var(--font-display); font-weight:var(--weight-black); font-size:clamp(6rem, 18vw, 15rem); line-height:.8; letter-spacing:-.04em; color:transparent; -webkit-text-stroke:2px var(--color-border); opacity:.09; pointer-events:none; user-select:none; }
+
+  .swatch-ramp { display:grid; grid-template-columns:repeat(10,1fr); border:var(--border-2) solid var(--color-border); }
   .swatch { aspect-ratio:1; display:flex; align-items:flex-end; padding:4px; font-size:9px; font-family:var(--font-mono); }
-  .demo-cell { border:var(--border-2) solid var(--black); padding:var(--space-5); display:flex; flex-direction:column; gap:var(--space-4); background:var(--color-surface); }
+  .demo-cell { border:var(--border-2) solid var(--color-border); padding:var(--space-5); display:flex; flex-direction:column; gap:var(--space-4); background:var(--color-surface); }
+  .demo-cell--feature { background:var(--color-surface-2); }
   .demo-cell__label { font-size:var(--text-2xs); text-transform:uppercase; letter-spacing:var(--tracking-wider); color:var(--color-text-muted); font-weight:var(--weight-bold); }
   .demo-row { display:flex; flex-wrap:wrap; gap:var(--space-3); align-items:center; }
   .type-row { display:flex; align-items:baseline; gap:var(--space-4); border-bottom:var(--border-1) solid var(--color-divider); padding-block:var(--space-3); }
   .type-row .tk { font-family:var(--font-mono); font-size:var(--text-xs); color:var(--color-text-muted); width:5rem; flex-shrink:0; }
-  .page-card { border:var(--border-3) solid var(--black); padding:var(--space-6); display:flex; flex-direction:column; gap:var(--space-3); background:var(--color-surface); transition:transform var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard); position:relative; overflow:hidden; }
+
+  /* ---- POSTER HERO — Bauhaus exhibition-poster reconstruction ---- */
+  .poster { position:relative; overflow:clip; padding-block: var(--space-12) var(--space-11); }
+  .poster__grid { display:grid; grid-template-columns:1fr; gap:var(--space-8); align-items:center; }
+  .poster__display { font-family:var(--font-display); font-weight:var(--weight-black); font-size:clamp(3.4rem, 12vw, 8.5rem); line-height: var(--leading-display-ko); letter-spacing:-.01em; margin-top:var(--space-4); }
+  .poster__display span { display:block; }
+  .poster__display .l2 { color:var(--red-500); }
+  .poster__display .l3 { position:relative; display:inline-block; }
+  .poster__display .l3::after { content:''; position:absolute; left:0; right:calc(var(--space-6) * -1); bottom:.12em; height:.14em; background:var(--blue-500); z-index:-1; }
+  .poster__vlabel { writing-mode:vertical-rl; text-orientation:mixed; font-family:var(--font-mono); font-size:var(--text-xs); letter-spacing:.34em; text-transform:uppercase; color:var(--color-text-muted); }
+  .poster__aside { position:relative; }
+  @media (min-width: 900px) {
+    .poster__grid { grid-template-columns: 1.05fr 0.95fr; }
+    .poster__aside { margin-right: calc(var(--space-9) * -1); }  /* bleed to the edge */
+  }
+
+  /* fixed ambient corner wedges — pure color, no opacity tricks (DNA).
+     Only on very wide viewports where the 1320px container leaves real gutters,
+     and pushed deep into the corners so they never sit behind reading text. */
+  .stage { position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; display:none; }
+  .stage__arc { position:absolute; }
+  .stage__arc--tr { top:calc(var(--navbar-h) - 1px); right:-8rem; width:13rem; height:13rem; background:var(--blue-500); border-radius:0 0 0 var(--radius-full); }
+  .stage__arc--bl { bottom:-8rem; left:-8rem; width:14rem; height:14rem; background:var(--red-500); border-radius:0 var(--radius-full) 0 0; }
+  @media (min-width: 1440px) { .stage { display:block; } }
+  main, .navbar, .footer { position:relative; z-index:1; }
+
+  /* ---- MONDRIAN PAGE HUB — asymmetric modular composition ---- */
+  .page-hub { display:grid; grid-template-columns:repeat(12,1fr); grid-auto-flow:dense; gap:var(--space-4); }
+  .page-hub > * { grid-column: span 4; }
+  .page-hub .cell--lead { grid-column: span 6; grid-row: span 2; }
+  .page-hub .cell--wide { grid-column: span 6; }
+  .page-hub .cell--sm   { grid-column: span 3; }
+  @media (max-width: 1024px) {
+    .page-hub > *, .page-hub .cell--sm, .page-hub .cell--wide { grid-column: span 6; }
+    .page-hub .cell--lead { grid-column: span 12; grid-row: auto; }
+  }
+  @media (max-width: 560px) { .page-hub > * { grid-column: span 12 !important; grid-row: auto !important; } }
+
+  .page-card { border:var(--border-3) solid var(--color-border); padding:var(--space-6); display:flex; flex-direction:column; gap:var(--space-3); background:var(--color-surface); transition:transform var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard); position:relative; overflow:hidden; }
   .page-card:hover { transform:translate(-4px,-4px); box-shadow:var(--shadow-flat-lg); }
+  .page-card:focus-visible { transform:translate(-4px,-4px); box-shadow:var(--shadow-flat-lg); }
   .page-card__no { font-family:var(--font-display); font-size:var(--text-4xl); font-weight:var(--weight-black); line-height:1; }
-  .footer { background:var(--black); color:var(--white); padding-block:var(--space-9); }
+  .cell--lead .page-card__no, .cell--wide .page-card__no { font-size:var(--text-6xl); }
+  .page-card__go { margin-top:auto; font-family:var(--font-mono); font-size:var(--text-xs); text-transform:uppercase; letter-spacing:var(--tracking-wide); color:var(--color-text-muted); display:inline-flex; align-items:center; gap:var(--space-1); }
+  /* filled lead card = blue color-block with a cropped circle motif */
+  .page-card--fill { background:var(--blue-500); border-color:var(--color-border); color:var(--white); justify-content:flex-start; }
+  .page-card--fill .text-muted, .page-card--fill .page-card__go { color:rgba(255,255,255,.82); }
+  .page-card--fill::after { content:''; position:absolute; right:-3rem; bottom:-3rem; width:9rem; height:9rem; background:var(--yellow-400); border-radius:var(--radius-full); z-index:0; }
+  .page-card--fill > * { position:relative; z-index:1; }
+  /* manifesto closer — inverse block, flips clean in dark, primaries stay loud */
+  .page-card--statement { background:var(--color-surface-inverse); color:var(--color-text-inverse); justify-content:center; gap:var(--space-5); }
+  .page-card--statement__line { font-family:var(--font-display); font-weight:var(--weight-black); font-size:var(--text-3xl); line-height:var(--leading-display-ko); }
+  .page-card--statement__meta { color:inherit; opacity:.7; font-family:var(--font-mono); letter-spacing:var(--tracking-wide); }
+
+  .footer { background:var(--black); color:var(--white); padding-block:var(--space-9); border-top: var(--rule-thick) solid var(--color-border); }
 </style>
 </head>
 <body>
 <a href="#main" class="sr-only">본문으로 건너뛰기</a>
+
+<!-- AMBIENT STAGE — fixed color wedges (pure color-field, DNA-safe) -->
+<div class="stage no-print" aria-hidden="true">
+  <span class="stage__arc stage__arc--tr"></span>
+  <span class="stage__arc stage__arc--bl"></span>
+</div>
 
 <!-- COMMAND PALETTE -->
 <div class="cmdk" data-cmdk aria-hidden="true" role="dialog" aria-modal="true" aria-label="명령 팔레트">
@@ -54,7 +129,7 @@
       <div class="cmdk__item" role="option" data-href="pages/pricing.html" data-keywords="pricing plans billing"><span class="ico ico-star"></span>요금제</div>
       <div class="cmdk__item" role="option" data-href="pages/settings.html" data-keywords="settings preferences"><span class="ico ico-gear"></span>설정</div>
       <div class="cmdk__group-label">작업</div>
-      <div class="cmdk__item" role="option" data-action="toggle-theme" data-keywords="dark light theme toggle"><span class="ico ico-home"></span>다크 모드 전환<span class="trail">⌘ D</span></div>
+      <div class="cmdk__item" role="option" data-action="toggle-theme" data-keywords="dark light theme toggle 다크 라이트"><span class="theme-toggle__shape" aria-hidden="true"></span>테마 전환 · 원 ↔ 사각<span class="trail">⌘ D</span></div>
       <div class="cmdk__item" role="option" data-action="toast" data-keywords="notify test toast"><span class="ico ico-bell"></span>테스트 알림 보내기</div>
       <div class="cmdk__empty" hidden>검색 결과가 없습니다.</div>
     </div>
@@ -64,33 +139,36 @@
 <!-- NAVBAR -->
 <header class="navbar no-print">
   <a class="navbar__brand" href="index.html" aria-label="Bauhaus 홈">
-    <span class="logomark"><span class="mark"><i></i><i></i><i></i></span> BAUHAUS</span>
+    <span class="logomark"><span class="mark" aria-hidden="true"><i></i><i></i><i></i></span> BAUHAUS</span>
   </a>
-  <nav class="navbar__nav" aria-label="주요 메뉴">
+  <nav class="navbar__nav" id="primary-nav" aria-label="주요 메뉴">
     <a class="navbar__link is-active" href="#foundations">기초</a>
     <a class="navbar__link" href="#components">컴포넌트</a>
     <a class="navbar__link" href="#pages">데모</a>
-    <a class="navbar__link" href="README.md">문서</a>
   </nav>
   <span class="navbar__spacer"></span>
   <div class="navbar__actions">
     <button class="btn btn-ghost btn-sm" data-open-cmdk aria-label="명령 팔레트 열기"><span class="ico ico-search ico-sm"></span><span class="cmdk__kbd">⌘K</span></button>
-    <button class="btn-icon" data-theme-toggle aria-label="테마 전환" aria-pressed="false"><span class="ico ico-home"></span></button>
-    <button class="btn-icon navbar__toggle" data-sidebar-mobile aria-label="메뉴"><span class="ico ico-menu"></span></button>
+    <button class="theme-toggle" data-theme-toggle aria-label="테마 전환" aria-pressed="false"><span class="theme-toggle__shape" aria-hidden="true"></span></button>
+    <button class="btn-icon navbar__toggle" data-nav-toggle aria-controls="primary-nav" aria-expanded="false" aria-label="메뉴 열기"><span class="ico ico-menu"></span></button>
   </div>
 </header>
 
 <main id="main">
-<!-- HERO -->
-<section class="container" style="padding-block:var(--space-12) var(--space-11);">
-  <div class="grid" style="align-items:center;">
-    <div class="col-7 lg:col-12" data-stagger>
-      <span class="eyebrow">Theme 11 · 디자인 시스템</span>
-      <h1 class="display" style="margin-top:var(--space-3);">FORM<br/>FOLLOWS<br/>FUNCTION</h1>
-      <p class="lead" style="max-width:34rem; margin-top:var(--space-5);">프로덕션 수준의 Bauhaus 인터페이스 키트. 순수 원색, 원–삼각형–사각형의 도형 알파벳, 엄격한 모듈형 그리드, 그리고 군더더기 없는 디자인. 오직 CSS 변수와 바닐라 JS만으로 구현했습니다.</p>
+<!-- HERO — bauhaus exhibition poster -->
+<section class="container poster">
+  <div class="poster__grid">
+    <div data-stagger>
+      <span class="eyebrow">Theme 11 · 바우하우스 디자인 시스템</span>
+      <h1 class="display poster__display">
+        <span class="l1">형태는</span>
+        <span class="l2">기능을</span>
+        <span class="l3">따른다</span>
+      </h1>
+      <p class="lead" style="max-width:33rem; margin-top:var(--space-6);">원·삼각형·사각형 세 도형과 빨강·노랑·파랑 세 원색. 그 최소한의 알파벳만으로 화면 전체를 조립합니다. 장식을 덜어내면, 남은 구조가 곧 표현입니다.</p>
       <div class="demo-row" style="margin-top:var(--space-7);">
-        <a class="btn btn-primary btn-lg" href="#components">컴포넌트 살펴보기 <span class="ico ico-arrow-r"></span></a>
-        <a class="btn btn-ghost btn-lg" href="#pages">데모 보기</a>
+        <a class="btn btn-primary btn-lg" href="#components">컴포넌트 보기 <span class="ico ico-arrow-r"></span></a>
+        <a class="btn btn-ghost btn-lg" href="#pages">데모 화면</a>
       </div>
       <div class="motif-trio" style="margin-top:var(--space-9);" aria-hidden="true">
         <span class="shape shape-circle shape-lg fill-red"></span>
@@ -98,12 +176,15 @@
         <span class="shape shape-square shape-lg fill-blue"></span>
       </div>
     </div>
-    <div class="col-5 lg:col-12">
-      <div class="hero-composition" aria-hidden="true">
-        <span class="blk blk-1"></span>
-        <span class="blk blk-2"></span>
-        <span class="blk blk-3"></span>
-        <span class="blk blk-4"></span>
+    <div class="poster__aside">
+      <div class="flex items-stretch gap-5">
+        <span class="poster__vlabel" aria-hidden="true">Form follows function · Est. 1919</span>
+        <div class="hero-composition flex-1" aria-hidden="true">
+          <span class="blk blk-1"></span>
+          <span class="blk blk-2"></span>
+          <span class="blk blk-3"></span>
+          <span class="blk blk-4"></span>
+        </div>
       </div>
     </div>
   </div>
@@ -125,14 +206,15 @@
 
 <!-- FOUNDATIONS -->
 <div class="container">
-<section class="section" id="foundations" style="border-top:none;">
-  <div class="section__head">
-    <div><span class="section__num">01 / 기초</span><h2>토큰 &amp; 프리미티브</h2></div>
-    <p class="text-muted" style="max-width:24rem;">모든 것은 원시 토큰에서 파생됩니다 — 순수 원색 램프, 기하학적 도형 세트, 모듈형 간격 스케일.</p>
+<section class="section grid-texture" id="foundations" style="border-top:none;">
+  <span class="section__mark" aria-hidden="true">01</span>
+  <div class="section__head" data-reveal>
+    <div><span class="section__num">01 · 기초</span><h2>토큰 &amp; 프리미티브</h2></div>
+    <p class="text-muted" style="max-width:24rem;">세 개의 원색과 네 개의 도형, 그리고 8px 모듈형 간격 — 시스템 전체가 이 알파벳에서 파생됩니다.</p>
   </div>
 
   <h3 style="font-size:var(--text-xl); margin-bottom:var(--space-4);">색상 램프</h3>
-  <div class="stack-lg">
+  <div class="stack-lg" data-reveal>
     <div>
       <div class="demo-cell__label" style="margin-bottom:var(--space-2);">Red — 보조 / 위험</div>
       <div class="swatch-ramp">
@@ -176,15 +258,15 @@
   </div>
 
   <h3 style="font-size:var(--text-xl); margin:var(--space-9) 0 var(--space-4);">도형 언어</h3>
-  <div class="grid-4 md:grid-2">
+  <div class="grid-4 md:grid-2" data-reveal>
     <div class="demo-cell text-center"><span class="shape shape-circle shape-lg fill-red" style="margin:0 auto;"></span><div class="demo-cell__label">원 · radius-full</div></div>
     <div class="demo-cell text-center"><span class="shape shape-triangle shape-tri-lg tri-yellow" style="margin:0 auto;"></span><div class="demo-cell__label">삼각형 · clip-path</div></div>
     <div class="demo-cell text-center"><span class="shape shape-square shape-lg fill-blue" style="margin:0 auto;"></span><div class="demo-cell__label">사각형 · radius-0</div></div>
     <div class="demo-cell text-center"><span class="shape shape-arc shape-lg fill-black" style="margin:0 auto;"></span><div class="demo-cell__label">4분 원호</div></div>
   </div>
 
-  <h3 style="font-size:var(--text-xl); margin:var(--space-9) 0 var(--space-4);">타입 스케일 — Jost</h3>
-  <div>
+  <h3 style="font-size:var(--text-xl); margin:var(--space-9) 0 var(--space-4);">타입 스케일 — Jost · 한글 Do Hyeon</h3>
+  <div data-reveal>
     <div class="type-row"><span class="tk">6xl / 88</span><span class="display" style="font-size:var(--text-6xl)">기하학</span></div>
     <div class="type-row"><span class="tk">4xl / 48</span><span style="font-family:var(--font-display);font-weight:700;font-size:var(--text-4xl)">합리적 질서</span></div>
     <div class="type-row"><span class="tk">2xl / 28</span><span style="font-family:var(--font-display);font-weight:600;font-size:var(--text-2xl)">기능 우선</span></div>
@@ -195,9 +277,10 @@
 
 <!-- COMPONENTS -->
 <section class="section" id="components">
-  <div class="section__head">
-    <div><span class="section__num">02 / 라이브러리</span><h2>컴포넌트 갤러리</h2></div>
-    <p class="text-muted" style="max-width:24rem;">폼, 디스플레이, 피드백, 오버레이, 내비게이션에 걸친 50개 이상의 컴포넌트. 모든 상태, 크기, 변형을 담았습니다.</p>
+  <span class="section__mark" aria-hidden="true">02</span>
+  <div class="section__head" data-reveal>
+    <div><span class="section__num">02 · 라이브러리</span><h2>컴포넌트 갤러리</h2></div>
+    <p class="text-muted" style="max-width:24rem;">폼·디스플레이·피드백·오버레이·내비게이션 전 영역. hover·focus·비활성·로딩·오류·빈 상태까지 실제 맥락 속에서 확인하세요.</p>
   </div>
 
   <div class="grid">
@@ -295,9 +378,9 @@
     <div class="col-4 lg:col-6 md:col-12">
       <div class="statcard" style="height:100%;">
         <div class="statcard__shape shape shape-circle fill-blue"></div>
-        <div class="statcard__label">매출</div>
-        <div class="statcard__value">$48.2K</div>
-        <div class="statcard__delta is-up">전월 대비 12.4%</div>
+        <div class="statcard__label">6월 매출</div>
+        <div class="statcard__value">₩4.82억</div>
+        <div class="statcard__delta is-up">전월 대비 18.2%</div>
       </div>
     </div>
     <div class="col-4 lg:col-12">
@@ -374,14 +457,14 @@
       <div class="table-wrap">
         <table class="table table--zebra" data-table>
           <thead><tr>
-            <th style="width:2.5rem"><label class="checkbox"><input type="checkbox" data-select-all /><span class="checkbox__box"></span></label></th>
-            <th data-sort="text">프로젝트</th><th data-sort="text">담당자</th><th data-sort="text">상태</th><th data-sort="number" class="table__num">예산</th>
+            <th scope="col" style="width:2.5rem"><label class="checkbox"><input type="checkbox" data-select-all aria-label="전체 선택" /><span class="checkbox__box"></span></label></th>
+            <th scope="col" data-sort="text"><button class="th-sort" type="button">프로젝트</button></th><th scope="col" data-sort="text"><button class="th-sort" type="button">담당자</button></th><th scope="col" data-sort="text"><button class="th-sort" type="button">상태</button></th><th scope="col" data-sort="number" class="table__num"><button class="th-sort" type="button">예산</button></th>
           </tr></thead>
           <tbody>
-            <tr><td><label class="checkbox"><input type="checkbox" data-row-check /><span class="checkbox__box"></span></label></td><td>삼각형 리브랜딩</td><td>김민준</td><td><span class="status status--progress"><span class="status__shape"></span>진행 중</span></td><td class="table__num" data-value="42000">$42,000</td></tr>
-            <tr><td><label class="checkbox"><input type="checkbox" data-row-check /><span class="checkbox__box"></span></label></td><td>그리드 시스템 v2</td><td>이서연</td><td><span class="status status--done"><span class="status__shape"></span>완료</span></td><td class="table__num" data-value="18500">$18,500</td></tr>
-            <tr><td><label class="checkbox"><input type="checkbox" data-row-check /><span class="checkbox__box"></span></label></td><td>원색 팔레트</td><td>박지후</td><td><span class="status status--blocked"><span class="status__shape"></span>차단됨</span></td><td class="table__num" data-value="9200">$9,200</td></tr>
-            <tr><td><label class="checkbox"><input type="checkbox" data-row-check /><span class="checkbox__box"></span></label></td><td>타입 스페시먼</td><td>최예린</td><td><span class="status status--progress"><span class="status__shape"></span>진행 중</span></td><td class="table__num" data-value="27750">$27,750</td></tr>
+            <tr><td><label class="checkbox"><input type="checkbox" data-row-check aria-label="행 선택" /><span class="checkbox__box"></span></label></td><td>삼각형 리브랜딩</td><td>김민준</td><td><span class="status status--progress"><span class="status__shape"></span>진행 중</span></td><td class="table__num" data-value="42000000">₩4,200만</td></tr>
+            <tr><td><label class="checkbox"><input type="checkbox" data-row-check aria-label="행 선택" /><span class="checkbox__box"></span></label></td><td>그리드 시스템 v2</td><td>이서연</td><td><span class="status status--done"><span class="status__shape"></span>완료</span></td><td class="table__num" data-value="18500000">₩1,850만</td></tr>
+            <tr><td><label class="checkbox"><input type="checkbox" data-row-check aria-label="행 선택" /><span class="checkbox__box"></span></label></td><td>원색 팔레트</td><td>박지후</td><td><span class="status status--blocked"><span class="status__shape"></span>차단됨</span></td><td class="table__num" data-value="9200000">₩920만</td></tr>
+            <tr><td><label class="checkbox"><input type="checkbox" data-row-check aria-label="행 선택" /><span class="checkbox__box"></span></label></td><td>타입 스페시먼</td><td>최예린</td><td><span class="status status--progress"><span class="status__shape"></span>진행 중</span></td><td class="table__num" data-value="27750000">₩2,775만</td></tr>
           </tbody>
         </table>
       </div>
@@ -403,22 +486,37 @@
   </div>
 </section>
 
-<!-- PAGES -->
-<section class="section" id="pages">
-  <div class="section__head">
-    <div><span class="section__num">03 / 쇼케이스</span><h2>데모 화면</h2></div>
-    <p class="text-muted" style="max-width:24rem;">전부 이 키트만으로 구성한 9개의 실전 스타일 화면. 완전한 반응형과 실제 인터랙션을 제공합니다.</p>
+<!-- PAGES — mondrian showcase hub -->
+<section class="section section--air" id="pages">
+  <span class="section__mark" aria-hidden="true">03</span>
+  <div class="section__head" data-reveal>
+    <div><span class="section__num">03 · 쇼케이스</span><h2>데모 화면</h2></div>
+    <p class="text-muted" style="max-width:24rem;">같은 도형 알파벳으로 지은 아홉 개의 실제 서비스 장면. 각 화면은 완전한 반응형과 실제 인터랙션을 갖췄습니다.</p>
   </div>
-  <div class="grid">
-    <a class="col-4 lg:col-6 md:col-12 page-card arc-corner" href="pages/dashboard.html"><span class="page-card__no">01</span><h4>분석 대시보드</h4><p class="text-muted text-sm">기하학적 위젯, 정렬 가능한 표, 도형 차트.</p></a>
-    <a class="col-4 lg:col-6 md:col-12 page-card arc-corner arc-red" href="pages/kanban.html"><span class="page-card__no">02</span><h4>칸반 보드</h4><p class="text-muted text-sm">상태 칼럼 사이로 드래그하는 카드.</p></a>
-    <a class="col-4 lg:col-6 md:col-12 page-card arc-corner arc-blue" href="pages/inbox.html"><span class="page-card__no">03</span><h4>받은 편지함 · 3분할</h4><p class="text-muted text-sm">폴더 목록, 메시지 목록, 읽기 창.</p></a>
-    <a class="col-4 lg:col-6 md:col-12 page-card arc-corner" href="pages/product.html"><span class="page-card__no">04</span><h4>상품 상세</h4><p class="text-muted text-sm">갤러리, 옵션, 장바구니 담기.</p></a>
-    <a class="col-4 lg:col-6 md:col-12 page-card arc-corner arc-red" href="pages/pricing.html"><span class="page-card__no">05</span><h4>요금제</h4><p class="text-muted text-sm">3개 플랜, 월간/연간 전환.</p></a>
-    <a class="col-4 lg:col-6 md:col-12 page-card arc-corner arc-blue" href="pages/settings.html"><span class="page-card__no">06</span><h4>설정</h4><p class="text-muted text-sm">탭, 토글, 위험 구역.</p></a>
-    <a class="col-4 lg:col-6 md:col-12 page-card arc-corner" href="pages/onboarding.html"><span class="page-card__no">07</span><h4>온보딩 위저드</h4><p class="text-muted text-sm">진행률이 표시되는 다단계 흐름.</p></a>
-    <a class="col-4 lg:col-6 md:col-12 page-card arc-corner arc-red" href="pages/profile.html"><span class="page-card__no">08</span><h4>프로필 / 계정</h4><p class="text-muted text-sm">커버, 통계, 활동 타임라인.</p></a>
-    <a class="col-4 lg:col-6 md:col-12 page-card arc-corner arc-blue" href="pages/404.html"><span class="page-card__no">09</span><h4>404 &amp; 빈 상태</h4><p class="text-muted text-sm">기하학적 페이지 없음 + 빈 상태 패턴.</p></a>
+  <div class="page-hub">
+    <a class="page-card cell--lead page-card--fill" href="pages/dashboard.html">
+      <span class="page-card__no">01</span>
+      <h4>분석 대시보드</h4>
+      <p class="text-sm">6월 캠페인 성과를 확인하는 아침 — 비대칭 벤토, 정렬 가능한 표, 도형 차트.</p>
+      <span class="page-card__go">열기 <span class="ico ico-arrow-r ico-sm"></span></span>
+    </a>
+    <a class="page-card cell--sm arc-corner arc-red" href="pages/kanban.html"><span class="page-card__no">02</span><h4>칸반 보드</h4><p class="text-muted text-sm">상태 칼럼을 오가는 작업 카드.</p><span class="page-card__go">열기 <span class="ico ico-arrow-r ico-sm"></span></span></a>
+    <a class="page-card cell--sm arc-corner arc-blue" href="pages/inbox.html"><span class="page-card__no">03</span><h4>받은 편지함</h4><p class="text-muted text-sm">폴더·목록·읽기 3분할 뷰.</p><span class="page-card__go">열기 <span class="ico ico-arrow-r ico-sm"></span></span></a>
+    <a class="page-card cell--sm arc-corner" href="pages/product.html"><span class="page-card__no">04</span><h4>상품 상세</h4><p class="text-muted text-sm">갤러리·옵션·장바구니.</p><span class="page-card__go">열기 <span class="ico ico-arrow-r ico-sm"></span></span></a>
+    <a class="page-card cell--sm arc-corner arc-red" href="pages/pricing.html"><span class="page-card__no">05</span><h4>요금제</h4><p class="text-muted text-sm">월간·연간 전환 3플랜.</p><span class="page-card__go">열기 <span class="ico ico-arrow-r ico-sm"></span></span></a>
+    <a class="page-card arc-corner arc-blue" href="pages/settings.html"><span class="page-card__no">06</span><h4>설정</h4><p class="text-muted text-sm">탭·토글·위험 구역 확인 플로우.</p><span class="page-card__go">열기 <span class="ico ico-arrow-r ico-sm"></span></span></a>
+    <a class="page-card arc-corner" href="pages/onboarding.html"><span class="page-card__no">07</span><h4>온보딩 위저드</h4><p class="text-muted text-sm">진행률이 표시되는 다단계 흐름.</p><span class="page-card__go">열기 <span class="ico ico-arrow-r ico-sm"></span></span></a>
+    <a class="page-card arc-corner arc-red" href="pages/profile.html"><span class="page-card__no">08</span><h4>프로필 · 계정</h4><p class="text-muted text-sm">커버·통계·활동 타임라인.</p><span class="page-card__go">열기 <span class="ico ico-arrow-r ico-sm"></span></span></a>
+    <a class="page-card cell--wide arc-corner arc-blue" href="pages/404.html"><span class="page-card__no">09</span><h4>404 · 빈 상태</h4><p class="text-muted text-sm">잘못된 시간에 도착한 페이지 — 도는 시계와 빈 상태 패턴.</p><span class="page-card__go">열기 <span class="ico ico-arrow-r ico-sm"></span></span></a>
+    <div class="page-card cell--wide page-card--statement">
+      <div class="motif-trio" aria-hidden="true">
+        <span class="shape shape-circle fill-red"></span>
+        <span class="shape shape-triangle tri-yellow"></span>
+        <span class="shape shape-square fill-blue"></span>
+      </div>
+      <p class="page-card--statement__line">형태는<br/>기능을 따른다</p>
+      <span class="text-sm page-card--statement__meta">Bauhaus · 1919 → 지금</span>
+    </div>
   </div>
 </section>
 </div>
@@ -427,8 +525,8 @@
 <!-- FOOTER -->
 <footer class="footer">
   <div class="container flex items-center justify-between gap-4" style="flex-wrap:wrap;">
-    <div class="logomark" style="color:#fff;"><span class="mark"><i></i><i></i><i></i></span> BAUHAUS</div>
-    <p class="text-sm" style="color:var(--neutral-300); max-width:30rem;">Theme 11 — 순수 CSS, 프레임워크 없는 Bauhaus 디자인 시스템. 형태는 기능을 따른다. 1919 → 영원히.</p>
+    <div class="logomark" style="color:#fff;"><span class="mark" aria-hidden="true"><i></i><i></i><i></i></span> BAUHAUS</div>
+    <p class="text-sm" style="color:var(--neutral-300); max-width:32rem;">Theme 11 · Bauhaus — 세 원색과 세 도형으로 짜인 디자인 시스템. 형태는 기능을 따른다. Weimar 1919 → 지금.</p>
     <div class="demo-row">
       <span class="badge badge--red">Red</span><span class="badge badge--yellow">Yellow</span><span class="badge badge--blue">Blue</span>
     </div>
@@ -440,7 +538,7 @@
   <div class="modal__dialog">
     <div class="modal__header"><h3 class="modal__title" id="demoModalTitle">프로젝트 만들기</h3><button class="modal__close btn-icon" data-close-modal aria-label="닫기"><span class="ico ico-x"></span></button></div>
     <div class="modal__body stack">
-      <div class="field"><label class="field__label">프로젝트 이름</label><input class="input" placeholder="삼각형 리브랜딩" autofocus /></div>
+      <div class="field"><label class="field__label">프로젝트 이름</label><input class="input" placeholder="예: 삼각형 리브랜딩" /></div>
       <div class="field"><label class="field__label">색상</label>
         <div class="demo-row">
           <label class="radio"><input type="radio" name="c" checked /><span class="radio__dot"></span> Blue</label>

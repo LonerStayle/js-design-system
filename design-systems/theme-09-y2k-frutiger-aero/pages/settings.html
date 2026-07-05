@@ -3,7 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="설정 — 프로필·계정·알림·결제·위험 영역을 한곳에서 관리하는 Aero 글래스 설정 화면." />
   <title>설정 · Aero</title>
+
+  <!-- Apply saved/system theme + mark JS on before first paint (no FOUC, no reveal flash) -->
+  <script>
+    (function () {
+      var d = document.documentElement;
+      d.classList.add('js');
+      try {
+        var t = localStorage.getItem('aero-theme');
+        if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        d.setAttribute('data-theme', t);
+      } catch (e) { d.setAttribute('data-theme', 'light'); }
+    })();
+  </script>
+
   <link rel="stylesheet" href="../tokens.css" />
   <link rel="stylesheet" href="../semantic.css" />
   <link rel="stylesheet" href="../base.css" />
@@ -117,7 +132,7 @@
       flex: none; width: 3rem; height: 2rem; border-radius: var(--radius-sm);
       background: linear-gradient(135deg, var(--aqua-400), var(--sky-600));
       box-shadow: var(--gloss-inset); display: inline-flex; align-items: center; justify-content: center;
-      color: #fff;
+      color: var(--white);
     }
     .pay-method__card svg { width: 1.25rem; height: 1.25rem; }
     .pay-method__num { font-weight: var(--weight-semibold); color: var(--color-text); font-variant-numeric: tabular-nums; }
@@ -171,6 +186,19 @@
     .confirm-warn { display: flex; align-items: center; gap: var(--space-1); font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--color-danger); }
     .confirm-warn svg { width: 1em; height: 1em; }
     .mono { font-family: var(--font-mono); font-weight: var(--weight-bold); color: var(--color-danger-fg); }
+
+    /* receipt download rendered as a link-styled button (action, not navigation) */
+    .receipt-link {
+      background: none; border: 0; padding: 0; font: inherit; cursor: pointer;
+      color: var(--color-primary); font-weight: var(--weight-semibold); text-decoration: none;
+    }
+    .receipt-link:hover { color: var(--color-primary-hover); text-decoration: underline; }
+    .receipt-link:focus-visible { outline: 2px solid transparent; box-shadow: var(--ring); border-radius: var(--radius-sm); }
+
+    /* theme toggle sun/moon swap */
+    .theme-toggle svg { width: 1.05rem; height: 1.05rem; }
+    [data-theme="light"] .theme-ico--sun { display: none; }
+    [data-theme="dark"]  .theme-ico--moon { display: none; }
   </style>
 </head>
 <body>
@@ -179,7 +207,7 @@
   <div class="aero-bubbles" data-bubbles="14" aria-hidden="true"></div>
 
   <!-- ===== Shared glossy navbar ===== -->
-  <header class="navbar" role="banner">
+  <header class="navbar navbar--sticky" role="banner">
     <a class="navbar__brand" href="../index.html">
       <span class="navbar__logo" aria-hidden="true">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
@@ -203,9 +231,17 @@
       <a class="navbar__link is-active" href="settings.html" aria-current="page">설정</a>
     </nav>
     <div class="navbar__actions">
-      <button class="btn btn--ghost btn--sm" data-command-open aria-label="명령 팔레트 열기">⌘K</button>
-      <button class="btn btn--secondary btn--sm" data-theme-toggle aria-pressed="false">
-        <span data-theme-label>Dark</span>
+      <button class="btn btn--ghost btn--sm" data-command-open aria-label="명령 팔레트 열기 (⌘K)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <span class="hide-mobile">⌘K</span>
+      </button>
+      <button class="btn btn--secondary btn--sm theme-toggle" data-theme-toggle aria-pressed="false">
+        <svg class="theme-ico--moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <svg class="theme-ico--sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <span data-theme-label>다크</span>
+      </button>
+      <button class="navbar__toggle" data-nav-toggle aria-label="메뉴 열기" aria-expanded="false">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
       </button>
     </div>
   </header>
@@ -223,7 +259,7 @@
       </ol>
     </nav>
 
-    <div class="settings-head">
+    <div class="settings-head" data-reveal>
       <h1 class="settings-head__title">설정</h1>
       <p class="settings-head__sub">계정, 프로필, 알림과 결제를 한곳에서 관리하세요. 변경 사항은 저장하기 전까지 적용되지 않습니다.</p>
     </div>
@@ -271,16 +307,16 @@
                 <strong>프로필 사진</strong>
                 <span class="avatar-editor__hint">JPG·PNG, 최대 2MB · 정사각형 권장</span>
                 <div class="avatar-editor__btns">
-                  <button type="button" class="btn btn--secondary btn--sm" data-toast data-toast-msg="사진 선택 창을 열었습니다." data-toast-variant="info">
+                  <button type="button" class="btn btn--secondary btn--sm" data-toast data-toast-msg="사진 선택 창을 열었어요." data-toast-variant="info">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 9l5-5 5 5"/><path d="M12 4v12"/></svg>
                     변경
                   </button>
-                  <button type="button" class="btn btn--ghost btn--sm" data-toast data-toast-msg="기본 이미지로 되돌렸습니다." data-toast-variant="info">삭제</button>
+                  <button type="button" class="btn btn--ghost btn--sm" data-toast data-toast-msg="기본 이미지로 되돌렸어요." data-toast-variant="info">삭제</button>
                 </div>
               </div>
             </div>
 
-            <form class="form-grid" onsubmit="return false">
+            <form class="form-grid" data-noreload>
               <div class="field">
                 <label class="field__label" for="pf-name">이름</label>
                 <input class="input" id="pf-name" type="text" value="강소라" autocomplete="name" />
@@ -296,7 +332,7 @@
               </div>
               <div class="field span-2">
                 <label class="field__label" for="pf-bio">소개</label>
-                <textarea class="textarea" id="pf-bio" placeholder="간단한 자기소개를 적어주세요">클라우드 위에서 일하는 프로덕트 디자이너 ☁️ 글래스모피즘과 청량한 UI를 좋아합니다.</textarea>
+                <textarea class="textarea" id="pf-bio" placeholder="간단한 자기소개를 적어주세요">맑고 청량한 화면을 만드는 프로덕트 디자이너입니다. 글래스모피즘과 물방울 같은 인터랙션을 좋아해요.</textarea>
                 <span class="field__hint">최대 160자</span>
               </div>
               <div class="field">
@@ -325,7 +361,7 @@
             <div class="save-row">
               <span class="save-row__note">마지막 저장: 2026-06-20 14:32</span>
               <button type="button" class="btn btn--ghost">취소</button>
-              <button type="button" class="btn btn--primary" data-toast data-toast-msg="프로필이 저장되었습니다." data-toast-variant="success">저장</button>
+              <button type="button" class="btn btn--primary" data-toast data-toast-msg="프로필을 저장했어요." data-toast-variant="success">저장</button>
             </div>
           </div>
         </article>
@@ -369,7 +405,7 @@
             </h2>
           </div>
           <div class="card__body">
-            <form class="form-grid" onsubmit="return false">
+            <form class="form-grid" data-noreload>
               <div class="field span-2">
                 <label class="field__label" for="ac-pw-old">현재 비밀번호</label>
                 <input class="input" id="ac-pw-old" type="password" autocomplete="current-password" placeholder="••••••••" />
@@ -379,15 +415,16 @@
                 <input class="input" id="ac-pw-new" type="password" autocomplete="new-password" placeholder="8자 이상" />
                 <span class="field__hint">대소문자·숫자·기호 조합 권장</span>
               </div>
-              <div class="field">
+              <div class="field" id="pw-conf-field">
                 <label class="field__label" for="ac-pw-conf">새 비밀번호 확인</label>
-                <input class="input" id="ac-pw-conf" type="password" autocomplete="new-password" placeholder="다시 입력" />
+                <input class="input" id="ac-pw-conf" type="password" autocomplete="new-password" placeholder="다시 입력" aria-describedby="pw-conf-error" />
+                <span class="field__error" id="pw-conf-error">새 비밀번호와 일치하지 않아요.</span>
               </div>
             </form>
           </div>
           <div class="card__footer">
             <div class="save-row">
-              <button type="button" class="btn btn--primary" data-toast data-toast-msg="비밀번호가 변경되었습니다." data-toast-variant="success">비밀번호 업데이트</button>
+              <button type="button" class="btn btn--primary" data-toast data-toast-msg="비밀번호를 변경했어요 · 다른 기기는 다시 로그인해야 해요" data-toast-variant="success">비밀번호 업데이트</button>
             </div>
           </div>
         </article>
@@ -516,7 +553,7 @@
           </div>
           <div class="card__footer">
             <div class="save-row">
-              <button type="button" class="btn btn--primary" data-toast data-toast-msg="알림 설정이 저장되었습니다." data-toast-variant="success">변경 사항 저장</button>
+              <button type="button" class="btn btn--primary" data-toast data-toast-msg="알림 설정을 저장했어요." data-toast-variant="success">변경 사항 저장</button>
             </div>
           </div>
         </article>
@@ -541,10 +578,10 @@
                   Pro
                   <span class="badge badge--primary badge--glossy">현재 이용 중</span>
                 </span>
-                <span class="plan-banner__price">월 ₩19,000 · 다음 결제일 2026-07-01</span>
+                <span class="plan-banner__price">월 ₩19,000 · 다음 결제일 2026년 8월 1일</span>
               </div>
               <span class="plan-banner__action">
-                <button type="button" class="btn btn--accent" data-toast data-toast-msg="업그레이드 페이지로 이동합니다." data-toast-variant="info">
+                <button type="button" class="btn btn--accent" data-toast data-toast-msg="업그레이드 페이지로 이동할게요." data-toast-variant="info">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
                   업그레이드
                 </button>
@@ -575,12 +612,12 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
               </span>
               <div>
-                <span class="pay-method__num">Visa •••• 4242</span><br/>
-                <span class="pay-method__meta">만료 08 / 27 · 기본 결제 수단</span>
+                <span class="pay-method__num">현대카드 ·· 4821</span><br/>
+                <span class="pay-method__meta">만료 08/27 · 기본 결제 수단</span>
               </div>
               <span style="margin-left:auto; display:flex; gap:var(--space-2);">
-                <button type="button" class="btn btn--ghost btn--sm" data-toast data-toast-msg="카드 정보 수정 창을 열었습니다." data-toast-variant="info">수정</button>
-                <button type="button" class="btn btn--secondary btn--sm" data-toast data-toast-msg="새 결제 수단 추가 창을 열었습니다." data-toast-variant="info">추가</button>
+                <button type="button" class="btn btn--ghost btn--sm" data-toast data-toast-msg="카드 정보 수정 창을 열었어요." data-toast-variant="info">수정</button>
+                <button type="button" class="btn btn--secondary btn--sm" data-toast data-toast-msg="새 결제 수단 추가 창을 열었어요 · 카카오페이·토스도 연결할 수 있어요" data-toast-variant="info">추가</button>
               </span>
             </div>
           </div>
@@ -608,13 +645,22 @@
                 </thead>
                 <tbody>
                   <tr>
+                    <td>2026-07-01</td>
+                    <td>Pro 플랜 · 월간</td>
+                    <td class="is-numeric">₩19,000</td>
+                    <td><span class="badge badge--warning">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                      처리 중</span></td>
+                    <td><button type="button" class="receipt-link" data-toast data-toast-msg="영수증을 내려받았어요." data-toast-variant="info">PDF</button></td>
+                  </tr>
+                  <tr>
                     <td>2026-06-01</td>
                     <td>Pro 플랜 · 월간</td>
                     <td class="is-numeric">₩19,000</td>
                     <td><span class="badge badge--success">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
                       결제됨</span></td>
-                    <td><a class="link" href="#" data-toast data-toast-msg="영수증을 내려받습니다." data-toast-variant="info">PDF</a></td>
+                    <td><button type="button" class="receipt-link" data-toast data-toast-msg="영수증을 내려받았어요." data-toast-variant="info">PDF</button></td>
                   </tr>
                   <tr>
                     <td>2026-05-01</td>
@@ -623,16 +669,7 @@
                     <td><span class="badge badge--success">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
                       결제됨</span></td>
-                    <td><a class="link" href="#" data-toast data-toast-msg="영수증을 내려받습니다." data-toast-variant="info">PDF</a></td>
-                  </tr>
-                  <tr>
-                    <td>2026-04-01</td>
-                    <td>Pro 플랜 · 월간</td>
-                    <td class="is-numeric">₩19,000</td>
-                    <td><span class="badge badge--warning">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                      처리 중</span></td>
-                    <td><a class="link" href="#" data-toast data-toast-msg="영수증을 내려받습니다." data-toast-variant="info">PDF</a></td>
+                    <td><button type="button" class="receipt-link" data-toast data-toast-msg="영수증을 내려받았어요." data-toast-variant="info">PDF</button></td>
                   </tr>
                 </tbody>
               </table>
@@ -666,7 +703,7 @@
                 <span class="danger-action__label">계정 비활성화</span>
                 <span class="danger-action__help">로그인이 일시 중단되며 프로필이 숨겨집니다. 언제든 다시 활성화할 수 있습니다.</span>
               </div>
-              <button type="button" class="btn btn--secondary" data-toast data-toast-msg="계정이 비활성화되었습니다." data-toast-variant="warning">
+              <button type="button" class="btn btn--secondary" data-toast data-toast-msg="계정을 비활성화했어요 · 언제든 다시 켤 수 있어요" data-toast-variant="warning">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5"/></svg>
                 계정 비활성화
               </button>
@@ -695,7 +732,7 @@
         저장하지 않은 변경 사항이 있습니다.
       </span>
       <button type="button" class="btn btn--ghost">취소</button>
-      <button type="button" class="btn btn--primary" data-toast data-toast-msg="모든 변경 사항이 저장되었습니다." data-toast-variant="success">
+      <button type="button" class="btn btn--primary" data-toast data-toast-msg="모든 변경 사항을 저장했어요." data-toast-variant="success">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
         저장
       </button>
@@ -703,7 +740,7 @@
   </div>
 
   <!-- ===== Delete account confirm modal ===== -->
-  <div class="modal modal--sm" id="delete-account-modal" data-modal role="dialog" aria-modal="true" aria-labelledby="del-modal-title" aria-describedby="del-modal-desc">
+  <div class="modal modal--sm" id="delete-account-modal" data-modal aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="del-modal-title" aria-describedby="del-modal-desc">
     <div class="modal__backdrop" data-modal-close></div>
     <div class="modal__panel">
       <div class="modal__header">
@@ -725,23 +762,19 @@
             <p class="alert__body">모든 프로젝트, 파일, 결제 내역이 즉시 영구 삭제됩니다.</p>
           </div>
         </div>
-        <p id="del-modal-desc">계속하려면 아래에 <span class="mono">DELETE</span> 를 정확히 입력하세요.</p>
+        <p id="del-modal-desc">계속하려면 아래에 <span class="mono">영구삭제</span> 를 정확히 입력하세요.</p>
         <div class="field" style="margin-top: var(--space-3)">
           <label class="field__label" for="del-confirm">확인 문구</label>
-          <input class="input" id="del-confirm" type="text" placeholder="DELETE" autocomplete="off" oninput="
-            var ok = this.value === 'DELETE';
-            var btn = document.getElementById('del-confirm-btn');
-            btn.disabled = !ok; btn.setAttribute('aria-disabled', String(!ok));
-          " />
+          <input class="input" id="del-confirm" type="text" placeholder="영구삭제" autocomplete="off" data-confirm-word="영구삭제" data-confirm-target="del-confirm-btn" />
           <span class="field__hint confirm-warn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>
-            대소문자를 구분합니다.
+            띄어쓰기 없이 정확히 입력해야 삭제됩니다.
           </span>
         </div>
       </div>
       <div class="modal__footer">
         <button type="button" class="btn btn--ghost" data-modal-close>취소</button>
-        <button type="button" class="btn btn--danger" id="del-confirm-btn" disabled aria-disabled="true" data-modal-close data-toast data-toast-msg="계정이 영구 삭제되었습니다." data-toast-variant="danger">
+        <button type="button" class="btn btn--danger" id="del-confirm-btn" disabled aria-disabled="true" data-modal-close data-toast data-toast-msg="계정을 영구 삭제했어요." data-toast-variant="danger">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/></svg>
           영구 삭제
         </button>
@@ -758,14 +791,38 @@
         <input type="text" placeholder="명령 또는 페이지 검색…" aria-label="명령 검색" />
       </div>
       <div class="command-palette__list" role="listbox">
-        <button class="command-palette__item" role="option" onclick="location.href='dashboard.html'">📊 분석 대시보드</button>
-        <button class="command-palette__item" role="option" onclick="location.href='kanban.html'">🗂️ 칸반 보드</button>
-        <button class="command-palette__item" role="option" onclick="location.href='inbox.html'">✉️ 이메일 인박스</button>
-        <button class="command-palette__item" role="option" onclick="location.href='product.html'">🛍️ 상품 상세</button>
-        <button class="command-palette__item" role="option" onclick="location.href='pricing.html'">💎 가격표</button>
-        <button class="command-palette__item" role="option" onclick="location.href='settings.html'">⚙️ 설정</button>
-        <button class="command-palette__item" role="option" onclick="location.href='../index.html'">🏠 홈으로</button>
-        <button class="command-palette__item" role="option" data-theme-toggle>🌙 테마 전환</button>
+        <button class="command-palette__item" role="option" data-command-href="dashboard.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 13h4v8H3zM10 3h4v18h-4zM17 9h4v12h-4z"/></svg>
+          분석 대시보드<span class="command-palette__shortcut">G D</span>
+        </button>
+        <button class="command-palette__item" role="option" data-command-href="kanban.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h5v16H4zM10 4h5v10h-5zM16 4h4v13h-4z"/></svg>
+          칸반 보드<span class="command-palette__shortcut">G K</span>
+        </button>
+        <button class="command-palette__item" role="option" data-command-href="inbox.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+          이메일 인박스<span class="command-palette__shortcut">G I</span>
+        </button>
+        <button class="command-palette__item" role="option" data-command-href="product.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2 3 6v14a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          상품 상세<span class="command-palette__shortcut">G S</span>
+        </button>
+        <button class="command-palette__item" role="option" data-command-href="pricing.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0l-7.2-7.2a2 2 0 0 1-.6-1.4V4a1 1 0 0 1 1-1h8a2 2 0 0 1 1.4.6l7.4 7.4a2 2 0 0 1 0 2.4z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>
+          가격표<span class="command-palette__shortcut">G P</span>
+        </button>
+        <button class="command-palette__item" role="option" data-command-href="settings.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 0 1-4 0v-.1A1.6 1.6 0 0 0 6.6 19l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1-2.7H2a2 2 0 0 1 0-4h.1A1.6 1.6 0 0 0 3.7 6.6l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H8a1.6 1.6 0 0 0 1-1.5V2a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V8a1.6 1.6 0 0 0 1.5 1H22a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg>
+          설정<span class="command-palette__shortcut">G ,</span>
+        </button>
+        <button class="command-palette__item" role="option" data-command-href="../index.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+          컴포넌트 허브<span class="command-palette__shortcut">G H</span>
+        </button>
+        <button class="command-palette__item" role="option" data-command-msg="테마를 전환했어요." data-theme-toggle>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+          테마 전환<span class="command-palette__shortcut">라이트 · 다크</span>
+        </button>
       </div>
       <div class="command-palette__empty" hidden>일치하는 결과가 없습니다.</div>
     </div>
@@ -777,5 +834,46 @@
   </footer>
 
   <script src="../app.js"></script>
+  <script>
+    /* Page behaviours — data-attribute driven, no inline handlers. */
+    (function () {
+      /* keep demo forms from reloading the page on Enter */
+      document.querySelectorAll('form[data-noreload]').forEach(function (f) {
+        f.addEventListener('submit', function (e) { e.preventDefault(); });
+      });
+
+      /* danger-zone confirm gate: enable the delete button only on an exact match */
+      var confirmInput = document.getElementById('del-confirm');
+      if (confirmInput) {
+        var word = confirmInput.getAttribute('data-confirm-word');
+        var target = document.getElementById(confirmInput.getAttribute('data-confirm-target'));
+        confirmInput.addEventListener('input', function () {
+          var ok = confirmInput.value === word;
+          if (target) { target.disabled = !ok; target.setAttribute('aria-disabled', String(!ok)); }
+        });
+        /* reset the field whenever the modal reopens */
+        var trigger = document.querySelector('[data-modal-open="delete-account-modal"]');
+        if (trigger) trigger.addEventListener('click', function () {
+          confirmInput.value = '';
+          if (target) { target.disabled = true; target.setAttribute('aria-disabled', 'true'); }
+        });
+      }
+
+      /* password confirmation — show the invalid state when it doesn't match */
+      var pwNew = document.getElementById('ac-pw-new');
+      var pwConf = document.getElementById('ac-pw-conf');
+      var pwField = document.getElementById('pw-conf-field');
+      function checkPw() {
+        if (!pwNew || !pwConf || !pwField) return;
+        var mismatch = pwConf.value.length > 0 && pwConf.value !== pwNew.value;
+        pwField.classList.toggle('field--invalid', mismatch);
+        pwConf.setAttribute('aria-invalid', String(mismatch));
+      }
+      if (pwNew && pwConf) {
+        pwNew.addEventListener('input', checkPw);
+        pwConf.addEventListener('input', checkPw);
+      }
+    })();
+  </script>
 </body>
 </html>

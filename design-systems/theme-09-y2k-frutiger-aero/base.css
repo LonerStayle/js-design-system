@@ -4,12 +4,10 @@
    ----------------------------------------------------------------------------
    Load order: tokens.css → semantic.css → base.css → components/*
 
-   Brings in a humanist sans (Mulish + Hind) from Google Fonts with a robust
-   offline fallback, paints the bright sky gradient + floating bubbles, and
-   ships a small layout/utility kit so the showcase pages stay framework-free.
+   Paints the bright sky gradient + meadow horizon + water caustics + floating
+   bubbles, and ships a small layout/utility kit so pages stay framework-free.
+   Fonts are loaded once in tokens.css (single consolidated @import).
    ========================================================================== */
-
-@import url('https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&family=Mulish:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
 
 /* -------------------------------------------------------------------------- *
  * RESET                                                                       *
@@ -57,18 +55,18 @@ summary { cursor: pointer; }
   color: var(--color-selection-fg);
 }
 
-/* Cool, glossy scrollbars */
-* { scrollbar-width: thin; scrollbar-color: var(--sky-400) transparent; }
+/* Cool, glossy scrollbars (themed via semantic tokens) */
+* { scrollbar-width: thin; scrollbar-color: var(--color-accent) transparent; }
 *::-webkit-scrollbar { width: 11px; height: 11px; }
 *::-webkit-scrollbar-track { background: transparent; }
 *::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--sky-300), var(--aqua-500));
+  background: var(--color-scrollbar);
   border-radius: var(--radius-full);
   border: 3px solid transparent;
   background-clip: content-box;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, var(--sky-400), var(--aqua-600));
+  background: var(--color-scrollbar-hover);
   background-clip: content-box;
 }
 
@@ -79,22 +77,53 @@ summary { cursor: pointer; }
 .aero-sky {
   position: fixed;
   inset: 0;
-  z-index: -2;
+  z-index: -3;
   background: var(--color-bg);
   pointer-events: none;
 }
-/* sun flare + far cloud wash painted over the gradient */
+/* sun flare + far cloud wash + drifting water caustics painted over the sky */
 .aero-sky::before {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: -12% -20%;                 /* bleed so the drifting caustics never expose an edge */
   background:
     var(--flare),
+    var(--caustic-layer),
     radial-gradient(120% 80% at 50% 120%, rgba(155, 225, 93, 0.18) 0%, rgba(155, 225, 93, 0) 55%),
     radial-gradient(80% 60% at 12% 8%, rgba(255, 255, 255, 0.45) 0%, rgba(255,255,255,0) 60%);
+  background-size: 100% 100%, 160% 160%, 100% 100%, 100% 100%;
+  background-position: 0 0, 0% 0%, 0 0, 0 0;
+  opacity: var(--fx-flare-opacity, 1);
   mix-blend-mode: screen;
+  animation: caustic-drift 26s ease-in-out infinite alternate;
 }
-[data-theme="dark"] .aero-sky::before { opacity: 0.5; }
+@keyframes caustic-drift {
+  from { background-position: 0 0, 0% 0%,   0 0, 0 0; }
+  to   { background-position: 0 0, 100% 60%, 0 0, 0 0; }
+}
+
+/* The meadow / shoreline horizon — a masked hill silhouette (two ridges for
+   depth). Colour comes from --fx-hill (themed), the shape from an alpha mask,
+   so dark mode turns the green hill into a teal water horizon automatically. */
+.aero-sky::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 38vh;
+  /* gradient carries the depth: hazy light crest → saturated base */
+  background: var(--fx-hill);
+  -webkit-mask: var(--hill-mask) center bottom / 100% 100% no-repeat;
+  mask: var(--hill-mask) center bottom / 100% 100% no-repeat;
+  opacity: var(--fx-hill-opacity, 0.55);
+  filter: drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.28));   /* crisp horizon line */
+  pointer-events: none;
+}
+
+/* Scene variants (§6-2) — pages opt in with data-scene on <html> or a section.
+   Defaults above = "meadow". These shift the mood without new markup. */
+[data-scene="calm"]     { --fx-hill-opacity: 0.42; --fx-flare-opacity: 0.85; }
+[data-scene="deep"]     { --fx-hill-opacity: 0.8; --fx-flare-opacity: 0.7; }
+[data-scene="tilt"] .aero-sky::after { transform: rotate(-2deg) scale(1.08); transform-origin: bottom; }
 
 /* The bubble field — JS injects .aero-bubble children; CSS animates them. */
 .aero-bubbles {
@@ -342,6 +371,71 @@ a:focus-visible,
     scroll-behavior: auto !important;
   }
   .aero-bubble { display: none !important; }
+  .aero-sky::before { animation: none !important; }   /* freeze the caustics drift */
+  /* content must never be left hidden by the surfacing reveal */
+  html.js [data-reveal] { opacity: 1 !important; transform: none !important; filter: none !important; }
+}
+
+/* -------------------------------------------------------------------------- *
+ * SIGNATURE MOTION — "surfacing" reveal (rise + gloss defocus, like a bubble  *
+ * breaking the water's surface). JS-gated so a JS failure never hides content.*
+ * -------------------------------------------------------------------------- */
+html.js [data-reveal] {
+  opacity: 0;
+  transform: translateY(18px) scale(0.985);
+  filter: blur(6px);
+  transition:
+    opacity var(--duration-slow) var(--ease-out),
+    transform var(--duration-slower) var(--ease-spring),
+    filter var(--duration-slow) var(--ease-out);
+}
+html.js [data-reveal].is-revealed { opacity: 1; transform: none; filter: none; }
+
+/* -------------------------------------------------------------------------- *
+ * POINTER-FOLLOW GLOSS — a wet highlight that chases the cursor across any    *
+ * [data-gloss] surface. JS sets --mx/--my; falls back to a centred sheen.     *
+ * -------------------------------------------------------------------------- */
+[data-gloss] { position: relative; }
+[data-gloss] > * { position: relative; z-index: 1; }   /* keep content above the sheen */
+[data-gloss]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;                        /* under content (.card > * is z-index:1) */
+  border-radius: inherit;
+  background: radial-gradient(
+    22rem 22rem at var(--mx, 50%) var(--my, 0%),
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.14) 26%,
+    rgba(255, 255, 255, 0) 52%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-base) var(--ease-standard);
+  mix-blend-mode: screen;
+}
+[data-gloss]:hover::after,
+[data-gloss]:focus-within::after { opacity: 1; }
+
+/* -------------------------------------------------------------------------- *
+ * HANGUL REFINEMENT LAYER  (§5-A-7) — assumes <html lang="ko"> + stack order  *
+ * fixed in tokens.css. Korean needs looser line-height + no faux bold (Jua is *
+ * a single-weight display face; hierarchy comes from size, not synthesis).    *
+ * -------------------------------------------------------------------------- */
+:lang(ko) { word-break: keep-all; overflow-wrap: break-word; line-break: strict; }
+:lang(ko) :is(h1, h2, h3, h4, h5, h6) { line-height: var(--leading-heading-ko, 1.3); }
+:lang(ko) :is(.display-1, .hero__title) { line-height: var(--leading-display-ko, 1.14); }
+:lang(ko) :is(h1, h2, h3, h4, h5, h6, .display-1, .hero__title, .stat-card__value, .card__title) {
+  font-synthesis-weight: none;      /* Jua has no 700 — let it render its true 400 */
+  letter-spacing: var(--tracking-normal);
+}
+:lang(ko) :is(.eyebrow, .demo__title, .stat-card__label, .sidebar__section-label) {
+  letter-spacing: var(--tracking-caps-ko, 0.06em);
+  text-transform: none;             /* uppercase is a no-op on Hangul */
+}
+:lang(ko) :is(em, i, cite) { font-style: normal; font-weight: var(--weight-semibold, 600); }
+:lang(ko) :is(.table td, .stat-card__value, .price, .stat__value) {
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 /* -------------------------------------------------------------------------- *

@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
-
 /* ============================================================================
    THEME 10 — MEMPHIS 80s · base.css
    ----------------------------------------------------------------------------
@@ -111,7 +109,7 @@ code, kbd, samp, pre { font-family: var(--font-mono); font-size: 0.92em; }
 .clash .c1 { color: var(--pink-500); }
 .clash .c2 { color: var(--blue-500); }
 .clash .c3 { color: var(--teal-600); }
-.clash .c4 { color: var(--coral-500); }
+.clash .c4 { color: var(--coral-600); }   /* coral-500 on cream ≈2.7:1 fails large-AA; -600 = 3.57:1 */
 
 /* Text highlight chip — solid block keeps contrast on busy backgrounds */
 .mark {
@@ -126,6 +124,90 @@ code, kbd, samp, pre { font-family: var(--font-mono); font-size: 0.92em; }
 .mark--pink { background: var(--pink-500); }
 .mark--blue { background: var(--blue-500); color: var(--white); }
 .mark--teal { background: var(--teal-400); }
+
+/* ----------------------------------------------------------------------- *
+ * POSTER TYPE — oversized Memphis word-blocks that overlap & clash          *
+ * Each word is its own solid fill block (keeps text on a solid ≥4.5:1).     *
+ * Used for the hero headline; reusable for any statement moment.            *
+ * ----------------------------------------------------------------------- */
+.poster-word {
+  display: inline-block;
+  font-family: var(--font-mega);
+  font-weight: var(--weight-regular);          /* Black Han Sans is single-weight */
+  font-size: clamp(2.6rem, 10vw, 6.5rem);
+  line-height: 1;
+  letter-spacing: 0;                           /* high-density mood font → no tracking */
+  padding: 0.06em 0.28em 0.14em;
+  border: var(--border-4);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-pop-xl);
+  color: var(--black);
+}
+.poster-word--pink  { background: var(--pink-500);   color: var(--black); }
+.poster-word--blue  { background: var(--blue-500);   color: var(--white); }
+.poster-word--yellow{ background: var(--yellow-500); color: var(--black); }
+.poster-word--teal  { background: var(--teal-500);   color: var(--black); }
+.poster-word--cream { background: var(--cream);      color: var(--black); }
+
+/* Ghost outline word — no fill, thick ink stroke; sits behind and bleeds off. */
+.ghost-type {
+  font-family: var(--font-mega);
+  font-weight: var(--weight-regular);
+  line-height: 0.8;
+  color: transparent;
+  -webkit-text-stroke: 2.5px var(--color-border);
+  text-stroke: 2.5px var(--color-border);
+  opacity: 0.14;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Vertical Korean/label — tategaki side-tag (§3-A-5) */
+.vlabel {
+  writing-mode: vertical-rl;
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-caps-ko);
+  font-size: var(--text-sm);
+}
+
+/* ----------------------------------------------------------------------- *
+ * FULL-BLEED BAND — a section that floods edge-to-edge in a flat field.     *
+ * The page-per-scroll rhythm break (FOUNDATION §2-3).                       *
+ * ----------------------------------------------------------------------- */
+.band { position: relative; }
+.band--ink {
+  background: var(--color-text);
+  color: var(--color-bg);              /* flips to a cream flood in dark mode */
+  border-block: var(--border-4);
+}
+/* Only the section INTRO sits directly on the band and must flip; cards/panels
+   inside keep their own surface + text tokens (they set color explicitly). */
+.band--ink .stack--sm :is(h1, h2, h3) { color: var(--color-bg); }
+.band--ink .stack--sm .lead { color: color-mix(in srgb, var(--color-bg) 80%, transparent); }
+
+/* ----------------------------------------------------------------------- *
+ * SIGNATURE MOTION — CONFETTI BURST (populated by app.js on primary press)  *
+ * A fixed layer of shape chips that fling outward once, then vanish.        *
+ * ----------------------------------------------------------------------- */
+#confetti-layer {
+  position: fixed; inset: 0;
+  z-index: var(--z-toast);
+  pointer-events: none;
+  overflow: hidden;
+}
+#confetti-layer .confetti-bit {
+  position: absolute;
+  width: var(--sz, 26px); height: var(--sz, 26px);
+  background-repeat: no-repeat; background-size: contain;
+  transform: translate(-50%, -50%) rotate(0deg);
+  animation: confetti-fly var(--dur, 620ms) var(--ease-out-back) forwards;
+}
+@keyframes confetti-fly {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.3) rotate(0deg); }
+  25%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx,0px)), calc(-50% + var(--dy,0px))) scale(1) rotate(var(--rot,180deg)); }
+}
 
 /* ----------------------------------------------------------------------- *
  * FOCUS & ACCESSIBILITY                                                     *
@@ -253,6 +335,10 @@ a:focus-visible, summary:focus-visible {
 .fill-coral  { background: var(--coral-500);  color: var(--black); }
 .fill-black  { background: var(--black);      color: var(--cream); }
 .fill-cream  { background: var(--cream);      color: var(--black); }
+/* Headings default to var(--color-text); inside a solid fill block they must instead
+   inherit the block's own fg or they break contrast (esp. in dark). */
+:is(.fill-pink, .fill-blue, .fill-yellow, .fill-teal, .fill-coral, .fill-black, .fill-cream)
+  :where(h1, h2, h3, h4, h5, h6) { color: inherit; }
 
 /* A guaranteed-readable solid panel to drop on top of any busy pattern */
 .panel {
@@ -285,6 +371,9 @@ a:focus-visible, summary:focus-visible {
   background-repeat: no-repeat;
   background-size: contain;
   width: 56px; height: 56px;
+  /* `translate` property composes with the animation's `transform` — used by the
+     hero cursor-repel so shapes dodge the pointer without fighting their spin/float. */
+  transition: translate var(--duration-base) var(--ease-out-back);
 }
 .deco--squiggle  { background-image: var(--shape-squiggle);  width: 80px; height: 34px; }
 .deco--triangle  { background-image: var(--shape-triangle);  width: 60px; height: 54px; }
@@ -335,11 +424,11 @@ a:focus-visible, summary:focus-visible {
  * ----------------------------------------------------------------------- */
 .reveal {
   opacity: 0;
-  transform: translateY(18px);
+  transform: translateY(20px) scale(0.96) rotate(var(--reveal-rot, -1.4deg));
   animation: reveal-in var(--duration-slow) var(--ease-out-back) forwards;
   animation-delay: var(--reveal-delay, 0s);
 }
-@keyframes reveal-in { to { opacity: 1; transform: translateY(0); } }
+@keyframes reveal-in { to { opacity: 1; transform: translateY(0) scale(1) rotate(0); } }
 
 .pop-in {
   opacity: 0; transform: scale(0.85) rotate(-3deg);
@@ -362,4 +451,31 @@ a:focus-visible, summary:focus-visible {
   .reveal, .pop-in { opacity: 1; transform: none; }
   .deco--spin, .deco--float, .deco--wobble,
   #floating-shapes .float-shape { animation: none !important; }
+  #confetti-layer { display: none !important; }
 }
+
+/* ----------------------------------------------------------------------- *
+ * HANGUL REFINEMENT LAYER (§5-A) — base metrics; requires <html lang="ko">  *
+ * + the stack-order fix in tokens.css. Latin/numbers still render in the    *
+ * Latin mood font (stack head), so tabular rhythm is preserved.             *
+ * ----------------------------------------------------------------------- */
+:lang(ko) { word-break: keep-all; overflow-wrap: break-word; line-break: strict; }
+:lang(ko) :is(h1, h2, h3, h4, .card__title) { line-height: var(--leading-heading-ko); }
+:lang(ko) :is(p, .lead) { line-height: var(--leading-body-ko); }
+:lang(ko) .display { line-height: var(--leading-display-ko); }
+/* Single-weight Korean mood fonts (Jua 400 / Black Han Sans 400): kill faux-bold,
+   let size + fill-block carry the hierarchy instead of synthetic weight. */
+:lang(ko) :is(.display, .poster-word, .ghost-type) { font-synthesis-weight: none; }
+/* uppercase/small-caps are inert on Hangul → translate to size + tracking */
+:lang(ko) :is(.eyebrow, h6, .badge, .field__label, .stat__label, .timeline__time) {
+  text-transform: none;
+  letter-spacing: var(--tracking-caps-ko);
+}
+/* Hangul has no italic → substitute weight so emphasis still reads */
+:lang(ko) :is(em, i, cite) { font-style: normal; font-weight: var(--weight-semibold); }
+/* Data values want tabular lining figures */
+:lang(ko) :is(.table td, .stat__value, .price, .pagination__btn) {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+/* Long unbroken tokens (prices, codes) must not split mid-glyph */
+.nowrap { white-space: nowrap; }

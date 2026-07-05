@@ -60,7 +60,7 @@
     $$('[data-theme-toggle]').forEach((btn) => {
       btn.setAttribute('aria-pressed', String(theme === 'dark'));
       const lbl = btn.querySelector('[data-theme-label]');
-      if (lbl) lbl.textContent = theme === 'dark' ? 'Light' : 'Dark';
+      if (lbl) lbl.textContent = theme === 'dark' ? '라이트' : '다크';
     });
   }
   function initTheme() {
@@ -416,10 +416,48 @@
     });
     items.forEach((it) =>
       it.addEventListener('click', () => {
+        const href = it.getAttribute('data-command-href');
         if (it.dataset.commandMsg) showToast(it.dataset.commandMsg, 'info');
         close();
+        if (href) window.location.href = href;   // replaces inline onclick navigation
       })
     );
+  }
+
+  /* ====================================================================== *
+   * 12b. WATER RIPPLE — a droplet bloom from the press point on any .btn    *
+   * ====================================================================== */
+  function initRipple() {
+    if (reduceMotion()) return;
+    document.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      const btn = e.target.closest('.btn');
+      if (!btn || btn.disabled || btn.classList.contains('is-disabled') ||
+          btn.classList.contains('btn--loading') || btn.getAttribute('aria-disabled') === 'true') return;
+      const rect = btn.getBoundingClientRect();
+      const span = document.createElement('span');
+      span.className = 'btn__ripple';
+      span.style.setProperty('--ripple-x', (e.clientX - rect.left) + 'px');
+      span.style.setProperty('--ripple-y', (e.clientY - rect.top) + 'px');
+      span.style.setProperty('--ripple-d', (Math.max(rect.width, rect.height) * 2) + 'px');
+      btn.appendChild(span);
+      span.addEventListener('animationend', () => span.remove());
+      setTimeout(() => span.remove(), 800);
+    });
+  }
+
+  /* ====================================================================== *
+   * 12c. POINTER-FOLLOW GLOSS — a wet highlight chases the cursor           *
+   * ====================================================================== */
+  function initGlossTrack() {
+    if (reduceMotion()) return;
+    $$('[data-gloss]').forEach((el) => {
+      el.addEventListener('pointermove', (e) => {
+        const r = el.getBoundingClientRect();
+        el.style.setProperty('--mx', (((e.clientX - r.left) / r.width) * 100).toFixed(1) + '%');
+        el.style.setProperty('--my', (((e.clientY - r.top) / r.height) * 100).toFixed(1) + '%');
+      });
+    });
   }
 
   /* ====================================================================== *
@@ -701,7 +739,7 @@
       };
       $('[data-wizard-next]', wizard)?.addEventListener('click', () => {
         if (current < panels.length - 1) { current++; render(); }
-        else showToast('온보딩이 완료되었습니다! 🎉', 'success');
+        else showToast('가입이 끝났어요. 아쿠아에 오신 걸 환영합니다.', 'success');
       });
       $('[data-wizard-prev]', wizard)?.addEventListener('click', () => { if (current > 0) { current--; render(); } });
       render();
@@ -799,6 +837,8 @@
     initCopy();
     initNavToggles();
     initReveal();
+    initRipple();
+    initGlossTrack();
   });
 
   // expose a tiny API for pages that want to trigger toasts programmatically
