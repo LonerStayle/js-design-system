@@ -165,9 +165,9 @@
     el.setAttribute("role", "status");
     el.innerHTML =
       '<svg class="toast-icon" viewBox="0 0 24 24" aria-hidden="true">' + (TOAST_ICONS[opts.variant] || TOAST_ICONS.default) + "</svg>" +
-      '<div class="grow"><div class="toast-title">' + (opts.title || "Notice") + "</div>" +
+      '<div class="grow"><div class="toast-title">' + (opts.title || "알림") + "</div>" +
       (opts.message ? '<div class="toast-msg">' + opts.message + "</div>" : "") + "</div>" +
-      '<button class="toast-close" aria-label="Dismiss"><svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.6"/></svg></button>';
+      '<button class="toast-close" aria-label="닫기"><svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.6"/></svg></button>';
     region.appendChild(el);
     const remove = () => { el.classList.add("is-leaving"); setTimeout(() => el.remove(), 280); };
     on($(".toast-close", el), "click", remove);
@@ -179,7 +179,7 @@
     document.addEventListener("click", (e) => {
       const b = e.target.closest("[data-toast]");
       if (!b) return;
-      toast({ title: b.getAttribute("data-toast-title") || "Notice", message: b.getAttribute("data-toast-msg") || "", variant: b.getAttribute("data-toast") || "default" });
+      toast({ title: b.getAttribute("data-toast-title") || "알림", message: b.getAttribute("data-toast-msg") || "", variant: b.getAttribute("data-toast") || "default" });
     });
   }
 
@@ -245,6 +245,15 @@
       e.preventDefault();
       if (window.__cmdkOpen) window.__cmdkOpen();
     }
+  }
+  // 검색바 등 [data-cmdk-trigger] 위임 바인딩 (인라인 onclick 제거용)
+  function initCmdkTriggers() {
+    document.addEventListener("click", (e) => {
+      const t = e.target.closest("[data-cmdk-trigger]");
+      if (!t) return;
+      e.preventDefault();
+      if (window.__cmdkOpen) window.__cmdkOpen();
+    });
   }
 
   /* ===================== 8. DROPDOWN / MENU ============================== */
@@ -314,11 +323,47 @@
 
   /* ===================== 12. SEGMENTED / BUTTON-GROUP ==================== */
   function initSegmented() {
-    $$(".segmented, .btn-group[data-toggle]").forEach((group) => {
-      $$("button", group).forEach((b) => on(b, "click", () => {
-        $$("button", group).forEach((x) => { x.setAttribute("aria-selected", "false"); x.classList.remove("is-active"); x.setAttribute("aria-pressed", "false"); });
-        b.setAttribute("aria-selected", "true"); b.classList.add("is-active"); b.setAttribute("aria-pressed", "true");
+    /* .segmented = 단일 선택 뷰/옵션 선택기 → role="radiogroup" + role="radio"
+       aria-checked 가 표준. 마크업이 레거시(aria-selected/tablist)면 런타임 이관.
+       클릭 + 방향키(←→↑↓/Home/End) + roving tabindex 완비. */
+    $$(".segmented").forEach((group) => {
+      if (group.getAttribute("role") !== "radiogroup") group.setAttribute("role", "radiogroup");
+      const btns = $$("button", group);
+      btns.forEach((b) => {
+        if (b.getAttribute("role") !== "radio") b.setAttribute("role", "radio");
+        if (b.hasAttribute("aria-selected")) {
+          if (!b.hasAttribute("aria-checked")) b.setAttribute("aria-checked", b.getAttribute("aria-selected"));
+          b.removeAttribute("aria-selected");
+        }
+        if (b.hasAttribute("aria-pressed")) b.removeAttribute("aria-pressed"); // radio 엔 무효
+        if (!b.hasAttribute("aria-checked")) b.setAttribute("aria-checked", b.classList.contains("is-active") ? "true" : "false");
+      });
+      const roving = () => btns.forEach((x) => { x.tabIndex = x.getAttribute("aria-checked") === "true" ? 0 : -1; });
+      const select = (b) => {
+        btns.forEach((x) => { x.setAttribute("aria-checked", "false"); x.classList.remove("is-active"); });
+        b.setAttribute("aria-checked", "true"); b.classList.add("is-active");
+        roving();
         if (group.dataset.onchange === "billing") syncBilling(b.dataset.value);
+      };
+      if (!btns.some((b) => b.getAttribute("aria-checked") === "true") && btns[0]) select(btns[0]);
+      else roving();
+      btns.forEach((b, i) => {
+        on(b, "click", () => select(b));
+        on(b, "keydown", (e) => {
+          let idx = null;
+          if (e.key === "ArrowRight" || e.key === "ArrowDown") idx = (i + 1) % btns.length;
+          else if (e.key === "ArrowLeft" || e.key === "ArrowUp") idx = (i - 1 + btns.length) % btns.length;
+          else if (e.key === "Home") idx = 0;
+          else if (e.key === "End") idx = btns.length - 1;
+          if (idx !== null) { e.preventDefault(); select(btns[idx]); btns[idx].focus(); }
+        });
+      });
+    });
+    /* .btn-group[data-toggle] = 눌림 토글(aria-pressed) — 별개 패턴 유지 */
+    $$(".btn-group[data-toggle]").forEach((group) => {
+      $$("button", group).forEach((b) => on(b, "click", () => {
+        $$("button", group).forEach((x) => { x.classList.remove("is-active"); x.setAttribute("aria-pressed", "false"); });
+        b.classList.add("is-active"); b.setAttribute("aria-pressed", "true");
       }));
     });
   }
@@ -352,7 +397,7 @@
       const addChip = (text) => {
         const chip = document.createElement("span");
         chip.className = "chip";
-        chip.innerHTML = text + ' <button type="button" aria-label="Remove"><svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2"/></svg></button>';
+        chip.innerHTML = text + ' <button type="button" aria-label="제거"><svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2"/></svg></button>';
         box.insertBefore(chip, input);
       };
       on(input, "keydown", (e) => {
@@ -371,7 +416,7 @@
       const dotsWrap = $(".carousel-dots", c);
       let idx = 0;
       if (dotsWrap) {
-        dotsWrap.innerHTML = slides.map((_, i) => '<button aria-label="Slide ' + (i + 1) + '"></button>').join("");
+        dotsWrap.innerHTML = slides.map((_, i) => '<button aria-label="슬라이드 ' + (i + 1) + '로 이동"></button>').join("");
       }
       const dots = dotsWrap ? $$("button", dotsWrap) : [];
       const go = (i) => {
@@ -399,13 +444,15 @@
   /* ===================== 17. TABLE (정렬 / 선택) ========================= */
   function initTables() {
     $$("table.table[data-sortable]").forEach((table) => {
-      $$("thead th.is-sortable", table).forEach((th, col) => {
-        on(th, "click", () => {
+      $$("thead th.is-sortable", table).forEach((th) => {
+        // 트리거 = 내부 button.th-sort(키보드 무료) 또는 th 자체(tabindex+keydown 폴백)
+        const trigger = th.querySelector(".th-sort") || th;
+        const doSort = () => {
           const tbody = table.tBodies[0];
           const rows = Array.from(tbody.rows);
           const cur = th.getAttribute("aria-sort");
           const dir = cur === "ascending" ? "descending" : "ascending";
-          $$("thead th", table).forEach((h) => h.removeAttribute("aria-sort"));
+          $$("thead th", table).forEach((h) => h.setAttribute("aria-sort", "none"));
           th.setAttribute("aria-sort", dir);
           const idx = Array.from(th.parentElement.children).indexOf(th);
           rows.sort((a, b) => {
@@ -416,7 +463,12 @@
             return dir === "ascending" ? r : -r;
           });
           rows.forEach((r) => tbody.appendChild(r));
-        });
+        };
+        on(trigger, "click", doSort);
+        if (trigger === th) {
+          th.tabIndex = 0;
+          on(th, "keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doSort(); } });
+        }
       });
     });
     // 행 선택 (헤더 전체선택 + 개별)
@@ -504,7 +556,7 @@
           const on_ = o.getAttribute("aria-selected") === "true";
           o.setAttribute("aria-selected", String(!on_));
           if (!on_) { const tag = document.createElement("span"); tag.className = "chip"; tag.dataset.val = o.dataset.value || o.textContent.trim();
-            tag.innerHTML = o.textContent.trim() + ' <button type="button" aria-label="Remove"><svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2"/></svg></button>';
+            tag.innerHTML = o.textContent.trim() + ' <button type="button" aria-label="제거"><svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2"/></svg></button>';
             control.insertBefore(tag, input); }
           else { const t = control.querySelector('.chip[data-val="' + (o.dataset.value || o.textContent.trim()) + '"]'); if (t) t.remove(); }
           input.value = ""; input.focus();
@@ -535,7 +587,7 @@
         Array.from(files).forEach((f) => {
           const row = document.createElement("div");
           row.className = "file-row";
-          row.innerHTML = '<span class="fi"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 2h8l4 4v16H6z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></span><div class="grow"><div>' + f.name + '</div><div class="fs-xs text-subtle">' + Math.max(1, Math.round(f.size / 1024)) + ' KB</div></div><button class="btn btn--icon btn--bare btn--sm" aria-label="Remove"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.6"/></svg></button>';
+          row.innerHTML = '<span class="fi"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 2h8l4 4v16H6z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg></span><div class="grow"><div>' + f.name + '</div><div class="fs-xs text-subtle">' + Math.max(1, Math.round(f.size / 1024)) + ' KB</div></div><button class="btn btn--icon btn--bare btn--sm" aria-label="제거"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.6"/></svg></button>';
           on(row.querySelector("button"), "click", () => row.remove());
           listWrap.appendChild(row);
         });
@@ -571,7 +623,7 @@
   /* ===================== INIT ALL ======================================= */
   function init() {
     initTheme(); initTabs(); initAccordion(); initModal(); initDrawer();
-    initToastTriggers(); initCmdk(); initDropdown(); initContextMenu();
+    initToastTriggers(); initCmdk(); initCmdkTriggers(); initDropdown(); initContextMenu();
     initSliders(); initSteppers(); initSegmented(); initRating(); initChipInput();
     initCarousel(); initSidebar(); initTables(); initCopy(); initCalendars();
     initCombobox(); initFileUpload(); initRings(); initReveal();

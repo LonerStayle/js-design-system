@@ -1,8 +1,18 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+/* FOUC 방지 — CSS 로드 전 저장된 테마를 동기 적용(키는 app.js 와 동일 "deco-theme").
+   흑금이 정본이라 미저장 기본은 다크(app.js initTheme 과 일치 → 첫 페인트 깜빡임 0). */
+(function () {
+  try {
+    var t = localStorage.getItem("deco-theme") || "dark";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
 <title>MAISON DÉCO · Art Deco 디자인 시스템</title>
 <meta name="description" content="1920~30년대 글래머에서 길어올린 프로덕션급 Art Deco 디자인 시스템 — 흑금·에메랄드·크림, 선버스트와 지구라트." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -14,11 +24,62 @@
 <link rel="stylesheet" href="components/index.css" />
 <style>
   /* 페이지 전용 약간의 보조 레이아웃 */
-  .hero { position: relative; padding-block: var(--space-14) var(--space-12); overflow: hidden; }
+  /* ── 히어로 = 극장 파사드 ─────────────────────────────── */
+  .hero { position: relative; padding-block: var(--space-14) var(--space-11); overflow: clip; }
   .hero-inner { position: relative; z-index: 2; }
-  .hero .kicker { margin-bottom: var(--space-5); }
-  .hero h1 { font-size: clamp(2.6rem, 7vw, var(--text-7xl)); line-height: 1.02; }
-  .hero .sub { max-width: 56ch; margin: var(--space-6) auto var(--space-8); }
+  .hero-sky { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .hero-sunburst {
+    position: absolute; left: 50%; top: -34%;
+    width: min(150vw, 1500px); aspect-ratio: 1; transform: translateX(-50%);
+    background: var(--ornament-sunburst-full);
+    -webkit-mask-image: radial-gradient(circle at 50% 40%, #000, transparent 60%); /* intentional: mask 알파 흑색 */
+    mask-image: radial-gradient(circle at 50% 40%, #000, transparent 60%); /* intentional: mask 알파 흑색 */
+    opacity: 0.5;
+  }
+  .hero-tower {
+    position: absolute; bottom: -4%; width: clamp(58px, 9vw, 132px); height: auto;
+    color: var(--color-primary); opacity: 0.42;
+  }
+  .hero-tower.left  { left: max(1.5vw, calc(50% - 580px)); }
+  .hero-tower.right { right: max(1.5vw, calc(50% - 580px)); transform: scaleX(-1); }
+  .hero .kicker { margin-bottom: var(--space-4); }
+  .hero h1 { font-size: clamp(3rem, 10vw, 8rem); line-height: 1.0; margin-block: var(--space-3); }
+  .hero .sub { max-width: 54ch; margin: var(--space-6) auto var(--space-8); }
+  /* 극장 마퀴 — 개관 안내판(dev-tool 스탯 스트립 대체) */
+  .marquee {
+    position: relative; width: min(760px, 94%); margin-top: var(--space-9);
+    border-block: 1px solid var(--color-border);
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); /* intentional: mask 알파 흑색 */
+    mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); /* intentional: mask 알파 흑색 */
+  }
+  .marquee__track {
+    display: inline-flex; align-items: center; gap: var(--space-5);
+    white-space: nowrap; padding-block: var(--space-3);
+    font-family: var(--font-sans); font-size: var(--text-xs);
+    letter-spacing: var(--tracking-wider); text-transform: uppercase;
+    color: var(--color-text-muted);
+    animation: marquee-run 26s linear infinite;
+  }
+  .marquee__track .sep { color: var(--color-primary-text); }
+  @keyframes marquee-run { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  /* 섹션 헤더 워터마크 숫자 무대 */
+  .sec-head { position: relative; isolation: isolate; }
+  .sec-head > *:not(.chapter-numeral) { position: relative; z-index: 1; }
+  /* 내비 검색바 — 좁은 화면에선 아이콘만 */
+  .navbar-search { width: 200px; }
+  @media (max-width: 620px) {
+    .navbar-search { width: auto; }
+    .navbar-search .grow, .navbar-search kbd { display: none; }
+  }
+  /* 초소형: 내비 CTA 숨김 — 대시보드는 '데모 화면' 카드 + ⌘K 로도 도달 */
+  @media (max-width: 460px) { .navbar-actions .btn--primary { display: none; } }
+  @media (max-width: 680px) { .hero-tower { opacity: 0.3; } }
+  @media (max-width: 520px) {
+    /* 워드마크가 0.34em 트래킹으로 잘리지 않게 — 모바일에서 크기·자간 축소 */
+    .hero h1 { font-size: clamp(2rem, 9.5vw, 2.6rem); }
+    .hero .wordmark { letter-spacing: 0.08em; }
+  }
   .gallery-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-6); align-items: start; }
   .swatch { height: 56px; border-radius: var(--radius-sm); border: 1px solid var(--color-border-muted); display: flex; align-items: flex-end; padding: 6px; font-family: var(--font-mono); font-size: var(--text-2xs); color: rgba(255,255,255,.75); }
   .ramp { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
@@ -53,7 +114,7 @@
     <a class="navbar-link" href="#pages">데모</a>
   </nav>
   <div class="navbar-actions">
-    <button class="searchbar" data-cmdk-trigger onclick="window.__cmdkOpen && window.__cmdkOpen()" style="cursor:pointer;width:200px" aria-label="명령 팔레트 열기">
+    <button class="searchbar navbar-search" type="button" data-cmdk-trigger aria-label="명령 팔레트 열기">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="1.6"/></svg>
       <span class="grow text-subtle fs-sm">검색…</span>
       <kbd>⌘K</kbd>
@@ -66,12 +127,30 @@
 </header>
 
 <main id="main">
-  <!-- ============================ HERO ============================ -->
-  <section class="hero deco-sunburst">
+  <!-- ============================ HERO — 극장 파사드 ============================ -->
+  <section class="hero" data-scene="overture">
+    <div class="hero-sky" aria-hidden="true">
+      <span class="hero-sunburst"></span>
+      <svg class="hero-tower left" viewBox="0 0 120 400" fill="none" preserveAspectRatio="xMidYMax meet">
+        <g stroke="currentColor" stroke-width="1.4" stroke-linejoin="round">
+          <path d="M38 400V176h44v224"/><path d="M46 176v-52h28v52"/><path d="M52 124V88h16v36"/>
+          <path d="M60 88V34"/><path d="M60 34l-9 26M60 34l9 26M60 34V10"/>
+          <path d="M38 214h44M38 250h44M38 286h44M38 322h44M38 358h44"/>
+        </g>
+      </svg>
+      <svg class="hero-tower right" viewBox="0 0 120 400" fill="none" preserveAspectRatio="xMidYMax meet">
+        <g stroke="currentColor" stroke-width="1.4" stroke-linejoin="round">
+          <path d="M38 400V176h44v224"/><path d="M46 176v-52h28v52"/><path d="M52 124V88h16v36"/>
+          <path d="M60 88V34"/><path d="M60 34l-9 26M60 34l9 26M60 34V10"/>
+          <path d="M38 214h44M38 250h44M38 286h44M38 322h44M38 358h44"/>
+        </g>
+      </svg>
+    </div>
     <div class="container hero-inner symmetry">
-      <p class="eyebrow kicker animate-in">Theme 12 · 황금기의 영광</p>
+      <p class="eyebrow kicker animate-in">제12 극장 · 황금기의 영광</p>
+      <hr class="deco-rule animate-in d1" style="width:min(240px,60%)" aria-hidden="true" />
       <h1 class="display animate-in d1">
-        <span class="text-gold">Maison&nbsp;Déco</span>
+        <span class="text-gold wordmark gild-sweep">Maison&nbsp;Déco</span>
       </h1>
       <p class="lead sub animate-in d2 center">
         검은 밤과 메탈릭 골드, 에메랄드의 광채. 1920년대의 글래머를 현대의
@@ -81,12 +160,11 @@
         <a class="btn btn--primary btn--lg" href="#components">컴포넌트 보기</a>
         <a class="btn btn--secondary btn--lg" href="#pages">데모 화면</a>
       </div>
-      <div class="deco-divider animate-in d4" style="width:min(420px,80%)"><span class="lozenge" aria-hidden="true"></span></div>
-      <div class="row-wrap animate-in d5" style="justify-content:center;gap:var(--space-8)">
-        <div class="symmetry" style="gap:2px"><span class="display text-gold fs-3xl">68</span><span class="eyebrow">컴포넌트</span></div>
-        <div class="symmetry" style="gap:2px"><span class="display text-gold fs-3xl">9</span><span class="eyebrow">데모 화면</span></div>
-        <div class="symmetry" style="gap:2px"><span class="display text-gold fs-3xl">AA</span><span class="eyebrow">대비 준수</span></div>
-        <div class="symmetry" style="gap:2px"><span class="display text-gold fs-3xl">0</span><span class="eyebrow">프레임워크</span></div>
+      <div class="marquee animate-in d4" aria-hidden="true">
+        <div class="marquee__track">
+          <span>Maison&nbsp;Déco</span><span class="sep">◆</span><span>개관 1925</span><span class="sep">◆</span><span>Est. West&nbsp;Egg</span><span class="sep">◆</span><span>흑금 · 에메랄드 · 크림의 기하학</span><span class="sep">◆</span><span>MMXXVI 시즌</span><span class="sep">◆</span>
+          <span>Maison&nbsp;Déco</span><span class="sep">◆</span><span>개관 1925</span><span class="sep">◆</span><span>Est. West&nbsp;Egg</span><span class="sep">◆</span><span>흑금 · 에메랄드 · 크림의 기하학</span><span class="sep">◆</span><span>MMXXVI 시즌</span><span class="sep">◆</span>
+        </div>
       </div>
     </div>
   </section>
@@ -94,7 +172,8 @@
   <!-- ============================ TOKENS ============================ -->
   <section class="section gallery-section" id="tokens">
     <div class="container">
-      <div class="symmetry mb-8">
+      <div class="sec-head symmetry mb-8">
+        <span class="chapter-numeral chapter-numeral--watermark" aria-hidden="true">I</span>
         <p class="eyebrow">기본 요소</p>
         <h2 class="fs-4xl">색 · 타이포 토큰</h2>
         <div class="deco-chevron-rule" style="width:160px;margin-top:12px" aria-hidden="true"></div>
@@ -112,15 +191,15 @@
             <div class="swatch" style="background:var(--gold-400)">400</div>
             <div class="swatch" style="background:var(--gold-500)">500</div>
             <div class="swatch" style="background:var(--gold-600)">600</div>
-            <div class="swatch" style="background:var(--gold-700);color:#eee">700</div>
-            <div class="swatch" style="background:var(--gold-800);color:#eee">800</div>
-            <div class="swatch" style="background:var(--gold-900);color:#eee">900</div>
+            <div class="swatch" style="background:var(--gold-700);color:var(--neutral-50)">700</div>
+            <div class="swatch" style="background:var(--gold-800);color:var(--neutral-50)">800</div>
+            <div class="swatch" style="background:var(--gold-900);color:var(--neutral-50)">900</div>
           </div>
           <h3 class="card-title mb-4 mt-6">Emerald · 제이드</h3>
           <div class="ramp">
-            <div class="swatch" style="background:var(--emerald-50);color:#222">50</div>
-            <div class="swatch" style="background:var(--emerald-100);color:#222">100</div>
-            <div class="swatch" style="background:var(--emerald-200);color:#222">200</div>
+            <div class="swatch" style="background:var(--emerald-50);color:var(--neutral-900)">50</div>
+            <div class="swatch" style="background:var(--emerald-100);color:var(--neutral-900)">100</div>
+            <div class="swatch" style="background:var(--emerald-200);color:var(--neutral-900)">200</div>
             <div class="swatch" style="background:var(--emerald-300)">300</div>
             <div class="swatch" style="background:var(--emerald-400)">400</div>
             <div class="swatch" style="background:var(--emerald-500)">500</div>
@@ -131,10 +210,10 @@
           </div>
           <h3 class="card-title mb-4 mt-6">Neutral · 블랙→크림 / Navy</h3>
           <div class="ramp mb-2">
-            <div class="swatch" style="background:var(--neutral-50);color:#222">50</div>
-            <div class="swatch" style="background:var(--neutral-100);color:#222">100</div>
-            <div class="swatch" style="background:var(--neutral-200);color:#222">200</div>
-            <div class="swatch" style="background:var(--neutral-300);color:#222">300</div>
+            <div class="swatch" style="background:var(--neutral-50);color:var(--neutral-900)">50</div>
+            <div class="swatch" style="background:var(--neutral-100);color:var(--neutral-900)">100</div>
+            <div class="swatch" style="background:var(--neutral-200);color:var(--neutral-900)">200</div>
+            <div class="swatch" style="background:var(--neutral-300);color:var(--neutral-900)">300</div>
             <div class="swatch" style="background:var(--neutral-400)">400</div>
             <div class="swatch" style="background:var(--neutral-500)">500</div>
             <div class="swatch" style="background:var(--neutral-600)">600</div>
@@ -143,9 +222,9 @@
             <div class="swatch" style="background:var(--neutral-900)">900</div>
           </div>
           <div class="ramp">
-            <div class="swatch" style="background:var(--navy-50);color:#222">50</div>
-            <div class="swatch" style="background:var(--navy-100);color:#222">100</div>
-            <div class="swatch" style="background:var(--navy-200);color:#222">200</div>
+            <div class="swatch" style="background:var(--navy-50);color:var(--neutral-900)">50</div>
+            <div class="swatch" style="background:var(--navy-100);color:var(--neutral-900)">100</div>
+            <div class="swatch" style="background:var(--navy-200);color:var(--neutral-900)">200</div>
             <div class="swatch" style="background:var(--navy-300)">300</div>
             <div class="swatch" style="background:var(--navy-400)">400</div>
             <div class="swatch" style="background:var(--navy-500)">500</div>
@@ -159,7 +238,7 @@
         <!-- 타이포 스케일 -->
         <div class="card card--pad" data-reveal>
           <h3 class="card-title mb-4">타이포그래피 스케일</h3>
-          <div class="type-row"><span class="tag">7xl</span><span class="display fs-5xl text-gold">Déco</span></div>
+          <div class="type-row"><span class="tag">7xl</span><span class="display fs-5xl text-gold wordmark">Déco</span></div>
           <div class="type-row"><span class="tag">4xl</span><span class="fs-4xl" style="font-family:var(--font-display)">선버스트 헤드라인</span></div>
           <div class="type-row"><span class="tag">2xl</span><span class="fs-2xl text-serif">우아한 세리프 본문 제목</span></div>
           <div class="type-row"><span class="tag">lg</span><span class="fs-lg text-serif">Cormorant 본문 리드 텍스트</span></div>
@@ -169,7 +248,7 @@
 
           <h3 class="card-title mb-4 mt-6">메탈릭 & 헤어라인</h3>
           <div class="stack-2">
-            <div class="swatch" style="height:48px;background:var(--metal-gold);color:#1a1206">--metal-gold</div>
+            <div class="swatch" style="height:48px;background:var(--metal-gold);color:var(--color-on-gold)">--metal-gold</div>
             <div style="height:4px;background:var(--gold-hairline-strong)" aria-hidden="true"></div>
             <hr class="deco-rule" aria-hidden="true" />
             <div class="deco-divider" style="margin:8px 0"><span class="lozenge" aria-hidden="true"></span></div>
@@ -182,10 +261,12 @@
   <!-- ============================ ORNAMENTS ============================ -->
   <section class="section gallery-section deco-fluting" id="ornaments" style="background-color:var(--color-bg-elevated)">
     <div class="container">
-      <div class="symmetry mb-8">
+      <div class="sec-head symmetry mb-8">
+        <span class="chapter-numeral chapter-numeral--watermark" aria-hidden="true">II</span>
         <p class="eyebrow">모티프</p>
-        <h2 class="fs-4xl">장식 모티프</h2>
-        <p class="text-muted mt-2 center" style="max-width:52ch">부채꼴 선버스트 · 계단형 지구라트 · 셰브론 · 세로 플루팅 · 스텝 코너 프레임. 전부 순수 CSS 와 인라인 SVG.</p>
+        <h2 class="fs-3xl">장식 모티프</h2>
+        <div class="deco-divider" style="width:min(320px,72%)"><span class="lozenge" aria-hidden="true"></span></div>
+        <p class="text-muted center" style="max-width:52ch">부채꼴 선버스트 · 계단형 지구라트 · 셰브론 · 세로 플루팅 · 스텝 코너 프레임 — 장식이 곧 구조가 되는 다섯 가지 기하학.</p>
       </div>
       <div class="grid grid-4">
         <div class="ornament-tile deco-rays"><span>Sunburst · 선버스트</span></div>
@@ -215,10 +296,11 @@
   <!-- ============================ COMPONENTS ============================ -->
   <section class="section gallery-section" id="components">
     <div class="container">
-      <div class="symmetry mb-8">
+      <div class="sec-head symmetry mb-8">
+        <span class="chapter-numeral chapter-numeral--watermark" aria-hidden="true">III</span>
         <p class="eyebrow">라이브러리</p>
-        <h2 class="fs-4xl">컴포넌트 갤러리</h2>
-        <div class="deco-chevron-rule" style="width:160px;margin-top:12px" aria-hidden="true"></div>
+        <h2 class="fs-5xl">컴포넌트 갤러리</h2>
+        <hr class="deco-rule" style="width:min(300px,64%);margin-top:14px" aria-hidden="true" />
       </div>
 
       <div class="gallery-grid">
@@ -291,8 +373,8 @@
             <label class="check check--radio"><input type="radio" name="plan" checked /><span class="box"><span class="dot"></span></span> 연간 결제</label>
             <label class="check check--radio"><input type="radio" name="plan" /><span class="box"><span class="dot"></span></span> 월간 결제</label>
             <label class="toggle"><input type="checkbox" checked /><span class="track"><span class="thumb"></span></span> 야간 모드 알림</label>
-            <div class="segmented" role="tablist" aria-label="뷰">
-              <button aria-selected="true" class="is-active">일</button><button aria-selected="false">주</button><button aria-selected="false">월</button>
+            <div class="segmented" role="radiogroup" aria-label="기간 보기">
+              <button type="button" role="radio" aria-checked="true" class="is-active">일</button><button type="button" role="radio" aria-checked="false">주</button><button type="button" role="radio" aria-checked="false">월</button>
             </div>
             <div class="slider"><input type="range" min="0" max="100" value="62" data-suffix="%" aria-label="밝기" /><span class="slider-val">62%</span></div>
             <div class="row"><span class="rating" data-value="4" aria-label="별점 4">
@@ -326,11 +408,11 @@
             <div class="demo-bar">
               <span class="tip">탭하세요<span class="tip-bubble">툴팁 · Tooltip</span></span>
             </div>
-            <div class="progress"><span class="bar" style="width:68%"></span></div>
-            <div class="progress progress--emerald progress--sm"><span class="bar" style="width:41%"></span></div>
+            <div class="progress" role="progressbar" aria-label="예약 달성률" aria-valuenow="68" aria-valuemin="0" aria-valuemax="100"><span class="bar" style="width:68%"></span></div>
+            <div class="progress progress--emerald progress--sm" role="progressbar" aria-label="좌석 점유율" aria-valuenow="41" aria-valuemin="0" aria-valuemax="100"><span class="bar" style="width:41%"></span></div>
             <div class="row gap-4">
-              <div class="progress-ring" data-value="74"><svg viewBox="0 0 80 80" aria-hidden="true"><circle class="track" cx="40" cy="40" r="34"/><circle class="val" cx="40" cy="40" r="34"/></svg><span class="label"></span></div>
-              <div class="spinner" role="status" aria-label="로딩"></div>
+              <div class="progress-ring" data-value="74" role="progressbar" aria-label="컬렉션 완성도" aria-valuenow="74" aria-valuemin="0" aria-valuemax="100"><svg viewBox="0 0 80 80" aria-hidden="true"><circle class="track" cx="40" cy="40" r="34"/><circle class="val" cx="40" cy="40" r="34"/></svg><span class="label"></span></div>
+              <div class="spinner" role="status" aria-label="로딩 중"></div>
             </div>
           </div>
         </div>
@@ -356,7 +438,7 @@
             <div class="demo-bar">
               <button class="btn btn--primary" data-modal-open="demoModal">모달 열기</button>
               <button class="btn btn--secondary" data-drawer-open="demoDrawer">드로어 열기</button>
-              <button class="btn btn--secondary" onclick="window.__cmdkOpen && window.__cmdkOpen()">⌘K 팔레트</button>
+              <button class="btn btn--secondary" type="button" data-cmdk-trigger>⌘K 팔레트</button>
             </div>
             <div class="dropdown">
               <button class="btn btn--secondary" data-dropdown-toggle aria-haspopup="true" aria-expanded="false">메뉴 ▾</button>
@@ -384,8 +466,8 @@
                 <button class="tab" role="tab" id="t3" aria-controls="p3" aria-selected="false" tabindex="-1">리뷰</button>
               </div>
               <div class="tab-panel" role="tabpanel" id="p1" aria-labelledby="t1"><p class="text-muted">개츠비의 저택처럼, 모든 컴포넌트는 골드 헤어라인으로 마감됩니다.</p></div>
-              <div class="tab-panel" role="tabpanel" id="p2" aria-labelledby="t2" hidden><p class="text-muted">순수 CSS · 인라인 SVG · 0 의존성.</p></div>
-              <div class="tab-panel" role="tabpanel" id="p3" aria-labelledby="t3" hidden><p class="text-muted">접근성 AA, 키보드 완전 조작.</p></div>
+              <div class="tab-panel" role="tabpanel" id="p2" aria-labelledby="t2" hidden><p class="text-muted">골드 헤어라인 · 스텝 코너 · 세로 플루팅 — 세 가지 마감으로 표면의 위계를 잽니다.</p></div>
+              <div class="tab-panel" role="tabpanel" id="p3" aria-labelledby="t3" hidden><p class="text-muted">장식을 덜어내지 않고도 명암 대비 AA와 키보드 전 구간 조작을 지켰습니다.</p></div>
             </div>
             <div class="accordion mt-6" data-accordion data-accordion-single>
               <div class="accordion-item">
@@ -408,19 +490,19 @@
               <table class="table table--striped" data-sortable data-selectable>
                 <thead><tr>
                   <th style="width:40px"><input type="checkbox" aria-label="전체 선택" /></th>
-                  <th class="is-sortable">손님 <span class="sort-ind">↕</span></th>
-                  <th class="is-sortable">테이블 <span class="sort-ind">↕</span></th>
-                  <th class="is-sortable">상태 <span class="sort-ind">↕</span></th>
-                  <th class="is-sortable" style="text-align:right">금액 <span class="sort-ind">↕</span></th>
+                  <th class="is-sortable" aria-sort="none"><button type="button" class="th-sort">손님 <span class="sort-ind" aria-hidden="true">↕</span></button></th>
+                  <th class="is-sortable" aria-sort="none"><button type="button" class="th-sort">테이블 <span class="sort-ind" aria-hidden="true">↕</span></button></th>
+                  <th class="is-sortable" aria-sort="none"><button type="button" class="th-sort">상태 <span class="sort-ind" aria-hidden="true">↕</span></button></th>
+                  <th class="is-sortable" aria-sort="none" style="text-align:right"><button type="button" class="th-sort">금액 <span class="sort-ind" aria-hidden="true">↕</span></button></th>
                 </tr></thead>
                 <tbody>
-                  <tr><td><input type="checkbox" aria-label="선택" /></td><td>김지수</td><td>A-1</td><td><span class="badge badge--success">확정</span></td><td class="cell-num" data-sort="1280">$1,280</td></tr>
-                  <tr><td><input type="checkbox" aria-label="선택" /></td><td>박정우</td><td>B-4</td><td><span class="badge badge--warning">대기</span></td><td class="cell-num" data-sort="640">$640</td></tr>
-                  <tr><td><input type="checkbox" aria-label="선택" /></td><td>이서연</td><td>C-2</td><td><span class="badge badge--success">확정</span></td><td class="cell-num" data-sort="2100">$2,100</td></tr>
-                  <tr><td><input type="checkbox" aria-label="선택" /></td><td>최도윤</td><td>A-3</td><td><span class="badge badge--danger">취소</span></td><td class="cell-num" data-sort="0">$0</td></tr>
+                  <tr><td><input type="checkbox" aria-label="선택" /></td><td>김지수</td><td>A-1</td><td><span class="badge badge--success">확정</span></td><td class="cell-num" data-sort="1284000">₩1,284,000</td></tr>
+                  <tr><td><input type="checkbox" aria-label="선택" /></td><td>박정우</td><td>B-4</td><td><span class="badge badge--warning">대기</span></td><td class="cell-num" data-sort="648000">₩648,000</td></tr>
+                  <tr><td><input type="checkbox" aria-label="선택" /></td><td>이서연</td><td>C-2</td><td><span class="badge badge--success">확정</span></td><td class="cell-num" data-sort="2120000">₩2,120,000</td></tr>
+                  <tr><td><input type="checkbox" aria-label="선택" /></td><td>최도윤</td><td>A-3</td><td><span class="badge badge--danger">취소</span></td><td class="cell-num" data-sort="0">₩0</td></tr>
                 </tbody>
               </table>
-              <div class="table-foot"><span>4 명 중 4 명 표시</span><div class="pagination"><a href="#" aria-label="이전">‹</a><a href="#" aria-current="page">1</a><a href="#">2</a><a href="#">3</a><span class="ellipsis">…</span><a href="#" aria-label="다음">›</a></div></div>
+              <div class="table-foot"><span>4명 중 4명 표시</span><div class="pagination"><button type="button" aria-label="이전 페이지">‹</button><button type="button" aria-current="page" aria-label="1 페이지">1</button><button type="button" aria-label="2 페이지">2</button><button type="button" aria-label="3 페이지">3</button><span class="ellipsis" aria-hidden="true">…</span><button type="button" aria-label="다음 페이지">›</button></div></div>
             </div>
           </div>
         </div>
@@ -431,10 +513,12 @@
   <!-- ============================ PAGES ============================ -->
   <section class="section gallery-section deco-fluting" id="pages" style="background-color:var(--color-bg-elevated)">
     <div class="container">
-      <div class="symmetry mb-8">
+      <div class="sec-head symmetry mb-8">
+        <span class="chapter-numeral chapter-numeral--watermark" aria-hidden="true">IV</span>
         <p class="eyebrow">쇼케이스</p>
         <h2 class="fs-4xl">데모 화면</h2>
-        <p class="text-muted mt-2 center" style="max-width:52ch">실제 데이터로 채운 9개의 멀티 페이지. 더블클릭만으로 열려 동작합니다.</p>
+        <div class="deco-divider" style="width:min(320px,72%)"><span class="lozenge" aria-hidden="true"></span></div>
+        <p class="text-muted center" style="max-width:52ch">개츠비의 세계관을 실제 데이터로 채운 아홉 개의 무대. 각 화면이 하나의 장면입니다.</p>
       </div>
       <div class="grid grid-3">
         <a class="card page-card deco-frame" href="pages/dashboard.html"><span class="pc-num">01</span><span class="pc-title">분석 대시보드</span><span class="pc-desc">위젯 · 테이블 · 차트로 구성한 우아한 콘솔.</span></a>
@@ -453,15 +537,24 @@
 
 <!-- ============================ FOOTER ============================ -->
 <footer class="site-foot section-sm">
-  <div class="container between wrap">
-    <div class="row gap-3">
-      <svg class="mark" viewBox="0 0 32 32" width="28" height="28" aria-hidden="true" style="color:var(--color-primary)"><path d="M16 1 31 16 16 31 1 16Z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M16 11v10M11 16h10" stroke="currentColor" stroke-width="1"/></svg>
-      <span class="display fs-sm" style="letter-spacing:var(--tracking-widest)">Maison Déco</span>
-    </div>
-    <p class="text-subtle fs-sm">Theme 12 · Art Deco — 순수 CSS 디자인 시스템 · © 1925–2026</p>
-    <div class="row gap-2">
-      <button class="btn btn--icon btn--bare" aria-label="GitHub"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.3 1.1 2.9.8.1-.6.3-1.1.6-1.3-2.2-.3-4.6-1.1-4.6-5a4 4 0 0 1 1-2.7c-.1-.3-.4-1.3.1-2.6 0 0 .8-.3 2.7 1a9.3 9.3 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.3.2 2.3.1 2.6a4 4 0 0 1 1 2.7c0 3.9-2.3 4.7-4.6 5 .4.3.7.9.7 1.8v2.6c0 .3.2.6.7.5A10 10 0 0 0 12 2Z" fill="currentColor"/></svg></button>
-      <button class="btn btn--icon btn--bare" data-theme-toggle aria-label="테마 전환"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>
+  <div class="container">
+    <div class="deco-divider" style="margin:0 auto var(--space-7);width:min(520px,86%)"><span class="lozenge" aria-hidden="true"></span></div>
+    <div class="between wrap" style="align-items:flex-start;gap:var(--space-6)">
+      <div class="row gap-3">
+        <svg class="mark" viewBox="0 0 32 32" width="30" height="30" aria-hidden="true" style="color:var(--color-primary)"><path d="M16 1 31 16 16 31 1 16Z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M16 6 26 16 16 26 6 16Z" fill="none" stroke="currentColor" stroke-width="1"/><path d="M16 11v10M11 16h10" stroke="currentColor" stroke-width="1"/></svg>
+        <div class="stack-2">
+          <span class="display fs-sm wordmark" style="letter-spacing:var(--tracking-widest)">Maison Déco</span>
+          <span class="text-subtle fs-xs">흑금 · 에메랄드 · 크림의 기하학</span>
+        </div>
+      </div>
+      <div class="text-subtle fs-xs" style="line-height:var(--leading-relaxed)">
+        <div>제12 극장 · Art Deco 컬렉션</div>
+        <div class="nowrap">개관 MCMXXV — MMXXVI · 판 № 012 / 030</div>
+      </div>
+      <div class="row gap-3">
+        <span class="text-subtle fs-xs nowrap">무대 조명</span>
+        <button class="btn btn--icon btn--bare" type="button" data-theme-toggle aria-label="테마 전환 (다크/라이트)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>
+      </div>
     </div>
   </div>
 </footer>
@@ -496,7 +589,7 @@
         <label class="check"><input type="checkbox" checked /><span class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span> 확정</label>
         <label class="check"><input type="checkbox" /><span class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span> 대기</label>
       </div>
-      <div class="field"><label class="label" for="dr-range">예산 상한</label><div class="slider"><input type="range" id="dr-range" min="0" max="5000" value="2500" data-suffix="$" /><span class="slider-val"></span></div></div>
+      <div class="field"><label class="label" for="dr-range">예산 상한</label><div class="slider"><input type="range" id="dr-range" min="0" max="500" value="250" data-suffix="만원" /><span class="slider-val"></span></div></div>
     </div>
     <div class="drawer-foot"><button class="btn btn--ghost grow" data-drawer-close>초기화</button><button class="btn btn--primary grow" data-drawer-close>적용</button></div>
   </div>

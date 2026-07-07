@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,7 +8,6 @@
   <script>(function(){try{var t=localStorage.getItem('mm-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap">
   <link rel="stylesheet" href="../tokens.css">
   <link rel="stylesheet" href="../semantic.css">
   <link rel="stylesheet" href="../base.css">
@@ -40,7 +39,7 @@
     .kanban-col {
       flex: 0 0 19rem; width: 19rem;
       display: flex; flex-direction: column;
-      max-height: calc(100vh - 16rem);
+      max-height: calc(100dvh - 16rem);
       scroll-snap-align: start;
     }
     .kanban-col-head {
@@ -94,6 +93,20 @@
     .comment-name { font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--color-text-strong); }
     .comment-time { font-size: var(--text-2xs); color: var(--color-text-subtle); }
     .comment-text { font-size: var(--text-sm); color: var(--color-text-muted); margin-top: 2px; }
+
+    /* 보드 요약 스펙 — "시스템은 수치로 말한다" (인덱스 spec-line DNA 연장) */
+    .board-stats { display: flex; flex-wrap: wrap; gap: 0; margin-top: var(--space-5);
+      border-top: var(--border-1) solid var(--color-border); }
+    .board-stats > div { display: flex; flex-direction: column; gap: 2px;
+      padding: var(--space-3) var(--space-6) var(--space-3) 0; }
+    .board-stats > div + div { padding-left: var(--space-6); border-left: var(--border-1) solid var(--color-border); }
+    .board-stats dt { font-size: var(--text-2xs); letter-spacing: var(--tracking-caps-ko); color: var(--color-text-subtle); }
+    .board-stats dd { font-size: var(--text-xl); font-weight: var(--weight-semibold); color: var(--color-text-strong);
+      letter-spacing: var(--tracking-tight); font-variant-numeric: tabular-nums; }
+
+    /* 카드 열 이동(키보드 대체 수단 — DnD 없이도 옮길 수 있게) */
+    .cm-move { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+    .cm-move .hint { font-size: var(--text-xs); color: var(--color-text-subtle); }
 
     /* 반응형: ≤768 컬럼 폭 고정(85vw) 가로 스크롤 */
     @media (max-width: 768px) {
@@ -153,12 +166,18 @@
         </div>
       </div>
 
-      <!-- 툴바: 필터 세그먼트 + 드로어 + 카드 추가 -->
+      <dl class="board-stats">
+        <div><dt>총 카드</dt><dd id="bs-total">15</dd></div>
+        <div><dt>진행 중</dt><dd id="bs-prog">4</dd></div>
+        <div><dt>완료율</dt><dd id="bs-done">20%</dd></div>
+      </dl>
+
+      <!-- 툴바: 필터 세그먼트(뷰 필터 = radiogroup) + 드로어 + 카드 추가 -->
       <div class="board-toolbar">
-        <div class="segmented" role="tablist" aria-label="카드 필터">
-          <button class="seg is-active" role="tab" aria-selected="true">전체</button>
-          <button class="seg" role="tab" aria-selected="false">내 작업</button>
-          <button class="seg" role="tab" aria-selected="false">긴급</button>
+        <div class="segmented" role="radiogroup" aria-label="카드 필터">
+          <button class="seg is-active" role="radio" aria-checked="true" data-value="all">전체</button>
+          <button class="seg" role="radio" aria-checked="false" data-value="mine">내 작업</button>
+          <button class="seg" role="radio" aria-checked="false" data-value="urgent">긴급</button>
         </div>
         <span class="grow"></span>
         <button class="btn btn-secondary" data-drawer-open="filterDrawer">
@@ -173,7 +192,7 @@
     </section>
 
     <!-- ── 보드 (가로 스크롤) ── -->
-    <div class="board" id="board" aria-label="칸반 보드">
+    <div class="board" id="board" role="group" aria-label="칸반 보드 · 컬럼 4개">
 
       <!-- 컬럼 1: 백로그 -->
       <section class="kanban-col" data-col="백로그">
@@ -491,10 +510,24 @@
       </div>
       <div class="modal-body stack-6">
 
+        <!-- 열 이동 (DnD 없이도 카드를 옮길 수 있는 키보드 접근 수단) -->
+        <div class="stack-2">
+          <p class="overline">열 이동</p>
+          <div class="cm-move" role="group" aria-label="이 카드를 다른 열로 이동">
+            <button class="btn btn-secondary btn-sm" id="cm-move-prev" type="button">
+              <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>이전 열</button>
+            <button class="btn btn-secondary btn-sm" id="cm-move-next" type="button">
+              다음 열<svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
+            <span class="hint">드래그가 어려워도 키보드로 옮길 수 있어요.</span>
+          </div>
+        </div>
+
+        <hr>
+
         <!-- 설명 -->
         <div class="stack-2">
           <p class="overline">설명</p>
-          <p class="text-sm text-muted">색·여백·타이포 토큰의 네이밍 규칙을 정리하고, 컴포넌트가 참조하는 시맨틱 토큰과의 매핑을 표로 문서화합니다. 다크 모드 대응 변수까지 포함합니다.</p>
+          <p class="text-sm text-muted" id="cm-desc">색·여백·타이포 토큰의 네이밍 규칙을 정리하고, 컴포넌트가 참조하는 시맨틱 토큰과의 매핑을 표로 문서화합니다. 다크 모드 대응 변수까지 포함합니다.</p>
         </div>
 
         <!-- 담당자 -->
@@ -509,7 +542,7 @@
           </div>
           <div class="stack-2">
             <p class="overline">라벨</p>
-            <div class="cluster"><span class="tag">문서</span><span class="tag">디자인</span></div>
+            <div class="cluster" id="cm-labels"><span class="tag">문서</span><span class="tag">디자인</span></div>
           </div>
         </div>
 
@@ -645,7 +678,7 @@
         <button class="command-item" data-href="pricing.html"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.6 13.4 12 22l-8.6-8.6A5 5 0 0 1 12 6a5 5 0 0 1 8.6 7.4z"/></svg>가격</button>
         <button class="command-item" data-href="settings.html"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 0 0-1.7-1L14.5 2h-5l-.3 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.5L3 11a7 7 0 0 0 0 2l-2 1.5 2 3.5 2.4-1a7 7 0 0 0 1.7 1l.3 2.5h5l.3-2.5a7 7 0 0 0 1.7-1l2.4 1 2-3.5-2-1.5a7 7 0 0 0 .1-1z"/></svg>설정</button>
         <div class="command-group-label">동작</div>
-        <button class="command-item" onclick="MM.toggleTheme()"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>다크 모드 전환<span class="cmd-meta">T</span></button>
+        <button class="command-item" data-command-action="toggle-theme"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>다크 모드 전환<span class="cmd-meta">T</span></button>
         <div class="command-empty" style="display:none">결과가 없습니다.</div>
       </div>
       <div class="command-footer">
@@ -665,15 +698,29 @@
       var board = document.getElementById('board');
       if (!board) return;
       var dragged = null;
+      var activeCard = null;           // 모달로 열려 있는 카드(열 이동 대상)
+      var CURRENT_USER = '김진수';      // "내 작업" 필터 기준 = 현재 사용자
 
-      /* 각 컬럼의 .count 갱신 — data-card 개수 기준 */
+      /* 각 컬럼의 .count 갱신(보이는 카드 기준) + 보드 요약 스펙 갱신 */
       function refreshCounts() {
+        var total = 0, byCol = {};
         document.querySelectorAll('.kanban-col').forEach(function (col) {
-          var n = col.querySelectorAll('[data-card]').length;
-          var c = col.querySelector('[data-count]');
-          if (c) c.textContent = n;
+          var name = col.getAttribute('data-col');
+          var n = 0;
+          col.querySelectorAll('[data-card]').forEach(function (c) { if (c.style.display !== 'none') n++; });
+          var badge = col.querySelector('[data-count]');
+          if (badge) badge.textContent = n;
+          byCol[name] = n; total += n;
         });
+        var done = byCol['완료'] || 0, prog = byCol['진행 중'] || 0;
+        setText('bs-total', total);
+        setText('bs-prog', prog);
+        setText('bs-done', total ? Math.round(done / total * 100) + '%' : '0%');
       }
+      function setText(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; }
+
+      /* 컬럼 배열(좌→우) */
+      function columnsList() { return Array.prototype.slice.call(document.querySelectorAll('.kanban-col')); }
 
       /* 드롭 위치 계산: 커서 y 기준으로 바로 아래 카드 찾기 */
       function afterElement(zone, y) {
@@ -764,7 +811,76 @@
         var an = document.getElementById('cm-assignee-name'); if (an) an.textContent = assignee;
         var aa = document.getElementById('cm-assignee-avatar'); if (aa) { aa.textContent = initials; aa.setAttribute('title', assignee); }
 
+        /* 설명·라벨을 클릭한 카드 기준으로 갱신 — 카드마다 내용이 똑같아 보이는 문제 방지 */
+        var descEl = card.querySelector('.kanban-card-desc');
+        var cmDesc = document.getElementById('cm-desc');
+        if (cmDesc && descEl) cmDesc.textContent = descEl.textContent;
+        var cmLabels = document.getElementById('cm-labels');
+        if (cmLabels) {
+          cmLabels.textContent = '';
+          var srcLabels = card.querySelectorAll('.kanban-card-labels .tag');
+          if (srcLabels.length) srcLabels.forEach(function (tag) { cmLabels.appendChild(tag.cloneNode(true)); });
+          else { var none = document.createElement('span'); none.className = 'text-sm text-subtle'; none.textContent = '라벨 없음'; cmLabels.appendChild(none); }
+        }
+
+        activeCard = card;
+        updateMoveButtons(col);
         if (window.MM && MM.openModal) MM.openModal('cardModal');
+      });
+
+      /* ── 열 이동(키보드/버튼) ── */
+      function updateMoveButtons(colEl) {
+        var prev = document.getElementById('cm-move-prev'), next = document.getElementById('cm-move-next');
+        if (!prev || !next) return;
+        if (!activeCard || !colEl) { prev.disabled = true; next.disabled = true; return; }
+        var cols = columnsList(), idx = cols.indexOf(colEl);
+        prev.disabled = idx <= 0;
+        next.disabled = idx >= cols.length - 1;
+      }
+      function moveActive(dir) {
+        if (!activeCard) return;
+        var cols = columnsList();
+        var curCol = activeCard.closest('.kanban-col');
+        var idx = cols.indexOf(curCol);
+        var target = cols[idx + dir];
+        if (!target) return;
+        var zone = target.querySelector('[data-dropzone]');
+        var emptyMarker = zone.querySelector('.dropzone-empty');
+        if (emptyMarker) zone.insertBefore(activeCard, emptyMarker);
+        else zone.appendChild(activeCard);
+        activeCard.style.display = '';   // 필터로 숨겨져 있었더라도 이동 후엔 노출
+        refreshCounts();
+        var colName = target.getAttribute('data-col');
+        setText('cm-col', colName);
+        updateMoveButtons(target);
+        if (window.MM && MM.toast) {
+          MM.toast({ title: '카드를 옮겼어요',
+            body: '“' + (activeCard.getAttribute('data-title') || '카드') + '” → ' + colName,
+            icon: 'success', duration: 2200 });
+        }
+      }
+      (function () {
+        var mp = document.getElementById('cm-move-prev'), mn = document.getElementById('cm-move-next');
+        if (mp) mp.addEventListener('click', function () { moveActive(-1); if (mp.disabled && mn && !mn.disabled) mn.focus(); });
+        if (mn) mn.addEventListener('click', function () { moveActive(1); if (mn.disabled && mp && !mp.disabled) mp.focus(); });
+      })();
+
+      /* ── 카드 필터(세그먼트 radiogroup) — app.js selectSegment 가 mm:segment 발화 ── */
+      document.addEventListener('mm:segment', function (e) {
+        var seg = e.target;
+        if (!seg || !seg.closest || !seg.closest('.segmented[aria-label="카드 필터"]')) return;
+        var v = seg.getAttribute('data-value') || (e.detail && e.detail.value) || 'all';
+        var mode = /mine|내 작업/.test(v) ? 'mine' : (/urgent|긴급/.test(v) ? 'urgent' : 'all');
+        document.querySelectorAll('[data-card]').forEach(function (card) {
+          var show = true;
+          if (mode === 'mine') show = card.getAttribute('data-assignee') === CURRENT_USER;
+          else if (mode === 'urgent') {
+            var labels = card.querySelector('.kanban-card-labels');
+            show = !!labels && /긴급/.test(labels.textContent);
+          }
+          card.style.display = show ? '' : 'none';
+        });
+        refreshCounts();
       });
 
       /* 카드 키보드 접근: Enter/Space로 상세 열기 */
@@ -786,6 +902,10 @@
       if (addBtn) addBtn.addEventListener('click', function () {
         var t = document.getElementById('cm-title'); if (t) t.textContent = '새 카드';
         var c = document.getElementById('cm-col'); if (c) c.textContent = '백로그';
+        var d = document.getElementById('cm-desc'); if (d) d.textContent = '카드에 대한 설명을 입력하세요.';
+        var l = document.getElementById('cm-labels'); if (l) { l.textContent = ''; var s = document.createElement('span'); s.className = 'text-sm text-subtle'; s.textContent = '라벨 없음'; l.appendChild(s); }
+        activeCard = null;            // 새 카드는 이동 대상 없음 → 버튼 비활성
+        updateMoveButtons(null);
       });
 
       /* 댓글 등록 데모 — 입력창 비우고 토스트 */
@@ -802,6 +922,7 @@
       });
 
       refreshCounts();
+      updateMoveButtons(null);
     })();
   </script>
 </body>

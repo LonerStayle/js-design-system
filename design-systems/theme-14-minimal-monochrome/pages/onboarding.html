@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,13 +7,12 @@
   <script>(function(){try{var t=localStorage.getItem('mm-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap">
   <link rel="stylesheet" href="../tokens.css">
   <link rel="stylesheet" href="../semantic.css">
   <link rel="stylesheet" href="../base.css">
   <link rel="stylesheet" href="../components/index.css">
   <style>
-    .ob-wrap { min-height: 100vh; display: grid; grid-template-columns: 320px 1fr; }
+    .ob-wrap { min-height: 100dvh; display: grid; grid-template-columns: 320px 1fr; }
     @media (max-width: 860px){ .ob-wrap { grid-template-columns: 1fr; } .ob-aside { display: none; } }
     .ob-aside { background: var(--color-surface-inverse); color: var(--color-text-inverse); padding: var(--space-11) var(--space-9); display: flex; flex-direction: column; }
     .ob-aside .mark { background: var(--color-text-inverse); color: var(--color-surface-inverse); }
@@ -35,10 +34,45 @@
     .pick:hover { border-color: var(--color-text); }
     .pick input { position: absolute; opacity: 0; }
     .pick:has(input:checked) { border-color: var(--color-text); background: var(--color-selected); border-width: 2px; padding: calc(var(--space-4) - 1px); }
+    /* 커스텀 라디오 카드는 네이티브 input 을 숨기므로(opacity:0) 전역 포커스 링이 보이지 않는다 —
+       키보드 포커스가 어느 카드에 있는지 카드 자체에 링으로 드러낸다(색 아닌 윤곽). */
+    .pick:has(input:focus-visible) { outline: var(--ring-width) solid var(--color-ring); outline-offset: var(--ring-offset); }
     .pick .pick-icon { color: var(--color-text); }
+
+    /* 모바일 진행 표시 — 다크 사이드가 숨는 ≤860px 에서 단계 진행을 대체(시각만, SR은 "단계 N/4" 텍스트가 담당) */
+    .ob-mobile-steps { display: none; }
+    @media (max-width: 860px) {
+      .ob-mobile-steps { display: block; height: 3px; margin-top: var(--space-4);
+        background: var(--color-border); border-radius: var(--radius-full); overflow: hidden; }
+      .ob-mp-bar { height: 100%; width: 25%; background: var(--color-text-strong);
+        transition: width var(--duration-base) var(--ease-out); }
+    }
+
+    /* 완료 장면 — 온보딩의 시그니처 모먼트. "색을 다 비웠다"는 서사를 명도·아웃라인으로. */
+    .ob-done { text-align: center; max-width: 34rem; margin-inline: auto; }
+    .ob-done-mark { display: inline-flex; align-items: center; justify-content: center;
+      width: 4.5rem; height: 4.5rem; border: var(--border-2) solid var(--color-text-strong);
+      border-radius: var(--radius-full); color: var(--color-text-strong); }
+    .ob-done-mark .icon { width: 2rem; height: 2rem; stroke-width: 1.8; }
+    .ob-done-title { font-size: clamp(1.75rem, 5vw, 2.75rem); letter-spacing: var(--tracking-tight); }
+    .ob-done-title .thin { font-weight: var(--weight-light); color: var(--color-text-muted); }
+    .ob-summary { display: flex; flex-wrap: wrap; justify-content: center; gap: 0;
+      border-top: var(--border-1) solid var(--color-border);
+      border-bottom: var(--border-1) solid var(--color-border); }
+    .ob-summary > div { display: flex; flex-direction: column; gap: 2px; padding: var(--space-4) var(--space-6); }
+    .ob-summary > div + div { border-left: var(--border-1) solid var(--color-border); }
+    .ob-summary dt { font-size: var(--text-2xs); letter-spacing: var(--tracking-caps-ko); color: var(--color-text-subtle); }
+    .ob-summary dd { font-size: var(--text-lg); font-weight: var(--weight-semibold); color: var(--color-text-strong); }
+    /* 좁은 화면: 좌측 헤어라인 대신 세로 스택 + 상단 헤어라인(줄바꿈 시 경계가 어긋나지 않게) */
+    @media (max-width: 520px){
+      .ob-summary { flex-direction: column; align-items: stretch; }
+      .ob-summary > div { align-items: center; padding-block: var(--space-3); }
+      .ob-summary > div + div { border-left: none; border-top: var(--border-1) solid var(--color-border); }
+    }
   </style>
 </head>
 <body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
   <div class="ob-wrap">
     <!-- 좌측: 진행 스텝(다크 패널) -->
     <aside class="ob-aside" aria-label="진행 상황">
@@ -70,6 +104,7 @@
         <span class="overline">단계 <span id="obNum">1</span> / 4</span>
         <button class="btn btn-icon btn-ghost" data-theme-toggle aria-pressed="false" aria-label="다크 모드로 전환"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
       </div>
+      <div class="ob-mobile-steps" aria-hidden="true"><div class="ob-mp-bar" id="obMpBar"></div></div>
 
       <div class="ob-body" data-wizard data-step="0">
         <!-- step 1 -->
@@ -77,10 +112,11 @@
           <div><h1>계정을 만들어 볼까요?</h1><p class="lead mt-2">몇 가지 정보만 입력하면 됩니다.</p></div>
           <div class="form-row">
             <div><label class="field-label" for="o-first">이름</label><input class="input" id="o-first" placeholder="진섭"></div>
-            <div><label class="field-label" for="o-last">성</label><input class="input" id="o-last" placeholder="김"></div>
+            <div><label class="field-label" for="o-last">성</label><input class="input" id="o-last" placeholder="이"></div>
           </div>
           <div><label class="field-label" for="o-email">업무 이메일</label>
-            <div class="input-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><input class="input" id="o-email" type="email" placeholder="you@company.com"></div></div>
+            <div class="input-icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><input class="input" id="o-email" type="email" placeholder="jinsub@studio.co.kr" required aria-describedby="o-email-error"></div>
+            <p class="field-error" id="o-email-error" hidden><svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>이메일 주소를 정확히 입력해 주세요. (예: jinsub@studio.co.kr)</p></div>
           <div><label class="field-label" for="o-pw">비밀번호</label><input class="input" id="o-pw" type="password" placeholder="8자 이상">
             <p class="field-hint">대소문자와 숫자를 포함해 주세요.</p></div>
           <label class="checkbox"><input type="checkbox" checked><span class="control"></span><span class="control-label">서비스 약관과 개인정보 처리방침에 동의합니다.</span></label>
@@ -89,9 +125,9 @@
         <!-- step 2 -->
         <section class="wizard-step stack-5" hidden>
           <div><h1>워크스페이스를 설정해요</h1><p class="lead mt-2">팀의 정체성을 정해 주세요.</p></div>
-          <div><label class="field-label" for="o-ws">워크스페이스 이름</label><input class="input" id="o-ws" value="Atelier Studio"></div>
+          <div><label class="field-label" for="o-ws">워크스페이스 이름</label><input class="input" id="o-ws" value="여백 스튜디오"></div>
           <div><label class="field-label" for="o-url">주소</label>
-            <div class="input-group"><span class="input-addon">monochrome.app/</span><input class="input" id="o-url" value="atelier"></div></div>
+            <div class="input-group"><span class="input-addon">monochrome.app/</span><input class="input" id="o-url" value="yeobaek"></div></div>
           <div>
             <label class="field-label">주로 어떤 일에 사용하시나요?</label>
             <div class="pick-grid">
@@ -108,7 +144,7 @@
           <div><h1>팀을 초대하세요</h1><p class="lead mt-2">함께하면 더 멀리 갑니다. (선택)</p></div>
           <div><label class="field-label">이메일로 초대</label>
             <div class="chipinput" data-chipinput>
-              <span class="chip"><span>mina@atelier.co</span><button type="button" aria-label="제거"><svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button></span>
+              <span class="chip"><span>garam@yeobaek.kr</span><button type="button" aria-label="제거"><svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button></span>
               <input type="text" placeholder="이메일 입력 후 Enter…" aria-label="초대할 이메일">
             </div>
             <p class="field-hint">쉼표 또는 Enter로 여러 명을 추가할 수 있습니다.</p>
@@ -116,20 +152,27 @@
           <div class="card">
             <p class="overline mb-3">대기 중인 초대</p>
             <div class="list">
-              <div class="list-item"><span class="avatar avatar-sm">MK</span><div class="grow"><div class="list-item-title">mina@atelier.co</div><div class="list-item-desc">편집자</div></div><span class="badge badge-soft">대기</span></div>
+              <div class="list-item"><span class="avatar avatar-sm" title="문가람">MK</span><div class="grow"><div class="list-item-title">garam@yeobaek.kr</div><div class="list-item-desc">문가람 · 편집자</div></div><span class="badge badge-soft">대기</span></div>
             </div>
           </div>
           <label class="switch"><input type="checkbox" checked><span class="track"></span><span>링크로 누구나 참여 허용</span></label>
         </section>
 
-        <!-- step 4 -->
+        <!-- step 4 — 완료 장면(시그니처): "색을 다 비웠다"는 서사를 명도·아웃라인으로 -->
         <section class="wizard-step" hidden>
-          <div class="empty">
-            <span class="empty-icon" style="width:4.5rem;height:4.5rem;border-color:var(--color-text)"><svg class="icon icon-lg" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>
-            <h1 class="mt-4">모두 준비됐습니다</h1>
-            <p class="empty-desc lead">Atelier Studio 워크스페이스가 생성되었습니다. 이제 첫 프로젝트를 시작해 보세요.</p>
-            <div class="cluster center mt-7">
-              <a class="btn btn-primary btn-lg" href="dashboard.html">대시보드로 이동</a>
+          <div class="ob-done">
+            <span class="ob-done-mark" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>
+            <p class="overline mt-6">설정 완료</p>
+            <h1 class="ob-done-title mt-2">색을 다 비웠습니다.<br><span class="thin">이제 시작만 남았어요.</span></h1>
+            <p class="lead mt-4"><span data-ws-name>여백 스튜디오</span> 워크스페이스가 만들어졌습니다.</p>
+            <dl class="ob-summary mt-7">
+              <div><dt>워크스페이스</dt><dd data-ws-name>여백 스튜디오</dd></div>
+              <div><dt>용도</dt><dd id="ob-sum-use">디자인</dd></div>
+              <div><dt>초대</dt><dd>1명 대기</dd></div>
+            </dl>
+            <div class="cluster center mt-9">
+              <a class="btn btn-primary btn-lg" href="dashboard.html">대시보드로 이동
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
               <a class="btn btn-secondary btn-lg" href="../index.html">컴포넌트 둘러보기</a>
             </div>
           </div>
@@ -153,20 +196,75 @@
 
   <script src="../app.js"></script>
   <script>
-    // 위저드 상태에 맞춰 단계 번호/버튼 라벨/이전버튼 가시성 갱신
+    // 위저드 상태 동기화 + 필수값 검증 + 완료 장면 채우기
     (function () {
       var wiz = document.querySelector('[data-wizard]');
       var total = document.querySelectorAll('.wizard-step').length;
+      var doneToastFired = false;
+      var NEXT_SVG = '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>';
+
+      function currentStep() { return parseInt(wiz.getAttribute('data-step') || '0', 10); }
+
+      function fillCompletion() {
+        var useEl = document.querySelector('input[name="use"]:checked');
+        var useLabel = useEl ? useEl.closest('.pick').querySelector('strong').textContent : '디자인';
+        var sumUse = document.getElementById('ob-sum-use'); if (sumUse) sumUse.textContent = useLabel;
+        var wsEl = document.getElementById('o-ws');
+        var wsName = (wsEl && wsEl.value.trim()) || '여백 스튜디오';
+        document.querySelectorAll('[data-ws-name]').forEach(function (n) { n.textContent = wsName; });
+        if (!doneToastFired && window.MM && MM.toast) {
+          doneToastFired = true;
+          MM.toast({ title: '준비 완료', body: wsName + ' 워크스페이스가 만들어졌어요.', icon: 'success' });
+        }
+      }
+
       function sync() {
-        var step = parseInt(wiz.getAttribute('data-step') || '0', 10);
+        var step = currentStep();
         document.getElementById('obNum').textContent = step + 1;
         document.getElementById('obPrev').style.visibility = step === 0 ? 'hidden' : 'visible';
         var next = document.getElementById('obNext');
         var skip = document.getElementById('obSkip');
-        if (step >= total - 1) { next.style.display = 'none'; skip.style.display = 'none'; }
-        else { next.style.display = ''; skip.style.display = ''; next.innerHTML = step === total - 2 ? '워크스페이스 생성 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>' : '다음 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>'; }
+        var bar = document.getElementById('obMpBar');
+        if (bar) bar.style.width = Math.round((step + 1) / total * 100) + '%';
+        // 좌측 다크 패널 스텝 동기화(app.js 의 스텝 탐색 범위가 main 안이라 aside 는 직접 갱신)
+        document.querySelectorAll('.ob-aside .step').forEach(function (s, i) {
+          s.classList.toggle('is-complete', i < step);
+          s.classList.toggle('is-active', i === step);
+        });
+        if (step >= total - 1) {
+          next.style.display = 'none'; skip.style.display = 'none';
+          fillCompletion();
+        } else {
+          next.style.display = ''; skip.style.display = '';
+          next.innerHTML = (step === total - 2 ? '워크스페이스 생성 ' : '다음 ') + NEXT_SVG;
+        }
       }
-      // app.js의 moveWizard 이후 상태를 반영하기 위해 버튼 클릭에 후킹
+
+      // 필수값 검증 — 1단계 이메일. capture 단계에서 가로채 app.js moveWizard 로 진행되기 전에 차단.
+      document.addEventListener('click', function (e) {
+        if (!e.target.closest('[data-wizard-next]')) return;
+        if (currentStep() !== 0) return;
+        var email = document.getElementById('o-email');
+        var ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((email.value || '').trim());
+        if (!ok) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          email.classList.add('is-invalid');
+          email.setAttribute('aria-invalid', 'true');
+          var err = document.getElementById('o-email-error'); if (err) err.hidden = false;
+          email.focus();
+        }
+      }, true);
+
+      // 입력 시 오류 해제
+      var emailInput = document.getElementById('o-email');
+      if (emailInput) emailInput.addEventListener('input', function () {
+        this.classList.remove('is-invalid');
+        this.removeAttribute('aria-invalid');
+        var err = document.getElementById('o-email-error'); if (err) err.hidden = true;
+      });
+
+      // app.js moveWizard 이후 상태 반영(버블 단계 — 진행이 성사된 클릭에만 반응)
       document.addEventListener('click', function (e) {
         if (e.target.closest('[data-wizard-next],[data-wizard-prev]')) { setTimeout(sync, 0); }
       });

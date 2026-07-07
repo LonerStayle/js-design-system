@@ -26,7 +26,7 @@ html {
 }
 
 body {
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-sans);
@@ -35,6 +35,10 @@ body {
   line-height: var(--leading-normal);
   letter-spacing: var(--tracking-normal);
   text-rendering: optimizeLegibility;
+  /* 한글 줄바꿈 계약 — 어절 단위, 긴 라틴 토큰 안전망 */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-break: strict;
   transition: background-color var(--duration-base) var(--ease-standard),
               color var(--duration-base) var(--ease-standard);
 }
@@ -118,7 +122,7 @@ h4 { font-size: var(--text-xl); font-weight: var(--weight-medium); letter-spacin
 h5 { font-size: var(--text-lg); font-weight: var(--weight-medium); letter-spacing: var(--tracking-normal); }
 h6 { font-size: var(--text-md); font-weight: var(--weight-medium); letter-spacing: var(--tracking-normal); }
 
-p { line-height: var(--leading-relaxed); }
+p { line-height: var(--leading-relaxed); text-wrap: pretty; }
 p + p { margin-top: var(--space-4); }
 
 small { font-size: var(--text-sm); }
@@ -320,11 +324,83 @@ blockquote {
 }
 .skip-link:focus { top: var(--space-4); }
 
-/* Noise/grain 텍스처는 쓰지 않는다 — "무스타일의 스타일" 유지.
-   대신 헤어라인과 여백만으로 깊이를 만든다. */
+/* ---------------------------------------------------------------------------
+   SIGNATURE — 무채색의 무기는 명도·스케일·반전·헤어라인·모션뿐.
+   noise/grain/텍스처/유채색은 절대 금지. 아래는 전부 1px 선과 명도만 쓴다.
+   --------------------------------------------------------------------------- */
+
+/* 풀블리드 — 컨테이너를 뚫고 화면 폭 전체로. (부모 overflow-x 은폐 없이) */
+.bleed { width: 100vw; margin-inline: calc(50% - 50vw); }
+
+/* 헤어라인 모눈/크로스헤어 배경 — "설계도 위의 시스템".
+   도트·텍스처가 아니라 1px 선이므로 DNA 정합(§3-B). 중앙에서 옅게 사라지게 마스크. */
+.grid-field { position: relative; isolation: isolate; }
+.grid-field::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, var(--fx-grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--fx-grid-line) 1px, transparent 1px);
+  background-size: 30px 30px;
+  -webkit-mask-image: radial-gradient(120% 90% at 12% 0%, #000 8%, transparent 72%);
+          mask-image: radial-gradient(120% 90% at 12% 0%, #000 8%, transparent 72%);
+}
+/* 십자 크로스헤어 마커(모서리 조준선) — 옵션 강조 */
+.crosshair { position: relative; }
+.crosshair::before, .crosshair::after {
+  content: ""; position: absolute; width: 11px; height: 11px; pointer-events: none;
+  border: 0 solid var(--color-border-strong);
+}
+.crosshair::before { top: -1px; left: -1px; border-top-width: 1px; border-left-width: 1px; }
+.crosshair::after  { bottom: -1px; right: -1px; border-bottom-width: 1px; border-right-width: 1px; }
+
+/* 반전 섹션 — 갤러리 화이트 속의 순흑 전시실(§5-①).
+   data-theme="dark" 를 섹션에 걸면 토큰 셋이 통째로 스왑된다. 표면색만 명시. */
+.section-invert { background: var(--color-bg); color: var(--color-text); }
+
+/* 아웃라인 스트로크 디스플레이 — 초박(스트로크) vs 솔리드(필)의 명도 병치(§5-⑥).
+   -webkit-text-stroke 미지원 브라우저는 @supports 로 솔리드 폴백(투명 텍스트 소실 방지). */
+.display-outline {
+  font-size: clamp(3rem, 12vw, 9rem);
+  font-weight: var(--weight-light);
+  line-height: var(--leading-display-ko);
+  letter-spacing: var(--tracking-tight);
+  color: transparent;
+  -webkit-text-stroke: 1.5px var(--color-text-strong);
+}
+.display-outline .solid {
+  color: var(--color-text-strong);
+  font-weight: var(--weight-semibold);
+  -webkit-text-stroke: 0;
+}
+@supports not ((-webkit-text-stroke: 1px black) or (text-stroke: 1px black)) {
+  .display-outline { color: var(--color-text-strong); }
+}
+
+/* 잉크 필 — 하→상으로 잉크가 차오르는 시그니처 호버(버튼/칩). background-size 기법. */
+.ink-fill {
+  background-image: linear-gradient(to top, var(--fx-ink) 0, var(--fx-ink) 100%);
+  background-repeat: no-repeat;
+  background-position: bottom center;
+  background-size: 100% 0%;
+  transition: background-size var(--duration-base) var(--ease-out),
+              color var(--duration-base) var(--ease-standard);
+}
+.ink-fill:hover, .ink-fill:focus-visible { background-size: 100% 100%; color: var(--color-bg); }
+
+/* 헤어라인 성장 언더라인 — 좌→우로 밑줄이 자라는 링크 호버(§5-③) */
+.underline-grow {
+  background-image: linear-gradient(var(--color-text-strong), var(--color-text-strong));
+  background-repeat: no-repeat;
+  background-position: left 100%;
+  background-size: 0% 1px;
+  transition: background-size var(--duration-base) var(--ease-out);
+}
+.underline-grow:hover, .underline-grow:focus-visible { background-size: 100% 1px; }
 
 /* ---------------------------------------------------------------------------
-   PAGE-LOAD REVEAL — 절제된 등장(staggered). 과하지 않게.
+   PAGE-LOAD REVEAL — 절제된 등장. 위 폴드(히어로)는 CSS-only 로드 스태거(JS 무관),
+   아래 폴드는 [data-reveal] 스크롤 트리거(app.js IntersectionObserver).
    --------------------------------------------------------------------------- */
 @keyframes mm-rise {
   from { opacity: 0; transform: translateY(8px); }
@@ -340,6 +416,39 @@ blockquote {
 .reveal-5 { animation-delay: 240ms; }
 .reveal-6 { animation-delay: 290ms; }
 
+/* 스크롤 리빌 — html.js 에서만 숨김(JS 실패 시 콘텐츠 opacity:0 잔존 방지). */
+.js [data-reveal] {
+  opacity: 0; transform: translateY(16px);
+  transition: opacity var(--duration-reveal) var(--ease-out),
+              transform var(--duration-reveal) var(--ease-out);
+}
+.js [data-reveal].is-in { opacity: 1; transform: none; }
+/* 그룹 스태거 — 자식이 순차 등장(등차 60ms) */
+.js [data-reveal-group] > * {
+  opacity: 0; transform: translateY(16px);
+  transition: opacity var(--duration-reveal) var(--ease-out),
+              transform var(--duration-reveal) var(--ease-out);
+}
+.js [data-reveal-group].is-in > * { opacity: 1; transform: none; }
+.js [data-reveal-group].is-in > *:nth-child(2) { transition-delay: 60ms; }
+.js [data-reveal-group].is-in > *:nth-child(3) { transition-delay: 120ms; }
+.js [data-reveal-group].is-in > *:nth-child(4) { transition-delay: 180ms; }
+.js [data-reveal-group].is-in > *:nth-child(5) { transition-delay: 240ms; }
+.js [data-reveal-group].is-in > *:nth-child(6) { transition-delay: 300ms; }
+.js [data-reveal-group].is-in > *:nth-child(n+7) { transition-delay: 360ms; }
+
+/* ---------------------------------------------------------------------------
+   THEME WIPE — 흑↔백 원형 잠식 전환(§3-E 모노크롬 시그니처). View Transitions 한정.
+   미지원/reduced-motion 은 즉시 스왑(app.js 가드).
+   --------------------------------------------------------------------------- */
+@keyframes mm-circle-wipe { from { clip-path: circle(0% at var(--wipe-x, 50%) var(--wipe-y, 50%)); }
+                            to   { clip-path: circle(150% at var(--wipe-x, 50%) var(--wipe-y, 50%)); } }
+::view-transition-old(root) { animation: none; }
+::view-transition-new(root) { animation: mm-circle-wipe var(--duration-wipe) var(--ease-out); }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+}
+
 /* ---------------------------------------------------------------------------
    REDUCED MOTION — 모션 최소화 선호 시 모든 애니/트랜지션 무력화
    --------------------------------------------------------------------------- */
@@ -351,6 +460,11 @@ blockquote {
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+  /* 리빌은 숨김 방치 금지 — 즉시 완성 상태로 노출(JS 도착 전 플래시도 방지) */
+  .js [data-reveal],
+  .js [data-reveal-group] > * { opacity: 1 !important; transform: none !important; }
+  /* 잉크 필/언더라인은 정적(호버 시 명도 스왑만) */
+  .ink-fill { transition: none; }
 }
 
 /* Print — 잉크 절약, 순수 흑백 */
@@ -358,3 +472,27 @@ blockquote {
   body { background: #fff; color: #000; }
   .no-print { display: none !important; }
 }
+
+/* ===========================================================================
+   HANGUL REFINEMENT LAYER (§5-A) — 전제: <html lang="ko"> + 스택 순서 교정(tokens.css).
+   라틴 수치를 한글에 이월하지 않는 기저값. 테마 토큰만 참조.
+   =========================================================================== */
+:lang(ko) { word-break: keep-all; overflow-wrap: break-word; line-break: strict; }
+:lang(ko) :is(h1, h2, h3, h4, h5, h6) { line-height: var(--leading-heading-ko); }
+:lang(ko) :is(.display, .display-2, .display-outline, .hero-display) { line-height: var(--leading-display-ko); }
+:lang(ko) p { line-height: var(--leading-body-ko); }
+/* 와이드 트래킹 라벨 — 한글은 극단 자간을 완화하고 uppercase/small-caps 무효화 */
+:lang(ko) :is(.overline, .demo-label, .statcard-label, .sidebar-section-label,
+               .menu-label, .command-group-label, .calendar-dow) {
+  letter-spacing: var(--tracking-caps-ko);
+  text-transform: none;
+  font-variant: normal;
+}
+/* 한글엔 이탤릭이 없다(faux-oblique 왜곡) — 굵기로 강조 대체 */
+:lang(ko) :is(em, i, cite) { font-style: normal; font-weight: var(--weight-semibold); }
+/* 데이터 숫자는 tabular — 전제: 숫자는 스택 ①(Inter)에서 렌더 */
+:lang(ko) :is(.table td, .statcard-value, .price, .tnum, .slider-value, .meter-value) {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+/* faux-bold 방지 — 무드 폰트 웨이트를 전부 실로드했으므로 합성 금지 */
+:lang(ko) :is(h1, h2, h3, .display, .display-outline, .hero-display) { font-synthesis-weight: none; }

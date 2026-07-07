@@ -346,14 +346,31 @@
     document.addEventListener("click", (e) => { if (e.target.closest("[data-cmdk-open]")) { e.preventDefault(); open(); } });
   }
 
-  /* ───────────────────── SEGMENTED CONTROL ───────────────────── */
+  /* ───────────────────── SEGMENTED CONTROL ─────────────────────
+   * Works as a tablist (aria-selected) OR a radiogroup (aria-checked), by the
+   * container's role. Radiogroup gets roving tabindex + arrow-key selection. */
   function initSegmented() {
     $$("[data-segmented]").forEach((seg) => {
-      const btns = $$("button, [role=tab]", seg);
-      seg.addEventListener("click", (e) => {
-        const b = e.target.closest("button, [role=tab]"); if (!b) return;
-        btns.forEach((x) => x.setAttribute("aria-selected", String(x === b)));
+      const btns = $$("button, [role=tab], [role=radio]", seg);
+      const isRadio = seg.getAttribute("role") === "radiogroup";
+      const attr = isRadio ? "aria-checked" : "aria-selected";
+      const select = (b) => {
+        btns.forEach((x) => {
+          const on = x === b;
+          x.setAttribute(attr, String(on));
+          if (isRadio) x.tabIndex = on ? 0 : -1;
+        });
         seg.dispatchEvent(new CustomEvent("segmentchange", { detail: { value: b.getAttribute("data-value") || b.textContent.trim() } }));
+      };
+      if (isRadio) btns.forEach((x) => { x.tabIndex = x.getAttribute("aria-checked") === "true" ? 0 : -1; });
+      seg.addEventListener("click", (e) => { const b = e.target.closest("button, [role=tab], [role=radio]"); if (b) select(b); });
+      seg.addEventListener("keydown", (e) => {
+        if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return;
+        const i = btns.indexOf(document.activeElement); if (i < 0) return;
+        e.preventDefault();
+        const dir = (e.key === "ArrowRight" || e.key === "ArrowDown") ? 1 : -1;
+        const next = btns[(i + dir + btns.length) % btns.length];
+        next.focus(); select(next);
       });
     });
   }
@@ -423,20 +440,26 @@
       if (!tbody) return;
       let rows = $$("tr", tbody);
 
-      // sorting
+      // sorting — wrap header content in a real button so it is keyboard
+      // operable (Enter/Space) without any page-side markup changes.
       $$("th[data-sort]", table).forEach((th, colVisual) => {
         const colIndex = Array.from(th.parentNode.children).indexOf(th);
         th.classList.add("is-sortable");
-        if (!$(".sort-ic", th)) {
+        if (!$(".th-sort", th)) {
+          const btn = document.createElement("button");
+          btn.type = "button"; btn.className = "th-sort";
+          while (th.firstChild) btn.appendChild(th.firstChild);
           const ic = document.createElement("span"); ic.className = "sort-ic";
           ic.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 9l4-4 4 4M8 15l4 4 4-4"/></svg>';
-          th.appendChild(ic);
+          btn.appendChild(ic);
+          th.appendChild(btn);
         }
+        if (!th.hasAttribute("aria-sort")) th.setAttribute("aria-sort", "none");
         th.addEventListener("click", () => {
           const numeric = th.getAttribute("data-sort") === "num";
           const cur = th.getAttribute("aria-sort");
           const dir = cur === "ascending" ? "descending" : "ascending";
-          $$("th[data-sort]", table).forEach((o) => o.removeAttribute("aria-sort"));
+          $$("th[data-sort]", table).forEach((o) => o.setAttribute("aria-sort", "none"));
           th.setAttribute("aria-sort", dir);
           const sorted = $$("tr", tbody).sort((a, b) => {
             let av = a.children[colIndex]?.getAttribute("data-value") ?? a.children[colIndex]?.textContent.trim() ?? "";
@@ -507,7 +530,9 @@
       function go(n) {
         idx = (n + slides.length) % slides.length;
         track.style.transform = "translateX(-" + idx * 100 + "%)";
-        dots.forEach((d, i) => d.classList.toggle("is-active", i === idx));
+        dots.forEach((d, i) => { const on = i === idx; d.classList.toggle("is-active", on); d.setAttribute("aria-current", on ? "true" : "false"); });
+        // single source of truth for anything mirroring the carousel (thumbnails, counters)
+        car.dispatchEvent(new CustomEvent("carouselchange", { detail: { index: idx } }));
       }
       $(".carousel__btn--next", car)?.addEventListener("click", () => go(idx + 1));
       $(".carousel__btn--prev", car)?.addEventListener("click", () => go(idx - 1));

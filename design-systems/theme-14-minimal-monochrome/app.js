@@ -13,6 +13,9 @@
   var $$ = function (sel, ctx) { return Array.prototype.slice.call((ctx || document).querySelectorAll(sel)); };
   var prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  // JS 도착 표시 — [data-reveal] 숨김은 html.js 스코프에서만(JS 실패 시 콘텐츠 잔존 방지)
+  document.documentElement.classList.add("js");
+
   /* ----------------------------------------------------------------------
      THEME — 라이트/다크 토글 (무채색 둘 다). localStorage 영속.
      ---------------------------------------------------------------------- */
@@ -28,9 +31,20 @@
     });
   }
   MM.setTheme = function (t) { try { localStorage.setItem(THEME_KEY, t); } catch (e) {} applyTheme(t); };
-  MM.toggleTheme = function () {
+  // 흑↔백 원형 잠식 전환(§3-E 시그니처). View Transitions 지원 + 모션 허용 시에만.
+  // 미지원/reduced-motion 은 즉시 스왑. 클릭 좌표를 원점으로.
+  MM.toggleTheme = function (originEl) {
     var cur = document.documentElement.getAttribute("data-theme") || systemTheme();
-    MM.setTheme(cur === "dark" ? "light" : "dark");
+    var next = cur === "dark" ? "light" : "dark";
+    if (prefersReduced || !document.startViewTransition) { MM.setTheme(next); return; }
+    var x = "50%", y = "50%";
+    if (originEl && originEl.getBoundingClientRect) {
+      var r = originEl.getBoundingClientRect();
+      x = (r.left + r.width / 2) + "px"; y = (r.top + r.height / 2) + "px";
+    }
+    document.documentElement.style.setProperty("--wipe-x", x);
+    document.documentElement.style.setProperty("--wipe-y", y);
+    document.startViewTransition(function () { MM.setTheme(next); });
   };
   // 초기 적용(깜빡임 최소화를 위해 head 인라인에서도 호출됨)
   applyTheme(getStoredTheme() || systemTheme());
@@ -198,9 +212,9 @@
   document.addEventListener("click", function (e) {
     var t = e.target;
 
-    // theme toggle
+    // theme toggle (클릭 좌표를 원형 전환 원점으로)
     var tt = t.closest("[data-theme-toggle]");
-    if (tt) { MM.toggleTheme(); return; }
+    if (tt) { MM.toggleTheme(tt); return; }
 
     // modal
     var mo = t.closest("[data-modal-open]");
@@ -225,7 +239,16 @@
     if (t.closest("[data-command-open]")) { MM.openCommand(); return; }
     if (t.closest(".command") && (t.classList.contains("command") )) { MM.closeCommand(); return; }
     var ci = t.closest(".command-item");
-    if (ci) { MM.closeCommand(); var href = ci.getAttribute("data-href"); if (href) location.href = href; return; }
+    if (ci) {
+      var href = ci.getAttribute("data-href");
+      var action = ci.getAttribute("data-command-action");
+      var toggleBtn = $("[data-theme-toggle]");
+      MM.closeCommand();
+      if (href) { location.href = href; }
+      else if (action === "toggle-theme") { MM.toggleTheme(toggleBtn); }
+      else if (action === "demo-toast") { MM.toast({ title: "알림 테스트", body: "커맨드 팔레트에서 호출한 토스트입니다.", icon: "bell" }); }
+      return;
+    }
 
     // toast 데모 트리거
     var tb = t.closest("[data-toast]");
@@ -278,15 +301,9 @@
     var atr = t.closest(".accordion-trigger");
     if (atr) { toggleAccordion(atr); return; }
 
-    // segmented control
+    // segmented control (role=radiogroup → aria-checked / role=tablist·무role → aria-selected)
     var seg = t.closest(".segmented button, .segmented .seg");
-    if (seg && seg.closest(".segmented")) {
-      $$(".segmented button, .segmented .seg", seg.closest(".segmented")).forEach(function (s) { s.setAttribute("aria-selected", "false"); s.classList.remove("is-active"); });
-      seg.setAttribute("aria-selected", "true"); seg.classList.add("is-active");
-      var ev = new CustomEvent("mm:segment", { detail: { value: seg.getAttribute("data-value") || seg.textContent.trim() }, bubbles: true });
-      seg.dispatchEvent(ev);
-      return;
-    }
+    if (seg && seg.closest(".segmented")) { selectSegment(seg.closest(".segmented"), seg, true); return; }
 
     // button-group toggle (aria-pressed)
     var bg = t.closest(".btn-group [aria-pressed]");
@@ -314,7 +331,7 @@
 
     // rating
     var star = t.closest(".rating .star");
-    if (star && !star.closest('[data-readonly="true"]')) { setRating(star.closest(".rating"), parseInt(star.getAttribute("data-value"), 10)); return; }
+    if (star && !star.closest('[data-readonly="true"]')) { setRating(star.closest(".rating"), parseInt(star.getAttribute("data-value"), 10), true); return; }
 
     // chip 제거
     var chipDel = t.closest(".chip button, .tag-removable button");
@@ -328,9 +345,9 @@
     var cp = t.closest("[data-copy]");
     if (cp) { doCopy(cp); return; }
 
-    // table sort
-    var th = t.closest(".th-sort");
-    if (th) { sortTable(th); return; }
+    // table sort (헤더 라벨은 실제 <button class="th-sort">, 정렬 대상은 부모 <th>)
+    var thBtn = t.closest(".th-sort");
+    if (thBtn) { var thEl = thBtn.closest("th"); if (thEl) sortTable(thEl); return; }
 
     // carousel controls
     var cprev = t.closest("[data-carousel-prev]"), cnext = t.closest("[data-carousel-next]");
@@ -399,6 +416,32 @@
       tabs[i].focus(); activateTab(tabs[i]);
       e.preventDefault();
     }
+
+    // Segmented radiogroup 화살표
+    var ae = document.activeElement;
+    var segFocus = ae && ae.closest && ae.closest('.segmented[role="radiogroup"] button, .segmented[role="radiogroup"] .seg');
+    if (segFocus && (e.key === "ArrowRight" || e.key === "ArrowLeft" || e.key === "ArrowUp" || e.key === "ArrowDown")) {
+      var grp = segFocus.closest(".segmented");
+      var opts = $$("button, .seg", grp);
+      var cIdx = opts.indexOf(segFocus);
+      var dir = (e.key === "ArrowRight" || e.key === "ArrowDown") ? 1 : -1;
+      e.preventDefault();
+      selectSegment(grp, opts[(cIdx + dir + opts.length) % opts.length], true);
+    }
+
+    // Rating 화살표 (입력용 별점, radiogroup 패턴)
+    var starFocus = ae && ae.closest && ae.closest(".rating .star");
+    if (starFocus) {
+      var rw = starFocus.closest(".rating");
+      if (rw && !rw.matches('[data-readonly="true"]')) {
+        var curR = parseInt(rw.getAttribute("data-rating") || "0", 10) || 0;
+        var maxR = $$(".star", rw).length;
+        if (e.key === "ArrowRight" || e.key === "ArrowUp") { e.preventDefault(); setRating(rw, Math.min(maxR, curR + 1), true); }
+        else if (e.key === "ArrowLeft" || e.key === "ArrowDown") { e.preventDefault(); setRating(rw, Math.max(1, curR - 1), true); }
+        else if (e.key === "Home") { e.preventDefault(); setRating(rw, 1, true); }
+        else if (e.key === "End") { e.preventDefault(); setRating(rw, maxR, true); }
+      }
+    }
   });
 
   // command 검색 입력
@@ -437,6 +480,24 @@
   }
 
   /* ----------------------------------------------------------------------
+     SEGMENTED CONTROL — role 인지(aria-checked/aria-selected) + roving tabindex
+     ---------------------------------------------------------------------- */
+  function selectSegment(group, seg, focus) {
+    var isRadio = group.getAttribute("role") === "radiogroup";
+    $$("button, .seg", group).forEach(function (s) {
+      s.classList.remove("is-active");
+      if (isRadio) { s.setAttribute("aria-checked", "false"); s.setAttribute("tabindex", "-1"); }
+      else if (s.hasAttribute("aria-selected")) { s.setAttribute("aria-selected", "false"); }
+    });
+    seg.classList.add("is-active");
+    if (isRadio) { seg.setAttribute("aria-checked", "true"); seg.setAttribute("tabindex", "0"); if (focus) seg.focus(); }
+    else { seg.setAttribute("aria-selected", "true"); }
+    seg.dispatchEvent(new CustomEvent("mm:segment", {
+      detail: { value: seg.getAttribute("data-value") || seg.textContent.trim() }, bubbles: true
+    }));
+  }
+
+  /* ----------------------------------------------------------------------
      ACCORDION
      ---------------------------------------------------------------------- */
   function toggleAccordion(trigger) {
@@ -457,14 +518,17 @@
   /* ----------------------------------------------------------------------
      RATING
      ---------------------------------------------------------------------- */
-  function setRating(wrap, val) {
+  function setRating(wrap, val, focus) {
     $$(".star", wrap).forEach(function (s) {
       var v = parseInt(s.getAttribute("data-value"), 10);
       s.classList.toggle("is-filled", v <= val);
       s.setAttribute("aria-checked", String(v === val));
+      // roving tabindex — 선택된 별만 탭 가능
+      s.setAttribute("tabindex", v === val ? "0" : "-1");
+      if (v === val && focus) s.focus();
     });
     wrap.setAttribute("data-rating", val);
-    var out = $(".rating-value", wrap.parentNode || wrap);
+    var out = $(".rating-value", wrap);
     if (out) out.textContent = val.toFixed(1);
   }
 
@@ -658,7 +722,28 @@
   });
 
   /* ----------------------------------------------------------------------
-     초기화 — 슬라이더 초기값, ScrollSpy 등 가벼운 셋업
+     SCROLL REVEAL — 공용 IntersectionObserver 1개. 효과는 CSS(.is-in)가 담당.
+     reduced-motion 은 즉시 완성. JS 실패 시 html.js 미부여로 콘텐츠 항상 노출.
+     ---------------------------------------------------------------------- */
+  function setupReveal() {
+    var targets = $$("[data-reveal], [data-reveal-group]");
+    if (!targets.length) return;
+    if (prefersReduced || !("IntersectionObserver" in window)) {
+      targets.forEach(function (el) { el.classList.add("is-in"); });
+      return;
+    }
+    // threshold 0 — 요소 상단이 뷰포트(하단 -12% 지점)에 들어오면 발화.
+    // (threshold 비율을 쓰면 뷰포트보다 큰 긴 요소가 영원히 임계 미달 → 콘텐츠 잔존 버그)
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("is-in"); io.unobserve(e.target); }
+      });
+    }, { threshold: 0, rootMargin: "0px 0px -12% 0px" });
+    targets.forEach(function (el) { io.observe(el); });
+  }
+
+  /* ----------------------------------------------------------------------
+     초기화 — 슬라이더 초기값, 리빌, roving tabindex 등 가벼운 셋업
      ---------------------------------------------------------------------- */
   function init() {
     // 슬라이더 출력 초기값
@@ -672,6 +757,26 @@
     $$(".searchbar").forEach(function (sb) { var clr = $(".searchbar-clear", sb), inp = $("input", sb); if (clr && inp) clr.style.visibility = inp.value ? "visible" : "hidden"; });
     // 연도 자동
     $$("[data-year]").forEach(function (n) { n.textContent = new Date().getFullYear(); });
+    // 스크롤 리빌
+    setupReveal();
+    // roving tabindex — segmented radiogroup: 활성 하나만 tabindex 0
+    $$('.segmented[role="radiogroup"]').forEach(function (g) {
+      var opts = $$("button, .seg", g);
+      var active = opts.filter(function (o) { return o.getAttribute("aria-checked") === "true" || o.classList.contains("is-active"); })[0] || opts[0];
+      opts.forEach(function (o) { o.setAttribute("tabindex", o === active ? "0" : "-1"); });
+    });
+    // roving tabindex — rating(입력용): 선택 별만 tabindex 0
+    $$('.rating:not([data-readonly="true"])').forEach(function (r) {
+      var val = parseInt(r.getAttribute("data-rating") || "0", 10) || 0;
+      var stars = $$(".star", r);
+      var matched = false;
+      stars.forEach(function (s) {
+        var v = parseInt(s.getAttribute("data-value"), 10);
+        var on = v === val; if (on) matched = true;
+        s.setAttribute("tabindex", on ? "0" : "-1");
+      });
+      if (!matched && stars[0]) stars[0].setAttribute("tabindex", "0");
+    });
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();

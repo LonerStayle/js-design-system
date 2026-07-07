@@ -5,8 +5,8 @@
    Load order:  tokens.css → semantic.css → base.css → components/*.css
    ========================================================================== */
 
-/* Display serif + body sans + mono. System fallbacks defined in tokens.css. */
-@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Archivo:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
+/* Web fonts (Latin + Korean) load from a single @import in tokens.css so the
+   render-blocking chain stays one deep — do not add a second @import here. */
 
 /* ------------------------------------------------------------------ *
  * Reset
@@ -33,6 +33,18 @@ body {
   letter-spacing: var(--tracking-wide);
   transition: background-color var(--duration-base) var(--ease-standard),
               color var(--duration-base) var(--ease-standard);
+}
+
+/* Film grain — a fixed, static noise veil over the charcoal void. Painted
+   above the body background (negative z-index) but beneath all content, so it
+   never intercepts pointer or focus. No animation → reduced-motion-safe. */
+body::before {
+  content: "";
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background-image: var(--grain-image);
+  background-size: 150px 150px;
+  opacity: var(--grain-opacity, 0.05);
+  mix-blend-mode: var(--grain-blend, soft-light);
 }
 
 img, picture, video, canvas, svg { display: block; max-width: 100%; }
@@ -257,6 +269,7 @@ kbd {
 @keyframes lux-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
 @keyframes lux-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes lux-line { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes lux-line-v { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 
 .reveal { opacity: 0; animation: lux-rise var(--duration-slower) var(--ease-emphasized) forwards; }
 .reveal[data-delay="1"] { animation-delay: 90ms; }
@@ -266,6 +279,8 @@ kbd {
 .reveal[data-delay="5"] { animation-delay: 460ms; }
 .reveal[data-delay="6"] { animation-delay: 560ms; }
 .reveal-line { transform-origin: left; animation: lux-line var(--duration-slow) var(--ease-emphasized) forwards; }
+/* signature opening — a gold hairline is drawn top→bottom before copy rises */
+.reveal-line-v { transform-origin: top; animation: lux-line-v var(--duration-slower) var(--ease-emphasized) forwards; }
 
 /* Scroll-triggered reveal (JS adds .reveal-in via IntersectionObserver) */
 [data-reveal] { opacity: 0; transform: translateY(22px); transition: opacity var(--duration-slower) var(--ease-emphasized), transform var(--duration-slower) var(--ease-emphasized); }
@@ -285,5 +300,65 @@ kbd {
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
-  .reveal, .reveal-line, [data-reveal] { opacity: 1 !important; transform: none !important; }
+  .reveal, .reveal-line, .reveal-line-v, [data-reveal] { opacity: 1 !important; transform: none !important; }
 }
+
+/* ------------------------------------------------------------------ *
+ * Corner marks — the maison's registration-tick signature on hover.
+ * Two diagonal gold ticks (top-left / bottom-right) fade in. Applied to
+ * interactive surfaces (.card--interactive, .screen-card, .spec on index).
+ * ------------------------------------------------------------------ */
+.corner-marks { position: relative; }
+.corner-marks::before, .corner-marks::after {
+  content: ""; position: absolute; width: 12px; height: 12px;
+  border: var(--border-1) solid var(--color-primary);
+  opacity: 0; transition: opacity var(--duration-base) var(--ease-emphasized);
+  pointer-events: none;
+}
+.corner-marks::before { top: 7px; left: 7px; border-right: 0; border-bottom: 0; }
+.corner-marks::after  { right: 7px; bottom: 7px; border-left: 0; border-top: 0; }
+.corner-marks:hover::before, .corner-marks:hover::after,
+.corner-marks:focus-visible::before, .corner-marks:focus-visible::after,
+.corner-marks.is-selected::before, .corner-marks.is-selected::after { opacity: 0.85; }
+
+/* ------------------------------------------------------------------ *
+ * Chapter header — an oversized Cormorant numeral marks a section like a
+ * book plate. Reusable across pages for consistent section rhythm.
+ *   <header class="chapter"><span class="chapter__no">02</span>
+ *     <div class="chapter__head stack-3"> …eyebrow · h2 · lead… </div></header>
+ * ------------------------------------------------------------------ */
+.chapter { position: relative; display: flex; align-items: flex-start; gap: var(--space-6); }
+.chapter__no {
+  flex: none; font-family: var(--font-display);
+  font-size: clamp(3.5rem, 9vw, var(--text-6xl)); font-weight: var(--weight-light);
+  line-height: 0.8; letter-spacing: var(--tracking-tighter);
+  color: var(--color-primary); opacity: 0.32; font-variant-numeric: lining-nums;
+}
+.chapter__head { padding-top: var(--space-2); }
+@media (max-width: 600px) { .chapter { gap: var(--space-4); } }
+
+/* ============================================================================ *
+ * HANGUL REFINEMENT LAYER — presupposes <html lang="ko"> + the stack order in
+ * tokens.css. Base values only; the display-serif DNA keeps its own tracking.
+ * ============================================================================ */
+:lang(ko) { word-break: keep-all; overflow-wrap: break-word; line-break: strict; }
+:lang(ko) :is(h1, h2, h3, .card__title, .modal__title, .drawer__title) { line-height: var(--leading-heading-ko); text-wrap: balance; }
+:lang(ko) :is(p, .lead, .card__body, .list__sub) { line-height: var(--leading-body-ko); }
+:lang(ko) p { text-wrap: pretty; }
+:lang(ko) .display, :lang(ko) .display-hero { line-height: var(--leading-display-ko); }
+/* Nanum Myeongjo's lightest cut is 400 — a Korean hero next to Cormorant Light
+   300 reads too heavy. Pin it to 400 and relax the tracking (spec §6). */
+:lang(ko) :is(.display-hero, h1, .h1) {
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-display-ko);
+  font-synthesis-weight: none;
+}
+/* The maison's uppercase caps are DNA and uppercase is a harmless no-op on
+   Hangul — keep it. What hurts Korean is the extreme 0.24em tracking spreading
+   the glyphs apart, so cap tracking to the Hangul-safe value (spec §5-A-9). */
+:lang(ko) :is(.eyebrow, .kicker, .label, .field__label, .badge, .btn,
+              .navbar__link, .tabs__tab, .spec__tag, .sidebar__label) {
+  letter-spacing: var(--tracking-caps-ko);
+}
+:lang(ko) :is(em, i, cite) { font-style: normal; font-weight: var(--weight-semibold); }
+:lang(ko) :is(.table td, .stat-card__value, .price, .num, .kv dd) { font-variant-numeric: tabular-nums lining-nums; }
