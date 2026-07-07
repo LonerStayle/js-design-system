@@ -44,7 +44,8 @@
   /* ---------------------------------------------------------------------------
      SPARKLE BURST — 클릭 시 반짝이 튀는 시그니처 (reduced-motion 정지)
      --------------------------------------------------------------------------- */
-  const SPARKLE_COLORS = ["#FF8FBC", "#B08FFF", "#6FD8B1", "#6FBAFF", "#FFD63E"];
+  // 시그니처: 클릭 시 하트·별·반짝이 모티프가 터진다 (단색 사각형 → 카와이 모티프)
+  const BURST_MOTIFS = ["var(--motif-heart)", "var(--motif-star)", "var(--motif-sparkle)"];
   function burst(el, count) {
     if (prefersReduced || !el) return;
     const rect = el.getBoundingClientRect();
@@ -54,20 +55,42 @@
     for (let i = 0; i < n; i++) {
       const s = document.createElement("span");
       const ang = (Math.PI * 2 * i) / n + Math.random() * 0.6;
-      const dist = 26 + Math.random() * 34;
-      const size = 6 + Math.random() * 8;
+      const dist = 30 + Math.random() * 42;
+      const size = 12 + Math.random() * 12;
+      const motif = BURST_MOTIFS[i % BURST_MOTIFS.length];
       s.style.cssText = `position:fixed;left:${cx}px;top:${cy}px;width:${size}px;height:${size}px;
-        border-radius:${Math.random() > 0.5 ? "50%" : "2px"};
-        background:${SPARKLE_COLORS[i % SPARKLE_COLORS.length]};
-        pointer-events:none;z-index:9999;opacity:1;transform:translate(-50%,-50%) rotate(0deg);
-        transition:transform .65s cubic-bezier(.16,1,.3,1),opacity .65s ease-out;`;
+        background:${motif} center/contain no-repeat;
+        pointer-events:none;z-index:9999;opacity:1;transform:translate(-50%,-50%) rotate(0deg) scale(0.6);
+        transition:transform .68s cubic-bezier(.16,1,.3,1),opacity .68s ease-out;`;
       document.body.appendChild(s);
       requestAnimationFrame(() => {
-        s.style.transform = `translate(${Math.cos(ang) * dist - size / 2}px,${Math.sin(ang) * dist - size / 2}px) rotate(${Math.random() * 360}deg) scale(0.2)`;
+        s.style.transform = `translate(${Math.cos(ang) * dist - size / 2}px,${Math.sin(ang) * dist - size / 2}px) rotate(${(Math.random() - 0.5) * 300}deg) scale(0.3)`;
         s.style.opacity = "0";
       });
-      setTimeout(() => s.remove(), 700);
+      setTimeout(() => s.remove(), 720);
     }
+  }
+
+  /* ---------------------------------------------------------------------------
+     CURSOR TRAIL — 커서 뒤로 별가루 (--z-cursor 회수, reduced-motion 정지)
+     --------------------------------------------------------------------------- */
+  function initCursorTrail() {
+    if (prefersReduced) return;
+    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+    let last = 0;
+    on(document, "pointermove", (e) => {
+      if (e.pointerType && e.pointerType !== "mouse") return;
+      const now = e.timeStamp || performance.now();
+      if (now - last < 85) return;
+      last = now;
+      const s = document.createElement("span");
+      s.className = "cursor-spark";
+      s.style.left = e.clientX + "px";
+      s.style.top = e.clientY + "px";
+      s.style.transform = `scale(${0.7 + Math.random() * 0.5}) rotate(${Math.random() * 60 - 30}deg)`;
+      document.body.appendChild(s);
+      setTimeout(() => s.remove(), 700);
+    });
   }
   // 글로벌 반짝이 트리거
   on(document, "click", (e) => {
@@ -128,18 +151,38 @@
      MODAL / DRAWER (공용 overlay 로직)
      --------------------------------------------------------------------------- */
   let lastFocused = null;
+  const FOCUSABLE = 'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
+  const trapHandlers = new WeakMap();   // 요소별 핸들러 (전역 단일 핸들러 누적 방지)
+  function trapFocus(el) {
+    const handler = (e) => {
+      if (e.key !== "Tab") return;
+      const f = $$(FOCUSABLE, el).filter((n) => n.offsetParent !== null || n === document.activeElement);
+      if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    el.addEventListener("keydown", handler);
+    trapHandlers.set(el, handler);
+  }
+  function releaseFocus(el) {
+    const h = trapHandlers.get(el);
+    if (h) { el.removeEventListener("keydown", h); trapHandlers.delete(el); }
+  }
   function openOverlay(el) {
     if (!el) return;
     lastFocused = document.activeElement;
     el.classList.add("is-open");
     toggleBackdrop(true, el);
-    const focusable = el.querySelector("input,button,textarea,select,a[href],[tabindex]");
+    const focusable = el.querySelector(FOCUSABLE);
     if (focusable) setTimeout(() => focusable.focus(), 60);
+    trapFocus(el);
     document.body.style.overflow = "hidden";
   }
   function closeOverlay(el) {
     if (!el) return;
     el.classList.remove("is-open");
+    releaseFocus(el);
     if (!$(".modal.is-open, .drawer.is-open, .cmdk.is-open")) {
       toggleBackdrop(false);
       document.body.style.overflow = "";
@@ -166,6 +209,20 @@
     if (e.key === "Escape") $$(".modal.is-open,.drawer.is-open,.cmdk.is-open,.popover.is-open,.dropdown.is-open").forEach((el) => {
       el.classList.contains("dropdown") || el.classList.contains("popover") ? el.classList.remove("is-open") : closeOverlay(el);
     });
+  });
+
+  /* ---------------------------------------------------------------------------
+     DISMISS — 알림 배너/알럿 닫기 (④-8: alert-close 핸들러 부재 해소)
+     --------------------------------------------------------------------------- */
+  on(document, "click", (e) => {
+    const t = e.target.closest("[data-dismiss], .alert-close, .banner-close");
+    if (!t) return;
+    const box = t.closest("[data-dismissable], .alert, .banner");
+    if (!box) return;
+    box.style.transition = "opacity var(--duration-fast) var(--ease-soft), transform var(--duration-fast) var(--ease-soft)";
+    box.style.opacity = "0";
+    box.style.transform = "translateY(-6px)";
+    setTimeout(() => box.remove(), 180);
   });
 
   /* ---------------------------------------------------------------------------
@@ -338,13 +395,29 @@
   function initSegmented() {
     $$(".segmented").forEach((seg) => {
       const btns = $$("button", seg);
-      btns.forEach((b) => on(b, "click", () => {
-        btns.forEach((x) => x.setAttribute("aria-selected", "false"));
-        b.setAttribute("aria-selected", "true");
-        // billing toggle hook
-        const ev = new CustomEvent("segmented:change", { detail: { value: b.dataset.value, index: btns.indexOf(b) } });
-        seg.dispatchEvent(ev);
-      }));
+      if (!btns.length) return;
+      // 역할 기반 상태 속성 선택: radio→aria-checked, tab→aria-selected, 그 외→aria-pressed
+      const attr = btns.some((b) => b.getAttribute("role") === "radio") ? "aria-checked"
+                 : btns.some((b) => b.getAttribute("role") === "tab") ? "aria-selected"
+                 : "aria-pressed";
+      const select = (b) => {
+        btns.forEach((x) => { x.setAttribute(attr, x === b ? "true" : "false"); x.tabIndex = x === b ? 0 : -1; });
+        seg.dispatchEvent(new CustomEvent("segmented:change", { detail: { value: b.dataset.value, index: btns.indexOf(b) } }));
+      };
+      btns.forEach((b, i) => {
+        on(b, "click", () => select(b));
+        on(b, "keydown", (e) => {
+          let ni = null;
+          if (e.key === "ArrowRight" || e.key === "ArrowDown") ni = (i + 1) % btns.length;
+          else if (e.key === "ArrowLeft" || e.key === "ArrowUp") ni = (i - 1 + btns.length) % btns.length;
+          else if (e.key === "Home") ni = 0;
+          else if (e.key === "End") ni = btns.length - 1;
+          if (ni !== null) { e.preventDefault(); select(btns[ni]); btns[ni].focus(); }
+        });
+      });
+      // roving tabindex 초기화
+      const cur = btns.find((b) => b.getAttribute(attr) === "true") || btns[0];
+      btns.forEach((b) => (b.tabIndex = b === cur ? 0 : -1));
     });
   }
 
@@ -383,13 +456,32 @@
     $$(".rating").forEach((rt) => {
       if (rt.hasAttribute("data-readonly")) return;
       const btns = $$("button", rt);
+      if (!btns.length) return;
+      const isRadio = btns[0].getAttribute("role") === "radio";
       const paint = (n) => btns.forEach((b, i) => b.classList.toggle("is-on", i < n));
-      let val = btns.filter((b) => b.classList.contains("is-on")).length;
+      let val = parseInt(rt.getAttribute("data-value")) || btns.filter((b) => b.classList.contains("is-on")).length || 1;
+      const commit = (n, focus) => {
+        val = Math.max(1, Math.min(btns.length, n));
+        paint(val);
+        rt.setAttribute("data-value", val);
+        btns.forEach((b, i) => {
+          if (isRadio) b.setAttribute("aria-checked", i === val - 1 ? "true" : "false");
+          b.tabIndex = i === val - 1 ? 0 : -1;
+        });
+        if (focus && btns[val - 1]) btns[val - 1].focus();
+      };
       btns.forEach((b, i) => {
         on(b, "mouseenter", () => paint(i + 1));
-        on(b, "click", () => { val = i + 1; paint(val); rt.setAttribute("data-value", val); burst(b, 6); });
+        on(b, "click", () => { commit(i + 1); burst(b, 6); });
+        on(b, "keydown", (e) => {
+          if (e.key === "ArrowRight" || e.key === "ArrowUp") { e.preventDefault(); commit(val + 1, true); burst(btns[Math.min(val, btns.length) - 1], 5); }
+          else if (e.key === "ArrowLeft" || e.key === "ArrowDown") { e.preventDefault(); commit(val - 1, true); }
+          else if (e.key === "Home") { e.preventDefault(); commit(1, true); }
+          else if (e.key === "End") { e.preventDefault(); commit(btns.length, true); }
+        });
       });
       on(rt, "mouseleave", () => paint(val));
+      commit(val, false);
     });
   }
 
@@ -459,14 +551,15 @@
      --------------------------------------------------------------------------- */
   function initTables() {
     $$("table.table").forEach((tbl) => {
-      // sortable
-      $$("th.sortable", tbl).forEach((th, colIdx) => {
-        on(th, "click", () => {
+      // sortable — 트리거는 th 내부 <button class="th-sort"> (키보드 Enter/Space 네이티브)
+      $$("th.sortable", tbl).forEach((th) => {
+        const trigger = th.querySelector(".th-sort") || th;
+        const sortNow = () => {
           const tbody = $("tbody", tbl);
           const rows = $$("tr", tbody);
           const idx = Array.from(th.parentNode.children).indexOf(th);
           const asc = th.getAttribute("aria-sort") !== "ascending";
-          $$("th", tbl).forEach((o) => o.removeAttribute("aria-sort"));
+          $$("th.sortable", tbl).forEach((o) => o.setAttribute("aria-sort", "none"));
           th.setAttribute("aria-sort", asc ? "ascending" : "descending");
           const num = (s) => parseFloat(String(s).replace(/[^0-9.\-]/g, ""));
           rows.sort((a, b) => {
@@ -476,7 +569,9 @@
             return asc ? av.localeCompare(bv, "ko") : bv.localeCompare(av, "ko");
           });
           rows.forEach((r) => tbody.appendChild(r));
-        });
+        };
+        if (!th.hasAttribute("aria-sort")) th.setAttribute("aria-sort", "none");
+        on(trigger, "click", sortNow);
       });
       // select-all
       const selAll = $('thead input[type="checkbox"]', tbl);
@@ -590,6 +685,7 @@
     initSidebar();
     initRings();
     initButtonFX();
+    initCursorTrail();
   }
 
   if (document.readyState === "loading") on(document, "DOMContentLoaded", init);

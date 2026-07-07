@@ -5,8 +5,8 @@
    Load order: tokens.css → semantic.css → base.css → components/*.css
    ============================================================================ */
 
-/* ---- Fonts (Google Fonts; degrades to system humanist stack offline) ---- */
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap");
+/* Fonts are imported once in tokens.css (single render-blocking request).
+   Degrades to the system humanist stack offline / on file://. */
 
 /* ============================ RESET ============================ */
 *,
@@ -50,12 +50,15 @@ body::before {
   z-index: 0;
   opacity: var(--texture-opacity);
   background-image:
-    radial-gradient(rgb(var(--texture-ink) / 0.035) 0.5px, transparent 0.5px),
-    radial-gradient(rgb(var(--texture-ink) / 0.030) 0.5px, transparent 0.5px),
-    repeating-linear-gradient(90deg, rgb(var(--texture-ink) / 0.018) 0 1px, transparent 1px 3px),
-    repeating-linear-gradient(0deg, rgb(var(--texture-ink) / 0.015) 0 1px, transparent 1px 3px);
-  background-size: 7px 7px, 11px 11px, 3px 3px, 3px 3px;
-  background-position: 0 0, 3px 4px, 0 0, 0 0;
+    /* slub — irregular fibre flecks (prime-sized fields = no moiré) */
+    radial-gradient(rgb(var(--texture-ink) / 0.035) 0.5px, transparent 0.6px),
+    radial-gradient(rgb(var(--texture-ink) / 0.026) 0.5px, transparent 0.6px),
+    /* warp — vertical threads */
+    repeating-linear-gradient(90deg, rgb(var(--texture-ink) / 0.020) 0 1px, transparent 1px 7px),
+    /* weft — horizontal threads at a different pitch so the weave crosses */
+    repeating-linear-gradient(0deg, rgb(var(--texture-ink) / 0.016) 0 1px, transparent 1px 5px);
+  background-size: 13px 13px, 17px 17px, 7px 7px, 5px 5px;
+  background-position: 0 0, 5px 6px, 0 0, 0 0;
 }
 /* Keep app content above the texture */
 body > * { position: relative; z-index: 1; }
@@ -310,4 +313,97 @@ code, kbd, samp, pre { font-family: var(--font-mono); font-size: 0.9em; }
 }
 @media (min-width: 769px) {
   .hide-desktop { display: none !important; }
+}
+
+/* ============================ HANGUL REFINEMENT ============================ *
+ * Prerequisite: <html lang="ko"> + the display/body stacks keep the Latin
+ * mood fonts first (so numerals stay tabular Latin) and the Korean mood
+ * fonts (Gowun Batang / Gowun Dodum) next. This layer only fixes leading,
+ * line-breaking and the italic/uppercase no-ops Korean can't render. */
+:lang(ko) {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-break: strict;
+}
+:lang(ko) :is(h1, h2, h3, .card-title, .modal-title, .drawer-title) {
+  line-height: var(--leading-heading-ko);
+  letter-spacing: normal;
+}
+:lang(ko) :is(.display-1, .display-2, .hero-title) {
+  line-height: var(--leading-display-ko);
+  letter-spacing: var(--tracking-display-ko);
+}
+:lang(ko) p, :lang(ko) .lead { line-height: var(--leading-body-ko); }
+:lang(ko) :is(.eyebrow, .label-pill, .h6, .uppercase, .sidebar-section) {
+  letter-spacing: var(--tracking-caps-ko);
+}
+/* Korean has no italics — faux-oblique warps Gowun Batang. Emphasise with
+   weight + warm colour instead (the .em-warm helper below, or plain <em>). */
+:lang(ko) :is(em, i, cite) {
+  font-style: normal;
+  font-weight: var(--weight-semibold);
+}
+:lang(ko) :is(.table td, .stat-value, .stat-card .stat-value, .price, .slider-value) {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+/* Warm inline emphasis (replaces faux-italic in hero/prose). */
+.em-warm { font-style: normal; color: var(--color-primary); font-weight: var(--weight-semibold); }
+
+/* ============================ SCOPED LINEN ============================ *
+ * Opt-in woven texture for a single section/band so pages can vary grain
+ * density (hero denser, content lighter) without touching the fixed global
+ * layer. Set --linen-opacity on the element. Decorative + non-interactive. */
+.linen { position: relative; isolation: isolate; }
+.linen::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  pointer-events: none; border-radius: inherit;
+  opacity: var(--linen-opacity, 0.6);
+  background-image:
+    radial-gradient(rgb(var(--texture-ink) / 0.04) 0.5px, transparent 0.6px),
+    repeating-linear-gradient(90deg, rgb(var(--texture-ink) / 0.022) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(0deg, rgb(var(--texture-ink) / 0.018) 0 1px, transparent 1px 5px);
+  background-size: 13px 13px, 7px 7px, 5px 5px;
+}
+
+/* ============================ CANDLE SIGNATURE ============================ *
+ * "Lighting a candle" is the system metaphor. A warm halo breathes behind
+ * hero CTAs; the theme toggle blooms warm light from the click point. All
+ * of it goes still under prefers-reduced-motion. */
+@keyframes candle-flicker {
+  0%, 100% { opacity: 0.55; transform: translate(-50%, -50%) scale(1); }
+  40%      { opacity: 0.9;  transform: translate(-50%, -52%) scale(1.06); }
+  70%      { opacity: 0.68; transform: translate(-50%, -49%) scale(0.98); }
+}
+.candle-cta { position: relative; isolation: isolate; }
+.candle-cta::before {
+  content: ""; position: absolute; z-index: -1;
+  left: 50%; top: 50%; width: 150%; height: 260%;
+  transform: translate(-50%, -50%);
+  border-radius: var(--radius-pill);
+  background: radial-gradient(closest-side,
+    rgb(var(--glow-warm-rgb) / var(--glow-alpha-strong)) 0%,
+    rgb(var(--glow-warm-rgb) / 0) 72%);
+  opacity: 0.7; pointer-events: none;
+  animation: candle-flicker 5.5s var(--ease-soft) infinite;
+}
+
+/* Theme-toggle bloom — a warm light wash that irises out from where the user
+   clicked. Mounted + removed by app.js; skipped entirely for reduced motion. */
+.theme-flash {
+  position: fixed; inset: 0; z-index: var(--z-toast); pointer-events: none;
+  background: radial-gradient(circle at var(--flash-x, 50%) var(--flash-y, 50%),
+    rgb(var(--glow-warm-rgb) / 0.34) 0%,
+    rgb(var(--glow-cream-rgb) / 0.12) 26%,
+    transparent 55%);
+  opacity: 0; animation: theme-bloom 620ms var(--ease-out) forwards;
+}
+@keyframes theme-bloom {
+  0%   { opacity: 0; transform: scale(0.6); }
+  35%  { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.25); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .candle-cta::before { animation: none; opacity: 0.6; }
+  .theme-flash { display: none !important; }
 }

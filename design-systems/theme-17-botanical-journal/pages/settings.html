@@ -1,10 +1,21 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Settings — Botanical Journal</title>
-<meta name="description" content="Account & workspace settings for the Botanical Journal herbarium app — profile, notifications, appearance, billing and the danger zone.">
+<script>
+  /* FOUC 방지 — 페인트 전에 저장된 테마를 동기 적용 (app.js와 동일 키 'bj-theme') */
+  (function () {
+    document.documentElement.classList.add("js");   /* JS 켜짐 표식 — no-JS 시 [data-reveal] 숨김 방지 (§3-C) */
+    try {
+      var t = localStorage.getItem("bj-theme");
+      if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
+<title>설정 — Botanical Journal</title>
+<meta name="description" content="Botanical Journal 표본실 앱의 계정·작업공간 설정 — 프로필, 알림, 화면, 결제, 그리고 위험 구역.">
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../semantic.css">
 <link rel="stylesheet" href="../base.css">
@@ -125,7 +136,8 @@
   .accent-swatch {
     width: 2.2rem; height: 2.2rem; border-radius: 50%;
     border: var(--border-2) solid var(--color-border); cursor: pointer;
-    display: grid; place-items: center; color: #fff; position: relative;
+    display: grid; place-items: center; position: relative;
+    color: var(--color-primary);  /* ring currentColor; each .acc-* swatch overrides to its own token */
     transition: transform var(--duration-fast);
   }
   .accent-swatch:hover { transform: scale(1.08); }
@@ -155,7 +167,23 @@
   .danger-row:last-child { border-bottom: 0; }
   .danger-row__text { flex: 1; min-width: 220px; }
 
-  .footer { border-top: var(--border-2) double var(--color-border-strong); padding-block: var(--space-7); margin-top: var(--space-8); }
+  /* theme-preview swatches — intentional fixed hex: each must show its own
+     theme's real colours regardless of the currently active theme */
+  .tsw-light  { background: linear-gradient(135deg, #f4eedf 60%, #cdd9bf); } /* intentional: light preview */
+  .tsw-dark   { background: linear-gradient(135deg, #181d12 55%, #3c4a2c); } /* intentional: dark preview */
+  .tsw-system { background: linear-gradient(135deg, #f4eedf 50%, #181d12 50%); } /* intentional: split preview */
+
+  /* accent bloom options — real ramp tokens, not arbitrary hex */
+  .acc-moss  { background: var(--green-600); color: var(--green-600); }
+  .acc-bloom { background: var(--bloom-500); color: var(--bloom-500); }
+  .acc-rose  { background: var(--rose-500);  color: var(--rose-500); }
+  .acc-sepia { background: var(--ink-600);   color: var(--ink-600); }
+  .acc-slate { background: var(--sky-500);   color: var(--sky-500); }
+  .accent-swatch svg { color: var(--parchment-50); }   /* fixed check colour, legible on every chip */
+
+  /* text-link styled button (invoice downloads) — replaces dummy href="#".
+     Only reset chrome; keep .link's underline gradient (don't touch background-image). */
+  button.link { background-color: transparent; border: 0; padding: 0 0 1px; font: inherit; cursor: pointer; }
 
   /* responsive — nav stacks above content under ~760px */
   @media (max-width: 760px) {
@@ -172,71 +200,92 @@
 </style>
 </head>
 <body>
-<a href="#main" class="skip-link">Skip to content</a>
+<a href="#main" class="skip-link">본문으로 건너뛰기</a>
 
 <!-- ============================ NAVBAR ============================ -->
 <header class="navbar">
-  <a class="navbar__brand" href="../index.html" aria-label="Botanical Journal home">
+  <a class="navbar__brand" href="../index.html" aria-label="Botanical Journal 홈">
     <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
       <path d="M16 29C16 19 14 9 19 3"/><path d="M16 22c-5 0-9-4-9-9M17 15c5 0 8-3 8-8M16 18c-4-1-6-4-6-8"/>
     </svg>
     <span>Botanical Journal<br><span class="binomial">Herbarium digitalis</span></span>
   </a>
   <div class="navbar__spacer"></div>
-  <nav class="navbar__links" aria-label="Primary">
-    <a class="navbar__link" href="dashboard.html">Dashboard</a>
-    <a class="navbar__link" href="kanban.html">Drawers</a>
-    <a class="navbar__link" href="inbox.html">Inbox</a>
-    <a class="navbar__link is-active" href="settings.html" aria-current="page">Settings</a>
+  <button class="btn btn--icon navbar__burger" type="button" data-mobile-nav-toggle aria-label="메뉴 열기" aria-controls="mobile-nav" aria-haspopup="dialog" aria-expanded="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <nav class="navbar__links" aria-label="주요 메뉴">
+    <a class="navbar__link" href="dashboard.html">대시보드</a>
+    <a class="navbar__link" href="kanban.html">서랍</a>
+    <a class="navbar__link" href="inbox.html">받은편지함</a>
+    <a class="navbar__link is-active" href="settings.html" aria-current="page">설정</a>
   </nav>
-  <button class="btn btn--icon" data-theme-toggle aria-pressed="false" aria-label="Toggle day / dusk theme">
+  <button class="btn btn--icon" data-theme-toggle aria-pressed="false" aria-label="주간 / 황혼 테마 전환">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
   </button>
-  <span class="avatar avatar-status avatar__ring" aria-label="Eleanor Marsh, curator" title="Eleanor Marsh">EM</span>
+  <span class="avatar avatar-status avatar__ring" aria-label="서민준, 큐레이터" title="서민준">서</span>
 </header>
+
+<!-- MOBILE NAV DRAWER — shared off-canvas menu (≤768px); reuses the §4-3 drawer overlay contract -->
+<div class="drawer-backdrop" id="mobile-nav-backdrop" aria-hidden="true">
+  <aside class="drawer drawer--left" id="mobile-nav" role="dialog" aria-modal="true" aria-labelledby="mobile-nav-title">
+    <div class="drawer__header">
+      <h2 class="h4 serif-display" id="mobile-nav-title">둘러보기</h2>
+      <button class="btn btn--icon" type="button" data-modal-close aria-label="메뉴 닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="drawer__body" style="padding:var(--space-3)">
+      <nav style="display:flex;flex-direction:column;gap:2px" aria-label="주요 메뉴">
+        <a class="nav-item" href="dashboard.html" data-modal-close><span>대시보드</span></a>
+        <a class="nav-item" href="kanban.html" data-modal-close><span>서랍</span></a>
+        <a class="nav-item" href="inbox.html" data-modal-close><span>받은편지함</span></a>
+        <a class="nav-item is-active" href="settings.html" aria-current="page" data-modal-close><span>설정</span></a>
+      </nav>
+    </div>
+  </aside>
+</div>
 
 <main id="main">
 
 <!-- ============================ PAGE HEADER ============================ -->
 <section class="settings-head">
   <div class="container">
-    <span class="eyebrow">workspace · curator console</span>
-    <h1 class="display-lg">Settings</h1>
-    <p class="lead" style="max-width:60ch">Tend your account, the way your herbarium looks, and what the journal whispers to you. Changes are kept per workspace — <span class="binomial">Marsh &amp; Fern Collective</span>.</p>
+    <span class="eyebrow">작업공간 · 큐레이터 콘솔</span>
+    <h1 class="display-lg">설정</h1>
+    <p class="lead" style="max-width:60ch">계정과 표본실의 겉모습, 그리고 저널이 건네는 알림을 손봅니다. 모든 변경은 작업공간별로 저장됩니다 — <span class="binomial">지리산 고사리 모임</span>.</p>
   </div>
-  <svg class="settings-head__leaf" viewBox="0 0 64 64" fill="none" stroke="var(--color-primary)" stroke-width="0.6" aria-hidden="true"><path d="M32 6C18 18 14 34 18 52c14-2 26-12 30-30C46 12 40 8 32 6Z"/><path d="M30 14C28 28 24 40 19 50"/><path d="M30 22c4 2 8 1 12-2M28 32c5 2 10 1 15-3M26 42c5 1 10-1 14-5"/></svg>
+  <svg class="settings-head__leaf" viewBox="0 0 64 64" fill="none" style="stroke:var(--color-primary)" stroke-width="0.6" aria-hidden="true"><path d="M32 6C18 18 14 34 18 52c14-2 26-12 30-30C46 12 40 8 32 6Z"/><path d="M30 14C28 28 24 40 19 50"/><path d="M30 22c4 2 8 1 12-2M28 32c5 2 10 1 15-3M26 42c5 1 10-1 14-5"/></svg>
 </section>
 
 <div class="container">
 <div class="settings-shell" data-tabs>
 
   <!-- ===================== LEFT NAV (vertical tablist) ===================== -->
-  <nav class="settings-nav paper" role="tablist" aria-orientation="vertical" aria-label="Settings sections">
-    <span class="settings-nav__label">Account</span>
+  <nav class="settings-nav paper" role="tablist" aria-orientation="vertical" aria-label="설정 섹션">
+    <span class="settings-nav__label">계정</span>
     <button class="nav-item" role="tab" id="t-profile" aria-controls="p-profile" aria-selected="true" tabindex="0">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
-      <span>Profile</span>
+      <span>프로필</span>
     </button>
     <button class="nav-item" role="tab" id="t-account" aria-controls="p-account" aria-selected="false" tabindex="-1">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18M7 15h4"/></svg>
-      <span>Account</span>
+      <span>계정</span>
     </button>
     <button class="nav-item" role="tab" id="t-notifications" aria-controls="p-notifications" aria-selected="false" tabindex="-1">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg>
-      <span>Notifications</span>
+      <span>알림</span>
     </button>
     <button class="nav-item" role="tab" id="t-appearance" aria-controls="p-appearance" aria-selected="false" tabindex="-1">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/><circle cx="8.5" cy="7.5" r="1.5"/><circle cx="6.5" cy="12.5" r="1.5"/><path d="M12 2a10 10 0 100 20 2.5 2.5 0 002.5-2.5c0-1.5-1-2-1-3 0-.8.7-1.5 1.5-1.5H17a5 5 0 005-5C22 5.6 17.5 2 12 2z"/></svg>
-      <span>Appearance</span>
+      <span>화면</span>
     </button>
-    <span class="settings-nav__label">Workspace</span>
+    <span class="settings-nav__label">작업공간</span>
     <button class="nav-item" role="tab" id="t-billing" aria-controls="p-billing" aria-selected="false" tabindex="-1">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg>
-      <span>Billing</span>
+      <span>결제</span>
     </button>
     <button class="nav-item nav-item--danger" role="tab" id="t-danger" aria-controls="p-danger" aria-selected="false" tabindex="-1">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M10.3 3.7L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.7a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>
-      <span>Danger zone</span>
+      <span>위험 구역</span>
     </button>
   </nav>
 
@@ -246,9 +295,9 @@
     <!-- ---------- PROFILE (default active) ---------- -->
     <section class="panel" role="tabpanel" id="p-profile" aria-labelledby="t-profile">
       <div class="panel-head">
-        <span class="eyebrow">who's pressing</span>
-        <h2>Profile</h2>
-        <p class="text-muted">How you appear to fellow curators across the collective.</p>
+        <span class="eyebrow">누가 눌러 말리나</span>
+        <h2>프로필</h2>
+        <p class="text-muted">모임의 다른 큐레이터에게 보이는 당신의 모습입니다.</p>
       </div>
 
       <form class="paper has-corner-sprig" style="padding:var(--space-6)" onsubmit="return false">
@@ -261,19 +310,19 @@
               <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M32 58C32 40 30 22 36 8"/><path d="M33 48c-7-1-12-6-14-13M34 48c6-2 10-8 10-15M33 36c-6-1-10-5-12-11M34 36c5-2 8-7 8-13"/></svg>
             </span>
             <div class="grow" style="min-width:240px">
-              <p class="text-strong">Portrait</p>
-              <p class="text-sm text-muted mb-3">A square pressing reads best — PNG or JPG, at least 256&nbsp;px.</p>
+              <p class="text-strong">프로필 사진</p>
+              <p class="text-sm text-muted mb-3">정사각형 이미지가 가장 잘 보입니다 — PNG 또는 JPG, 최소 256&nbsp;px.</p>
               <div class="row row-2 wrap">
-                <button class="btn btn--secondary btn--sm" type="button" data-toast="Choose a new portrait from your device." data-toast-title="Change portrait" data-toast-variant="info">Change</button>
-                <button class="btn btn--ghost btn--sm" type="button" data-toast="Portrait reset to your initials." data-toast-title="Removed" data-toast-variant="info">Remove</button>
+                <button class="btn btn--secondary btn--sm" type="button" data-toast="기기에서 새 사진을 선택하세요." data-toast-title="사진 변경" data-toast-variant="info">변경</button>
+                <button class="btn btn--ghost btn--sm" type="button" data-toast="사진을 이니셜로 되돌렸어요." data-toast-title="제거됨" data-toast-variant="info">제거</button>
               </div>
             </div>
           </div>
 
-          <div class="dropzone" tabindex="0" role="button" aria-label="Upload a new portrait">
+          <div class="dropzone" tabindex="0" role="button" aria-label="새 프로필 사진 업로드">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-            <p><strong>Drop a portrait here</strong> or click to browse</p>
-            <p class="text-xs text-faint">PNG, JPG up to 4MB · square crops best</p>
+            <p><strong>사진을 여기에 끌어다 놓거나</strong> 클릭해 찾아보세요</p>
+            <p class="text-xs text-faint">PNG, JPG · 최대 4MB · 정사각형 권장</p>
             <input type="file" accept="image/*" hidden>
           </div>
           <div class="stack-2" data-file-list></div>
@@ -282,94 +331,94 @@
 
           <div class="grid grid-2">
             <div class="field">
-              <label class="field__label" for="pf-name">Display name <span class="req">*</span></label>
-              <input class="input" id="pf-name" value="Eleanor Marsh">
-              <span class="field__hint">Shown on every specimen card you press.</span>
+              <label class="field__label" for="pf-name">표시 이름 <span class="req">*</span></label>
+              <input class="input" id="pf-name" value="서민준">
+              <span class="field__hint">당신이 누른 모든 표본 카드에 표시됩니다.</span>
             </div>
             <div class="field">
-              <label class="field__label" for="pf-handle">Curator handle</label>
-              <div class="input-group"><span class="input-group__icon" aria-hidden="true">@</span><input class="input" id="pf-handle" value="ellie.marsh"></div>
+              <label class="field__label" for="pf-handle">큐레이터 아이디</label>
+              <div class="input-group"><span class="input-group__icon" aria-hidden="true">@</span><input class="input" id="pf-handle" value="moss.seo"></div>
             </div>
           </div>
 
           <div class="field">
-            <label class="field__label" for="pf-bio">Field note (bio)</label>
-            <textarea class="textarea" id="pf-bio" rows="3">Pressing wildflowers and woodland ferns since 2014. Keeper of drawer no. 4. Forever chasing the perfect Athyrium frond.</textarea>
-            <span class="field__hint">A short note, 280 characters or so.</span>
+            <label class="field__label" for="pf-bio">현장 노트 (소개)</label>
+            <textarea class="textarea" id="pf-bio" rows="3">2016년부터 오대산 일대의 이끼와 숲 고사리를 눌러 말리고 있습니다. 4번 서랍 담당. 언제나 완벽한 처녀고사리 잎을 찾아 헤맵니다.</textarea>
+            <span class="field__hint">짧은 소개글, 280자 안팎이면 좋아요.</span>
           </div>
 
           <div class="grid grid-2">
             <div class="field">
-              <label class="field__label" for="pf-loc">Location</label>
-              <div class="input-group"><span class="input-group__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 21s7-6 7-11a7 7 0 10-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span><input class="input" id="pf-loc" value="Dartmoor, Devon"></div>
+              <label class="field__label" for="pf-loc">지역</label>
+              <div class="input-group"><span class="input-group__icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 21s7-6 7-11a7 7 0 10-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></span><input class="input" id="pf-loc" value="강원 평창 · 오대산"></div>
             </div>
             <div class="field">
-              <label class="field__label" for="pf-site">Website</label>
-              <input class="input" id="pf-site" value="https://marshfern.studio" inputmode="url">
+              <label class="field__label" for="pf-site">웹사이트</label>
+              <input class="input" id="pf-site" value="https://seo-moss.studio" inputmode="url">
             </div>
           </div>
 
           <div class="field">
-            <label class="field__label" for="pf-spec">Specialties</label>
+            <label class="field__label" for="pf-spec">전문 분야</label>
             <div class="chips" data-chip-input>
-              <span class="chip">Ferns <button type="button" aria-label="Remove Ferns"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></span>
-              <span class="chip">Succulents <button type="button" aria-label="Remove Succulents"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></span>
-              <span class="chip">Wildflowers <button type="button" aria-label="Remove Wildflowers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></span>
-              <span class="chip">Mosses <button type="button" aria-label="Remove Mosses"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></span>
-              <input id="pf-spec" placeholder="Add a specialty…">
+              <span class="chip">고사리 <button type="button" aria-label="고사리 삭제"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></span>
+              <span class="chip">이끼 <button type="button" aria-label="이끼 삭제"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></span>
+              <span class="chip">들꽃 <button type="button" aria-label="들꽃 삭제"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></span>
+              <span class="chip">우산이끼 <button type="button" aria-label="우산이끼 삭제"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></span>
+              <input id="pf-spec" placeholder="분야 추가…">
             </div>
-            <span class="field__hint">Press Enter to add. Try Lichens, Grasses, Sedges…</span>
+            <span class="field__hint">Enter를 눌러 추가하세요. 지의류, 사초, 벼과 식물 등.</span>
           </div>
         </div>
       </form>
 
       <div class="save-bar">
-        <span class="save-bar__note">You have unsaved edits to your profile.</span>
+        <span class="save-bar__note">프로필에 저장하지 않은 변경이 있습니다.</span>
         <div class="grow"></div>
-        <button class="btn btn--ghost" type="button" data-toast="Profile edits discarded." data-toast-title="Reverted" data-toast-variant="info">Discard</button>
-        <button class="btn btn--primary" type="button" data-toast="Your curator profile is updated." data-toast-title="Profile saved" data-toast-variant="success">Save changes</button>
+        <button class="btn btn--ghost" type="button" data-toast="프로필 변경을 되돌렸습니다." data-toast-title="되돌림" data-toast-variant="info">되돌리기</button>
+        <button class="btn btn--primary" type="button" data-toast="큐레이터 프로필을 저장했습니다." data-toast-title="프로필 저장됨" data-toast-variant="success">변경 저장</button>
       </div>
     </section>
 
     <!-- ---------- ACCOUNT ---------- -->
     <section class="panel" role="tabpanel" id="p-account" aria-labelledby="t-account" hidden>
       <div class="panel-head">
-        <span class="eyebrow">credentials</span>
-        <h2>Account</h2>
-        <p class="text-muted">Your sign-in, language, and the email the journal writes to.</p>
+        <span class="eyebrow">로그인 정보</span>
+        <h2>계정</h2>
+        <p class="text-muted">로그인 정보와 언어, 그리고 저널이 편지를 보내는 이메일입니다.</p>
       </div>
 
       <div class="paper" style="padding:var(--space-6)">
         <div class="stack-6">
           <div class="grid grid-2">
             <div class="field">
-              <label class="field__label" for="ac-email">Email address</label>
-              <input class="input" id="ac-email" type="email" value="eleanor@marshfern.studio">
-              <span class="field__hint">Verified <svg viewBox="0 0 24 24" width="12" fill="none" stroke="var(--color-success)" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>
+              <label class="field__label" for="ac-email">이메일 주소</label>
+              <input class="input" id="ac-email" type="email" value="minjun@seo-moss.studio">
+              <span class="field__hint">인증됨 <svg viewBox="0 0 24 24" width="12" fill="none" style="stroke:var(--color-success)" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></span>
             </div>
             <div class="field">
-              <label class="field__label" for="ac-lang">Journal language</label>
+              <label class="field__label" for="ac-lang">저널 언어</label>
               <select class="select" id="ac-lang">
-                <option>English (United Kingdom)</option>
+                <option>한국어</option>
                 <option>English (United States)</option>
-                <option>Latin (binomials only)</option>
-                <option>Français</option>
-                <option>Deutsch</option>
+                <option>라틴어 (학명만)</option>
+                <option>日本語</option>
+                <option>中文 (简体)</option>
               </select>
             </div>
             <div class="field">
-              <label class="field__label" for="ac-tz">Time zone</label>
+              <label class="field__label" for="ac-tz">시간대</label>
               <select class="select" id="ac-tz">
-                <option>GMT · London</option>
-                <option>CET · Paris</option>
-                <option>EST · New York</option>
-                <option>PST · Los Angeles</option>
+                <option>KST · 서울</option>
+                <option>JST · 도쿄</option>
+                <option>GMT · 런던</option>
+                <option>PST · 로스앤젤레스</option>
               </select>
             </div>
             <div class="field">
-              <label class="field__label" for="ac-pw">Password</label>
+              <label class="field__label" for="ac-pw">비밀번호</label>
               <input class="input" id="ac-pw" type="password" value="pressed-fern-1842">
-              <span class="field__hint">Last changed 3 months ago.</span>
+              <span class="field__hint">3개월 전에 마지막으로 변경했습니다.</span>
             </div>
           </div>
 
@@ -377,211 +426,211 @@
 
           <div class="switch-row">
             <div class="switch-row__text">
-              <p class="switch-row__title">Two-factor authentication</p>
-              <p class="switch-row__help">Require a one-time code from your phone at every sign-in.</p>
+              <p class="switch-row__title">2단계 인증</p>
+              <p class="switch-row__help">로그인할 때마다 휴대폰의 일회용 코드를 입력하게 합니다.</p>
             </div>
-            <label class="switch" aria-label="Two-factor authentication"><input type="checkbox" checked><span class="switch__track"></span></label>
+            <label class="switch" aria-label="2단계 인증"><input type="checkbox" checked><span class="switch__track"></span></label>
           </div>
           <div class="switch-row">
             <div class="switch-row__text">
-              <p class="switch-row__title">Public curator profile</p>
-              <p class="switch-row__help">Let other members find your pressed specimens by name.</p>
+              <p class="switch-row__title">공개 큐레이터 프로필</p>
+              <p class="switch-row__help">다른 회원이 이름으로 당신의 표본을 찾을 수 있게 합니다.</p>
             </div>
-            <label class="switch" aria-label="Public curator profile"><input type="checkbox" checked><span class="switch__track"></span></label>
+            <label class="switch" aria-label="공개 큐레이터 프로필"><input type="checkbox" checked><span class="switch__track"></span></label>
           </div>
         </div>
       </div>
 
       <div class="save-bar">
-        <span class="save-bar__note">Account &amp; security preferences.</span>
+        <span class="save-bar__note">계정 &amp; 보안 설정.</span>
         <div class="grow"></div>
-        <button class="btn btn--primary" type="button" data-toast="Account settings saved." data-toast-title="Account updated" data-toast-variant="success">Save changes</button>
+        <button class="btn btn--primary" type="button" data-toast="계정 설정을 저장했습니다." data-toast-title="계정 업데이트됨" data-toast-variant="success">변경 저장</button>
       </div>
     </section>
 
     <!-- ---------- NOTIFICATIONS ---------- -->
     <section class="panel" role="tabpanel" id="p-notifications" aria-labelledby="t-notifications" hidden>
       <div class="panel-head">
-        <span class="eyebrow">what reaches you</span>
-        <h2>Notifications</h2>
-        <p class="text-muted">Decide which whispers from the herbarium land in your inbox.</p>
+        <span class="eyebrow">무엇을 받을까</span>
+        <h2>알림</h2>
+        <p class="text-muted">표본실이 건네는 소식 중 어떤 것을 받을지 정하세요.</p>
       </div>
 
       <div class="paper" style="padding:var(--space-6)">
-        <p class="panel-sub">By email</p>
+        <p class="panel-sub">이메일로</p>
         <div class="switch-row">
           <div class="switch-row__text">
-            <p class="switch-row__title">Email digest</p>
-            <p class="switch-row__help">A weekly summary of new pressings, comments, and drawer activity.</p>
+            <p class="switch-row__title">이메일 요약</p>
+            <p class="switch-row__help">새 압화, 댓글, 서랍 활동을 주 1회 요약해 보내드립니다.</p>
           </div>
-          <label class="switch" aria-label="Email digest"><input type="checkbox" checked><span class="switch__track"></span></label>
+          <label class="switch" aria-label="이메일 요약"><input type="checkbox" checked><span class="switch__track"></span></label>
         </div>
         <div class="switch-row">
           <div class="switch-row__text">
-            <p class="switch-row__title">New specimen alerts</p>
-            <p class="switch-row__help">Get notified the moment a fellow curator presses a new specimen into a shared drawer.</p>
+            <p class="switch-row__title">새 표본 알림</p>
+            <p class="switch-row__help">동료 큐레이터가 공유 서랍에 새 표본을 누르는 순간 알려드립니다.</p>
           </div>
-          <label class="switch" aria-label="New specimen alerts"><input type="checkbox" checked><span class="switch__track"></span></label>
+          <label class="switch" aria-label="새 표본 알림"><input type="checkbox" checked><span class="switch__track"></span></label>
         </div>
         <div class="switch-row">
           <div class="switch-row__text">
-            <p class="switch-row__title">Drawer moisture warnings</p>
-            <p class="switch-row__help">Be warned when a press climbs above 65% humidity — mould risk for fragile fronds.</p>
+            <p class="switch-row__title">서랍 습도 경고</p>
+            <p class="switch-row__help">압착기 습도가 65%를 넘으면 알려드립니다 — 여린 잎에 곰팡이가 필 위험이 있습니다.</p>
           </div>
-          <label class="switch" aria-label="Drawer moisture warnings"><input type="checkbox" checked><span class="switch__track"></span></label>
+          <label class="switch" aria-label="서랍 습도 경고"><input type="checkbox" checked><span class="switch__track"></span></label>
         </div>
 
-        <p class="panel-sub" style="margin-top:var(--space-6)">Occasional</p>
+        <p class="panel-sub" style="margin-top:var(--space-6)">가끔</p>
         <div class="switch-row">
           <div class="switch-row__text">
-            <p class="switch-row__title">Society newsletter</p>
-            <p class="switch-row__help">Seasonal foraging windows, pressing techniques, and rare-find features.</p>
+            <p class="switch-row__title">연구회 소식지</p>
+            <p class="switch-row__help">계절별 채집 시기, 압화 기법, 그리고 희귀종 발견 소식.</p>
           </div>
-          <label class="switch" aria-label="Society newsletter"><input type="checkbox"><span class="switch__track"></span></label>
+          <label class="switch" aria-label="연구회 소식지"><input type="checkbox"><span class="switch__track"></span></label>
         </div>
         <div class="switch-row">
           <div class="switch-row__text">
-            <p class="switch-row__title">Weekly summary</p>
-            <p class="switch-row__help">A tidy Sunday recap of everything you catalogued this week.</p>
+            <p class="switch-row__title">주간 정리</p>
+            <p class="switch-row__help">이번 주 정리한 표본을 일요일에 깔끔하게 되짚어 드립니다.</p>
           </div>
-          <label class="switch" aria-label="Weekly summary"><input type="checkbox" checked><span class="switch__track"></span></label>
+          <label class="switch" aria-label="주간 정리"><input type="checkbox" checked><span class="switch__track"></span></label>
         </div>
       </div>
 
       <div class="save-bar">
-        <span class="save-bar__note">Notification preferences.</span>
+        <span class="save-bar__note">알림 설정.</span>
         <div class="grow"></div>
-        <button class="btn btn--primary" type="button" data-toast="Notification preferences saved." data-toast-title="Notifications updated" data-toast-variant="success">Save changes</button>
+        <button class="btn btn--primary" type="button" data-toast="알림 설정을 저장했습니다." data-toast-title="알림 업데이트됨" data-toast-variant="success">변경 저장</button>
       </div>
     </section>
 
     <!-- ---------- APPEARANCE ---------- -->
     <section class="panel" role="tabpanel" id="p-appearance" aria-labelledby="t-appearance" hidden>
       <div class="panel-head">
-        <span class="eyebrow">the look of the page</span>
-        <h2>Appearance</h2>
-        <p class="text-muted">Tune the light, the density, and the accent bloom of your herbarium.</p>
+        <span class="eyebrow">화면의 인상</span>
+        <h2>화면</h2>
+        <p class="text-muted">표본실의 빛과 밀도, 그리고 강조색을 취향에 맞게 맞춥니다.</p>
       </div>
 
       <div class="paper" style="padding:var(--space-6)">
         <div class="stack-6">
           <div>
-            <p class="panel-sub">Theme</p>
-            <div class="theme-cards" role="radiogroup" aria-label="Theme">
+            <p class="panel-sub">테마</p>
+            <div class="theme-cards" role="radiogroup" aria-label="테마">
               <label class="theme-card is-checked" data-theme-choice="light">
                 <input type="radio" name="appearance-theme" value="light" checked>
                 <span class="theme-card__check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></span>
-                <span class="theme-card__swatch"><span style="background:linear-gradient(135deg,#f4eedf 60%,#cdd9bf)"></span></span>
-                <span class="theme-card__name">Daylight</span>
-                <span class="theme-card__meta">Cream parchment, sepia ink</span>
+                <span class="theme-card__swatch"><span class="tsw-light"></span></span>
+                <span class="theme-card__name">주간</span>
+                <span class="theme-card__meta">크림 양피지, 세피아 잉크</span>
               </label>
               <label class="theme-card" data-theme-choice="dark">
                 <input type="radio" name="appearance-theme" value="dark">
                 <span class="theme-card__check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></span>
-                <span class="theme-card__swatch"><span style="background:linear-gradient(135deg,#181d12 55%,#3c4a2c)"></span></span>
-                <span class="theme-card__name">Dusk</span>
-                <span class="theme-card__meta">Deep moss, lamp-lit pages</span>
+                <span class="theme-card__swatch"><span class="tsw-dark"></span></span>
+                <span class="theme-card__name">황혼</span>
+                <span class="theme-card__meta">짙은 이끼, 등불 켠 지면</span>
               </label>
               <label class="theme-card" data-theme-choice="system">
                 <input type="radio" name="appearance-theme" value="system">
                 <span class="theme-card__check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></span>
-                <span class="theme-card__swatch"><span style="background:linear-gradient(135deg,#f4eedf 50%,#181d12 50%)"></span></span>
-                <span class="theme-card__name">System</span>
-                <span class="theme-card__meta">Follows your device</span>
+                <span class="theme-card__swatch"><span class="tsw-system"></span></span>
+                <span class="theme-card__name">시스템</span>
+                <span class="theme-card__meta">기기 설정을 따름</span>
               </label>
             </div>
           </div>
 
           <div>
-            <p class="panel-sub">Density</p>
+            <p class="panel-sub">밀도</p>
             <div class="row between wrap" style="gap:var(--space-4)">
-              <p class="text-sm text-muted" style="max-width:38ch">How tightly cards and lists are packed across the journal.</p>
-              <div class="segmented" role="group" data-segmented aria-label="Density">
-                <button class="segmented__option" type="button" aria-pressed="false" data-value="compact">Compact</button>
-                <button class="segmented__option" type="button" aria-pressed="true" data-value="cosy">Cosy</button>
-                <button class="segmented__option" type="button" aria-pressed="false" data-value="roomy">Roomy</button>
+              <p class="text-sm text-muted" style="max-width:38ch">저널 전체에서 카드와 목록을 얼마나 촘촘하게 배치할지 정합니다.</p>
+              <div class="segmented" role="group" data-segmented aria-label="밀도">
+                <button class="segmented__option" type="button" aria-pressed="false" data-value="compact">촘촘</button>
+                <button class="segmented__option" type="button" aria-pressed="true" data-value="cosy">알맞게</button>
+                <button class="segmented__option" type="button" aria-pressed="false" data-value="roomy">넉넉</button>
               </div>
             </div>
           </div>
 
           <div>
-            <p class="panel-sub">Accent bloom</p>
-            <div class="accent-row" role="group" aria-label="Accent colour">
-              <button class="accent-swatch" type="button" aria-pressed="true" aria-label="Moss" style="background:#6b7d4a;color:#6b7d4a"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></button>
-              <button class="accent-swatch" type="button" aria-pressed="false" aria-label="Bloom mustard" style="background:#c69a3a;color:#c69a3a"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></button>
-              <button class="accent-swatch" type="button" aria-pressed="false" aria-label="Dusty rose" style="background:#b07a78;color:#b07a78"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></button>
-              <button class="accent-swatch" type="button" aria-pressed="false" aria-label="Sepia" style="background:#7a6446;color:#7a6446"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></button>
-              <button class="accent-swatch" type="button" aria-pressed="false" aria-label="Slate blue" style="background:#5a6f78;color:#5a6f78"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></button>
+            <p class="panel-sub">강조색</p>
+            <div class="accent-row" role="group" aria-label="강조색">
+              <button class="accent-swatch acc-moss" type="button" aria-pressed="true" aria-label="이끼"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></button>
+              <button class="accent-swatch acc-bloom" type="button" aria-pressed="false" aria-label="머스터드 블룸"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></button>
+              <button class="accent-swatch acc-rose" type="button" aria-pressed="false" aria-label="더스티 로즈"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></button>
+              <button class="accent-swatch acc-sepia" type="button" aria-pressed="false" aria-label="세피아"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></button>
+              <button class="accent-swatch acc-slate" type="button" aria-pressed="false" aria-label="슬레이트 블루"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg></button>
             </div>
-            <p class="field__hint mt-2">Used for buttons, links, and active states.</p>
+            <p class="field__hint mt-2">버튼, 링크, 활성 상태에 쓰입니다.</p>
           </div>
 
           <hr class="rule">
 
           <div class="switch-row" style="border-bottom:0;padding-bottom:0">
             <div class="switch-row__text">
-              <p class="switch-row__title">Reduce motion</p>
-              <p class="switch-row__help">Soften transitions and the slide-in of drawers and toasts.</p>
+              <p class="switch-row__title">모션 줄이기</p>
+              <p class="switch-row__help">전환 효과와 서랍·토스트의 슬라이드 등장을 부드럽게 줄입니다.</p>
             </div>
-            <label class="switch" aria-label="Reduce motion"><input type="checkbox"><span class="switch__track"></span></label>
+            <label class="switch" aria-label="모션 줄이기"><input type="checkbox"><span class="switch__track"></span></label>
           </div>
         </div>
       </div>
 
       <div class="save-bar">
-        <span class="save-bar__note">Theme changes apply live; density &amp; accent on save.</span>
+        <span class="save-bar__note">테마는 바로 적용되고, 밀도와 강조색은 저장 시 적용됩니다.</span>
         <div class="grow"></div>
-        <button class="btn btn--primary" type="button" data-toast="Appearance preferences saved." data-toast-title="Appearance updated" data-toast-variant="success">Save changes</button>
+        <button class="btn btn--primary" type="button" data-toast="화면 설정을 저장했습니다." data-toast-title="화면 업데이트됨" data-toast-variant="success">변경 저장</button>
       </div>
     </section>
 
     <!-- ---------- BILLING ---------- -->
     <section class="panel" role="tabpanel" id="p-billing" aria-labelledby="t-billing" hidden>
       <div class="panel-head">
-        <span class="eyebrow">the ledger</span>
-        <h2>Billing</h2>
-        <p class="text-muted">Your plan, payment, and a tidy record of past invoices.</p>
+        <span class="eyebrow">장부</span>
+        <h2>결제</h2>
+        <p class="text-muted">현재 플랜과 결제 수단, 그리고 지난 영수증을 정리해 두었습니다.</p>
       </div>
 
       <div class="grid grid-2 mb-5">
         <div class="paper has-corner-sprig" style="padding:var(--space-5)">
           <span class="corner-sprig corner-sprig--tr corner-sprig--vine" aria-hidden="true"></span>
-          <span class="badge badge--primary">Current plan</span>
-          <h3 class="mt-3" style="font-size:var(--text-2xl)">Herbarium · Pro</h3>
-          <p class="binomial">£12 / month · billed annually</p>
-          <p class="text-sm text-muted mt-2">Unlimited specimens, 12 shared drawers, moisture sensors, and priority drying tips.</p>
+          <span class="badge badge--primary">현재 플랜</span>
+          <h3 class="mt-3" style="font-size:var(--text-2xl)">정원사</h3>
+          <p class="binomial"><span class="nowrap">월 9,900원</span> · 연납 결제</p>
+          <p class="text-sm text-muted mt-2">표본 무제한, 공유 서랍 12개, 습도 센서, 그리고 우선 건조 팁을 제공합니다.</p>
           <div class="row row-2 wrap mt-4">
-            <button class="btn btn--secondary btn--sm" type="button" data-toast="Plan comparison opened." data-toast-title="Change plan" data-toast-variant="info">Change plan</button>
-            <a class="btn btn--ghost btn--sm" href="pricing.html">View all plans</a>
+            <button class="btn btn--secondary btn--sm" type="button" data-toast="플랜 비교표를 열었습니다." data-toast-title="플랜 변경" data-toast-variant="info">플랜 변경</button>
+            <a class="btn btn--ghost btn--sm" href="pricing.html">모든 플랜 보기</a>
           </div>
         </div>
         <div class="paper" style="padding:var(--space-5)">
-          <p class="label mb-3">Payment method</p>
+          <p class="label mb-3">결제 수단</p>
           <div class="list">
             <div class="list__item">
               <span class="avatar avatar--sm" aria-hidden="true">
                 <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
               </span>
-              <div class="grow"><div class="text-sm text-strong">Visa ending 4218</div><div class="text-xs text-muted">Expires 09 / 2027</div></div>
-              <span class="badge badge--success badge--dot">default</span>
+              <div class="grow"><div class="text-sm text-strong">현대카드 ··4218</div><div class="text-xs text-muted">09 / 2027 만료</div></div>
+              <span class="badge badge--success badge--dot">기본</span>
             </div>
           </div>
-          <button class="btn btn--secondary btn--sm mt-4" type="button" data-toast="Add a new card." data-toast-title="Payment method" data-toast-variant="info">Update card</button>
+          <button class="btn btn--secondary btn--sm mt-4" type="button" data-toast="새 카드를 등록합니다." data-toast-title="결제 수단" data-toast-variant="info">카드 변경</button>
           <hr class="rule mt-4 mb-3">
-          <p class="text-sm text-muted">Next renewal <strong class="text-strong">14 March 2027</strong> · £144.00</p>
+          <p class="text-sm text-muted">다음 갱신 <strong class="text-strong">2027년 3월 14일</strong> · <span class="nowrap">₩99,000</span></p>
         </div>
       </div>
 
       <div class="paper" style="padding:var(--space-5)">
-        <p class="label mb-3">Invoice history</p>
+        <p class="label mb-3">결제 내역</p>
         <div class="table-wrap">
           <div class="table-scroll">
             <table class="table table--striped table--compact">
-              <thead><tr><th>Date</th><th>Description</th><th class="num">Amount</th><th>Status</th><th></th></tr></thead>
+              <thead><tr><th>날짜</th><th>내용</th><th class="num">금액</th><th>상태</th><th></th></tr></thead>
               <tbody>
-                <tr><td>14 Mar 2026</td><td class="text-muted">Herbarium Pro · annual</td><td class="num">£144.00</td><td><span class="badge badge--success badge--dot">paid</span></td><td><a class="link text-sm" href="#" data-toast="Invoice downloaded." data-toast-title="Invoice" data-toast-variant="info">PDF</a></td></tr>
-                <tr><td>14 Mar 2025</td><td class="text-muted">Herbarium Pro · annual</td><td class="num">£132.00</td><td><span class="badge badge--success badge--dot">paid</span></td><td><a class="link text-sm" href="#" data-toast="Invoice downloaded." data-toast-title="Invoice" data-toast-variant="info">PDF</a></td></tr>
-                <tr><td>14 Mar 2024</td><td class="text-muted">Herbarium Starter · annual</td><td class="num">£48.00</td><td><span class="badge badge--success badge--dot">paid</span></td><td><a class="link text-sm" href="#" data-toast="Invoice downloaded." data-toast-title="Invoice" data-toast-variant="info">PDF</a></td></tr>
+                <tr><td>2026.03.14</td><td class="text-muted">정원사 · 연간</td><td class="num">₩99,000</td><td><span class="badge badge--success badge--dot">결제완료</span></td><td><button type="button" class="link text-sm" data-toast="영수증을 내려받았습니다." data-toast-title="영수증" data-toast-variant="info">PDF</button></td></tr>
+                <tr><td>2025.03.14</td><td class="text-muted">정원사 · 연간</td><td class="num">₩99,000</td><td><span class="badge badge--success badge--dot">결제완료</span></td><td><button type="button" class="link text-sm" data-toast="영수증을 내려받았습니다." data-toast-title="영수증" data-toast-variant="info">PDF</button></td></tr>
+                <tr><td>2024.03.14</td><td class="text-muted">새싹 · 연간</td><td class="num">₩0</td><td><span class="badge badge--neutral badge--dot">무료</span></td><td><button type="button" class="link text-sm" data-toast="영수증을 내려받았습니다." data-toast-title="영수증" data-toast-variant="info">PDF</button></td></tr>
               </tbody>
             </table>
           </div>
@@ -592,32 +641,32 @@
     <!-- ---------- DANGER ZONE ---------- -->
     <section class="panel" role="tabpanel" id="p-danger" aria-labelledby="t-danger" hidden>
       <div class="panel-head">
-        <span class="eyebrow">handle with care</span>
-        <h2>Danger zone</h2>
-        <p class="text-muted">Irreversible and destructive actions. Read each one twice.</p>
+        <span class="eyebrow">신중히 다루세요</span>
+        <h2>위험 구역</h2>
+        <p class="text-muted">되돌릴 수 없는 파괴적인 작업입니다. 하나하나 두 번씩 읽어 주세요.</p>
       </div>
 
       <div class="paper alert--danger" style="padding:var(--space-6);border-left:var(--border-2) solid var(--color-danger)">
         <div class="danger-row">
           <div class="danger-row__text">
-            <p class="switch-row__title">Export all data</p>
-            <p class="switch-row__help">Download every specimen, label, photo and field note as a portable archive.</p>
+            <p class="switch-row__title">전체 데이터 내보내기</p>
+            <p class="switch-row__help">모든 표본, 라벨, 사진, 현장 노트를 옮길 수 있는 압축 파일로 내려받습니다.</p>
           </div>
-          <button class="btn btn--secondary" type="button" data-toast="Preparing your archive — we'll email a link." data-toast-title="Export started" data-toast-variant="info">Export all data</button>
+          <button class="btn btn--secondary" type="button" data-toast="압축 파일을 준비 중입니다 — 완료되면 이메일로 링크를 보내드릴게요." data-toast-title="내보내기 시작됨" data-toast-variant="info">전체 데이터 내보내기</button>
         </div>
         <div class="danger-row">
           <div class="danger-row__text">
-            <p class="switch-row__title">Archive account</p>
-            <p class="switch-row__help">Hide your herbarium and pause billing. You can reactivate any time within 12 months.</p>
+            <p class="switch-row__title">계정 보관 처리</p>
+            <p class="switch-row__help">표본실을 숨기고 결제를 일시 중지합니다. 12개월 안에는 언제든 다시 활성화할 수 있어요.</p>
           </div>
-          <button class="btn btn--secondary" type="button" data-toast="Your account is now archived." data-toast-title="Account archived" data-toast-variant="warning">Archive account</button>
+          <button class="btn btn--secondary" type="button" data-toast="계정을 보관 처리했습니다." data-toast-title="계정 보관됨" data-toast-variant="warning">계정 보관</button>
         </div>
         <div class="danger-row">
           <div class="danger-row__text">
-            <p class="switch-row__title text-primary" style="color:var(--color-danger-soft-fg)">Delete account permanently</p>
-            <p class="switch-row__help">Erase your account and every pressed specimen forever. This cannot be undone.</p>
+            <p class="switch-row__title" style="color:var(--color-danger-soft-fg)">계정 영구 삭제</p>
+            <p class="switch-row__help">계정과 눌러 말린 모든 표본을 영원히 지웁니다. 되돌릴 수 없습니다.</p>
           </div>
-          <button class="btn btn--danger" type="button" data-modal-open="confirm-delete">Delete account</button>
+          <button class="btn btn--danger" type="button" data-modal-open="confirm-delete">계정 삭제</button>
         </div>
       </div>
     </section>
@@ -627,43 +676,43 @@
 </div><!-- /.container -->
 </main>
 
-<!-- ============================ FOOTER ============================ -->
+<!-- ============================ FOOTER (colophon) ============================ -->
 <footer class="footer">
   <div class="container">
     <div class="row between wrap" style="gap:var(--space-5)">
       <div class="stack-2">
         <div class="navbar__brand" style="font-size:var(--text-lg)"><svg viewBox="0 0 32 32" width="24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M16 29C16 19 14 9 19 3"/><path d="M16 22c-5 0-9-4-9-9M17 15c5 0 8-3 8-8"/></svg> Botanical Journal</div>
-        <p class="text-muted text-sm" style="max-width:46ch">Settings for the Marsh &amp; Fern Collective workspace. Every preference is stored on this device.</p>
+        <p class="text-muted text-sm" style="max-width:46ch">‘지리산 고사리 모임’ 작업공간의 설정입니다. 모든 환경설정은 이 기기에 저장됩니다.</p>
       </div>
       <div class="row row-5 wrap items-start">
-        <div class="stack-2"><span class="label">Account</span><a class="link text-sm" href="#" onclick="document.getElementById('t-profile').click();return false">Profile</a><a class="link text-sm" href="#" onclick="document.getElementById('t-account').click();return false">Account</a><a class="link text-sm" href="#" onclick="document.getElementById('t-billing').click();return false">Billing</a></div>
-        <div class="stack-2"><span class="label">System</span><a class="link text-sm" href="../index.html">Design system</a><a class="link text-sm" href="dashboard.html">Dashboard</a><a class="link text-sm" href="pricing.html">Pricing</a></div>
+        <div class="stack-2"><span class="label">계정</span><button class="link text-sm" type="button" data-tab-link="t-profile">프로필</button><button class="link text-sm" type="button" data-tab-link="t-account">계정</button><button class="link text-sm" type="button" data-tab-link="t-billing">결제</button></div>
+        <div class="stack-2"><span class="label">시스템</span><a class="link text-sm" href="../index.html">디자인 시스템</a><a class="link text-sm" href="dashboard.html">대시보드</a><a class="link text-sm" href="pricing.html">요금제</a></div>
       </div>
     </div>
     <hr class="rule-double mt-6 mb-4">
-    <p class="text-faint text-xs">№ 17 · Botanical Journal · pressed &amp; catalogued <span data-year>2026</span> · Herbarium digitalis</p>
+    <p class="text-faint text-xs">№ 017 / 200 · Botanical Journal · 압화 &amp; 정리 <span data-year>2026</span> · Herbarium digitalis</p>
   </div>
 </footer>
 
 <!-- ============================ DELETE CONFIRM MODAL ============================ -->
 <div class="modal-backdrop" id="confirm-delete" role="dialog" aria-modal="true" aria-labelledby="cd-title" aria-hidden="true">
   <div class="modal modal--sm">
-    <button class="btn btn--icon modal__close" data-modal-close aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
-    <div class="modal__header"><h2 class="modal__title" id="cd-title">Delete account?</h2></div>
+    <button class="btn btn--icon modal__close" data-modal-close aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    <div class="modal__header"><h2 class="modal__title" id="cd-title">계정을 삭제할까요?</h2></div>
     <div class="modal__body stack-4">
       <div class="alert alert--danger">
         <span class="alert__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg></span>
-        <div class="alert__body"><p class="alert__title">This is permanent</p><p class="alert__text">2,480 pressed specimens and every shared drawer will be erased. There is no undo.</p></div>
+        <div class="alert__body"><p class="alert__title">되돌릴 수 없습니다</p><p class="alert__text">눌러 말린 표본 1,842점과 모든 공유 서랍이 지워집니다. 복구할 수 없어요.</p></div>
       </div>
       <div class="field">
-        <label class="field__label" for="cd-input">Type <strong class="mono">DELETE</strong> to confirm</label>
-        <input class="input" id="cd-input" placeholder="DELETE" autocomplete="off" data-confirm-input aria-describedby="cd-hint">
-        <span class="field__hint" id="cd-hint">The delete button stays disabled until the word matches.</span>
+        <label class="field__label" for="cd-input">확인을 위해 <strong class="mono">삭제</strong> 를 입력하세요</label>
+        <input class="input" id="cd-input" placeholder="삭제" autocomplete="off" data-confirm-input aria-describedby="cd-hint">
+        <span class="field__hint" id="cd-hint">단어가 일치할 때까지 삭제 버튼은 비활성 상태로 유지됩니다.</span>
       </div>
     </div>
     <div class="modal__footer">
-      <button class="btn btn--ghost" data-modal-close>Cancel</button>
-      <button class="btn btn--danger" id="cd-delete" disabled data-modal-close data-toast="Your account and all specimens have been deleted." data-toast-title="Account deleted" data-toast-variant="danger">Delete permanently</button>
+      <button class="btn btn--ghost" data-modal-close>취소</button>
+      <button class="btn btn--danger" id="cd-delete" disabled data-modal-close data-toast="계정과 모든 표본을 삭제했습니다." data-toast-title="계정 삭제됨" data-toast-variant="danger">영구 삭제</button>
     </div>
   </div>
 </div>
@@ -672,6 +721,14 @@
 <script>
 /* ── page-local wiring (theme toggle, tabs, command palette all live in app.js) ─ */
 (function () {
+  /* Footer quick-links → activate the matching settings tab (replaces inline onclick) */
+  document.querySelectorAll('[data-tab-link]').forEach(function (link) {
+    link.addEventListener('click', function () {
+      var tab = document.getElementById(link.getAttribute('data-tab-link'));
+      if (tab) { tab.click(); tab.focus(); }
+    });
+  });
+
   /* Theme radio cards → drive data-theme + sync the checked card outline */
   var themeCards = document.querySelectorAll('.theme-card');
   themeCards.forEach(function (card) {
@@ -702,12 +759,12 @@
     });
   });
 
-  /* Type-to-confirm: enable Delete only when input === DELETE */
+  /* Type-to-confirm: enable the delete button only when input === '삭제' */
   var confirmInput = document.querySelector('[data-confirm-input]');
   var deleteBtn = document.getElementById('cd-delete');
   if (confirmInput && deleteBtn) {
     confirmInput.addEventListener('input', function () {
-      deleteBtn.disabled = confirmInput.value.trim().toUpperCase() !== 'DELETE';
+      deleteBtn.disabled = confirmInput.value.trim() !== '삭제';
     });
     /* reset the field whenever the modal is closed */
     var backdrop = document.getElementById('confirm-delete');

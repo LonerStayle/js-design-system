@@ -1,27 +1,57 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Botanical Journal — 디자인 시스템 식물 표본집</title>
 <meta name="description" content="Botanical Journal: 압화 식물 야외 일지 콘셉트의 디자인 시스템. 크림빛 양피지 위에 세이지·이끼 그린과 부드러운 갈색 잉크.">
+<script>
+  /* FOUC 방지 — 페인트 전에 저장된 테마를 동기 적용 (app.js와 동일 키 'bj-theme') */
+  (function () {
+    document.documentElement.classList.add("js");   /* JS 켜짐 표식 — no-JS 시 [data-reveal] 숨김 방지 (§3-C) */
+    try {
+      var t = localStorage.getItem("bj-theme");
+      if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="semantic.css">
 <link rel="stylesheet" href="base.css">
 <link rel="stylesheet" href="components/index.css">
 <style>
-  /* page-local layout for the hub */
-  .hero { position: relative; overflow: hidden; padding-block: var(--space-12) var(--space-10); }
-  .hero__grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: var(--space-8); align-items: center; }
-  .hero__plate { position: relative; aspect-ratio: 1; max-width: 460px; margin-inline: auto; }
-  .hero__plate svg { width: 100%; height: 100%; }
-  .hero__plate .specimen-tag { position: absolute; bottom: 6%; left: 4%; }
-  .hero__bg-leaf { position: absolute; top: -8%; right: -6%; width: 420px; opacity: 0.07; pointer-events: none; transform: rotate(8deg); }
-  @media (max-width: 880px) { .hero__grid { grid-template-columns: 1fr; } .hero__plate { display: none; } }
+  /* ===== HERO — the A2 mounting sheet ===== */
+  .hero { position: relative; overflow: clip; padding-block: var(--space-11) var(--space-9); }
+  .hero__grid { display: grid; grid-template-columns: 1.04fr 0.96fr; gap: var(--space-9); align-items: center; }
+  .hero__lead { position: relative; z-index: 2; }
+  .hero__note { position: absolute; left: 2px; bottom: calc(var(--space-9) * -1); max-width: 30ch; }
 
+  .hero__sheet { position: relative; aspect-ratio: 5 / 6; width: 100%; max-width: 430px; margin-inline: auto; padding: var(--space-6); }
+  .hero__sheet .plate-art { width: 100%; height: 100%; display: block; }
+  /* plate colours via CSS classes (no var() in SVG presentation attrs) */
+  .plate-frame { stroke: var(--color-border); fill: none; }
+  .plate-frame--dash { stroke: var(--color-border-strong); }
+  .plate-stem  { stroke: var(--color-primary); fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .plate-bloom { fill: var(--color-accent); stroke: none; }
+  .plate-petal { stroke: var(--color-rose); fill: none; }
+
+  .hero__tape--1 { top: -9px; left: 20%; }
+  .hero__tape--2 { bottom: 20%; right: -12px; }
+  .hero__stamp  { top: var(--space-5); right: var(--space-4); }
+  .hero__tag    { position: absolute; bottom: 8%; left: 4px; z-index: 4; }
+  .hero__vlabel { position: absolute; top: 16%; right: -6px; height: 42%; z-index: 4; }
+  .hero__ff--1 { top: 30%; left: 26%; } .hero__ff--2 { top: 58%; left: 62%; } .hero__ff--3 { top: 44%; left: 40%; }
+  @media (max-width: 900px) {
+    .hero__grid { grid-template-columns: 1fr; gap: var(--space-10); }
+    .hero__note { position: static; margin-top: var(--space-5); max-width: none; }
+    .hero__sheet { max-width: 360px; }
+  }
+
+  /* ===== Palette ramps — legible labels on any swatch ===== */
   .ramp { display: flex; border-radius: var(--radius-md); overflow: hidden; border: var(--border-1) solid var(--color-border); box-shadow: var(--shadow-xs); }
-  .ramp__swatch { flex: 1; height: 56px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; font-size: 10px; font-family: var(--font-mono); color: rgba(255,255,255,0.85); }
-  .ramp__swatch.dark-text { color: rgba(40,30,20,0.7); }
+  .ramp__swatch { flex: 1; height: 56px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; font-size: 11px; font-weight: 500; font-family: var(--font-mono); color: var(--parchment-50); text-shadow: 0 1px 2px rgba(28,24,18,0.55); }
+  .ramp__swatch.dark-text { color: var(--ink-800); text-shadow: 0 1px 0 rgba(255,255,255,0.4); }
 
   .motif-card { text-align: center; padding: var(--space-6); }
   .motif-card__art { width: 88px; height: 88px; margin: 0 auto var(--space-3); color: var(--color-primary); }
@@ -32,15 +62,15 @@
   .gallery-nav a { white-space: nowrap; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-family: var(--font-label); font-variant: small-caps; letter-spacing: var(--tracking-wide); font-size: var(--text-sm); color: var(--color-text-muted); }
   .gallery-nav a:hover { color: var(--color-primary); background: var(--color-primary-soft); }
 
-  .comp-block { padding-block: var(--space-8); border-top: var(--border-1) solid var(--color-divider); scroll-margin-top: 120px; }
-  .comp-block__head { margin-bottom: var(--space-5); }
+  /* ===== Component blocks — each is a numbered plate (Tab. N) ===== */
+  .comp-block { position: relative; padding-block: var(--space-8); border-top: var(--border-1) solid var(--color-divider); scroll-margin-top: 120px; }
+  .comp-block__head { position: relative; margin-bottom: var(--space-6); }
+  .comp-block__plate { position: absolute; top: -0.35em; right: 0; font-size: clamp(3.5rem, 9vw, 6.5rem); }
+  .comp-block__head > *:not(.comp-block__plate) { position: relative; z-index: 1; }
   .demo-row { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: center; }
-  .swatch-spec { display: flex; align-items: center; gap: var(--space-3); }
-  .swatch-spec__chip { width: 40px; height: 40px; border-radius: var(--radius-sm); border: var(--border-1) solid var(--color-border); flex-shrink: 0; }
 
   .page-card { display: flex; flex-direction: column; height: 100%; }
   .page-card__num { font-family: var(--font-display); font-size: var(--text-2xl); color: var(--color-primary); opacity: 0.5; }
-  .footer { border-top: var(--border-2) double var(--color-border-strong); padding-block: var(--space-8); margin-top: var(--space-10); }
 </style>
 </head>
 <body>
@@ -60,7 +90,7 @@
     <a class="navbar__link" href="#motifs">모티프</a>
     <a class="navbar__link" href="#components">컴포넌트</a>
     <a class="navbar__link" href="#pages">표본 페이지</a>
-    <a class="navbar__link" href="README.md">가이드</a>
+    <a class="navbar__link" href="#colophon">판권</a>
   </nav>
   <button class="btn btn--secondary btn--sm" data-cmdk-open aria-label="명령 팔레트 열기">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
@@ -74,52 +104,66 @@
 <main id="main">
 <!-- ============================ HERO ============================ -->
 <section class="hero">
+  <span class="watermark" aria-hidden="true" style="inset:-40px auto auto -60px; transform:rotate(14deg); opacity:0.045"></span>
   <div class="container">
     <div class="hero__grid">
-      <div class="stack-5 reveal">
-        <span class="eyebrow">야외 일지 № 17 · 2026 압화</span>
-        <h1 class="display-lg">꽃처럼 눌러&nbsp;말리고&nbsp;<em>분류해</em> 정리한 디자인 시스템.</h1>
-        <p class="lead" style="max-width:54ch">Botanical Journal은 인터페이스 요소들을 모은 식물 표본집입니다 — 크림빛 양피지 위에 펼쳐진 세이지·이끼 그린, 부드러운 갈색 잉크로 기록했습니다. 토큰, 컴포넌트, 그리고 완성된 9개의 표본 페이지 모두 순수 CSS로만 만들었습니다.</p>
+      <div class="hero__lead stack-5 reveal">
+        <span class="eyebrow">야외 채집 일지 · 제17호</span>
+        <h1 class="display-lg">눌러 말리고,<br>이름 붙인<br><em>디자인 표본집</em>.</h1>
+        <p class="lead" style="max-width:52ch">크림빛 양피지 위에 세이지와 이끼 그린을 얹고, 갈색 세피아 잉크로 적어 내려간 인터페이스 도감입니다. 잎맥 하나까지 손으로 그렸습니다.</p>
         <div class="demo-row">
           <a class="btn btn--primary btn--lg" href="#components">
-            표본집 둘러보기
+            표본집 펼쳐보기
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
-          <a class="btn btn--secondary btn--lg" href="#pages">표본 페이지 보기</a>
+          <a class="btn btn--secondary btn--lg" href="#pages">완성 표본 9첩</a>
         </div>
-        <div class="row row-4 wrap" style="margin-top:var(--space-2)">
-          <span class="badge badge--primary badge--dot">120개 이상 요소</span>
-          <span class="badge badge--accent badge--dot">9개 페이지</span>
-          <span class="badge badge--neutral badge--dot">주간 + 황혼</span>
-          <span class="badge badge--success badge--dot">AA 명도 대비</span>
+        <div class="row row-3 wrap" style="margin-top:var(--space-2)">
+          <span class="badge badge--primary badge--dot">표본 2,480점</span>
+          <span class="badge badge--accent badge--dot">완성 표본 9첩</span>
+          <span class="badge badge--neutral badge--dot">주간 · 황혼 2판</span>
         </div>
+        <p class="pencil-note hero__note">압화 №017 — 잎맥 선명, 상태 양호. 황혼 판에서는 등불 아래 다시 눌렀다.</p>
       </div>
 
-      <div class="hero__plate reveal reveal-2" aria-hidden="true">
-        <svg viewBox="0 0 400 400" fill="none">
-          <!-- pressed botanical plate -->
-          <circle cx="200" cy="200" r="186" stroke="var(--color-border-strong)" stroke-width="1" stroke-dasharray="2 5"/>
-          <circle cx="200" cy="200" r="170" stroke="var(--color-border)" stroke-width="1"/>
-          <g stroke="var(--color-primary)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M200 360C200 250 188 150 230 70"/>
-            <path d="M205 300c-40 4-72-22-86-66M210 250c34 6 62-14 74-54M205 210c-34-2-60-26-66-66M214 180c30 4 54-10 62-44M210 150c-26-4-44-22-48-50"/>
+      <div class="hero__sheet mounting-sheet reveal reveal-2" role="img"
+           aria-label="압화 표본 №017 — 이끼과 고사리 한 대와 머스터드 꽃, 마른 장미 꽃잎이 린넨 테이프로 고정된 표본 대지">
+        <span class="tape hero__tape--1" aria-hidden="true"></span>
+        <span class="tape tape--v hero__tape--2" aria-hidden="true"></span>
+
+        <svg class="plate-art ink-draw" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet" fill="none" aria-hidden="true">
+          <circle class="plate-frame plate-frame--dash" cx="200" cy="200" r="188" stroke-width="1" stroke-dasharray="2 6"/>
+          <circle class="plate-frame" cx="200" cy="200" r="172" stroke-width="1"/>
+          <g class="plate-stem" stroke-width="1.7">
+            <path class="ink-2" d="M200 360C200 250 188 150 230 70" pathLength="1000"/>
+            <path class="ink-3" d="M205 300c-40 4-72-22-86-66" pathLength="1000"/>
+            <path class="ink-3" d="M210 250c34 6 62-14 74-54" pathLength="1000"/>
+            <path class="ink-4" d="M205 210c-34-2-60-26-66-66" pathLength="1000"/>
+            <path class="ink-4" d="M214 180c30 4 54-10 62-44" pathLength="1000"/>
+            <path class="ink-5" d="M210 150c-26-4-44-22-48-50" pathLength="1000"/>
           </g>
-          <g fill="var(--color-accent)" opacity="0.85">
+          <g class="plate-petal" stroke-width="1.5">
+            <path class="ink-4" d="M120 300c-18-10-22-30-10-44 12 10 16 30 10 44Z" pathLength="1000"/>
+            <path class="ink-5" d="M300 130c18-10 22-30 10-44-12 10-16 30-10 44Z" pathLength="1000"/>
+          </g>
+          <g class="plate-bloom ink-fill" opacity="0.9">
             <circle cx="230" cy="70" r="7"/><circle cx="244" cy="84" r="5"/><circle cx="216" cy="84" r="5"/><circle cx="230" cy="96" r="5"/>
           </g>
-          <g fill="none" stroke="var(--color-rose)" stroke-width="1.4">
-            <path d="M120 300c-18-10-22-30-10-44 12 10 16 30 10 44Z"/>
-            <path d="M300 130c18-10 22-30 10-44-12 10-16 30-10 44Z"/>
-          </g>
         </svg>
-        <span class="specimen-tag">
+
+        <span class="accession-stamp hero__stamp" aria-hidden="true">압화<b>№017</b>이끼과</span>
+        <span class="specimen-tag sway hero__tag" aria-hidden="true">
           <span class="specimen-tag__name">Filix memoria</span><br>
-          <span class="specimen-tag__meta">no. 017 · 이끼과</span>
+          <span class="specimen-tag__meta">№ 017 · 이끼과</span>
         </span>
+        <span class="vertical-label hero__vlabel" aria-hidden="true">기억의 고사리</span>
+
+        <span class="firefly hero__ff--1" aria-hidden="true"></span>
+        <span class="firefly firefly--2 hero__ff--2" aria-hidden="true"></span>
+        <span class="firefly firefly--3 hero__ff--3" aria-hidden="true"></span>
       </div>
     </div>
   </div>
-  <svg class="hero__bg-leaf" viewBox="0 0 64 64" fill="none" stroke="var(--color-primary)" stroke-width="0.6" aria-hidden="true"><path d="M32 6C18 18 14 34 18 52c14-2 26-12 30-30C46 12 40 8 32 6Z"/><path d="M30 14C28 28 24 40 19 50"/></svg>
 </section>
 
 <!-- ============================ GALLERY NAV ============================ -->
@@ -143,7 +187,8 @@
 <!-- ============================ PALETTE ============================ -->
 <section class="comp-block" id="palette">
   <div class="comp-block__head">
-    <span class="eyebrow">색소</span>
+    <span class="comp-block__plate plate-number" aria-hidden="true">I</span>
+    <span class="eyebrow">도판 I · 색소</span>
     <h2>눌러 말린 팔레트</h2>
     <p class="text-muted" style="max-width:60ch">채도를 낮춘 네 가지 자연색 — 살아 있는 그린, 크림빛 양피지, 세피아 잉크, 그리고 꽃가루 빛. 모든 색 단계는 50→900으로 이어지며, 텍스트 색상은 양피지 위에서 4.5:1 대비를 확보하도록 조정했습니다.</p>
   </div>
@@ -155,7 +200,7 @@
         <div class="ramp__swatch dark-text" style="background:var(--green-100)">100</div>
         <div class="ramp__swatch dark-text" style="background:var(--green-200)">200</div>
         <div class="ramp__swatch dark-text" style="background:var(--green-300)">300</div>
-        <div class="ramp__swatch" style="background:var(--green-400)">400</div>
+        <div class="ramp__swatch dark-text" style="background:var(--green-400)">400</div>
         <div class="ramp__swatch" style="background:var(--green-500)">500</div>
         <div class="ramp__swatch" style="background:var(--green-600)">600</div>
         <div class="ramp__swatch" style="background:var(--green-700)">700</div>
@@ -200,7 +245,7 @@
           <div class="ramp__swatch dark-text" style="background:var(--bloom-100)">100</div>
           <div class="ramp__swatch dark-text" style="background:var(--bloom-200)">200</div>
           <div class="ramp__swatch dark-text" style="background:var(--bloom-300)">300</div>
-          <div class="ramp__swatch" style="background:var(--bloom-400)">400</div>
+          <div class="ramp__swatch dark-text" style="background:var(--bloom-400)">400</div>
           <div class="ramp__swatch" style="background:var(--bloom-500)">500</div>
           <div class="ramp__swatch" style="background:var(--bloom-700)">700</div>
         </div>
@@ -223,9 +268,10 @@
 <!-- ============================ TYPOGRAPHY ============================ -->
 <section class="comp-block" id="type">
   <div class="comp-block__head">
-    <span class="eyebrow">필체</span>
+    <span class="comp-block__plate plate-number" aria-hidden="true">II</span>
+    <span class="eyebrow">도판 II · 필체</span>
     <h2>타이포그래피</h2>
-    <p class="text-muted">디스플레이는 Cormorant Garamond, 본문은 EB Garamond — 올드스타일 숫자, 스몰캡스 표본 라벨, 이탤릭 학명.</p>
+    <p class="text-muted">디스플레이는 Cormorant Garamond와 고운바탕, 본문은 EB Garamond와 나눔명조 — 올드스타일 숫자, 표본 라벨, 이탤릭 학명이 서재의 목소리를 만듭니다.</p>
   </div>
   <div class="grid grid-2">
     <div class="paper" style="padding:var(--space-6)">
@@ -256,9 +302,10 @@
 <!-- ============================ MOTIFS ============================ -->
 <section class="comp-block" id="motifs">
   <div class="comp-block__head">
-    <span class="eyebrow">일러스트레이션</span>
+    <span class="comp-block__plate plate-number" aria-hidden="true">III</span>
+    <span class="eyebrow">도판 III · 세밀화</span>
     <h2>식물 모티프</h2>
-    <p class="text-muted">손으로 그린 펜 선 일러스트, 인라인 SVG, 테마별 색조 재적용. 장식 요소이므로 — 항상 <code class="mono text-sm">aria-hidden</code> 처리.</p>
+    <p class="text-muted">잎·고사리·꽃·덩굴을 펜 선으로 그린 세밀화. 주간에는 세피아 잉크로, 황혼에는 크림색으로 다시 물들며 카드 모서리와 괘선, 워터마크에 스며듭니다.</p>
   </div>
   <div class="grid grid-4">
     <div class="card motif-card">
@@ -282,7 +329,7 @@
 
 <!-- ============================ BUTTONS ============================ -->
 <section class="comp-block" id="components">
-  <div class="comp-block__head"><span class="eyebrow">요소 · 폼</span><h2>버튼</h2><p class="text-muted">프라이머리, 세컨더리, 고스트, 액센트, 위험, 아이콘 — 세 가지 크기, 모든 상태.</p></div>
+  <div class="comp-block__head"><span class="comp-block__plate plate-number" aria-hidden="true">IV</span><span class="eyebrow">도판 IV · 버튼</span><h2>버튼</h2><p class="text-muted">프라이머리, 세컨더리, 고스트, 액센트, 위험, 아이콘 — 세 가지 크기, hover·focus·active·비활성·로딩까지 전 상태.</p></div>
   <div class="stack-5">
     <div class="demo-row">
       <button class="btn btn--primary">표본 누르기</button>
@@ -313,7 +360,7 @@
 
 <!-- ============================ FORMS ============================ -->
 <section class="comp-block" id="forms">
-  <div class="comp-block__head"><span class="eyebrow">요소 · 폼</span><h2>입력 &amp; 컨트롤</h2></div>
+  <div class="comp-block__head"><span class="comp-block__plate plate-number" aria-hidden="true">V</span><span class="eyebrow">도판 V · 채록</span><h2>입력 &amp; 컨트롤</h2><p class="text-muted">표본을 기록하는 서식 — 검증 오류, 자동완성, 칩 입력, 평점, 그리고 현장 채집물 업로드.</p></div>
   <div class="grid grid-3">
     <div class="field">
       <label class="field__label" for="f-name">표본 이름</label>
@@ -377,11 +424,11 @@
     </div>
     <div class="field"><span class="field__label">평점</span>
       <div class="rating" data-rating data-value="4" aria-label="평가하기">
-        <button aria-label="잎 1개"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg></button>
-        <button aria-label="2"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg></button>
-        <button aria-label="3"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg></button>
-        <button aria-label="4"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg></button>
-        <button aria-label="5"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg></button>
+        <button aria-label="잎 1개로 평가"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg></button>
+        <button aria-label="잎 2개로 평가"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg></button>
+        <button aria-label="잎 3개로 평가"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg></button>
+        <button aria-label="잎 4개로 평가"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg></button>
+        <button aria-label="잎 5개로 평가"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg></button>
       </div>
     </div>
   </div>
@@ -399,7 +446,7 @@
 
 <!-- ============================ CARDS / DATA ============================ -->
 <section class="comp-block" id="cards">
-  <div class="comp-block__head"><span class="eyebrow">요소 · 표시</span><h2>카드, 통계 &amp; 라벨</h2></div>
+  <div class="comp-block__head"><span class="comp-block__plate plate-number" aria-hidden="true">VI</span><span class="eyebrow">도판 VI · 표본첩</span><h2>카드, 통계 &amp; 라벨</h2></div>
   <div class="grid grid-3 mb-6">
     <div class="stat"><span class="stat__icon"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span><p class="stat__label">눌러 말린 표본</p><p class="stat__value" data-reveal data-countup="2480" data-decimals="0">0</p><p class="stat__delta stat__delta--up"><svg viewBox="0 0 24 24" width="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 15l6-6 6 6"/></svg> 이번 시즌 12%</p></div>
     <div class="stat"><span class="stat__icon"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><p class="stat__label">평균 건조 시간</p><p class="stat__value">6.4<span style="font-size:.5em"> 일</span></p><p class="stat__delta stat__delta--down"><svg viewBox="0 0 24 24" width="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg> 0.8 단축</p></div>
@@ -408,7 +455,7 @@
   <div class="grid grid-3">
     <article class="card card--specimen has-corner-sprig">
       <span class="corner-sprig corner-sprig--tr" aria-hidden="true"></span>
-      <div class="card__media"><svg viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice" style="width:100%;height:100%;background:var(--green-100)"><g stroke="var(--green-600)" stroke-width="1.4" fill="none" stroke-linecap="round"><path d="M160 190C160 120 150 60 185 20"/><path d="M165 150c-30 4-54-16-64-50M170 110c26 4 48-10 56-40M165 80c-26-2-44-20-48-50"/></g></svg></div>
+      <div class="card__media"><svg viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice" style="width:100%;height:100%;background:var(--green-100)" aria-hidden="true"><g style="stroke:var(--green-600)" stroke-width="1.4" fill="none" stroke-linecap="round"><path d="M160 190C160 120 150 60 185 20"/><path d="M165 150c-30 4-54-16-64-50M170 110c26 4 48-10 56-40M165 80c-26-2-44-20-48-50"/></g></svg></div>
       <div class="card__header"><span class="badge badge--primary">고사리</span><h3 class="card__title mt-2">레이디 고사리</h3><p class="binomial">Athyrium filix-femina</p></div>
       <div class="card__body"><p class="text-muted text-sm">축축한 숲 그늘에서 잘 자라는 섬세하고 깃털 같은 잎. 첫 일지를 시작하기에 더없이 좋은 압화입니다.</p></div>
       <div class="card__footer"><button class="btn btn--ghost btn--sm">상세 보기</button><div class="grow"></div><span class="rating rating--readonly is-filled" aria-label="5점 만점에 5점"><svg width="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg><svg width="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg><svg width="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C7 6 5 11 6 19c5-1 9-5 11-12-1-3-3-4-5-5z"/></svg></span></div>
@@ -439,7 +486,7 @@
 
 <!-- ============================ FEEDBACK ============================ -->
 <section class="comp-block" id="feedback">
-  <div class="comp-block__head"><span class="eyebrow">요소 · 피드백</span><h2>알림, 토스트 &amp; 진행률</h2></div>
+  <div class="comp-block__head"><span class="comp-block__plate plate-number" aria-hidden="true">VII</span><span class="eyebrow">도판 VII · 기별</span><h2>알림, 토스트 &amp; 진행률</h2></div>
   <div class="grid grid-2 mb-6">
     <div class="alert alert--success"><span class="alert__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span><div class="alert__body"><p class="alert__title">표본 분류 완료</p><p class="alert__text">레이디 고사리를 4번 서랍에 추가했습니다.</p></div></div>
     <div class="alert alert--warning"><span class="alert__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.7L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.7a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg></span><div class="alert__body"><p class="alert__title">습도 상승</p><p class="alert__text">2번 서랍이 65%를 넘었습니다 — 압화 상태를 확인하세요.</p></div></div>
@@ -453,15 +500,16 @@
     <button class="btn btn--danger-ghost" data-toast="표본을 저장할 수 없습니다." data-toast-title="무언가 시들었습니다" data-toast-variant="danger">토스트 · 위험</button>
   </div>
   <div class="grid grid-3">
-    <div class="paper" style="padding:var(--space-5)"><p class="label mb-3">선형 진행률</p><div class="progress mb-3"><div class="progress__bar" style="width:72%"></div></div><div class="progress mb-3"><div class="progress__bar progress__bar--accent progress__bar--striped" style="width:46%"></div></div><div class="progress progress--lg"><div class="progress__bar" style="width:88%"></div></div></div>
-    <div class="paper row center" style="padding:var(--space-5)"><div class="progress-ring" style="--val:73"><span class="progress-ring__label">73%</span></div></div>
+    <div class="paper" style="padding:var(--space-5)"><p class="label mb-3">선형 진행률</p><div class="progress mb-3" role="progressbar" aria-label="분류 진행률" aria-valuenow="72" aria-valuemin="0" aria-valuemax="100"><div class="progress__bar" style="width:72%"></div></div><div class="progress mb-3" role="progressbar" aria-label="건조 진행률" aria-valuenow="46" aria-valuemin="0" aria-valuemax="100"><div class="progress__bar progress__bar--accent progress__bar--striped" style="width:46%"></div></div><div class="progress progress--lg" role="progressbar" aria-label="부착 준비율" aria-valuenow="88" aria-valuemin="0" aria-valuemax="100"><div class="progress__bar" style="width:88%"></div></div></div>
+    <div class="paper row center" style="padding:var(--space-5)"><div class="progress-ring" style="--val:73" role="progressbar" aria-label="시즌 채집 달성률" aria-valuenow="73" aria-valuemin="0" aria-valuemax="100"><span class="progress-ring__label">73%</span></div></div>
     <div class="paper row center row-4" style="padding:var(--space-5)"><div class="spinner spinner--sm"></div><div class="spinner"></div><div class="spinner spinner--lg"></div></div>
   </div>
 </section>
 
 <!-- ============================ DATA ============================ -->
 <section class="comp-block" id="data">
-  <div class="comp-block__head"><span class="eyebrow">요소 · 표시</span><h2>테이블, 탭 &amp; 아코디언</h2></div>
+  <span class="stain" aria-hidden="true" style="top:var(--space-4); right:var(--space-6);"></span>
+  <div class="comp-block__head"><span class="comp-block__plate plate-number" aria-hidden="true">VIII</span><span class="eyebrow">도판 VIII · 대장</span><h2>테이블, 탭 &amp; 아코디언</h2></div>
   <div class="table-wrap mb-6">
     <div class="table-scroll">
       <table class="table table--striped" data-sortable>
@@ -503,7 +551,7 @@
 
 <!-- ============================ OVERLAYS ============================ -->
 <section class="comp-block" id="overlays">
-  <div class="comp-block__head"><span class="eyebrow">요소 · 오버레이</span><h2>오버레이 &amp; 내비게이션</h2></div>
+  <div class="comp-block__head"><span class="comp-block__plate plate-number" aria-hidden="true">IX</span><span class="eyebrow">도판 IX · 겹면</span><h2>오버레이 &amp; 내비게이션</h2></div>
   <div class="demo-row mb-6">
     <button class="btn btn--primary" data-modal-open="demo-modal">다이얼로그 열기</button>
     <button class="btn btn--secondary" data-modal-open="demo-drawer">드로어 열기</button>
@@ -511,13 +559,13 @@
     <span class="tooltip" data-tooltip="압화 꽃 모양 툴팁" tabindex="0"><span class="btn btn--ghost">마우스를 올려보세요</span></span>
     <div class="dropdown"><button class="btn btn--secondary" data-dropdown-trigger aria-haspopup="true">메뉴 <svg viewBox="0 0 24 24" width="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button><div class="dropdown__panel"><div class="menu"><div class="menu__label">표본</div><button class="menu__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg> 라벨 편집</button><button class="menu__item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 12h14M12 5v14"/></svg> 복제</button><div class="menu__sep"></div><button class="menu__item menu__item--danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg> 삭제</button></div></div></div>
   </div>
-  <div class="breadcrumb mb-5"><a href="index.html">저널</a><span class="breadcrumb__sep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span><a href="#">고사리</a><span class="breadcrumb__sep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span><span aria-current="page">레이디 고사리</span></div>
+  <div class="breadcrumb mb-5"><a href="index.html">저널</a><span class="breadcrumb__sep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span><a href="#cards">고사리</a><span class="breadcrumb__sep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span><span aria-current="page">레이디 고사리</span></div>
   <div class="steps" style="max-width:560px"><div class="step is-done"><div class="step__marker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></div><span class="step__label">채집</span></div><div class="step is-done"><div class="step__marker"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></div><span class="step__label">압화</span></div><div class="step is-active"><div class="step__marker">3</div><span class="step__label">분류</span></div><div class="step"><div class="step__marker">4</div><span class="step__label">부착</span></div></div>
 </section>
 
 <!-- ============================ PAGES ============================ -->
 <section class="comp-block" id="pages">
-  <div class="comp-block__head"><span class="eyebrow">컬렉션</span><h2>표본 페이지</h2><p class="text-muted">완성된 9개의 화면 — 반응형, 실제 데이터, 모든 인터랙션이 동작합니다. 아무 카드나 더블클릭해 열어보세요.</p></div>
+  <div class="comp-block__head"><span class="comp-block__plate plate-number" aria-hidden="true">X</span><span class="eyebrow">도판 X · 컬렉션</span><h2>완성 표본 9첩</h2><p class="text-muted">끝까지 조판한 아홉 화면 — 반응형, 실제 데이터, 모든 인터랙션이 살아 있습니다. 카드를 눌러 펼쳐 보세요.</p></div>
   <div class="grid grid-3">
     <a class="card card--interactive page-card" href="pages/dashboard.html"><div class="card__body"><span class="page-card__num">01</span><h3 class="card__title">분석 대시보드</h3><p class="text-muted text-sm">자연색 위젯, 장부 테이블, CSS 차트.</p><span class="badge badge--primary mt-2" style="align-self:flex-start">데이터</span></div></a>
     <a class="card card--interactive page-card" href="pages/kanban.html"><div class="card__body"><span class="page-card__num">02</span><h3 class="card__title">칸반 보드</h3><p class="text-muted text-sm">서랍 사이를 끌어 옮기는 표본 카드.</p><span class="badge badge--accent mt-2" style="align-self:flex-start">드래그 앤 드롭</span></div></a>
@@ -534,20 +582,22 @@
 </div>
 
 <!-- ============================ FOOTER ============================ -->
-<footer class="footer">
-  <div class="container">
-    <div class="row between wrap" style="gap:var(--space-5)">
-      <div class="stack-2">
-        <div class="navbar__brand" style="font-size:var(--text-lg)"><svg viewBox="0 0 32 32" width="24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M16 29C16 19 14 9 19 3"/><path d="M16 22c-5 0-9-4-9-9M17 15c5 0 8-3 8-8"/></svg> Botanical Journal</div>
-        <p class="text-muted text-sm" style="max-width:46ch">야외 일지 콘셉트의 디자인 시스템. 순수 CSS 토큰, 프레임워크 없음, 모든 페이지가 <code class="mono text-xs">file://</code>에서 렌더링됩니다.</p>
+<footer class="footer" id="colophon">
+  <div class="container" style="position:relative">
+    <span class="plate-number" aria-hidden="true" style="top:-0.15em; right:0; font-size:clamp(3rem,8vw,6rem)">XVII</span>
+    <div class="row between wrap" style="gap:var(--space-6); position:relative; z-index:1">
+      <div class="stack-3" style="max-width:46ch">
+        <div class="navbar__brand" style="font-size:var(--text-lg)"><svg viewBox="0 0 32 32" width="24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M16 29C16 19 14 9 19 3"/><path d="M16 22c-5 0-9-4-9-9M17 15c5 0 8-3 8-8"/></svg> Botanical Journal</div>
+        <p class="text-muted text-sm">제17호 야외 채집 일지 — 크림빛 양피지에 세이지·이끼 그린을 얹고 세피아 잉크로 눌러 엮은 인터페이스 도감. 주간과 황혼, 두 판(版)으로 눌러 두었습니다.</p>
+        <p class="pencil-note" style="rotate:-1deg">표제 Cormorant Garamond · 고운바탕 / 본문 EB Garamond · 나눔명조</p>
       </div>
       <div class="row row-5 wrap items-start">
-        <div class="stack-2"><span class="label">시스템</span><a class="link text-sm" href="README.md">가이드 읽기</a><a class="link text-sm" href="CHECKLIST.md">체크리스트</a><a class="link text-sm" href="#palette">토큰</a></div>
+        <div class="stack-2"><span class="label">도감</span><a class="link text-sm" href="#palette">색소 팔레트</a><a class="link text-sm" href="#motifs">식물 모티프</a><a class="link text-sm" href="#components">컴포넌트</a></div>
         <div class="stack-2"><span class="label">표본 페이지</span><a class="link text-sm" href="pages/dashboard.html">대시보드</a><a class="link text-sm" href="pages/pricing.html">요금제</a><a class="link text-sm" href="pages/kanban.html">칸반</a></div>
       </div>
     </div>
-    <hr class="rule-double mt-6 mb-4">
-    <p class="text-faint text-xs">№ 17 · Botanical Journal · 압화 &amp; 분류 <span data-year>2026</span> · Herbarium digitalis</p>
+    <hr class="rule-double mt-6 mb-4" style="position:relative; z-index:1">
+    <p class="text-faint text-xs" style="position:relative; z-index:1">№ 017 / 200 · Botanical Journal · 압화 &amp; 제책 <span data-year>2026</span> · Herbarium digitalis</p>
   </div>
 </footer>
 
@@ -584,9 +634,9 @@
     <div class="cmdk__input-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input class="cmdk__input" placeholder="표본, 페이지, 작업 검색…" aria-label="명령 입력"></div>
     <div class="cmdk__list">
       <div class="cmdk__group" data-group="Pages"><div class="cmdk__group-label">페이지</div>
-        <div class="cmdk__item" href="pages/dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg> 분석 대시보드 <kbd>G D</kbd></div>
-        <div class="cmdk__item" href="pages/kanban.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="10" rx="1"/><rect x="17" y="4" width="4" height="14" rx="1"/></svg> 칸반 보드</div>
-        <div class="cmdk__item" href="pages/pricing.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 12V8H6a2 2 0 010-4h12v4"/><path d="M4 6v12a2 2 0 002 2h14v-4"/></svg> 요금제</div>
+        <div class="cmdk__item" data-href="pages/dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg> 분석 대시보드 <kbd>G D</kbd></div>
+        <div class="cmdk__item" data-href="pages/kanban.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="10" rx="1"/><rect x="17" y="4" width="4" height="14" rx="1"/></svg> 칸반 보드</div>
+        <div class="cmdk__item" data-href="pages/pricing.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M20 12V8H6a2 2 0 010-4h12v4"/><path d="M4 6v12a2 2 0 002 2h14v-4"/></svg> 요금제</div>
       </div>
       <div class="cmdk__group" data-group="Actions"><div class="cmdk__group-label">작업</div>
         <div class="cmdk__item" data-action="toggle-theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"/></svg> 주간 / 황혼 전환 <kbd>⌘ J</kbd></div>

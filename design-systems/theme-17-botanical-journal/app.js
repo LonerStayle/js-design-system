@@ -25,7 +25,7 @@
       $$('[data-theme-toggle]').forEach(btn => {
         btn.setAttribute('aria-pressed', String(t === 'dark'));
         const lbl = btn.querySelector('[data-theme-label]');
-        if (lbl) lbl.textContent = t === 'dark' ? 'Dusk' : 'Daylight';
+        if (lbl) lbl.textContent = t === 'dark' ? '황혼' : '주간';
       });
     },
     set(t) { localStorage.setItem(THEME_KEY, t); this.apply(t); },
@@ -116,6 +116,7 @@
   function closeModal(backdrop) {
     backdrop.classList.remove('is-open');
     backdrop.setAttribute('aria-hidden', 'true');
+    if (backdrop.id === 'mobile-nav-backdrop') $$('[data-mobile-nav-toggle]').forEach(b => b.setAttribute('aria-expanded', 'false'));
     if (!$('.modal-backdrop.is-open, .drawer-backdrop.is-open, .cmdk-backdrop.is-open')) document.body.style.overflow = '';
     if (lastFocused) lastFocused.focus();
   }
@@ -150,7 +151,7 @@
     warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.7L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.7a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
     info:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>'
   };
-  window.bjToast = function ({ title = 'Noted', text = '', variant = 'success', timeout = 4200 } = {}) {
+  window.bjToast = function ({ title = '기록했습니다', text = '', variant = 'success', timeout = 4200 } = {}) {
     const stack = ensureToastStack();
     const el = document.createElement('div');
     el.className = 'toast toast--' + variant;
@@ -159,7 +160,7 @@
       '<span class="toast__icon" aria-hidden="true">' + (ICONS[variant] || ICONS.success) + '</span>' +
       '<div class="toast__body"><div class="toast__title">' + title + '</div>' +
       (text ? '<div class="toast__text">' + text + '</div>' : '') + '</div>' +
-      '<button class="btn btn--icon btn--sm" aria-label="Dismiss"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
+      '<button class="btn btn--icon btn--sm" aria-label="알림 닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
     const remove = () => { el.classList.add('is-leaving'); setTimeout(() => el.remove(), 260); };
     on(el.querySelector('button'), 'click', remove);
     stack.appendChild(el);
@@ -168,7 +169,7 @@
   };
   document.addEventListener('click', e => {
     const t = e.target.closest('[data-toast]');
-    if (t) window.bjToast({ title: t.getAttribute('data-toast-title') || 'Pressed & catalogued', text: t.getAttribute('data-toast') || '', variant: t.getAttribute('data-toast-variant') || 'success' });
+    if (t) window.bjToast({ title: t.getAttribute('data-toast-title') || '압화 및 분류 완료', text: t.getAttribute('data-toast') || '', variant: t.getAttribute('data-toast-variant') || 'success' });
   });
 
   /* ------------------------------------------------------------------ */
@@ -211,16 +212,38 @@
     const backdrop = $('[data-cmdk]');
     if (!backdrop) return;
     const input = $('.cmdk__input', backdrop);
+    const list = $('.cmdk__list', backdrop);
     const items = $$('.cmdk__item', backdrop);
     let active = 0;
+    // Progressive listbox/combobox ARIA — attaches on any page's cmdk markup
+    if (list && !list.id) list.id = 'cmdk-list';
+    if (list) list.setAttribute('role', 'listbox');
+    input.setAttribute('role', 'combobox');
+    input.setAttribute('aria-autocomplete', 'list');
+    input.setAttribute('aria-expanded', 'false');
+    if (list) input.setAttribute('aria-controls', list.id);
+    items.forEach((it, i) => { if (!it.id) it.id = 'cmdk-opt-' + i; it.setAttribute('role', 'option'); it.setAttribute('aria-selected', 'false'); });
+    const emptyEl = $('.cmdk__empty', backdrop);
+    if (emptyEl) { emptyEl.setAttribute('role', 'status'); emptyEl.setAttribute('aria-live', 'polite'); }
     const open = () => {
       backdrop.classList.add('is-open'); backdrop.setAttribute('aria-hidden', 'false');
+      input.setAttribute('aria-expanded', 'true');
       document.body.style.overflow = 'hidden'; lastFocused = document.activeElement;
       input.value = ''; filter(''); setTimeout(() => input.focus(), 50);
     };
-    const close = () => { backdrop.classList.remove('is-open'); backdrop.setAttribute('aria-hidden', 'true'); if (!$('.modal-backdrop.is-open,.drawer-backdrop.is-open')) document.body.style.overflow = ''; if (lastFocused) lastFocused.focus(); };
+    const close = () => { backdrop.classList.remove('is-open'); backdrop.setAttribute('aria-hidden', 'true'); input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); if (!$('.modal-backdrop.is-open,.drawer-backdrop.is-open')) document.body.style.overflow = ''; if (lastFocused) lastFocused.focus(); };
     const visible = () => items.filter(it => it.style.display !== 'none');
-    const setActive = (i) => { const vis = visible(); active = Math.max(0, Math.min(i, vis.length - 1)); items.forEach(it => it.classList.remove('is-active')); if (vis[active]) { vis[active].classList.add('is-active'); vis[active].scrollIntoView({ block: 'nearest' }); } };
+    const setActive = (i) => {
+      const vis = visible();
+      active = Math.max(0, Math.min(i, vis.length - 1));
+      items.forEach(it => { it.classList.remove('is-active'); it.setAttribute('aria-selected', 'false'); });
+      if (vis[active]) {
+        vis[active].classList.add('is-active');
+        vis[active].setAttribute('aria-selected', 'true');
+        input.setAttribute('aria-activedescendant', vis[active].id);
+        vis[active].scrollIntoView({ block: 'nearest' });
+      } else { input.removeAttribute('aria-activedescendant'); }
+    };
     const filter = (q) => {
       q = q.toLowerCase().trim();
       let groups = {};
@@ -245,9 +268,10 @@
     on(backdrop, 'click', e => { if (e.target === backdrop) close(); });
     items.forEach(it => on(it, 'click', () => {
       const action = it.getAttribute('data-action');
+      const link = it.getAttribute('data-href') || it.getAttribute('href');
       if (action === 'toggle-theme') Theme.toggle();
-      else if (it.getAttribute('href')) { window.location.href = it.getAttribute('href'); return; }
-      else window.bjToast({ title: 'Command run', text: it.textContent.trim(), variant: 'info' });
+      else if (link) { window.location.href = link; return; }
+      else window.bjToast({ title: '명령을 실행했습니다', text: it.textContent.trim(), variant: 'info' });
       close();
     }));
     $$('[data-cmdk-open]').forEach(b => on(b, 'click', open));
@@ -286,7 +310,7 @@
       ? btn.closest('.codeblock').querySelector('code, pre').innerText
       : (document.getElementById(btn.getAttribute('data-copy'))?.innerText || btn.getAttribute('data-copy'));
     navigator.clipboard?.writeText(text).then(() => {
-      const old = btn.textContent; btn.textContent = 'Copied ✓';
+      const old = btn.textContent; btn.textContent = '복사됨 ✓';
       setTimeout(() => btn.textContent = old, 1400);
     });
   });
@@ -299,7 +323,7 @@
     const slides = $$('.carousel__slide', track);
     const dotsWrap = $('.carousel__dots', root);
     if (dotsWrap) {
-      dotsWrap.innerHTML = slides.map((_, i) => `<button class="carousel__dot${i === 0 ? ' is-active' : ''}" aria-label="Slide ${i + 1}"></button>`).join('');
+      dotsWrap.innerHTML = slides.map((_, i) => `<button class="carousel__dot${i === 0 ? ' is-active' : ''}" aria-label="${i + 1}번 슬라이드"></button>`).join('');
     }
     const dots = dotsWrap ? $$('.carousel__dot', dotsWrap) : [];
     const scrollTo = i => slides[i] && track.scrollTo({ left: slides[i].offsetLeft - track.offsetLeft, behavior: prefersReduced() ? 'auto' : 'smooth' });
@@ -381,7 +405,7 @@
       val = val.trim(); if (!val) return;
       const chip = document.createElement('span');
       chip.className = 'chip';
-      chip.innerHTML = val + ' <button type="button" aria-label="Remove ' + val + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
+      chip.innerHTML = val + ' <button type="button" aria-label="' + val + ' 삭제"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
       root.insertBefore(chip, input);
     };
     on(input, 'keydown', e => {
@@ -439,7 +463,7 @@
     if (!t) return;
     const annual = t.checked;
     $$('[data-price]').forEach(p => p.textContent = annual ? p.dataset.priceAnnual : p.dataset.price);
-    $$('[data-price-period]').forEach(p => p.textContent = annual ? '/ year' : '/ month');
+    $$('[data-price-period]').forEach(p => p.textContent = annual ? '/년' : '/월');
     $$('[data-annual-note]').forEach(n => n.style.visibility = annual ? 'visible' : 'hidden');
   });
 
@@ -460,7 +484,7 @@
     };
     on($('[data-wizard-next]', root), 'click', () => { if (cur < panels.length - 1) { cur++; render(); } });
     on($('[data-wizard-prev]', root), 'click', () => { if (cur > 0) { cur--; render(); } });
-    on($('[data-wizard-done]', root), 'click', () => window.bjToast({ title: 'All set!', text: 'Your journal is ready to bloom.', variant: 'success' }));
+    on($('[data-wizard-done]', root), 'click', () => window.bjToast({ title: '표본집이 완성됐어요', text: '첫 압화를 시작할 준비가 끝났습니다.', variant: 'success' }));
     render();
   }
 
@@ -472,6 +496,7 @@
     ['dragenter', 'dragover'].forEach(ev => on(zone, ev, e => { e.preventDefault(); zone.classList.add('is-dragover'); }));
     ['dragleave', 'drop'].forEach(ev => on(zone, ev, e => { e.preventDefault(); zone.classList.remove('is-dragover'); }));
     on(zone, 'click', () => input && input.click());
+    on(zone, 'keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input && input.click(); } });
     on(zone, 'drop', e => showFiles(e.dataTransfer.files));
     if (input) on(input, 'change', () => showFiles(input.files));
     function showFiles(files) {
@@ -481,7 +506,7 @@
         const row = document.createElement('div'); row.className = 'file-row';
         row.innerHTML = '<span class="file-row__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg></span>' +
           '<div class="file-row__meta"><div class="file-row__name">' + f.name + '</div><div class="file-row__size">' + (f.size / 1024).toFixed(1) + ' KB</div></div>' +
-          '<button class="btn btn--icon btn--sm" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
+          '<button class="btn btn--icon btn--sm" aria-label="' + f.name + ' 제거"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
         on(row.querySelector('button'), 'click', () => row.remove());
         list.appendChild(row);
       });
@@ -547,10 +572,12 @@
   }
 
   /* ------------------------------------------------------------------ */
-  /* MOBILE NAV — [data-mobile-nav-toggle]                              */
+  /* MOBILE NAV — [data-mobile-nav-toggle] opens the shared off-canvas   */
+  /* menu (reuses the drawer overlay contract: focus trap, ESC, scrim).  */
   /* ------------------------------------------------------------------ */
   document.addEventListener('click', e => {
-    if (e.target.closest('[data-mobile-nav-toggle]')) { const d = $('#mobile-nav'); if (d) openModal('mobile-nav-backdrop'); }
+    const t = e.target.closest('[data-mobile-nav-toggle]');
+    if (t && document.getElementById('mobile-nav-backdrop')) { t.setAttribute('aria-expanded', 'true'); openModal('mobile-nav-backdrop'); }
   });
 
   /* ------------------------------------------------------------------ */

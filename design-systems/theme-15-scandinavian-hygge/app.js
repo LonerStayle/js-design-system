@@ -57,6 +57,32 @@
   };
   Theme.init();
 
+  /* Candle "lighting" bloom — warm light irises out from the click point when
+     the theme flips. Skipped under reduced motion. */
+  function themeFlash(x, y) {
+    if (prefersReduced()) return;
+    const f = document.createElement("div");
+    f.className = "theme-flash";
+    f.style.setProperty("--flash-x", (typeof x === "number" ? x : window.innerWidth / 2) + "px");
+    f.style.setProperty("--flash-y", (typeof y === "number" ? y : window.innerHeight * 0.12) + "px");
+    document.body.appendChild(f);
+    setTimeout(() => f.remove(), 640);
+  }
+
+  /* Polite live-region announcer (kanban moves, etc.) */
+  function announce(msg) {
+    let live = document.getElementById("hygge-live");
+    if (!live) {
+      live = document.createElement("div");
+      live.id = "hygge-live";
+      live.className = "sr-only";
+      live.setAttribute("aria-live", "polite");
+      document.body.appendChild(live);
+    }
+    live.textContent = "";
+    setTimeout(() => { live.textContent = msg; }, 40);
+  }
+
   /* ====================================================================
    * FOCUS TRAP helper (for modal / drawer / command palette)
    * ================================================================== */
@@ -90,17 +116,32 @@
     const idx = openLayers.indexOf(layer);
     if (idx === -1) return;
     openLayers.splice(idx, 1);
-    const finish = () => {
-      layer.el.hidden = true;
+    // Visually hide the panel. Default overlays fade out via [hidden]; a layer
+    // may supply layer.hide() to close another way (the off-canvas sidebar strips
+    // its .open class so it slides out on its own transform transition).
+    const hideNow = () => {
       layer.el.classList.remove("is-closing");
+      if (layer.hide) layer.hide();
+      else layer.el.hidden = true;
+    };
+    const cleanup = () => {
       if (layer.overlay && layer.overlay.parentNode) layer.overlay.remove();
       if (!openLayers.length) lockScroll(false);
       if (layer.restoreFocus && layer.restoreFocus.focus) layer.restoreFocus.focus();
     };
-    if (immediate || prefersReduced()) { finish(); return; }
+    if (immediate || prefersReduced()) { hideNow(); cleanup(); return; }
+    if (layer.slide) {
+      // Sidebar: start the transform slide-out now, fade the scrim alongside,
+      // then clean up (scrim node, scroll lock, focus restore) once it settles.
+      hideNow();
+      if (layer.overlay) layer.overlay.classList.add("is-closing");
+      setTimeout(cleanup, 200);
+      return;
+    }
+    // modal / drawer / command: fade out in place, then hide + clean up.
     layer.el.classList.add("is-closing");
     if (layer.overlay) layer.overlay.classList.add("is-closing");
-    setTimeout(finish, 200);
+    setTimeout(() => { hideNow(); cleanup(); }, 200);
   }
 
   function openLayer(el, type) {
@@ -114,6 +155,27 @@
     // focus first focusable / the panel
     const panel = el.querySelector(".modal-panel, .drawer, .command, [data-autofocus]") || el;
     const focusTarget = el.querySelector("[data-autofocus]") || $$(FOCUSABLE, el)[0] || panel;
+    setTimeout(() => focusTarget && focusTarget.focus && focusTarget.focus(), 30);
+    return layer;
+  }
+
+  /* Off-canvas sidebar (mobile) — joins the same overlay stack as modal/drawer so
+     it gets scrim (click-outside close), ESC, Tab focus-trap, scroll lock and
+     focus restore. It slides via its .open class rather than the [hidden] attr,
+     so it never hides the desktop sidebar. */
+  function openSidebar(sb) {
+    if (!sb || openLayers.some((l) => l.el === sb)) return;
+    const restoreFocus = document.activeElement;
+    const layer = {
+      el: sb, type: "sidebar", restoreFocus, overlay: null,
+      slide: true,
+      hide: () => sb.classList.remove("open"),
+    };
+    layer.overlay = mountOverlay(() => closeLayer(layer));
+    sb.classList.add("open");
+    lockScroll(true);
+    openLayers.push(layer);
+    const focusTarget = $$(FOCUSABLE, sb)[0] || sb;
     setTimeout(() => focusTarget && focusTarget.focus && focusTarget.focus(), 30);
     return layer;
   }
@@ -138,7 +200,7 @@
       r = document.createElement("div");
       r.className = "toast-region";
       r.setAttribute("role", "region");
-      r.setAttribute("aria-label", "Notifications");
+      r.setAttribute("aria-label", "알림");
       r.setAttribute("aria-live", "polite");
       document.body.appendChild(r);
     }
@@ -161,8 +223,8 @@
       '<span class="toast-icon">' + (TOAST_ICONS[variant] || TOAST_ICONS.info) + "</span>" +
       '<div class="toast-body"><div class="toast-title"></div>' +
       (opts.msg ? '<div class="toast-msg"></div>' : "") + "</div>" +
-      '<button class="toast-close" aria-label="Dismiss"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>';
-    el.querySelector(".toast-title").textContent = opts.title || "Notification";
+      '<button class="toast-close" aria-label="닫기"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>';
+    el.querySelector(".toast-title").textContent = opts.title || "알림";
     if (opts.msg) el.querySelector(".toast-msg").textContent = opts.msg;
     region.appendChild(el);
     let timer;
@@ -195,12 +257,12 @@
       palette.hidden = true;
       palette.setAttribute("role", "dialog");
       palette.setAttribute("aria-modal", "true");
-      palette.setAttribute("aria-label", "Command palette");
+      palette.setAttribute("aria-label", "명령 팔레트");
       const items = (window.HYGGE_COMMANDS || [
-        { label: "Go to Dashboard", group: "Navigate", href: "pages/dashboard.html", icon: "grid" },
-        { label: "Open Kanban board", group: "Navigate", href: "pages/kanban.html", icon: "columns" },
-        { label: "Toggle dark mode", group: "Actions", action: "theme" },
-        { label: "Show success toast", group: "Actions", action: "toast" },
+        { label: "대시보드로 이동", group: "이동", href: "pages/dashboard.html", icon: "grid" },
+        { label: "칸반 보드 열기", group: "이동", href: "pages/kanban.html", icon: "columns" },
+        { label: "다크 모드 전환", group: "작업", action: "theme" },
+        { label: "토스트 표시", group: "작업", action: "toast" },
       ]);
       palette.innerHTML = commandMarkup(items);
       document.body.appendChild(palette);
@@ -211,7 +273,7 @@
       return (
         '<div class="command-input-row">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>' +
-        '<input type="text" placeholder="Type a command or search…" aria-label="Command search" data-autofocus>' +
+        '<input type="text" placeholder="명령을 입력하거나 검색하세요…" aria-label="명령 검색" data-autofocus>' +
         "<kbd>ESC</kbd></div>" +
         '<div class="command-list" role="listbox"></div>'
       );
@@ -223,7 +285,7 @@
       function render() {
         const q = input.value.toLowerCase().trim();
         filtered = items.filter((it) => it.label.toLowerCase().includes(q));
-        if (!filtered.length) { list.innerHTML = '<div class="command-empty">No results found 🍂</div>'; return; }
+        if (!filtered.length) { list.innerHTML = '<div class="command-empty">찾는 명령이 없어요. 다른 말로 검색해 보세요.</div>'; return; }
         const groups = {};
         filtered.forEach((it) => { (groups[it.group || "Results"] = groups[it.group || "Results"] || []).push(it); });
         let html = "", i = 0;
@@ -243,8 +305,8 @@
         closeTop();
         if (!it) return;
         if (it.href) window.location.href = it.href;
-        else if (it.action === "theme") Theme.toggle();
-        else if (it.action === "toast") pushToast({ title: "Hello from ⌘K", msg: "Command executed.", variant: "success" });
+        else if (it.action === "theme") { themeFlash(); Theme.toggle(); }
+        else if (it.action === "toast") pushToast({ title: "명령을 실행했어요", msg: "⌘K 팔레트에서 실행한 예시 알림입니다.", variant: "success" });
         else if (typeof it.action === "function") it.action();
       }
       function closeTop() { const l = openLayers.find((x) => x.el === pal); if (l) closeLayer(l); }
@@ -311,8 +373,14 @@
       try { cfg = JSON.parse(tt.getAttribute("data-toast")); } catch (err) { cfg = { title: tt.getAttribute("data-toast") }; }
       pushToast(cfg); return;
     }
-    // Theme toggle
-    if (e.target.closest("[data-theme-toggle]")) { Theme.toggle(); return; }
+    // Theme toggle — bloom warm light from the button's centre
+    const tg = e.target.closest("[data-theme-toggle]");
+    if (tg) {
+      const r = tg.getBoundingClientRect();
+      themeFlash(r.left + r.width / 2, r.top + r.height / 2);
+      Theme.toggle();
+      return;
+    }
 
     // Dropdown toggle
     const dd = e.target.closest("[data-dropdown-toggle]");
@@ -322,7 +390,13 @@
       if (menu) {
         const isOpen = menu.classList.contains("is-open");
         closeAllMenus();
-        if (!isOpen) { menu.classList.add("is-open"); menu.style.display = "flex"; dd.setAttribute("aria-expanded", "true"); }
+        if (!isOpen) {
+          menu.classList.add("is-open"); menu.style.display = "flex"; dd.setAttribute("aria-expanded", "true");
+          // make menu items keyboard-reachable and land focus on the first
+          const mi = $$('[role="menuitem"], .menu-item', menu);
+          mi.forEach((x) => { if (!x.matches("a[href],button")) x.tabIndex = 0; });
+          if (mi[0]) setTimeout(() => mi[0].focus && mi[0].focus(), 20);
+        }
       }
       return;
     }
@@ -334,11 +408,14 @@
       if (sb) sb.classList.toggle("collapsed");
       return;
     }
-    // Sidebar off-canvas (mobile)
+    // Sidebar off-canvas (mobile) — toggle through the shared overlay manager
     const so = e.target.closest("[data-sidebar-open]");
     if (so) {
       const sb = $("#" + (so.getAttribute("data-sidebar-open") || "")) || $(".sidebar");
-      if (sb) sb.classList.toggle("open");
+      if (sb) {
+        const existing = openLayers.find((l) => l.el === sb);
+        if (existing) closeLayer(existing); else openSidebar(sb);
+      }
       return;
     }
 
@@ -350,6 +427,27 @@
     $$(".menu.is-open").forEach((m) => { m.classList.remove("is-open"); m.style.display = ""; });
     $$("[data-dropdown-toggle][aria-expanded='true']").forEach((b) => b.setAttribute("aria-expanded", "false"));
   }
+
+  // Arrow-key navigation inside any open menu (role="menu" or .menu)
+  document.addEventListener("keydown", (e) => {
+    const item = e.target.closest && e.target.closest('.menu [role="menuitem"], .menu .menu-item');
+    if (!item) return;
+    const menu = item.closest(".menu");
+    const items = $$('[role="menuitem"], .menu-item', menu).filter((x) => !x.disabled);
+    if (!items.length) return;
+    let i = items.indexOf(item);
+    if (e.key === "ArrowDown") { i = (i + 1) % items.length; items[i].focus(); e.preventDefault(); }
+    else if (e.key === "ArrowUp") { i = (i - 1 + items.length) % items.length; items[i].focus(); e.preventDefault(); }
+    else if (e.key === "Home") { items[0].focus(); e.preventDefault(); }
+    else if (e.key === "End") { items[items.length - 1].focus(); e.preventDefault(); }
+    else if (e.key === "Escape") {
+      const wrap = menu.closest(".dropdown");
+      const toggle = wrap && wrap.querySelector("[data-dropdown-toggle]");
+      closeAllMenus();
+      if (toggle && toggle.focus) toggle.focus();
+      e.preventDefault();
+    }
+  });
 
   /* ====================================================================
    * TABS (role-based, keyboard accessible)
@@ -438,9 +536,15 @@
    * ================================================================== */
   function initSortTables() {
     $$("table.table").forEach((table) => {
-      $$("th.sortable", table).forEach((th, colIndex) => {
-        th.addEventListener("click", () => {
+      $$("th.sortable", table).forEach((th) => {
+        // Prefer an inner <button class="th-sort"> (natively focusable);
+        // otherwise make the <th> itself keyboard-operable.
+        const trigger = th.querySelector(".th-sort") || th;
+        const isBareTh = trigger === th;
+        if (isBareTh) th.tabIndex = 0;
+        function doSort() {
           const tbody = table.querySelector("tbody");
+          if (!tbody) return;
           const rows = Array.from(tbody.rows);
           const idx = Array.from(th.parentNode.children).indexOf(th);
           const asc = th.getAttribute("aria-sort") !== "ascending";
@@ -450,11 +554,17 @@
             const av = (a.cells[idx].dataset.sort || a.cells[idx].textContent).trim();
             const bv = (b.cells[idx].dataset.sort || b.cells[idx].textContent).trim();
             const an = parseFloat(av.replace(/[^0-9.-]/g, "")), bn = parseFloat(bv.replace(/[^0-9.-]/g, ""));
-            const cmp = (!isNaN(an) && !isNaN(bn)) ? an - bn : av.localeCompare(bv);
+            const cmp = (!isNaN(an) && !isNaN(bn)) ? an - bn : av.localeCompare(bv, "ko");
             return asc ? cmp : -cmp;
           });
           rows.forEach((r) => tbody.appendChild(r));
-        });
+        }
+        trigger.addEventListener("click", doSort);
+        if (isBareTh) {
+          th.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doSort(); }
+          });
+        }
       });
       // select-all checkbox
       const selectAll = table.querySelector("[data-select-all]");
@@ -500,15 +610,38 @@
         input.value = v;
       });
     });
-    // Rating
-    $$(".rating:not([data-readonly])").forEach((r) => {
+    // Rating (input). Display-only ratings use [data-readonly] or role="img"
+    // with <span> stars and are left untouched.
+    $$(".rating").forEach((r) => {
+      if (r.hasAttribute("data-readonly") || r.getAttribute("role") === "img") return;
       const stars = $$("button", r);
-      stars.forEach((star, i) => {
-        star.addEventListener("click", () => {
-          stars.forEach((s, j) => s.classList.toggle("is-filled", j <= i));
-          r.dataset.value = i + 1;
+      if (!stars.length) return;
+      const isRadio = stars[0].getAttribute("role") === "radio";
+      function setVal(v) {
+        r.dataset.value = v;
+        stars.forEach((s, j) => {
+          s.classList.toggle("is-filled", j < v);
+          if (isRadio) {
+            s.setAttribute("aria-checked", String(j + 1 === v));
+            s.tabIndex = j + 1 === v ? 0 : -1;
+          }
         });
+      }
+      const initial = parseInt(r.dataset.value || "0", 10) || 0;
+      if (isRadio && !initial && stars[0]) stars[0].tabIndex = 0;
+      stars.forEach((star, i) => {
+        star.addEventListener("click", () => setVal(i + 1));
         star.addEventListener("mouseenter", () => stars.forEach((s, j) => s.classList.toggle("is-filled", j <= i)));
+        star.addEventListener("keydown", (e) => {
+          const n = stars.length;
+          let v = parseInt(r.dataset.value || "0", 10) || 1;
+          if (e.key === "ArrowRight" || e.key === "ArrowUp") v = Math.min(n, v + 1);
+          else if (e.key === "ArrowLeft" || e.key === "ArrowDown") v = Math.max(1, v - 1);
+          else if (e.key === "Home") v = 1;
+          else if (e.key === "End") v = n;
+          else return;
+          e.preventDefault(); setVal(v); stars[v - 1].focus();
+        });
       });
       r.addEventListener("mouseleave", () => {
         const v = parseInt(r.dataset.value || "0", 10);
@@ -538,8 +671,9 @@
   function addChip(container, input, text) {
     const chip = document.createElement("span");
     chip.className = "chip";
-    chip.innerHTML = '<span></span><button type="button" aria-label="Remove ' + text + '"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>';
+    chip.innerHTML = '<span></span><button type="button"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>';
     chip.querySelector("span").textContent = text;
+    chip.querySelector("button").setAttribute("aria-label", text + " 삭제");
     container.insertBefore(chip, input);
   }
   initInputs();
@@ -602,6 +736,31 @@
     });
   }
   initCarousels();
+
+  /* ====================================================================
+   * KANBAN — keyboard/touch alternative to drag & drop.
+   * Page markup: each column = [data-kanban-col][data-kanban-name],
+   * drop area = [data-kanban-list], each card carries move buttons
+   *   <button data-kanban-move="prev|next">…</button>.
+   * ================================================================== */
+  document.addEventListener("click", (e) => {
+    const mv = e.target.closest("[data-kanban-move]");
+    if (!mv) return;
+    const dir = mv.getAttribute("data-kanban-move");
+    const card = mv.closest(".kanban-card");
+    const col = card && card.closest("[data-kanban-col]");
+    if (!card || !col) return;
+    const cols = $$("[data-kanban-col]");
+    const ci = cols.indexOf(col);
+    const target = dir === "next" ? cols[ci + 1] : cols[ci - 1];
+    if (!target) return;
+    const list = target.querySelector("[data-kanban-list]") || target;
+    list.appendChild(card);
+    if (card.focus) card.focus();
+    const title = card.querySelector(".kc-title");
+    const name = target.getAttribute("data-kanban-name") || "다른 열";
+    announce((title ? title.textContent : "카드") + "을(를) " + name + " 열로 옮겼습니다.");
+  });
 
   /* ====================================================================
    * SCROLL REVEAL (respects reduced motion)

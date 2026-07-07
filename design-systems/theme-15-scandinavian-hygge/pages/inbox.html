@@ -1,10 +1,20 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hygge Mail · Inbox</title>
-<meta name="description" content="A cosy three-pane email client built with the Scandinavian Hygge design system.">
+<script>
+  // Set the theme before first paint so OS-dark users never see a cream flash.
+  (function () {
+    try {
+      var t = localStorage.getItem("hygge-theme");
+      if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
+<title>Hygge 메일 · 받은편지함</title>
+<meta name="description" content="스칸디나비안 휘게 디자인 시스템으로 만든 아늑한 3분할 메일 클라이언트.">
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../semantic.css">
 <link rel="stylesheet" href="../base.css">
@@ -66,7 +76,6 @@
   .folder-section-label {
     font-size: var(--text-2xs);
     letter-spacing: .08em;
-    text-transform: uppercase;
     color: var(--color-text-subtle);
     font-weight: 700;
     padding: var(--space-3) var(--space-2) var(--space-1);
@@ -117,7 +126,9 @@
     gap: var(--space-3);
   }
   .list-head-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
-  .list-head h2 { font-size: var(--text-lg); margin: 0; }
+  .list-head h2 { font-size: var(--text-lg); margin: 0; display: inline-flex; align-items: center; gap: var(--space-2); }
+  .head-sprig { color: var(--color-accent); line-height: 0; flex: none; }
+  .head-sprig svg { width: 18px; height: 18px; }
   .msg-rows { display: flex; flex-direction: column; }
 
   .msg-row {
@@ -144,6 +155,15 @@
   }
   .msg-row.is-unread { border-left-color: var(--color-accent); }
   .msg-row.is-unread.is-selected { border-left-color: var(--color-primary); }
+  /* full-row "open" affordance — a stretched transparent button so the row
+     is a single accessible control without nesting the star button inside it */
+  .msg-open {
+    position: absolute; inset: 0; z-index: 0;
+    width: 100%; height: 100%; margin: 0; padding: 0;
+    border: 0; background: transparent; cursor: pointer;
+    border-radius: 0; font: inherit; color: inherit;
+  }
+  .msg-open:focus-visible { outline: 2px solid var(--color-ring); outline-offset: -3px; border-radius: var(--radius-sm); }
 
   .msg-avatar { margin-top: 2px; }
   .msg-main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -156,9 +176,11 @@
   .msg-preview { font-size: var(--text-xs); color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .msg-indicators { display: flex; align-items: center; gap: var(--space-2); margin-top: 2px; }
   .msg-star {
+    position: relative; z-index: 1; /* sit above the stretched .msg-open button */
     background: transparent; border: 0; padding: 0; cursor: pointer;
     color: var(--color-text-subtle); display: inline-flex; line-height: 0;
   }
+  .msg-star:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; border-radius: var(--radius-sm); }
   .msg-star svg { width: 15px; height: 15px; }
   .msg-star:hover { color: var(--color-warning); }
   .msg-star.is-starred { color: var(--color-warning); }
@@ -175,15 +197,14 @@
   }
   .read-actions { display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap; }
   .read-body { padding: var(--space-6); max-width: 46rem; }
-  .read-body p { color: var(--color-text-secondary); line-height: 1.7; margin: 0 0 var(--space-4); }
+  .read-body p { color: var(--color-text-secondary); line-height: var(--leading-body-ko, 1.72); margin: 0 0 var(--space-4); }
   .read-from { display: flex; align-items: center; gap: var(--space-3); margin: var(--space-4) 0 0; }
   .read-from-meta { min-width: 0; }
   .quote-block {
-    border-left: 3px solid var(--color-border);
+    border-left: 3px solid var(--color-accent);
     padding: var(--space-2) var(--space-4);
     margin: 0 0 var(--space-4);
     color: var(--color-text-muted);
-    font-style: italic;
   }
   .read-foot {
     padding: var(--space-4) var(--space-6) var(--space-6);
@@ -209,7 +230,7 @@
 </style>
 </head>
 <body>
-<a class="skip-link" href="#main">Skip to content</a>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
 
 <div class="mail-app">
 
@@ -217,7 +238,7 @@
   <header class="navbar">
     <a class="brand" href="../index.html">
       <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5 5h14l3 7v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-6Z"/></svg></span>
-      <span class="nav-label">Hygge Mail</span>
+      <span class="nav-label">Hygge 메일</span>
     </a>
 
     <span class="nav-spacer"></span>
@@ -225,7 +246,7 @@
     <!-- center search -->
     <div class="searchbar hide-mobile" style="max-width:24rem;flex:1 1 18rem;margin-inline:var(--space-4)">
       <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <input class="input" type="search" placeholder="Search mail — from:, has:attachment…" aria-label="Search mail">
+      <input class="input" type="search" placeholder="메일 검색 — 보낸사람:, 첨부:…" aria-label="메일 검색">
     </div>
 
     <span class="nav-spacer"></span>
@@ -233,16 +254,16 @@
     <div class="navbar-actions">
       <a class="btn btn-ghost btn-sm hide-mobile" href="../index.html">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
-        Back to app
+        앱으로 돌아가기
       </a>
-      <button class="btn btn-ghost btn-sm" data-command-open aria-label="Open command palette">
+      <button class="btn btn-ghost btn-sm" data-command-open aria-label="명령 팔레트 열기">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
         <kbd>⌘K</kbd>
       </button>
-      <button class="btn btn-icon btn-ghost" data-theme-toggle aria-pressed="false" aria-label="Toggle dark mode">
+      <button class="btn btn-icon btn-ghost" data-theme-toggle aria-pressed="false" aria-label="다크 모드 전환">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>
       </button>
-      <span class="avatar avatar-sm" style="background:var(--sage-200);color:var(--sage-700)" aria-hidden="true">SH</span>
+      <span class="avatar avatar-sm" style="background:var(--sage-200);color:var(--sage-700)" title="한서연" aria-hidden="true">서연</span>
     </div>
   </header>
 
@@ -250,322 +271,332 @@
   <div class="mail-grid" id="mailGrid">
 
     <!-- ---------- LEFT: FOLDERS ---------- -->
-    <nav class="mail-pane pane-folders" aria-label="Mail folders">
+    <nav class="mail-pane pane-folders" aria-label="메일 폴더">
       <button class="btn btn-primary btn-block" data-drawer-open="compose-drawer">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-        Compose
+        새 메일
       </button>
 
       <ul role="list" style="display:flex;flex-direction:column;gap:2px;margin-top:var(--space-3)">
         <li>
           <button class="folder-link is-active" aria-current="page">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5 5h14l3 7v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-6Z"/></svg>
-            Inbox <span class="folder-count">12</span>
+            받은편지함 <span class="folder-count">12</span>
           </button>
         </li>
         <li>
           <button class="folder-link">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 17.3-6.2 3.7 1.6-7L2 9.2l7.2-.6L12 2l2.8 6.6 7.2.6-5.4 4.8 1.6 7Z"/></svg>
-            Starred <span class="folder-count">4</span>
+            중요 <span class="folder-count">4</span>
           </button>
         </li>
         <li>
           <button class="folder-link">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-            Sent
+            보낸메일
           </button>
         </li>
         <li>
           <button class="folder-link">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/><path d="M9 13h6M9 17h4"/></svg>
-            Drafts <span class="folder-count">3</span>
+            임시보관 <span class="folder-count">3</span>
           </button>
         </li>
         <li>
           <button class="folder-link">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
-            Archive
+            보관함
           </button>
         </li>
         <li>
           <button class="folder-link">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6"/><path d="M10 11v6M14 11v6"/></svg>
-            Trash
+            휴지통
           </button>
         </li>
       </ul>
 
-      <span class="folder-section-label">Labels</span>
+      <span class="folder-section-label">라벨</span>
       <ul class="reset-list" style="display:flex;flex-direction:column;gap:2px">
-        <li><button class="folder-link label-link"><span class="badge-dot" style="background:var(--terracotta-400)" aria-hidden="true"></span> Family</button></li>
-        <li><button class="folder-link label-link"><span class="badge-dot" style="background:var(--dusty-blue-400)" aria-hidden="true"></span> Suppliers</button></li>
-        <li><button class="folder-link label-link"><span class="badge-dot" style="background:var(--sage-400)" aria-hidden="true"></span> Orders</button></li>
+        <li><button class="folder-link label-link"><span class="badge-dot" style="background:var(--terracotta-400)" aria-hidden="true"></span> 가족</button></li>
+        <li><button class="folder-link label-link"><span class="badge-dot" style="background:var(--dusty-blue-400)" aria-hidden="true"></span> 공급처</button></li>
+        <li><button class="folder-link label-link"><span class="badge-dot" style="background:var(--sage-400)" aria-hidden="true"></span> 주문</button></li>
       </ul>
 
       <div style="margin-top:auto;padding:var(--space-3) var(--space-2) var(--space-1)">
-        <div class="text-2xs text-muted" style="margin-bottom:var(--space-2)">Storage · 4.2 GB of 15 GB</div>
+        <div class="text-2xs text-muted" style="margin-bottom:var(--space-2)">저장용량 · 15GB 중 4.2GB</div>
         <div class="progress progress-sm accent"><div class="bar" style="width:28%"></div></div>
       </div>
     </nav>
 
     <!-- ---------- MIDDLE: MESSAGE LIST ---------- -->
-    <section class="mail-pane pane-list" aria-label="Message list">
+    <section class="mail-pane pane-list" aria-label="메일 목록">
       <div class="list-head">
         <div class="list-head-row">
-          <h2 class="font-display">Inbox 🍵</h2>
-          <button class="btn btn-icon btn-ghost btn-sm" aria-label="Refresh messages" data-toast='{"title":"Up to date","msg":"No new mail right now — enjoy your tea.","variant":"info"}'>
+          <h2 class="font-display"><span class="head-sprig" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21c0-8 4-13 11-15"/><path d="M9 13c-3 .5-5-1-5.5-4 3-.5 5 1 5.5 4Z"/><path d="M13 9c1-3 3-4.5 6-4.5 0 3-2 4.5-6 4.5Z"/></svg></span>받은편지함</h2>
+          <button class="btn btn-icon btn-ghost btn-sm" aria-label="메일 새로고침" data-toast='{"title":"새 메일이 없어요","msg":"지금은 조용하네요. 잠시 차 한 잔 하실래요?","variant":"info"}'>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
           </button>
         </div>
         <div class="list-head-row">
-          <div class="segmented" role="group" aria-label="Filter messages" id="listFilter">
-            <button class="is-active" aria-pressed="true">All</button>
-            <button aria-pressed="false">Unread</button>
+          <div class="segmented" role="group" aria-label="메일 필터" id="listFilter">
+            <button class="is-active" aria-pressed="true">전체</button>
+            <button aria-pressed="false">안 읽음</button>
           </div>
-          <span class="text-2xs text-muted">12 conversations</span>
+          <span class="text-2xs text-muted">대화 12개</span>
         </div>
       </div>
 
       <div class="msg-rows" role="list" id="msgRows">
 
         <!-- 1 · selected + unread -->
-        <button class="msg-row is-unread is-selected" role="listitem" data-msg>
-          <span class="avatar avatar-sm msg-avatar" style="background:var(--dusty-blue-100);color:var(--dusty-blue-700)" aria-hidden="true">EN</span>
+        <div class="msg-row is-unread is-selected" role="listitem">
+          <button class="msg-open" data-msg aria-label="동해목재 이경환 님의 메일 열기 — 원목 사이드 테이블 견적"></button>
+          <span class="avatar avatar-sm msg-avatar" style="background:var(--dusty-blue-100);color:var(--dusty-blue-700)" aria-hidden="true">경환</span>
           <span class="msg-main">
             <span class="msg-top">
-              <span class="msg-sender">Eik Nordström</span>
-              <span class="msg-time">9:42 AM</span>
+              <span class="msg-sender">동해목재 이경환</span>
+              <span class="msg-time">오전 9:42</span>
             </span>
-            <span class="msg-subject">Oak quote — your linen side tables are ready to mill</span>
-            <span class="msg-preview">Hej Sofie, the air-dried oak boards came in lovely this batch. I can have six side tables…</span>
+            <span class="msg-subject">원목 사이드 테이블 견적 — 보내주신 도면대로 재단 준비됐어요</span>
+            <span class="msg-preview">서연 님, 지난가을 켜서 말려 둔 오크 판재가 이번엔 결이 참 곱게 나왔어요. 사이드 테이블 여섯 점은…</span>
             <span class="msg-indicators">
-              <span class="msg-star is-starred" role="button" tabindex="0" aria-label="Toggle star" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 17.3-6.2 3.7 1.6-7L2 9.2l7.2-.6L12 2l2.8 6.6 7.2.6-5.4 4.8 1.6 7Z"/></svg></span>
-              <span class="msg-clip" title="Has attachment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.4 11.1-9.2 9.2a5 5 0 0 1-7-7l9.1-9.2a3.3 3.3 0 0 1 4.7 4.7l-9.2 9.1a1.7 1.7 0 0 1-2.3-2.3l8.5-8.5"/></svg></span>
-              <span class="badge-dot" style="background:var(--dusty-blue-400)" aria-label="Suppliers label"></span>
+              <span class="msg-star is-starred" role="button" tabindex="0" aria-label="별표" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 17.3-6.2 3.7 1.6-7L2 9.2l7.2-.6L12 2l2.8 6.6 7.2.6-5.4 4.8 1.6 7Z"/></svg></span>
+              <span class="msg-clip" title="첨부 있음"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.4 11.1-9.2 9.2a5 5 0 0 1-7-7l9.1-9.2a3.3 3.3 0 0 1 4.7 4.7l-9.2 9.1a1.7 1.7 0 0 1-2.3-2.3l8.5-8.5"/></svg></span>
+              <span class="badge-dot" style="background:var(--dusty-blue-400)" aria-label="공급처 라벨"></span>
             </span>
           </span>
-        </button>
+        </div>
 
         <!-- 2 · unread -->
-        <button class="msg-row is-unread" role="listitem" data-msg>
-          <span class="avatar avatar-sm msg-avatar" style="background:var(--sage-100);color:var(--sage-700)" aria-hidden="true">HV</span>
+        <div class="msg-row is-unread" role="listitem">
+          <button class="msg-open" data-msg aria-label="온기 리넨 메일 열기 — 주문 확인"></button>
+          <span class="avatar avatar-sm msg-avatar" style="background:var(--sage-100);color:var(--sage-700)" aria-hidden="true">온기</span>
           <span class="msg-main">
             <span class="msg-top">
-              <span class="msg-sender">Hygge Væveri</span>
-              <span class="msg-time">8:18 AM</span>
+              <span class="msg-sender">온기 리넨</span>
+              <span class="msg-time">오전 8:18</span>
             </span>
-            <span class="msg-subject">Order #2048 confirmed — sage linen throws shipping Thursday</span>
-            <span class="msg-preview">Thank you for your order. Three sage linen throws and a set of ceramic mugs are being…</span>
+            <span class="msg-subject">주문 #2048 확인 — 세이지 리넨 스로우, 목요일 발송돼요</span>
+            <span class="msg-preview">주문해 주셔서 고맙습니다. 세이지 리넨 스로우 세 장과 세라믹 머그 세트가 지금 포장되고…</span>
             <span class="msg-indicators">
-              <span class="msg-star" role="button" tabindex="0" aria-label="Toggle star" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 17.3-6.2 3.7 1.6-7L2 9.2l7.2-.6L12 2l2.8 6.6 7.2.6-5.4 4.8 1.6 7Z"/></svg></span>
-              <span class="badge-dot" style="background:var(--sage-400)" aria-label="Orders label"></span>
+              <span class="msg-star" role="button" tabindex="0" aria-label="별표" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 17.3-6.2 3.7 1.6-7L2 9.2l7.2-.6L12 2l2.8 6.6 7.2.6-5.4 4.8 1.6 7Z"/></svg></span>
+              <span class="badge-dot" style="background:var(--sage-400)" aria-label="주문 라벨"></span>
             </span>
           </span>
-        </button>
+        </div>
 
         <!-- 3 · read -->
-        <button class="msg-row" role="listitem" data-msg>
-          <span class="avatar avatar-sm msg-avatar" style="background:var(--terracotta-100);color:var(--terracotta-700)" aria-hidden="true">MM</span>
+        <div class="msg-row" role="listitem">
+          <button class="msg-open" data-msg aria-label="외할머니 메일 열기 — 약과와 촛불 이야기"></button>
+          <span class="avatar avatar-sm msg-avatar" style="background:var(--terracotta-100);color:var(--terracotta-700)" aria-hidden="true">할머</span>
           <span class="msg-main">
             <span class="msg-top">
-              <span class="msg-sender">Mormor Inge</span>
-              <span class="msg-time">Yesterday</span>
+              <span class="msg-sender">외할머니</span>
+              <span class="msg-time">어제</span>
             </span>
-            <span class="msg-subject">Re: Sunday kanelboller &amp; candles 🕯️</span>
-            <span class="msg-preview">Min skat, I found grandfather's old cardamom recipe in the linen drawer. Come by Sunday…</span>
+            <span class="msg-subject">Re: 주말에 약과랑 촛불 — 계핏가루 레시피 찾았단다</span>
+            <span class="msg-preview">우리 강아지, 리넨 서랍에서 할아버지 옛날 계피 약과 적어 둔 걸 찾았어. 일요일에 잠깐…</span>
             <span class="msg-indicators">
-              <span class="msg-star is-starred" role="button" tabindex="0" aria-label="Toggle star" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 17.3-6.2 3.7 1.6-7L2 9.2l7.2-.6L12 2l2.8 6.6 7.2.6-5.4 4.8 1.6 7Z"/></svg></span>
-              <span class="badge-dot" style="background:var(--terracotta-400)" aria-label="Family label"></span>
+              <span class="msg-star is-starred" role="button" tabindex="0" aria-label="별표" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 17.3-6.2 3.7 1.6-7L2 9.2l7.2-.6L12 2l2.8 6.6 7.2.6-5.4 4.8 1.6 7Z"/></svg></span>
+              <span class="badge-dot" style="background:var(--terracotta-400)" aria-label="가족 라벨"></span>
             </span>
           </span>
-        </button>
+        </div>
 
         <!-- 4 · unread -->
-        <button class="msg-row is-unread" role="listitem" data-msg>
-          <span class="avatar avatar-sm msg-avatar" style="background:var(--clay-100);color:var(--clay-700)" aria-hidden="true">SL</span>
+        <div class="msg-row is-unread" role="listitem">
+          <button class="msg-open" data-msg aria-label="슬로우리빙 위클리 메일 열기 — 이번 주 소식"></button>
+          <span class="avatar avatar-sm msg-avatar" style="background:var(--clay-100);color:var(--clay-700)" aria-hidden="true">슬로</span>
           <span class="msg-main">
             <span class="msg-top">
-              <span class="msg-sender">Slow Living Weekly</span>
-              <span class="msg-time">Tue</span>
+              <span class="msg-sender">슬로우리빙 위클리</span>
+              <span class="msg-time">화</span>
             </span>
-            <span class="msg-subject">This week in slow living: warm wood, woollen socks &amp; a candle ritual</span>
-            <span class="msg-preview">Five small ways to make the long evenings feel softer — plus a reader's cosy reading…</span>
+            <span class="msg-subject">이번 주 슬로우 리빙 — 따뜻한 나무, 도톰한 양말, 그리고 촛불 의식</span>
+            <span class="msg-preview">긴 저녁을 한결 포근하게 만드는 작은 다섯 가지 — 독자님이 보내 주신 아늑한 독서…</span>
             <span class="msg-indicators">
-              <span class="msg-star" role="button" tabindex="0" aria-label="Toggle star" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 17.3-6.2 3.7 1.6-7L2 9.2l7.2-.6L12 2l2.8 6.6 7.2.6-5.4 4.8 1.6 7Z"/></svg></span>
+              <span class="msg-star" role="button" tabindex="0" aria-label="별표" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 17.3-6.2 3.7 1.6-7L2 9.2l7.2-.6L12 2l2.8 6.6 7.2.6-5.4 4.8 1.6 7Z"/></svg></span>
             </span>
           </span>
-        </button>
+        </div>
 
         <!-- 5 · read -->
-        <button class="msg-row" role="listitem" data-msg>
-          <span class="avatar avatar-sm msg-avatar" style="background:var(--dusty-blue-100);color:var(--dusty-blue-700)" aria-hidden="true">AK</span>
+        <div class="msg-row" role="listitem">
+          <button class="msg-open" data-msg aria-label="김도아 님의 메일 열기 — 오크 스툴 도착"></button>
+          <span class="avatar avatar-sm msg-avatar" style="background:var(--sage-100);color:var(--sage-700)" aria-hidden="true">도아</span>
           <span class="msg-main">
             <span class="msg-top">
-              <span class="msg-sender">Astrid Kallio</span>
-              <span class="msg-time">Tue</span>
+              <span class="msg-sender">김도아</span>
+              <span class="msg-time">화</span>
             </span>
-            <span class="msg-subject">The oak stool arrived — it's perfect ☺</span>
-            <span class="msg-preview">It found its home by the window this morning. The grain is so warm in the afternoon…</span>
+            <span class="msg-subject">오크 스툴이 도착했어요 — 창가에 딱 맞아요</span>
+            <span class="msg-preview">오늘 아침 창가에 자리를 잡았어요. 오후 햇살이 들 때 나뭇결이 참 따뜻해 보여서…</span>
             <span class="msg-indicators">
-              <span class="msg-star" role="button" tabindex="0" aria-label="Toggle star" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 17.3-6.2 3.7 1.6-7L2 9.2l7.2-.6L12 2l2.8 6.6 7.2.6-5.4 4.8 1.6 7Z"/></svg></span>
-              <span class="badge-dot" style="background:var(--sage-400)" aria-label="Orders label"></span>
+              <span class="msg-star" role="button" tabindex="0" aria-label="별표" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 17.3-6.2 3.7 1.6-7L2 9.2l7.2-.6L12 2l2.8 6.6 7.2.6-5.4 4.8 1.6 7Z"/></svg></span>
+              <span class="badge-dot" style="background:var(--sage-400)" aria-label="주문 라벨"></span>
             </span>
           </span>
-        </button>
+        </div>
 
         <!-- 6 · read -->
-        <button class="msg-row" role="listitem" data-msg>
-          <span class="avatar avatar-sm msg-avatar" style="background:var(--warm-neutral-200);color:var(--warm-neutral-700)" aria-hidden="true">KP</span>
+        <div class="msg-row" role="listitem">
+          <button class="msg-open" data-msg aria-label="가마골 도예 메일 열기 — 머그 유약 샘플"></button>
+          <span class="avatar avatar-sm msg-avatar" style="background:var(--warm-neutral-200);color:var(--warm-neutral-700)" aria-hidden="true">가마</span>
           <span class="msg-main">
             <span class="msg-top">
-              <span class="msg-sender">Kerttu Pottery</span>
-              <span class="msg-time">Mon</span>
+              <span class="msg-sender">가마골 도예</span>
+              <span class="msg-time">월</span>
             </span>
-            <span class="msg-subject">Glaze samples for the speckled mug — second firing done</span>
-            <span class="msg-preview">The oatmeal and the soft sage both came out beautifully. I've attached photos so you…</span>
+            <span class="msg-subject">머그 유약 샘플 — 2차 소성 마쳤어요</span>
+            <span class="msg-preview">오트밀색과 은은한 세이지, 둘 다 곱게 나왔어요. 사진을 첨부했으니 보시고…</span>
             <span class="msg-indicators">
-              <span class="msg-star" role="button" tabindex="0" aria-label="Toggle star" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 17.3-6.2 3.7 1.6-7L2 9.2l7.2-.6L12 2l2.8 6.6 7.2.6-5.4 4.8 1.6 7Z"/></svg></span>
-              <span class="msg-clip" title="Has attachment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.4 11.1-9.2 9.2a5 5 0 0 1-7-7l9.1-9.2a3.3 3.3 0 0 1 4.7 4.7l-9.2 9.1a1.7 1.7 0 0 1-2.3-2.3l8.5-8.5"/></svg></span>
-              <span class="badge-dot" style="background:var(--dusty-blue-400)" aria-label="Suppliers label"></span>
+              <span class="msg-star" role="button" tabindex="0" aria-label="별표" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 17.3-6.2 3.7 1.6-7L2 9.2l7.2-.6L12 2l2.8 6.6 7.2.6-5.4 4.8 1.6 7Z"/></svg></span>
+              <span class="msg-clip" title="첨부 있음"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.4 11.1-9.2 9.2a5 5 0 0 1-7-7l9.1-9.2a3.3 3.3 0 0 1 4.7 4.7l-9.2 9.1a1.7 1.7 0 0 1-2.3-2.3l8.5-8.5"/></svg></span>
+              <span class="badge-dot" style="background:var(--dusty-blue-400)" aria-label="공급처 라벨"></span>
             </span>
           </span>
-        </button>
+        </div>
 
         <!-- 7 · unread -->
-        <button class="msg-row is-unread" role="listitem" data-msg>
-          <span class="avatar avatar-sm msg-avatar" style="background:var(--terracotta-100);color:var(--terracotta-700)" aria-hidden="true">LF</span>
+        <div class="msg-row is-unread" role="listitem">
+          <button class="msg-open" data-msg aria-label="토요일 꽃집 메일 열기 — 드라이 번들 픽업"></button>
+          <span class="avatar avatar-sm msg-avatar" style="background:var(--terracotta-100);color:var(--terracotta-700)" aria-hidden="true">꽃집</span>
           <span class="msg-main">
             <span class="msg-top">
-              <span class="msg-sender">Lauantai Flowers</span>
-              <span class="msg-time">Mon</span>
+              <span class="msg-sender">토요일 꽃집</span>
+              <span class="msg-time">월</span>
             </span>
-            <span class="msg-subject">Your dried eucalyptus &amp; wheat bundle is ready for pickup</span>
-            <span class="msg-preview">We've wrapped it in brown paper and twine, just as you like. The shop is open until six…</span>
+            <span class="msg-subject">유칼립투스·밀 드라이 번들, 픽업 준비됐어요</span>
+            <span class="msg-preview">늘 하시던 대로 크라프트 종이에 노끈으로 묶어 두었어요. 가게는 여섯 시까지 열어…</span>
             <span class="msg-indicators">
-              <span class="msg-star" role="button" tabindex="0" aria-label="Toggle star" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 17.3-6.2 3.7 1.6-7L2 9.2l7.2-.6L12 2l2.8 6.6 7.2.6-5.4 4.8 1.6 7Z"/></svg></span>
+              <span class="msg-star" role="button" tabindex="0" aria-label="별표" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 17.3-6.2 3.7 1.6-7L2 9.2l7.2-.6L12 2l2.8 6.6 7.2.6-5.4 4.8 1.6 7Z"/></svg></span>
             </span>
           </span>
-        </button>
+        </div>
 
         <!-- 8 · read -->
-        <button class="msg-row" role="listitem" data-msg>
-          <span class="avatar avatar-sm msg-avatar" style="background:var(--sage-100);color:var(--sage-700)" aria-hidden="true">FB</span>
+        <div class="msg-row" role="listitem">
+          <button class="msg-open" data-msg aria-label="아빠 메일 열기 — 주말 오두막"></button>
+          <span class="avatar avatar-sm msg-avatar" style="background:var(--sage-100);color:var(--sage-700)" aria-hidden="true">아빠</span>
           <span class="msg-main">
             <span class="msg-top">
-              <span class="msg-sender">Far &amp; Bjørn</span>
-              <span class="msg-time">Sun</span>
+              <span class="msg-sender">아빠 · 준</span>
+              <span class="msg-time">일</span>
             </span>
-            <span class="msg-subject">Cabin weekend — bring the wool blanket?</span>
-            <span class="msg-preview">We lit the wood stove early. Bring tea and that big sage blanket and we'll watch the…</span>
+            <span class="msg-subject">주말 오두막 — 울 담요 챙겨 올래?</span>
+            <span class="msg-preview">장작 난로는 미리 지펴 뒀다. 차랑 그 큰 세이지 담요만 챙겨 오면 같이 노을을…</span>
             <span class="msg-indicators">
-              <span class="msg-star is-starred" role="button" tabindex="0" aria-label="Toggle star" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 17.3-6.2 3.7 1.6-7L2 9.2l7.2-.6L12 2l2.8 6.6 7.2.6-5.4 4.8 1.6 7Z"/></svg></span>
-              <span class="badge-dot" style="background:var(--terracotta-400)" aria-label="Family label"></span>
+              <span class="msg-star is-starred" role="button" tabindex="0" aria-label="별표" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 17.3-6.2 3.7 1.6-7L2 9.2l7.2-.6L12 2l2.8 6.6 7.2.6-5.4 4.8 1.6 7Z"/></svg></span>
+              <span class="badge-dot" style="background:var(--terracotta-400)" aria-label="가족 라벨"></span>
             </span>
           </span>
-        </button>
+        </div>
 
         <!-- 9 · read -->
-        <button class="msg-row" role="listitem" data-msg>
-          <span class="avatar avatar-sm msg-avatar" style="background:var(--clay-100);color:var(--clay-700)" aria-hidden="true">TT</span>
+        <div class="msg-row" role="listitem">
+          <button class="msg-open" data-msg aria-label="한아름 목재 메일 열기 — 세금계산서 결제 완료"></button>
+          <span class="avatar avatar-sm msg-avatar" style="background:var(--clay-100);color:var(--clay-700)" aria-hidden="true">한아</span>
           <span class="msg-main">
             <span class="msg-top">
-              <span class="msg-sender">Tämä Timber Co.</span>
-              <span class="msg-time">Fri</span>
+              <span class="msg-sender">한아름 목재</span>
+              <span class="msg-time">금</span>
             </span>
-            <span class="msg-subject">Invoice #441 settled — thank you, see you next season</span>
-            <span class="msg-preview">Payment received for the ash and birch order. A receipt is attached. Warm regards from…</span>
+            <span class="msg-subject">세금계산서 #441 결제 완료 — 다음 시즌에 또 봬요</span>
+            <span class="msg-preview">애시와 자작 주문 건 결제가 확인됐습니다. 영수증 첨부해 드려요. 따뜻한 마음을…</span>
             <span class="msg-indicators">
-              <span class="msg-star" role="button" tabindex="0" aria-label="Toggle star" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 17.3-6.2 3.7 1.6-7L2 9.2l7.2-.6L12 2l2.8 6.6 7.2.6-5.4 4.8 1.6 7Z"/></svg></span>
-              <span class="msg-clip" title="Has attachment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.4 11.1-9.2 9.2a5 5 0 0 1-7-7l9.1-9.2a3.3 3.3 0 0 1 4.7 4.7l-9.2 9.1a1.7 1.7 0 0 1-2.3-2.3l8.5-8.5"/></svg></span>
-              <span class="badge-dot" style="background:var(--dusty-blue-400)" aria-label="Suppliers label"></span>
+              <span class="msg-star" role="button" tabindex="0" aria-label="별표" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 17.3-6.2 3.7 1.6-7L2 9.2l7.2-.6L12 2l2.8 6.6 7.2.6-5.4 4.8 1.6 7Z"/></svg></span>
+              <span class="msg-clip" title="첨부 있음"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.4 11.1-9.2 9.2a5 5 0 0 1-7-7l9.1-9.2a3.3 3.3 0 0 1 4.7 4.7l-9.2 9.1a1.7 1.7 0 0 1-2.3-2.3l8.5-8.5"/></svg></span>
+              <span class="badge-dot" style="background:var(--dusty-blue-400)" aria-label="공급처 라벨"></span>
             </span>
           </span>
-        </button>
+        </div>
 
         <!-- 10 · read -->
-        <button class="msg-row" role="listitem" data-msg>
-          <span class="avatar avatar-sm msg-avatar" style="background:var(--warm-neutral-200);color:var(--warm-neutral-700)" aria-hidden="true">SC</span>
+        <div class="msg-row" role="listitem">
+          <button class="msg-open" data-msg aria-label="스튜디오 세라 메일 열기 — 향초 만들기 저녁"></button>
+          <span class="avatar avatar-sm msg-avatar" style="background:var(--warm-neutral-200);color:var(--warm-neutral-700)" aria-hidden="true">세라</span>
           <span class="msg-main">
             <span class="msg-top">
-              <span class="msg-sender">Saana &amp; the Studio</span>
-              <span class="msg-time">Thu</span>
+              <span class="msg-sender">스튜디오 · 세라</span>
+              <span class="msg-time">목</span>
             </span>
-            <span class="msg-subject">Friday candle-making evening — who's bringing the cocoa?</span>
-            <span class="msg-preview">Linen aprons are out and the beeswax is melting slowly. Pull up a stool and stay a while…</span>
+            <span class="msg-subject">금요일 향초 만들기 저녁 — 코코아는 누가 가져올까요?</span>
+            <span class="msg-preview">리넨 앞치마 꺼내 놨고 밀랍은 천천히 녹고 있어요. 스툴 하나 끌어와서 오래…</span>
             <span class="msg-indicators">
-              <span class="msg-star" role="button" tabindex="0" aria-label="Toggle star" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 17.3-6.2 3.7 1.6-7L2 9.2l7.2-.6L12 2l2.8 6.6 7.2.6-5.4 4.8 1.6 7Z"/></svg></span>
+              <span class="msg-star" role="button" tabindex="0" aria-label="별표" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 17.3-6.2 3.7 1.6-7L2 9.2l7.2-.6L12 2l2.8 6.6 7.2.6-5.4 4.8 1.6 7Z"/></svg></span>
             </span>
           </span>
-        </button>
+        </div>
 
       </div>
     </section>
 
     <!-- ---------- RIGHT: READING PANE ---------- -->
-    <article class="mail-pane pane-read" aria-label="Reading pane" id="readingPane">
+    <article class="mail-pane pane-read" aria-label="읽기 창" id="readingPane">
       <div class="read-head">
         <button class="btn btn-ghost btn-sm mobile-back" id="backToList">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
-          Back
+          뒤로
         </button>
 
         <div class="row-between" style="gap:var(--space-3);align-items:flex-start;margin-bottom:var(--space-3)">
-          <h1 class="font-display" style="font-size:var(--text-2xl);margin:0;line-height:1.25">Oak quote — your linen side tables are ready to mill</h1>
-          <span class="badge badge-outline" style="flex:0 0 auto"><span class="badge-dot" style="background:var(--dusty-blue-400)"></span> Suppliers</span>
+          <h1 class="font-display" style="font-size:var(--text-2xl);margin:0;line-height:var(--leading-heading-ko, 1.32)">원목 사이드 테이블 견적 — 보내주신 도면대로 재단 준비됐어요</h1>
+          <span class="badge badge-outline" style="flex:0 0 auto"><span class="badge-dot" style="background:var(--dusty-blue-400)"></span> 공급처</span>
         </div>
 
         <div class="read-actions">
-          <button class="btn btn-icon btn-ghost" aria-label="Reply" data-toast='{"title":"Reply","msg":"Opening a reply to Eik…","variant":"info"}'>
+          <button class="btn btn-icon btn-ghost" aria-label="답장" data-toast='{"title":"답장","msg":"이경환 님에게 답장을 씁니다.","variant":"info"}'>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 17 4 12l5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
           </button>
-          <button class="btn btn-icon btn-ghost" aria-label="Forward" data-toast='{"title":"Forward","msg":"Choose a recipient to forward to.","variant":"info"}'>
+          <button class="btn btn-icon btn-ghost" aria-label="전달" data-toast='{"title":"전달","msg":"전달할 받는사람을 골라 주세요.","variant":"info"}'>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 17 5-5-5-5"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg>
           </button>
-          <button class="btn btn-icon btn-ghost" aria-label="Archive" data-toast='{"title":"Archived","msg":"Conversation moved to Archive.","variant":"success"}'>
+          <button class="btn btn-icon btn-ghost" aria-label="보관" data-toast='{"title":"보관함으로 옮겼어요","msg":"대화를 보관함에 넣었습니다.","variant":"success"}'>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
           </button>
-          <button class="btn btn-icon btn-danger-ghost" aria-label="Delete" data-toast='{"title":"Moved to Trash","msg":"You can restore it within 30 days.","variant":"warning"}'>
+          <button class="btn btn-icon btn-danger-ghost" aria-label="삭제" data-toast='{"title":"휴지통으로 옮겼어요","msg":"30일 안에 되돌릴 수 있어요.","variant":"warning"}'>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6"/></svg>
           </button>
-          <button class="msg-star is-starred btn btn-icon btn-ghost" role="button" aria-label="Toggle star" aria-pressed="true">
+          <button class="msg-star is-starred btn btn-icon btn-ghost" role="button" aria-label="별표" aria-pressed="true">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m12 17.3-6.2 3.7 1.6-7L2 9.2l7.2-.6L12 2l2.8 6.6 7.2.6-5.4 4.8 1.6 7Z"/></svg>
           </button>
 
           <span class="nav-spacer"></span>
 
           <div class="dropdown">
-            <button class="btn btn-icon btn-ghost" data-dropdown-toggle aria-haspopup="true" aria-expanded="false" aria-label="More actions">
+            <button class="btn btn-icon btn-ghost" data-dropdown-toggle aria-haspopup="true" aria-expanded="false" aria-label="더 많은 작업">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
             </button>
             <div class="menu right" role="menu">
-              <button class="menu-item" role="menuitem">Mark as unread</button>
-              <button class="menu-item" role="menuitem">Snooze until tomorrow</button>
-              <button class="menu-item" role="menuitem">Add label</button>
-              <button class="menu-item" role="menuitem">Print</button>
+              <button class="menu-item" role="menuitem">안 읽음으로 표시</button>
+              <button class="menu-item" role="menuitem">내일까지 잠시 숨기기</button>
+              <button class="menu-item" role="menuitem">라벨 추가</button>
+              <button class="menu-item" role="menuitem">인쇄</button>
               <div class="menu-sep"></div>
-              <button class="menu-item danger" role="menuitem">Block sender</button>
+              <button class="menu-item danger" role="menuitem">발신 차단</button>
             </div>
           </div>
         </div>
 
         <div class="read-from">
-          <span class="avatar msg-avatar" style="background:var(--dusty-blue-100);color:var(--dusty-blue-700)" aria-hidden="true">EN</span>
+          <span class="avatar msg-avatar" style="background:var(--dusty-blue-100);color:var(--dusty-blue-700)" aria-hidden="true">경환</span>
           <div class="read-from-meta">
-            <div style="font-weight:600;color:var(--color-text)">Eik Nordström <span class="text-sm text-muted" style="font-weight:400">&lt;eik@nordstrom-oak.fi&gt;</span></div>
-            <div class="text-xs text-muted">to me · Today at 9:42 AM</div>
+            <div style="font-weight:600;color:var(--color-text)">이경환 <span class="text-sm text-muted" style="font-weight:400">&lt;gyeonghwan@donghae-timber.co.kr&gt;</span></div>
+            <div class="text-xs text-muted">받는사람: 나 · 오늘 오전 9:42</div>
           </div>
         </div>
       </div>
 
       <div class="read-body">
-        <p>Hej Sofie,</p>
-        <p>Good news from the workshop. The air-dried oak boards we set aside last autumn came in beautifully this batch — tight, even grain and a warm honey tone that will only deepen with a little oil. I think they're a perfect match for the linen-topped side tables you sketched.</p>
-        <p>I can have six tables milled, sanded to 240, and finished in our usual hardwax oil within three weeks. Below is the quote, all in. If you'd like the lower stretcher detail from the original drawing, that's another small charge but honestly worth it for the steadiness.</p>
+        <p>서연 님, 안녕하세요.</p>
+        <p>공방에서 좋은 소식부터 전해요. 지난가을에 따로 켜서 말려 둔 오크 판재가 이번 배치에서 아주 곱게 나왔어요. 결이 촘촘하고 고른 데다, 기름을 한 번 먹이면 더 깊어질 따뜻한 꿀빛이라 보내 주신 리넨 상판 사이드 테이블 도면과 잘 어울리겠더라고요.</p>
+        <p>사이드 테이블 여섯 점을 240방까지 샌딩하고 늘 쓰는 하드왁스 오일로 마감해서 3주 안에 드릴 수 있어요. 아래 첨부한 견적서에 전부 정리해 두었습니다. 원래 도면에 있던 아래쪽 가로대를 넣으시면 비용이 조금 더 붙지만, 흔들림이 확실히 줄어드니 저는 권해 드리고 싶어요.</p>
 
-        <p class="quote-block">"Let the wood lead and the room will feel calm." — still the best advice grandfather ever gave me. These boards practically asked to become your tables.</p>
+        <p class="quote-block">“나무가 이끄는 대로 두면, 방은 저절로 차분해진다.” — 할아버지께서 늘 하시던 말씀이에요. 이 판재는 그대로 서연 님 테이블이 되고 싶어 하는 것 같았습니다.</p>
 
-        <p>Let me know if Thursday works for a quick call, and I'll get the first one on the bench. Slow and steady, as always.</p>
-        <p>Warmly,<br>Eik 🪵</p>
+        <p>목요일쯤 잠깐 통화 괜찮으시면 알려 주세요. 바로 첫 점을 작업대에 올릴게요. 늘 그렇듯, 천천히 그리고 단단하게요.</p>
+        <p>따뜻한 마음을 담아,<br>이경환 드림</p>
 
         <!-- attachment -->
         <div class="file-list" style="margin-top:var(--space-5)">
@@ -574,25 +605,25 @@
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/></svg>
             </span>
             <div class="li-main">
-              <div class="li-title">Oak-side-tables-quote.pdf</div>
-              <div class="li-sub text-muted">PDF · 248 KB</div>
+              <div class="li-title">원목-사이드테이블-견적서.pdf</div>
+              <div class="li-sub text-muted">PDF · 248KB</div>
             </div>
-            <button class="btn btn-soft btn-sm" aria-label="Download Oak-side-tables-quote.pdf" data-toast='{"title":"Downloading","msg":"Oak-side-tables-quote.pdf","variant":"info"}'>
+            <button class="btn btn-soft btn-sm" aria-label="원목-사이드테이블-견적서.pdf 내려받기" data-toast='{"title":"내려받는 중","msg":"원목-사이드테이블-견적서.pdf","variant":"info"}'>
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
-              Download
+              내려받기
             </button>
           </div>
         </div>
       </div>
 
       <div class="read-foot">
-        <button class="btn btn-primary" data-toast='{"title":"Reply","msg":"Opening a reply to Eik…","variant":"info"}'>
+        <button class="btn btn-primary" data-toast='{"title":"답장","msg":"이경환 님에게 답장을 씁니다.","variant":"info"}'>
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 17 4 12l5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
-          Reply
+          답장
         </button>
-        <button class="btn btn-secondary" data-toast='{"title":"Forward","msg":"Choose a recipient to forward to.","variant":"info"}'>
+        <button class="btn btn-secondary" data-toast='{"title":"전달","msg":"전달할 받는사람을 골라 주세요.","variant":"info"}'>
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 17 5-5-5-5"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg>
-          Forward
+          전달
         </button>
       </div>
     </article>
@@ -603,31 +634,31 @@
 <!-- ============ COMPOSE DRAWER ============ -->
 <div class="drawer" id="compose-drawer" hidden role="dialog" aria-modal="true" aria-labelledby="compose-title">
   <div class="drawer-header">
-    <h2 class="modal-title" id="compose-title">New message ✍️</h2>
-    <button class="modal-close" data-drawer-close aria-label="Close compose">
+    <h2 class="modal-title" id="compose-title">새 메일</h2>
+    <button class="modal-close" data-drawer-close aria-label="새 메일 닫기">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
     </button>
   </div>
   <div class="drawer-body flow">
     <div class="field">
-      <label class="label" for="cmp-to">To</label>
-      <input class="input" id="cmp-to" type="email" placeholder="name@studio.fi" data-autofocus>
+      <label class="label" for="cmp-to">받는사람</label>
+      <input class="input" id="cmp-to" type="email" placeholder="받는사람 메일 주소" data-autofocus>
     </div>
     <div class="field">
-      <label class="label" for="cmp-subj">Subject</label>
-      <input class="input" id="cmp-subj" type="text" placeholder="A little note…">
+      <label class="label" for="cmp-subj">제목</label>
+      <input class="input" id="cmp-subj" type="text" placeholder="짧은 인사 한 줄">
     </div>
     <div class="field">
-      <label class="label" for="cmp-body">Message</label>
-      <textarea class="textarea" id="cmp-body" rows="9" placeholder="Hej,&#10;&#10;Write something warm…"></textarea>
-      <span class="hint">Tip: keep it short and kind — like a good cup of tea.</span>
+      <label class="label" for="cmp-body">내용</label>
+      <textarea class="textarea" id="cmp-body" rows="9" placeholder="안녕하세요,&#10;&#10;따뜻한 인사를 적어 보세요…"></textarea>
+      <span class="hint">짧고 다정하게 — 차 한 잔 건네듯이.</span>
     </div>
   </div>
   <div class="drawer-footer">
-    <button class="btn btn-ghost" data-drawer-close>Discard</button>
-    <button class="btn btn-primary" data-drawer-close data-toast='{"title":"Message sent","msg":"Your note is on its way. 🌿","variant":"success"}'>
+    <button class="btn btn-ghost" data-drawer-close>삭제</button>
+    <button class="btn btn-primary" data-drawer-close data-toast='{"title":"메일을 보냈어요","msg":"편지가 곧 도착할 거예요.","variant":"success"}'>
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-      Send
+      보내기
     </button>
   </div>
 </div>
@@ -636,11 +667,14 @@
 <script>
   (function () {
     var grid = document.getElementById('mailGrid');
-    var rows = document.querySelectorAll('#msgRows [data-msg]');
-    rows.forEach(function (row) {
-      row.addEventListener('click', function (e) {
-        if (e.target.closest('.msg-star')) return; // star handled separately
-        rows.forEach(function (r) { r.classList.remove('is-selected'); });
+    var rowEls = document.querySelectorAll('#msgRows .msg-row');
+    // Each row's primary action is a stretched .msg-open button (keeps the star
+    // as a sibling control rather than a nested interactive element).
+    document.querySelectorAll('#msgRows .msg-open[data-msg]').forEach(function (open) {
+      open.addEventListener('click', function () {
+        var row = open.closest('.msg-row');
+        if (!row) return;
+        rowEls.forEach(function (r) { r.classList.remove('is-selected'); });
         row.classList.add('is-selected');
         row.classList.remove('is-unread');
         if (grid) grid.classList.add('show-reading'); // mobile: reveal reading pane
@@ -666,7 +700,7 @@
       btn.addEventListener('click', function () {
         seg.querySelectorAll('button').forEach(function (b) { b.classList.remove('is-active'); b.setAttribute('aria-pressed', 'false'); });
         btn.classList.add('is-active'); btn.setAttribute('aria-pressed', 'true');
-        rows.forEach(function (r) { r.style.display = (i === 1 && !r.classList.contains('is-unread')) ? 'none' : ''; });
+        rowEls.forEach(function (r) { r.style.display = (i === 1 && !r.classList.contains('is-unread')) ? 'none' : ''; });
       });
     });
 

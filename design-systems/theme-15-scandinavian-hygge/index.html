@@ -1,8 +1,18 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+  // Set the theme before first paint so OS-dark users never see a cream flash.
+  (function () {
+    try {
+      var t = localStorage.getItem("hygge-theme");
+      if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
 <title>Scandinavian Hygge · 디자인 시스템</title>
 <meta name="description" content="따뜻하고 차분하며 기능적인 디자인 시스템 — 오프화이트 크림, 절제된 어스 톤, 부드러운 라운딩과 여백.">
 <link rel="stylesheet" href="tokens.css">
@@ -16,46 +26,59 @@
 <link rel="stylesheet" href="components/navigation.css">
 <style>
   /* Page-local flourishes for the hub only */
+  /* Hero = "afternoon light through a window". Two soft diagonal sunbeams
+     rake across warm corner washes; the linen grain runs a touch denser here. */
   .hero {
-    position: relative; overflow: hidden;
+    position: relative; overflow: clip;
     padding-block: var(--space-14) var(--space-13);
+    --linen-opacity: 0.85;
     background:
-      radial-gradient(120% 120% at 12% 8%, var(--sage-100) 0%, transparent 42%),
-      radial-gradient(110% 100% at 92% 0%, var(--terracotta-100) 0%, transparent 40%),
-      radial-gradient(120% 120% at 70% 110%, var(--dusty-blue-100) 0%, transparent 45%);
+      linear-gradient(118deg, transparent 8%, rgb(var(--glow-warm-rgb) / 0.10) 18%, transparent 30%,
+        transparent 50%, rgb(var(--glow-sage-rgb) / 0.10) 60%, transparent 72%),
+      radial-gradient(130% 110% at 92% -12%, var(--terracotta-50) 0%, transparent 52%),
+      radial-gradient(120% 120% at 4% 2%, var(--sage-50) 0%, transparent 46%);
   }
   [data-theme="dark"] .hero {
     background:
-      radial-gradient(120% 120% at 12% 8%, rgb(157 174 150 / 0.12) 0%, transparent 42%),
-      radial-gradient(110% 100% at 92% 0%, rgb(201 139 107 / 0.12) 0%, transparent 40%),
-      radial-gradient(120% 120% at 70% 110%, rgb(138 161 177 / 0.10) 0%, transparent 45%);
+      /* warmer, brighter beams + two "window lamp" halos for the cabin-at-dusk mood */
+      linear-gradient(118deg, transparent 8%, rgb(var(--glow-warm-rgb) / 0.16) 18%, transparent 32%,
+        transparent 52%, rgb(var(--glow-sage-rgb) / 0.12) 60%, transparent 74%),
+      radial-gradient(60% 70% at 88% 8%, rgb(var(--glow-warm-rgb) / 0.18) 0%, transparent 60%),
+      radial-gradient(70% 80% at 6% 96%, rgb(var(--glow-sage-rgb) / 0.12) 0%, transparent 62%);
   }
   .hero-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: var(--space-10); align-items: center; }
   @media (max-width: 920px) { .hero-grid { grid-template-columns: 1fr; gap: var(--space-8); } }
-  .hero h1 { font-size: clamp(2.6rem, 6vw, var(--text-6xl)); line-height: 1.02; letter-spacing: var(--tracking-tighter); }
-  .hero h1 em { font-style: italic; color: var(--color-primary); }
+  .hero-title { font-size: clamp(2.6rem, 6vw, var(--text-6xl)); line-height: 1.04; letter-spacing: var(--tracking-tighter); }
+  .hero-title span { display: block; }
   .hero-lead { font-size: var(--text-lg); color: var(--color-text-secondary); max-width: 46ch; margin-top: var(--space-5); line-height: var(--leading-relaxed); }
   .hero-cta { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-7); }
-  .hero-meta { display: flex; flex-wrap: wrap; gap: var(--space-6); margin-top: var(--space-9); }
-  .hero-meta .hm { display: flex; flex-direction: column; gap: 2px; }
-  .hero-meta .hm b { font-family: var(--font-display); font-size: var(--text-2xl); }
+  .hero-meta { display: flex; flex-wrap: wrap; gap: var(--space-6) var(--space-8); margin-top: var(--space-9); }
+  .hero-meta .hm { display: flex; flex-direction: column; gap: 2px; max-width: 15ch; }
+  .hero-meta .hm b { font-family: var(--font-display); font-size: var(--text-2xl); color: var(--color-text); }
 
-  /* hero collage card */
-  .collage { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4); }
-  .collage .tile { border-radius: var(--radius-lg); padding: var(--space-5); border: var(--border-1) solid var(--color-border); background: var(--color-surface); box-shadow: var(--shadow-sm); }
-  .collage .tall { grid-row: span 2; }
+  /* hero collage — "objects set down by hand": tiles tilt and overlap slightly */
+  .collage { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4); padding-block: var(--space-2); }
+  .collage .tile { border-radius: var(--radius-lg); padding: var(--space-5); border: var(--border-1) solid var(--color-border); background: var(--color-surface); box-shadow: var(--shadow-md);
+    transition: transform var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard); }
+  .collage .tall { grid-row: span 2; rotate: -1.4deg; }
+  .collage .tile:nth-child(2) { rotate: 1.6deg; z-index: 2; }
+  .collage .tile:nth-child(3) { rotate: -0.8deg; margin-top: calc(var(--space-3) * -1); }
+  .collage:hover .tile { rotate: 0deg; }
   .swatch-stack { display: flex; flex-direction: column; gap: 6px; }
-  .swatch-stack .sw { height: 1.5rem; border-radius: var(--radius-sm); }
+  .swatch-stack .sw { height: 1.5rem; border-radius: var(--radius-sm); box-shadow: var(--shadow-inset); }
+  @media (max-width: 920px) { .collage .tile, .collage .tile:nth-child(2), .collage .tile:nth-child(3) { rotate: 0deg; margin-top: 0; } }
 
   .section-head { max-width: 56ch; margin-bottom: var(--space-8); }
   .section-head h2 { font-size: var(--text-3xl); }
   .anchor-nav { position: sticky; top: 4rem; z-index: 50; }
 
-  /* token visual blocks */
-  .ramp { display: grid; grid-template-columns: repeat(11, 1fr); border-radius: var(--radius-md); overflow: hidden; border: var(--border-1) solid var(--color-border); }
+  /* token visual blocks — columns auto-size to the number of stops, so an
+     11-stop ramp and a 10-stop ramp both fill the row without filler cells. */
+  .ramp { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border-radius: var(--radius-md); overflow: hidden; border: var(--border-1) solid var(--color-border); }
   .ramp .stop { aspect-ratio: 1 / 1.4; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; font-size: 9px; color: rgb(255 255 255 / 0.85); font-variant-numeric: tabular-nums; }
   .ramp .stop.dark-label { color: rgb(42 36 30 / 0.7); }
-  @media (max-width: 640px){ .ramp .stop { font-size: 7px; } }
+  /* labels drop below ~8px on phones — hide them, keep the colour band */
+  @media (max-width: 560px){ .ramp .stop { font-size: 0; } }
   .ramp-name { font-size: var(--text-sm); font-weight: var(--weight-semibold); margin-bottom: var(--space-2); display:flex; align-items:center; gap: var(--space-2); }
 
   .spec-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: var(--space-3); }
@@ -89,7 +112,6 @@
     <a href="#tokens">토큰</a>
     <a href="#components">컴포넌트</a>
     <a href="#showcase">쇼케이스</a>
-    <a href="README.md">문서</a>
   </nav>
   <span class="nav-spacer"></span>
   <div class="navbar-actions">
@@ -110,19 +132,22 @@
   <div class="container hero-grid">
     <div>
       <span class="eyebrow reveal reveal-1">Theme 15 · 따뜻한 미니멀리즘</span>
-      <h1 class="reveal reveal-2 mt-2">아늑하고 <em>집중</em>되는<br>작업을 위한 차분한 도구.</h1>
-      <p class="hero-lead reveal reveal-3">오프화이트 크림과 절제된 어스 톤 — 세이지, 테라코타, 더스티 블루 — 위에 만든 실무용 디자인 시스템. 부드러운 라운딩과 은은한 그림자, 그리고 충분한 여백을 담았습니다.</p>
+      <h1 class="hero-title reveal reveal-2 mt-2">
+        <span>아늑하게, 그리고 <em class="em-warm">또렷하게</em>.</span>
+        <span>매일의 작업이 편안해지는 도구.</span>
+      </h1>
+      <p class="hero-lead reveal reveal-3">오프화이트 크림 위에 세이지·테라코타·더스티블루를 얹은 실무용 디자인 시스템이에요. 부드러운 라운딩과 은은한 그림자, 넉넉한 여백으로 하루 종일 봐도 눈이 편안하게 다듬었습니다.</p>
       <div class="hero-cta reveal reveal-4">
-        <a href="#components" class="btn btn-primary btn-lg">컴포넌트 살펴보기
+        <a href="#components" class="btn btn-primary btn-lg candle-cta">컴포넌트 살펴보기
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
         </a>
         <a href="pages/dashboard.html" class="btn btn-secondary btn-lg">대시보드 데모 보기</a>
       </div>
       <div class="hero-meta reveal reveal-5">
-        <div class="hm"><b>5</b><span class="text-muted text-sm">컬러 램프</span></div>
-        <div class="hm"><b>50+</b><span class="text-muted text-sm">컴포넌트</span></div>
+        <div class="hm"><b>5</b><span class="text-muted text-sm">어스 톤 컬러 램프</span></div>
+        <div class="hm"><b>12px</b><span class="text-muted text-sm">기본 라운딩</span></div>
         <div class="hm"><b>9</b><span class="text-muted text-sm">데모 화면</span></div>
-        <div class="hm"><b>AA+</b><span class="text-muted text-sm">명암비</span></div>
+        <div class="hm"><b>4.5:1</b><span class="text-muted text-sm">이상 본문 대비</span></div>
       </div>
     </div>
 
@@ -151,8 +176,8 @@
       <div class="tile">
         <span class="label-pill">버튼</span>
         <div class="flow-sm">
-          <button class="btn btn-primary btn-block btn-sm">기본</button>
-          <button class="btn btn-secondary btn-block btn-sm">보조</button>
+          <span class="btn btn-primary btn-block btn-sm">기본</span>
+          <span class="btn btn-secondary btn-block btn-sm">보조</span>
         </div>
       </div>
     </div>
@@ -169,7 +194,7 @@
     </div>
 
     <!-- colour ramps -->
-    <div class="grid" style="grid-template-columns:1fr 1fr" data-reveal>
+    <div class="grid grid-2" data-reveal>
       <div>
         <div class="ramp-name"><span class="badge-dot" style="background:var(--warm-neutral-500)"></span> 웜 뉴트럴</div>
         <div class="ramp">
@@ -199,7 +224,6 @@
           <div class="stop" style="background:var(--sage-700)">700</div>
           <div class="stop" style="background:var(--sage-800)">800</div>
           <div class="stop" style="background:var(--sage-900)">900</div>
-          <div class="stop" style="background:var(--sage-900);opacity:.7">·</div>
         </div>
       </div>
       <div>
@@ -215,7 +239,6 @@
           <div class="stop" style="background:var(--terracotta-700)">700</div>
           <div class="stop" style="background:var(--terracotta-800)">800</div>
           <div class="stop" style="background:var(--terracotta-900)">900</div>
-          <div class="stop" style="background:var(--terracotta-900);opacity:.7">·</div>
         </div>
       </div>
       <div>
@@ -231,7 +254,6 @@
           <div class="stop" style="background:var(--dusty-blue-700)">700</div>
           <div class="stop" style="background:var(--dusty-blue-800)">800</div>
           <div class="stop" style="background:var(--dusty-blue-900)">900</div>
-          <div class="stop" style="background:var(--dusty-blue-900);opacity:.7">·</div>
         </div>
       </div>
     </div>
@@ -319,12 +341,12 @@
           <input type="range" class="slider" min="0" max="100" value="64" data-output="warmth-out" data-suffix="%" aria-label="온기">
           <span class="slider-value" id="warmth-out">64%</span>
         </div>
-        <div class="rating mt-4" role="img" aria-label="5점 만점에 4점" data-value="4">
-          <button aria-label="별 1개" class="is-filled"><svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="m12 3 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.2l1-5.8-4.3-4.1 5.9-.9Z"/></svg></button>
-          <button aria-label="별 2개" class="is-filled"><svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="m12 3 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.2l1-5.8-4.3-4.1 5.9-.9Z"/></svg></button>
-          <button aria-label="별 3개" class="is-filled"><svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="m12 3 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.2l1-5.8-4.3-4.1 5.9-.9Z"/></svg></button>
-          <button aria-label="별 4개" class="is-filled"><svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="m12 3 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.2l1-5.8-4.3-4.1 5.9-.9Z"/></svg></button>
-          <button aria-label="별 5개"><svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="m12 3 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.2l1-5.8-4.3-4.1 5.9-.9Z"/></svg></button>
+        <div class="rating mt-4" role="radiogroup" aria-label="별점 선택 (5점 만점)" data-value="4">
+          <button role="radio" aria-checked="false" tabindex="-1" aria-label="별 1개" class="is-filled"><svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="m12 3 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.2l1-5.8-4.3-4.1 5.9-.9Z"/></svg></button>
+          <button role="radio" aria-checked="false" tabindex="-1" aria-label="별 2개" class="is-filled"><svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="m12 3 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.2l1-5.8-4.3-4.1 5.9-.9Z"/></svg></button>
+          <button role="radio" aria-checked="false" tabindex="-1" aria-label="별 3개" class="is-filled"><svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="m12 3 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.2l1-5.8-4.3-4.1 5.9-.9Z"/></svg></button>
+          <button role="radio" aria-checked="true" tabindex="0" aria-label="별 4개" class="is-filled"><svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="m12 3 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.2l1-5.8-4.3-4.1 5.9-.9Z"/></svg></button>
+          <button role="radio" aria-checked="false" tabindex="-1" aria-label="별 5개"><svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="m12 3 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.2l1-5.8-4.3-4.1 5.9-.9Z"/></svg></button>
         </div>
       </div>
 
@@ -400,7 +422,7 @@
             <span class="avatar avatar-more">+4</span>
           </div>
           <span class="avatar-wrap"><span class="avatar avatar-lg" style="background:var(--warm-neutral-200);color:var(--warm-neutral-700)">AT</span><span class="presence"></span></span>
-          <span class="tooltip"><button class="btn btn-secondary btn-sm">마우스를 올려보세요</button><span class="tip">아늑한 툴팁 🌿</span></span>
+          <span class="tooltip"><button class="btn btn-secondary btn-sm">마우스를 올려보세요</button><span class="tip">따뜻한 힌트를 담은 툴팁</span></span>
         </div>
       </div>
 
@@ -468,12 +490,9 @@
       <span class="brand-mark" aria-hidden="true" style="width:2rem;height:2rem;border-radius:var(--radius-sm)">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 9v11a1 1 0 0 0 1 1h5v-6h6v6h5a1 1 0 0 0 1-1V9Z"/></svg>
       </span>
-      <span class="text-sm text-muted">Scandinavian Hygge · theme-15 — 순수 CSS + 바닐라 JS, 프레임워크 없음.</span>
+      <span class="text-sm text-muted">Scandinavian Hygge — 오후 햇살이 드는 방을 위한 디자인 시스템</span>
     </div>
-    <div class="row gap-4 text-sm">
-      <a class="link" href="README.md">README</a>
-      <a class="link" href="CHECKLIST.md">체크리스트</a>
-    </div>
+    <div class="text-sm text-subtle">크림 · 오크 · 리넨 · 세라믹 · 촛불</div>
   </div>
 </footer>
 
@@ -508,8 +527,8 @@
       <label class="check"><input type="checkbox" checked><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> 오크</label>
       <label class="check mt-2"><input type="checkbox"><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> 리넨</label>
     </div>
-    <div class="field"><span class="label">가격 · 최대 $240</span>
-      <input type="range" class="slider" min="0" max="500" value="240" aria-label="최대 가격"></div>
+    <div class="field"><span class="label">가격 · 최대 24만원</span>
+      <input type="range" class="slider" min="0" max="50" value="24" aria-label="최대 가격 (만원)"></div>
   </div>
   <div class="drawer-footer">
     <button class="btn btn-ghost btn-block" data-drawer-close>초기화</button>
