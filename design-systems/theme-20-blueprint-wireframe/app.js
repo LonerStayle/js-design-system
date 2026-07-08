@@ -630,7 +630,7 @@
   }
 
   /* ================================================================== */
-  /* 14. KANBAN drag & drop                                             */
+  /* 14. KANBAN drag & drop + [data-move] column-move buttons           */
   /* ================================================================== */
   function initKanban() {
     var dragged = null;
@@ -638,7 +638,7 @@
     function makeDraggable(card) {
       card.setAttribute("draggable", "true");
       on(card, "dragstart", function () { dragged = card; setTimeout(function () { card.classList.add("is-drag"); }, 0); });
-      on(card, "dragend", function () { card.classList.remove("is-drag"); dragged = null; $$(".kanban-col-body").forEach(function (b) { b.classList.remove("is-drop-target"); }); updateCounts(); });
+      on(card, "dragend", function () { card.classList.remove("is-drag"); dragged = null; $$(".kanban-col-body").forEach(function (b) { b.classList.remove("is-drop-target"); }); updateCounts(); refreshMoveButtons(); });
     }
     $$(".kanban-col-body").forEach(function (body) {
       on(body, "dragover", function (e) { e.preventDefault(); body.classList.add("is-drop-target"); var after = afterElement(body, e.clientY); if (dragged) { if (after == null) body.appendChild(dragged); else body.insertBefore(dragged, after); } });
@@ -660,8 +660,44 @@
         var n = $$(".kanban-card", col).length;
         var badge = $(".kanban-col-head .count", col);
         if (badge) badge.textContent = n;
+        $$(".k-wip-now", col).forEach(function (w) { w.textContent = n; });
+        var wip = $(".k-wip", col);
+        if (wip) wip.classList.toggle("is-full", n >= 3);
       });
     }
+    /* [data-move="prev|next"] — keyboard/click alternative to drag & drop.
+       Cards at the board edges get the matching button disabled. */
+    function refreshMoveButtons() {
+      var cols = $$(".kanban-col");
+      cols.forEach(function (col, ci) {
+        $$(".kanban-card", col).forEach(function (card) {
+          var p = $('[data-move="prev"]', card), n = $('[data-move="next"]', card);
+          if (p) p.disabled = ci === 0;
+          if (n) n.disabled = ci === cols.length - 1;
+        });
+      });
+    }
+    $$(".kanban").forEach(function (board) {
+      on(board, "click", function (e) {
+        var btn = e.target.closest ? e.target.closest("[data-move]") : null;
+        if (!btn || btn.disabled) return;
+        var card = btn.closest(".kanban-card");
+        var cols = $$(".kanban-col", board);
+        var ci = cols.indexOf(card && card.closest(".kanban-col"));
+        var dirName = btn.getAttribute("data-move");
+        var target = cols[ci + (dirName === "next" ? 1 : -1)];
+        if (!card || ci < 0 || !target) return;
+        $(".kanban-col-body", target).appendChild(card);
+        updateCounts(); refreshMoveButtons();
+        /* keep focus on the moved card — same-direction button, else its twin */
+        var same = $('[data-move="' + dirName + '"]', card);
+        var next = (same && !same.disabled) ? same : $("[data-move]:not([disabled])", card);
+        if (next) next.focus();
+        var lv = $("#k-live"), head = $(".kanban-col-head .title", target);
+        if (lv) lv.textContent = (card.getAttribute("data-card") || "카드") + " · " + (head ? head.textContent.trim() : "") + " 열로 옮겼습니다.";
+      });
+    });
+    refreshMoveButtons();
   }
 
   /* ================================================================== */
