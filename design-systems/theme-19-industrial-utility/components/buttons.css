@@ -37,13 +37,15 @@
 .btn:active { transform: translate(2px, 2px); box-shadow: none; }
 .btn:focus-visible { outline: var(--ring-width) solid var(--ring-color); outline-offset: var(--ring-offset); }
 
+/* disabled: 실제 :disabled 는 브라우저가 클릭을 막으므로 cursor 를 살려 not-allowed 를 보인다.
+   pointer-events:none 는 커서 표시까지 죽이므로 aria-disabled(가짜 비활성)에만 한정 */
 .btn:disabled, .btn[aria-disabled="true"] {
   opacity: 0.45;
   cursor: not-allowed;
   filter: grayscale(0.4);
-  pointer-events: none;
   box-shadow: none;
 }
+.btn[aria-disabled="true"] { pointer-events: none; }
 
 /* sizes */
 .btn--sm { --_h: var(--btn-height-sm); --_px: var(--btn-pad-x-sm); font-size: var(--text-xs); gap: var(--space-2); }
@@ -58,6 +60,16 @@
 }
 .btn--primary:hover { background: var(--color-primary-hover); }
 .btn--primary:active { background: var(--color-primary-active); }
+/* 승인 도장 — primary 를 누르는 순간 옐로 잉크가 '쾅' 찍혀 퍼진다(작업지시 승인 은유).
+   로딩 중(::after=스피너)엔 발화 금지 */
+.btn--primary:not([data-loading]):active::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: var(--border-2) solid var(--color-primary);
+  animation: stamp-flash 160ms var(--ease-out) 1;
+  pointer-events: none;
+}
 
 /* SECONDARY — 스틸 메탈 + 옐로 테두리 hover */
 .btn--secondary {
@@ -171,7 +183,10 @@
   color: var(--color-text-muted);
   transition: color var(--duration-base) var(--ease-standard);
 }
+/* 활성 옵션 — radiogroup(aria-checked) / 구 tablist(aria-selected) 양쪽 지원 */
+.segmented__option[aria-checked="true"],
 .segmented__option[aria-selected="true"] { color: var(--color-primary-fg); }
+.segmented__option:focus-visible { outline: var(--ring-width) solid var(--ring-color); outline-offset: -1px; }
 .segmented__thumb {
   position: absolute;
   z-index: 0;
@@ -179,4 +194,60 @@
   background: var(--color-primary);
   transition: transform var(--duration-base) var(--ease-snap), width var(--duration-base) var(--ease-snap);
   box-shadow: var(--shadow-sm);
+}
+
+/* ---------------------------------------------------------------------------
+   BREAKER SWITCH · 차단기 나이프 스위치 (테마 토글의 시그니처 모먼트)
+   상하로 젖혀지는 레버 — 다크=하강(차단), 라이트=상승(투입). --ease-snap 90ms.
+   --------------------------------------------------------------------------- */
+.breaker {
+  display: inline-flex; align-items: center; gap: var(--space-3);
+  height: var(--btn-height-md);
+  padding: 0 var(--space-4) 0 var(--space-3);
+  background: var(--color-surface-inset);
+  border: var(--border-2) solid var(--color-border-strong);
+  box-shadow: var(--shadow-inset-deep);
+  user-select: none;
+}
+.breaker:hover { border-color: var(--color-primary); }
+.breaker:focus-visible { outline: var(--ring-width) solid var(--ring-color); outline-offset: 2px; }
+.breaker__slot {
+  position: relative;
+  width: 20px; height: 30px;
+  background: var(--concrete-black);
+  border: var(--border-1) solid var(--color-border-strong);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.6);
+  flex: 0 0 auto;
+}
+/* 접점 표시(위=투입/ON, 아래=차단/OFF) */
+.breaker__slot::before, .breaker__slot::after {
+  content: ""; position: absolute; left: 50%; width: 8px; height: 8px;
+  transform: translateX(-50%); border-radius: var(--radius-full);
+  background: var(--concrete-600);
+}
+.breaker__slot::before { top: 3px; }
+.breaker__slot::after  { bottom: 3px; }
+.breaker__lever {
+  position: absolute; left: 50%; bottom: 4px;
+  width: 6px; height: 20px; margin-left: -3px;
+  transform-origin: 50% 100%;
+  background: linear-gradient(180deg, var(--concrete-100), var(--concrete-400));
+  border: var(--border-1) solid var(--concrete-black);
+  transform: rotate(26deg);       /* 다크 = 아래로 젖혀짐(차단) */
+  transition: transform var(--duration-fast) var(--ease-snap), background var(--duration-fast);
+}
+.breaker__lever::after {         /* 손잡이 볼 */
+  content: ""; position: absolute; top: -5px; left: 50%; transform: translateX(-50%);
+  width: 12px; height: 12px; border-radius: var(--radius-full);
+  background: var(--hazard-orange-500); border: var(--border-1) solid var(--concrete-black);
+}
+.breaker[aria-pressed="true"] .breaker__lever {
+  transform: rotate(-26deg);      /* 라이트 = 위로 투입 */
+  background: linear-gradient(180deg, var(--safety-yellow-200), var(--safety-yellow-500));
+}
+.breaker[aria-pressed="true"] .breaker__slot::before { background: var(--signal-green-400); box-shadow: 0 0 6px var(--signal-green-400); }
+.breaker__label {
+  font-family: var(--font-mono); font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide); color: var(--color-text-muted);
+  min-width: 34px; text-align: left;
 }

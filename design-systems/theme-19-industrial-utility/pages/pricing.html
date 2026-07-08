@@ -1,9 +1,18 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>현장 플랜 · INDUSTRIAL UTILITY</title>
+<script>
+/* FOUC 방지 — 스타일 로드 전 data-theme 확정(다크 정본). app.js 와 동일 키 */
+(function () {
+  try {
+    var t = localStorage.getItem("theme19-mode") || "dark";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
+})();
+</script>
+<title>플랜 규격 · INDUSTRIAL UTILITY</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -18,113 +27,174 @@
 <link rel="stylesheet" href="../components/navigation.css">
 <link rel="stylesheet" href="../components/charts.css">
 <style>
-  .plans { display: grid; grid-template-columns: repeat(3,1fr); gap: var(--space-6); margin-top: var(--space-9); align-items: start; }
-  @media (max-width: 880px) { .plans { grid-template-columns: 1fr; } }
-  .plan { background: var(--color-surface); border: var(--border-2) solid var(--color-border); padding: var(--space-8) var(--space-7); display: flex; flex-direction: column; gap: var(--space-5); position: relative; }
-  .plan--featured { border: var(--border-3) solid var(--color-primary); box-shadow: var(--shadow-lg); }
-  .plan__feat { display: flex; align-items: flex-start; gap: var(--space-3); font-size: var(--text-sm); }
-  .plan__feat svg { flex: 0 0 auto; margin-top: 2px; }
+  /* 히어로 시리얼 */
+  .price-hero__serial { display: inline-flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; justify-content: center; margin-bottom: var(--space-5); }
+
+  /* ── 플랜 그리드 = 규격품 진열 (권장 규격 1점을 띄워 위계) ── */
+  .plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-6); margin-top: var(--space-11); align-items: start; }
+  @media (max-width: 880px) { .plans { grid-template-columns: 1fr; gap: var(--space-9); margin-top: var(--space-9); } }
+  .plan {
+    background: var(--color-surface); border: var(--border-2) solid var(--color-border);
+    padding: var(--space-8) var(--space-7); display: flex; flex-direction: column; gap: var(--space-5);
+    position: relative;
+  }
+  .plan__spec { font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: var(--tracking-wide); color: var(--color-text-subtle); }
+  /* 권장 규격품 — 옐로 후광(--shadow-yellow 점화) + 위로 띄움 + 주의 띠 */
+  .plan--featured {
+    border: var(--border-3) solid var(--color-primary);
+    box-shadow: var(--shadow-yellow);
+    transform: translateY(-12px);
+    z-index: 1;
+  }
+  @media (max-width: 880px) { .plan--featured { transform: none; } }
+  .plan__topband { margin: calc(var(--space-8) * -1) calc(var(--space-7) * -1) var(--space-3); }
+
+  .plan__title { font-family: var(--font-display); }
+  .plan__desc { color: var(--color-text-muted); margin-top: var(--space-2); }
+
+  .price { display: flex; align-items: baseline; gap: 2px; font-variant-numeric: tabular-nums lining-nums; }
+  .price__amt { font-family: var(--font-display); font-weight: 700; letter-spacing: var(--tracking-tight); }
+  .price__note { font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--color-text-muted); letter-spacing: var(--tracking-wide); min-height: 1em; }
+
+  /* ── 피처 목록: ✓ = 시그널 그린, ✗ = subtle. SVG stroke=currentColor(색은 컨테이너에서) ── */
+  .plan__feat { display: flex; align-items: flex-start; gap: var(--space-3); font-size: var(--text-sm); color: var(--color-text); }
+  .plan__feat svg { flex: 0 0 auto; margin-top: 2px; color: var(--color-success); }
   .plan__feat.off { color: var(--color-text-subtle); }
-  .price { display: flex; align-items: baseline; gap: 2px; }
-  .price__amt { font-family: var(--font-display); font-weight: 700; }
+  .plan__feat.off svg { color: var(--color-text-subtle); }
+
+  /* ── 비교표: ✓ 색은 셀에서 부여(SVG는 currentColor). block svg 는 margin auto 로 중앙 ── */
+  .compare-table td svg { color: var(--color-success); margin: 0 auto; }
   .compare-x { color: var(--color-text-subtle); }
+  .compare-table th.col-feat { color: var(--color-primary); }
+
+  @media (max-width: 620px) {
+    .price-hero { padding-top: var(--space-9) !important; }
+  }
 </style>
 </head>
-<body data-animate-meters>
+<body>
 <a href="#main" class="skip-link">본문으로 건너뛰기</a>
 
 <header class="navbar navbar--sticky">
   <a class="brand" href="../index.html"><span class="brand__mark">19</span><span class="brand__name">CTRL OPS<small>PRICING</small></span></a>
   <nav class="navbar__links" aria-label="주요"><a class="navbar__link" href="../index.html">SYSTEM</a><a class="navbar__link is-active" href="pricing.html">PRICING</a><a class="navbar__link" href="dashboard.html">DEMO</a></nav>
   <span class="spacer"></span>
-  <button class="btn btn--icon btn--secondary" data-action="toggle-theme" aria-label="테마 전환"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg></button>
+  <button class="breaker" data-action="toggle-theme" aria-pressed="false" aria-label="조명 전환 · 다크/라이트" title="차단기 레버 — 조명 전환">
+    <span class="breaker__slot" aria-hidden="true"><span class="breaker__lever"></span></span>
+    <span class="breaker__label" aria-hidden="true">DARK</span>
+  </button>
   <a href="onboarding.html" class="btn btn--primary">무료 시작</a>
 </header>
 
-<main id="main" class="container container--narrow" style="max-width:1080px">
+<main id="main" class="container" style="max-width:1120px">
   <!-- HERO -->
-  <section class="text-center" style="padding:var(--space-12) 0 var(--space-7)">
-    <span class="badge badge--solid badge--primary mb-5" style="display:inline-flex">PLANT SOFTWARE</span>
-    <h1 class="t-5xl stencil mb-5">현장 플랜</h1>
-    <p class="text-muted" style="max-width:520px;margin:0 auto var(--space-7)">라인 한 개부터 공장 전체까지. 생산 관제·정비·분석을 하나의 콘솔에서. 언제든 업·다운그레이드 가능.</p>
+  <section class="price-hero text-center" style="padding:var(--space-12) 0 var(--space-6)">
+    <div class="price-hero__serial">
+      <span class="badge badge--solid badge--primary">PLANT SOFTWARE</span>
+      <span class="cluster" style="gap:var(--space-2)"><span class="live-dot" aria-hidden="true"></span><span class="label">정격 규격표 · 라인당 추가 과금 없음</span></span>
+    </div>
+    <h1 class="t-5xl stencil stencil--bridge mb-5">플랜 규격</h1>
+    <p class="text-muted" style="max-width:540px;margin:0 auto var(--space-8)">라인 한 개부터 공장 전체까지. 생산 관제·정비·분석을 한 콘솔에서. 규모가 바뀌면 규격만 바꾸면 된다.</p>
     <div data-billing-toggle style="display:inline-block">
-      <div class="segmented" data-segmented role="tablist" aria-label="결제 주기">
-        <span class="segmented__thumb"></span>
-        <button class="segmented__option" data-bill="monthly" aria-selected="true">월간 결제</button>
-        <button class="segmented__option" data-bill="yearly" aria-selected="false">연간 결제 <span data-save-badge style="display:none" class="badge badge--success">−20%</span></button>
+      <div class="segmented" data-segmented role="radiogroup" aria-label="결제 주기">
+        <span class="segmented__thumb" aria-hidden="true"></span>
+        <button class="segmented__option" role="radio" data-bill="monthly" aria-checked="true">월간 결제</button>
+        <button class="segmented__option" role="radio" data-bill="yearly" aria-checked="false" tabindex="-1">연간 결제 <span data-save-badge style="display:none" class="badge badge--success">−20%</span></button>
       </div>
     </div>
   </section>
 
   <!-- PLANS -->
-  <section class="plans">
+  <section class="plans" aria-label="요금제 규격">
     <!-- SITE -->
     <div class="plan">
-      <div><div class="label mb-3">SITE</div><h3 class="t-2xl">현장</h3><p class="text-muted t-sm" style="margin-top:var(--space-2)">소규모 단일 라인 운영</p></div>
-      <div class="price" data-price data-monthly="39,000" data-yearly="31,000"><span class="t-xl">₩</span><span class="price__amt t-5xl">39,000</span><span class="price__per text-muted">/월</span></div>
+      <div>
+        <div class="label mb-3">SITE · 규격 KS-S</div>
+        <h3 class="t-2xl plan__title">현장</h3>
+        <p class="t-sm plan__desc">소규모 단일 라인 운영</p>
+      </div>
+      <div>
+        <div class="price" data-price data-monthly="39,000" data-yearly="31,200"><span class="t-xl">₩</span><span class="price__amt t-5xl">39,000</span><span class="price__per text-muted">/월</span></div>
+        <div class="price__note" data-price-note>부가세 별도 · 월간 청구</div>
+      </div>
       <a href="onboarding.html" class="btn btn--secondary btn--block">현장 시작하기</a>
       <hr style="margin:0">
       <div class="stack" style="--stack-gap: var(--space-3)">
-        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>생산 라인 1개</div>
-        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>실시간 대시보드</div>
-        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>작업 지시 보드</div>
-        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>사용자 5명</div>
+        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>생산 라인 1개</div>
+        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>실시간 대시보드</div>
+        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>작업 지시 보드</div>
+        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>사용자 5명</div>
         <div class="plan__feat off"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6 6 18"/></svg>고급 분석 리포트</div>
         <div class="plan__feat off"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6 6 18"/></svg>API 연동</div>
-        <div class="plan__feat off"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6 6 18"/></svg>전담 지원</div>
+        <div class="plan__feat off"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6 6 18"/></svg>전담 매니저</div>
       </div>
     </div>
 
-    <!-- PLANT (featured) -->
+    <!-- PLANT (권장 규격) -->
     <div class="plan plan--featured">
-      <span class="card__tab">★ 추천</span>
-      <div><div class="label label--yellow mb-3">PLANT</div><h3 class="t-2xl">공장</h3><p class="text-muted t-sm" style="margin-top:var(--space-2)">다중 라인 + 통합 분석</p></div>
-      <div class="price" data-price data-monthly="89,000" data-yearly="71,000"><span class="t-xl">₩</span><span class="price__amt t-5xl text-primary">89,000</span><span class="price__per text-muted">/월</span></div>
+      <div class="hazard-band hazard-band--fine plan__topband" aria-hidden="true"></div>
+      <span class="card__tab">권장 규격 · KS-P</span>
+      <div>
+        <div class="label label--yellow mb-3">PLANT · 다중 라인</div>
+        <h3 class="t-2xl plan__title">공장</h3>
+        <p class="t-sm plan__desc">다중 라인 + 통합 분석</p>
+      </div>
+      <div>
+        <div class="price" data-price data-monthly="89,000" data-yearly="71,200"><span class="t-xl">₩</span><span class="price__amt t-5xl text-primary">89,000</span><span class="price__per text-muted">/월</span></div>
+        <div class="price__note" data-price-note>부가세 별도 · 월간 청구</div>
+      </div>
       <a href="onboarding.html" class="btn btn--primary btn--block">공장 시작하기</a>
       <hr style="margin:0">
       <div class="stack" style="--stack-gap: var(--space-3)">
-        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>생산 라인 <b style="margin-left:4px">무제한</b></div>
-        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>실시간 대시보드 + 게이지</div>
-        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>고급 분석 리포트</div>
-        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>예지 정비 알림</div>
-        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>API 연동</div>
-        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>사용자 <b style="margin-left:4px">50명</b></div>
+        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>생산 라인 <b style="margin-left:4px">무제한</b></div>
+        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>실시간 대시보드 + 게이지</div>
+        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>고급 분석 리포트</div>
+        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>예지 정비 알림</div>
+        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>API 연동</div>
+        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>사용자 <b style="margin-left:4px">50명</b></div>
         <div class="plan__feat off"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6 6 18"/></svg>전담 매니저</div>
       </div>
     </div>
 
     <!-- ENTERPRISE -->
     <div class="plan">
-      <div><div class="label mb-3">ENTERPRISE</div><h3 class="t-2xl">기업</h3><p class="text-muted t-sm" style="margin-top:var(--space-2)">다중 공장·맞춤 통합</p></div>
-      <div class="price"><span class="price__amt t-4xl">견적</span><span class="price__per text-muted" style="margin-left:6px">맞춤</span></div>
+      <div>
+        <div class="label mb-3">ENTERPRISE · 규격 KS-E</div>
+        <h3 class="t-2xl plan__title">기업</h3>
+        <p class="t-sm plan__desc">다중 공장 · 맞춤 통합</p>
+      </div>
+      <div>
+        <div class="price"><span class="price__amt t-4xl">견적</span><span class="price__per text-muted" style="margin-left:6px">맞춤</span></div>
+        <div class="price__note">연간 계약 · 세금계산서</div>
+      </div>
       <button class="btn btn--secondary btn--block" data-action="demo-toast" data-type="info" data-title="문의 접수" data-msg="영업팀이 1영업일 내 연락드립니다.">영업팀 문의</button>
       <hr style="margin:0">
       <div class="stack" style="--stack-gap: var(--space-3)">
-        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>공장 다중 운영</div>
-        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>온프레미스 설치 옵션</div>
-        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>SSO · 감사 로그</div>
-        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>맞춤 통합·개발</div>
-        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>전담 매니저 + SLA</div>
-        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>사용자 무제한</div>
-        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>24/7 우선 지원</div>
+        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>공장 다중 운영</div>
+        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>온프레미스 설치 옵션</div>
+        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>SSO · 감사 로그</div>
+        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>맞춤 통합·개발</div>
+        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>전담 매니저 + SLA</div>
+        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>사용자 무제한</div>
+        <div class="plan__feat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>24/7 우선 지원</div>
       </div>
     </div>
   </section>
 
   <!-- COMPARE TABLE -->
   <section style="margin-top:var(--space-12)">
-    <div class="section-head"><span class="section-head__bar"></span><div><div class="section-head__title">상세 비교</div><div class="section-head__meta">FEATURE MATRIX</div></div></div>
+    <div class="section-head"><span class="section-head__bar"></span><div><div class="section-head__title">상세 비교</div><div class="section-head__meta">FEATURE MATRIX · 규격 대조표</div></div></div>
     <div class="table-wrap">
-      <table class="table">
-        <thead><tr><th>기능</th><th class="text-center">현장</th><th class="text-center">공장</th><th class="text-center">기업</th></tr></thead>
+      <table class="table compare-table">
+        <thead><tr><th scope="col">기능</th><th scope="col" class="text-center">현장</th><th scope="col" class="text-center col-feat">공장</th><th scope="col" class="text-center">기업</th></tr></thead>
         <tbody>
           <tr><td class="cell-strong">생산 라인</td><td class="text-center">1</td><td class="text-center">무제한</td><td class="text-center">무제한</td></tr>
           <tr><td class="cell-strong">사용자</td><td class="text-center">5</td><td class="text-center">50</td><td class="text-center">무제한</td></tr>
-          <tr><td class="cell-strong">실시간 대시보드</td><td class="text-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></td><td class="text-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></td><td class="text-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></td></tr>
-          <tr><td class="cell-strong">고급 분석 리포트</td><td class="text-center"><span class="compare-x">—</span></td><td class="text-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></td><td class="text-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></td></tr>
-          <tr><td class="cell-strong">예지 정비 알림</td><td class="text-center"><span class="compare-x">—</span></td><td class="text-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></td><td class="text-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></td></tr>
-          <tr><td class="cell-strong">API 연동</td><td class="text-center"><span class="compare-x">—</span></td><td class="text-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></td><td class="text-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></td></tr>
-          <tr><td class="cell-strong">전담 매니저 · SLA</td><td class="text-center"><span class="compare-x">—</span></td><td class="text-center"><span class="compare-x">—</span></td><td class="text-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></td></tr>
+          <tr><td class="cell-strong">실시간 대시보드</td><td class="text-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" role="img" aria-label="지원"><path d="M5 13l4 4L19 7"/></svg></td><td class="text-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" role="img" aria-label="지원"><path d="M5 13l4 4L19 7"/></svg></td><td class="text-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" role="img" aria-label="지원"><path d="M5 13l4 4L19 7"/></svg></td></tr>
+          <tr><td class="cell-strong">고급 분석 리포트</td><td class="text-center"><span class="compare-x" aria-label="미지원">—</span></td><td class="text-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" role="img" aria-label="지원"><path d="M5 13l4 4L19 7"/></svg></td><td class="text-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" role="img" aria-label="지원"><path d="M5 13l4 4L19 7"/></svg></td></tr>
+          <tr><td class="cell-strong">예지 정비 알림</td><td class="text-center"><span class="compare-x" aria-label="미지원">—</span></td><td class="text-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" role="img" aria-label="지원"><path d="M5 13l4 4L19 7"/></svg></td><td class="text-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" role="img" aria-label="지원"><path d="M5 13l4 4L19 7"/></svg></td></tr>
+          <tr><td class="cell-strong">API 연동</td><td class="text-center"><span class="compare-x" aria-label="미지원">—</span></td><td class="text-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" role="img" aria-label="지원"><path d="M5 13l4 4L19 7"/></svg></td><td class="text-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" role="img" aria-label="지원"><path d="M5 13l4 4L19 7"/></svg></td></tr>
+          <tr><td class="cell-strong">전담 매니저 · SLA</td><td class="text-center"><span class="compare-x" aria-label="미지원">—</span></td><td class="text-center"><span class="compare-x" aria-label="미지원">—</span></td><td class="text-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" role="img" aria-label="지원"><path d="M5 13l4 4L19 7"/></svg></td></tr>
         </tbody>
       </table>
     </div>
@@ -149,10 +219,25 @@
 
 <footer class="footer" style="padding:var(--space-9) 0 var(--space-12)">
   <div class="hazard-band" aria-hidden="true"></div>
-  <div class="container" style="padding-top:var(--space-7)"><span class="label">CTRL OPS · INDUSTRIAL UTILITY · © 2026</span></div>
+  <div class="container" style="padding-top:var(--space-7)"><span class="label">INDUSTRIAL UTILITY · UNIT NO. DS-019 · 제조 2026 · 진섭공작소</span></div>
 </footer>
 
 <a href="../index.html" class="btn btn--secondary btn--sm demo-return">← 시스템 허브</a>
 <script src="../app.js"></script>
+<script>
+/* 결제 주기 전환 시 청구 안내 문구도 함께 갱신(월간/연간). app.js billing-toggle 와 공존. */
+(function () {
+  var tg = document.querySelector("[data-billing-toggle]");
+  if (!tg) return;
+  function setNotes(yearly) {
+    document.querySelectorAll("[data-price-note]").forEach(function (n) {
+      n.textContent = yearly ? "부가세 별도 · 연 20% 할인 · 연간 청구" : "부가세 별도 · 월간 청구";
+    });
+  }
+  tg.querySelectorAll(".segmented__option").forEach(function (o) {
+    o.addEventListener("click", function () { setNotes(o.getAttribute("data-bill") === "yearly"); });
+  });
+})();
+</script>
 </body>
 </html>

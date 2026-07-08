@@ -1,8 +1,17 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+/* FOUC 방지 — 스타일 로드 전 data-theme 확정(다크가 정본). app.js 와 동일 키 */
+(function () {
+  try {
+    var t = localStorage.getItem("theme19-mode") || "dark";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
+})();
+</script>
 <title>시스템 설정 · INDUSTRIAL UTILITY</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,13 +31,27 @@
   .toggle-row:last-child { border-bottom: none; }
   .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); }
   @media (max-width: 720px) { .settings-grid { grid-template-columns: 1fr; } }
+  /* 보안 탭 — 카드가 세로로 쌓이는 단일 열(인라인 grid 승격). max-width 는 카드 폭 제한 */
+  .sec-col { display: grid; grid-template-columns: 1fr; gap: var(--space-5); max-width: 760px; }
+
+  /* 테마 전환 행 — 차단기 레버가 주인공이라 여백을 넉넉히 */
+  .theme-row .breaker { height: 44px; }
+
+  /* 토프바 — 모바일에서 데스크톱 접기 버튼 숨김 + 브레이커 라벨/검색 축소(360px 대응) */
+  @media (max-width: 1024px) { .topbar__collapse { display: none; } }
+  @media (max-width: 720px) {
+    .topbar .breaker__label { display: none; }
+    .topbar .breaker { padding-inline: var(--space-3); }
+    .topbar .searchbar { width: auto !important; padding-inline: var(--space-3); }
+    .topbar .searchbar kbd { display: none; }
+  }
 </style>
 </head>
 <body>
 <a href="#main" class="skip-link">본문으로 건너뛰기</a>
 <div class="app-shell" data-collapsed="false" data-mobile-open="false">
 
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar__head">
       <a class="brand" href="../index.html"><span class="brand__mark">19</span><span class="brand__name sidebar__label">CTRL<small>OPS CONSOLE</small></span></a>
     </div>
@@ -49,11 +72,15 @@
   </aside>
 
   <header class="topbar">
-    <button class="btn btn--icon btn--ghost" data-action="toggle-sidebar" aria-label="사이드바 토글"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    <button class="topbar__burger" data-action="toggle-mobile-nav" aria-label="메뉴 열기" aria-controls="sidebar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+    <button class="btn btn--icon btn--ghost topbar__collapse" data-action="toggle-sidebar" aria-label="사이드바 접기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
     <nav class="breadcrumb" aria-label="위치"><a class="breadcrumb__item" href="../index.html">SYSTEM</a><span class="breadcrumb__sep"></span><span class="breadcrumb__item" aria-current="page">설정</span></nav>
     <span class="spacer"></span>
     <button class="searchbar" data-action="open-cmdk" style="width:160px" aria-label="명령 팔레트"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><kbd>⌘K</kbd></button>
-    <button class="btn btn--icon btn--secondary" data-action="toggle-theme" aria-label="테마 전환"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg></button>
+    <button class="breaker" data-action="toggle-theme" aria-pressed="false" aria-label="조명 전환 · 다크/라이트" title="차단기 레버 — 조명 전환">
+      <span class="breaker__slot" aria-hidden="true"><span class="breaker__lever"></span></span>
+      <span class="breaker__label" aria-hidden="true">DARK</span>
+    </button>
     <div class="menu"><button class="avatar" data-menu-toggle aria-haspopup="true" aria-expanded="false" aria-label="계정 메뉴">JS</button>
       <div class="menu__panel" hidden><a class="menu__item" href="profile.html">프로필</a><div class="menu__sep"></div><button class="menu__item menu__item--danger">로그아웃</button></div>
     </div>
@@ -81,7 +108,7 @@
             </div>
             <div class="settings-grid">
               <div class="field"><label class="field__label" for="lang">언어</label><select class="select" id="lang"><option>한국어</option><option>English</option><option>日本語</option></select></div>
-              <div class="field"><label class="field__label">단위계</label><div class="segmented" data-segmented style="width:fit-content"><span class="segmented__thumb"></span><button class="segmented__option" aria-selected="true">미터 (SI)</button><button class="segmented__option" aria-selected="false">야드·파운드</button></div></div>
+              <div class="field"><span class="field__label" id="unit-lbl">단위계</span><div class="segmented" data-segmented role="radiogroup" aria-labelledby="unit-lbl" style="width:fit-content"><span class="segmented__thumb" aria-hidden="true"></span><button class="segmented__option" role="radio" aria-checked="true">미터 (SI)</button><button class="segmented__option" role="radio" aria-checked="false" tabindex="-1">야드·파운드</button></div></div>
             </div>
             <div class="field"><label class="field__label" for="addr">작업장 정보</label><textarea class="textarea" id="addr">경기도 안산시 단원구 산단로 123 · 1공장 (조립·도장·검수 3개 라인)</textarea></div>
           </div>
@@ -91,8 +118,11 @@
         <div class="card mt-7" style="max-width:760px">
           <div class="card__head"><div class="card__title">화면 테마</div></div>
           <div class="card__body">
-            <div class="toggle-row"><div><div class="t-sm" style="font-weight:600">다크 / 라이트 모드</div><div class="t-xs text-muted">차콜 메탈 정본 또는 라이트 콘크리트 테마로 전환합니다.</div></div>
-              <button class="btn btn--secondary" data-action="toggle-theme" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg><span class="theme-label">DARK</span></button>
+            <div class="toggle-row theme-row"><div><div class="t-sm" style="font-weight:600">조명 전환 · 다크 / 라이트</div><div class="t-xs text-muted">차단기 레버를 젖혀 차콜 메탈 정본과 라이트 콘크리트 조명을 전환합니다.</div></div>
+              <button class="breaker" data-action="toggle-theme" aria-pressed="false" aria-label="조명 전환 · 다크/라이트" title="차단기 레버 — 조명 전환">
+                <span class="breaker__slot" aria-hidden="true"><span class="breaker__lever"></span></span>
+                <span class="breaker__label" aria-hidden="true">DARK</span>
+              </button>
             </div>
           </div>
         </div>
@@ -125,18 +155,18 @@
 
       <!-- 보안 -->
       <div class="tabs__panel" role="tabpanel" id="cp3" aria-labelledby="ct3" hidden>
-        <div class="settings-grid" style="grid-template-columns:1fr;max-width:760px">
+        <div class="sec-col">
           <div class="card">
             <div class="card__head"><div class="card__title">비밀번호 변경</div></div>
             <div class="card__body stack" style="--stack-gap: var(--space-5)">
               <div class="field"><label class="field__label" for="pw1">현재 비밀번호</label><input class="input" type="password" id="pw1" value="········"></div>
               <div class="settings-grid">
-                <div class="field"><label class="field__label" for="pw2">새 비밀번호</label><input class="input" type="password" id="pw2"></div>
-                <div class="field"><label class="field__label" for="pw3">새 비밀번호 확인</label><input class="input" type="password" id="pw3"></div>
+                <div class="field"><label class="field__label" for="pw2">새 비밀번호</label><input class="input" type="password" id="pw2" value="Gita!2049" autocomplete="new-password" aria-describedby="pw2-help"><span class="field__help" id="pw2-help">영문·숫자·기호 조합 10자 이상</span></div>
+                <div class="field"><label class="field__label" for="pw3">새 비밀번호 확인</label><input class="input" type="password" id="pw3" value="Gita!2050" autocomplete="new-password" aria-invalid="true" aria-describedby="pw3-err"><span class="field__error" id="pw3-err"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" aria-hidden="true"><path d="M12 8v5M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>새 비밀번호와 확인이 일치하지 않습니다.</span></div>
               </div>
               <div class="toggle-row" style="border:none;padding-top:0"><div><div class="t-sm" style="font-weight:600">2단계 인증</div><div class="t-xs text-muted">OTP 앱으로 추가 보안 적용</div></div><label class="toggle"><input type="checkbox" checked><span class="toggle__track"></span><span class="toggle__state">ON</span></label></div>
             </div>
-            <div class="card__foot"><span class="spacer"></span><button class="btn btn--primary" data-action="demo-toast" data-type="success" data-title="변경됨" data-msg="비밀번호가 변경되었습니다.">변경</button></div>
+            <div class="card__foot"><span class="spacer"></span><button class="btn btn--primary" id="pw-submit">변경</button></div>
           </div>
 
           <div class="card">
@@ -188,15 +218,60 @@
 
 <!-- COMMAND PALETTE -->
 <div class="cmdk-overlay" id="cmdk" data-open="false" role="dialog" aria-modal="true" aria-label="명령 팔레트">
-  <div class="cmdk"><div class="cmdk__search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input placeholder="명령 검색…" aria-label="검색"><kbd>ESC</kbd></div>
-    <div class="cmdk__list"><div class="cmdk__group"><div class="cmdk__group-label">이동</div>
-      <a class="cmdk__item" href="dashboard.html" aria-selected="true">대시보드</a>
-      <a class="cmdk__item" href="profile.html">프로필</a></div>
-    </div><div class="cmdk__foot"><span>↑↓ 이동</span><span>↵ 선택</span></div>
+  <div class="cmdk">
+    <div class="cmdk__search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input placeholder="명령 또는 화면 검색…" aria-label="명령 검색" role="combobox" aria-expanded="true" aria-controls="cmdk-listbox" aria-autocomplete="list" aria-activedescendant="">
+      <kbd>ESC</kbd>
+    </div>
+    <div class="cmdk__list" id="cmdk-listbox" role="listbox" aria-label="명령 및 화면 결과">
+      <div class="cmdk__group" role="group" aria-label="화면 이동">
+        <div class="cmdk__group-label" aria-hidden="true">화면 이동</div>
+        <a class="cmdk__item" id="cmdk-opt-dash" role="option" href="dashboard.html" aria-selected="true" data-label="대시보드"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>관제 대시보드</a>
+        <a class="cmdk__item" id="cmdk-opt-profile" role="option" href="profile.html" data-label="프로필"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>작업자 프로필</a>
+      </div>
+      <div class="cmdk__group" role="group" aria-label="동작">
+        <div class="cmdk__group-label" aria-hidden="true">동작</div>
+        <button class="cmdk__item" id="cmdk-opt-theme" role="option" data-label="조명 전환" data-action="toggle-theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>조명(다크/라이트) 전환<kbd>T</kbd></button>
+      </div>
+      <div class="cmdk__empty" role="status" hidden>
+        <span class="label">검색 결과 없음</span>
+        <span class="t-xs text-muted mono">다른 키워드로 다시 조회하세요</span>
+      </div>
+    </div>
+    <div class="cmdk__foot"><span>↑↓ 이동</span><span>↵ 선택</span><span>ESC 닫기</span></div>
   </div>
 </div>
 
 <a href="../index.html" class="btn btn--secondary btn--sm demo-return">← 시스템 허브</a>
 <script src="../app.js"></script>
+<script>
+/* 비밀번호 변경 폼 — 확인 불일치 시 invalid 상태 유지 + '저장 실패' 토스트, 일치 시 성공(폼 에러 상태 시연).
+   인라인 onclick 없음 · app.js 가 노출한 window.Toast 재사용 · 시스템 이벤트 아키텍처 비간섭. */
+(function () {
+  var btn = document.getElementById("pw-submit");
+  var pw2 = document.getElementById("pw2");
+  var pw3 = document.getElementById("pw3");
+  var err = document.getElementById("pw3-err");
+  if (!btn || !pw2 || !pw3 || !err) return;
+  function clearInvalid() { pw3.removeAttribute("aria-invalid"); err.hidden = true; }
+  pw3.addEventListener("input", function () {
+    if (pw3.getAttribute("aria-invalid") === "true" && pw2.value === pw3.value && pw3.value) clearInvalid();
+  });
+  btn.addEventListener("click", function () {
+    var empty = !pw2.value || !pw3.value;
+    var mismatch = pw2.value !== pw3.value;
+    if (empty || mismatch) {
+      pw3.setAttribute("aria-invalid", "true");
+      err.hidden = false;
+      pw3.focus();
+      if (window.Toast) window.Toast.show({ type: "danger", title: "저장 실패", msg: empty ? "새 비밀번호를 두 칸 모두 입력해 주세요." : "새 비밀번호와 확인이 일치하지 않습니다." });
+      return;
+    }
+    clearInvalid();
+    if (window.Toast) window.Toast.show({ type: "success", title: "변경됨", msg: "비밀번호가 변경되었습니다." });
+  });
+})();
+</script>
 </body>
 </html>

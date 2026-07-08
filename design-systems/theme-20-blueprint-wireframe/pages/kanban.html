@@ -1,9 +1,19 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark" data-grid="on" data-dims="on">
+<html lang="ko" data-grid="on" data-dims="on">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>칸반 보드 · BLUEPRINT/DS</title>
+<script>
+/* Sync theme before first paint — no light flash on a saved-dark reload. */
+(function () {
+  try {
+    var t = localStorage.getItem("bp-theme");
+    if (t !== "light" && t !== "dark") t = "dark";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -11,6 +21,44 @@
 <link rel="stylesheet" href="../semantic.css">
 <link rel="stylesheet" href="../base.css">
 <link rel="stylesheet" href="../components/all.css">
+<style>
+  /* Kanban card — top row carries the ticket id + keyboard column-move nudges.
+     Cards are draggable AND fully keyboard-operable (◀ ▶ move between columns). */
+  .k-top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+  .k-move { display: inline-flex; gap: 2px; }
+  .k-move-btn {
+    width: 20px; height: 20px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: var(--border-1) solid var(--color-border);
+    color: var(--color-text-subtle);
+    transition: color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
+  }
+  .k-move-btn svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 1.5; }
+  .k-move-btn:hover:not(:disabled),
+  .k-move-btn:focus-visible { color: var(--color-primary); border-color: var(--color-primary); }
+  .k-move-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .k-chips { display: inline-flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; min-width: 0; }
+  /* WIP limit readout on the in-progress column head — a drafting-style ratio */
+  .k-wip {
+    font-family: var(--font-mono); font-size: var(--text-2xs);
+    letter-spacing: var(--tracking-wide); color: var(--color-text-subtle);
+    border: var(--border-1) solid var(--color-border); padding: 0 var(--space-2);
+  }
+  .k-wip.is-full { color: var(--color-warning); border-color: var(--color-warning); }
+  .kanban-col-head .head-meta { display: inline-flex; align-items: center; gap: var(--space-2); }
+  /* Each column is a lettered zone of the sheet (drawing-register grammar):
+     the whole board reads as one drafting plate, A→E left to right. */
+  .kanban-col-head .head-lead { display: inline-flex; align-items: center; gap: var(--space-2); min-width: 0; }
+  .k-zone {
+    flex: none; width: 18px; height: 18px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: var(--text-2xs); font-weight: var(--weight-medium);
+    color: var(--color-primary); letter-spacing: 0;
+    border: var(--border-1) solid var(--color-border-strong);
+  }
+  /* Board datum strip — drawing parameters, not a marketing stat row */
+  .board-tb { margin-bottom: var(--space-5); }
+</style>
 </head>
 <body class="bp-grid">
 <a class="skip-link" href="#main">본문으로 건너뛰기</a>
@@ -44,52 +92,105 @@
 
     <main id="main" class="app-content">
       <div class="page-head row between wrap gap-4">
-        <div><p class="caption">SHEET 02 · WORKFLOW</p><h1 class="page-title">스프린트 보드</h1><p class="page-sub">드래그하여 카드를 이동하세요 · 24개 작업</p></div>
+        <div>
+          <p class="caption">SHEET SCR-02 · WORKFLOW</p>
+          <h1 class="page-title">칸반 보드</h1>
+          <p class="page-sub">강남 오피스 리모델링 — 6월 마감 스프린트 · 작업 10건. 카드를 끌거나 <span class="nowrap">◀ ▶</span> 버튼으로 열을 옮깁니다.</p>
+        </div>
         <div class="row gap-3">
-          <div class="avatar-group" aria-label="팀"><span class="avatar avatar--sm">KS</span><span class="avatar avatar--sm">LD</span><span class="avatar avatar--sm">PC</span><span class="more" style="width:26px;height:26px">+3</span></div>
+          <div class="avatar-group" aria-label="설계팀"><span class="avatar avatar--sm">KS</span><span class="avatar avatar--sm">LD</span><span class="avatar avatar--sm">PC</span><span class="more" style="width:26px;height:26px">+2</span></div>
           <button class="btn btn--primary" data-open-modal="new-card">+ 작업 추가</button>
         </div>
       </div>
 
-      <div class="kanban" role="list" aria-label="칸반 보드">
+      <div class="title-block board-tb" role="group" aria-label="보드 제원">
+        <div class="cell"><span class="k">PROJECT</span><span class="v">강남 리모델링</span></div>
+        <div class="cell"><span class="k">PHASE</span><span class="v">실시설계</span></div>
+        <div class="cell"><span class="k">SPRINT</span><span class="v">S-24 · 6월</span></div>
+        <div class="cell"><span class="k">REV</span><span class="v">C</span></div>
+      </div>
+
+      <div class="sr-only" role="status" aria-live="polite" id="k-live"></div>
+
+      <div class="kanban" role="list" aria-label="칸반 보드" data-reveal>
         <!-- BACKLOG -->
-        <section class="kanban-col" role="listitem">
-          <div class="kanban-col-head"><span class="title">백로그</span><span class="badge"><span class="count">3</span></span></div>
+        <section class="kanban-col" role="listitem" aria-label="백로그">
+          <div class="kanban-col-head"><span class="head-lead"><span class="k-zone" aria-hidden="true">A</span><span class="title">백로그</span></span><span class="head-meta"><span class="badge"><span class="count">3</span></span></span></div>
           <div class="kanban-col-body">
-            <article class="kanban-card"><div class="k-id">DS-101</div><div class="k-title">치수선 컴포넌트 토큰 정리</div><div class="k-foot"><span class="badge badge--info">DESIGN</span><span class="avatar avatar--sm">KS</span></div></article>
-            <article class="kanban-card"><div class="k-id">DS-102</div><div class="k-title">다크/라이트 대비 재검증</div><div class="k-foot"><span class="tag">a11y</span><span class="avatar avatar--sm">LD</span></div></article>
-            <article class="kanban-card"><div class="k-id">DS-103</div><div class="k-title">그리드 토글 단축키</div><div class="k-foot"><span class="badge badge--warning">P2</span><span class="avatar avatar--sm">PC</span></div></article>
+            <article class="kanban-card" data-card="DR-124">
+              <div class="k-top"><span class="k-id">DR-124</span><span class="k-move" role="group" aria-label="DR-124 열 이동"><button type="button" class="k-move-btn" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 12 12"><path d="M7.5 2.5L3.5 6l4 3.5"/></svg></button><button type="button" class="k-move-btn" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 12 12"><path d="M4.5 2.5l4 3.5-4 3.5"/></svg></button></span></div>
+              <div class="k-title">지하주차장 배관 경로 확정</div>
+              <div class="k-foot"><span class="k-chips"><span class="tag">배관</span></span><span class="avatar avatar--sm">PC</span></div>
+            </article>
+            <article class="kanban-card" data-card="DR-121">
+              <div class="k-top"><span class="k-id">DR-121</span><span class="k-move" role="group" aria-label="DR-121 열 이동"><button type="button" class="k-move-btn" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 12 12"><path d="M7.5 2.5L3.5 6l4 3.5"/></svg></button><button type="button" class="k-move-btn" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 12 12"><path d="M4.5 2.5l4 3.5-4 3.5"/></svg></button></span></div>
+              <div class="k-title">2층 방화구획 치수 검토</div>
+              <div class="k-foot"><span class="k-chips"><span class="tag">구조</span></span><span class="avatar avatar--sm">LD</span></div>
+            </article>
+            <article class="kanban-card" data-card="DR-118">
+              <div class="k-top"><span class="k-id">DR-118</span><span class="k-move" role="group" aria-label="DR-118 열 이동"><button type="button" class="k-move-btn" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 12 12"><path d="M7.5 2.5L3.5 6l4 3.5"/></svg></button><button type="button" class="k-move-btn" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 12 12"><path d="M4.5 2.5l4 3.5-4 3.5"/></svg></button></span></div>
+              <div class="k-title">로비 조명 계통도 초안</div>
+              <div class="k-foot"><span class="k-chips"><span class="tag">전기</span></span><span class="avatar avatar--sm">KS</span></div>
+            </article>
           </div>
         </section>
         <!-- TODO -->
-        <section class="kanban-col" role="listitem">
-          <div class="kanban-col-head"><span class="title">할 일</span><span class="badge"><span class="count">2</span></span></div>
+        <section class="kanban-col" role="listitem" aria-label="할 일">
+          <div class="kanban-col-head"><span class="head-lead"><span class="k-zone" aria-hidden="true">B</span><span class="title">할 일</span></span><span class="head-meta"><span class="badge"><span class="count">2</span></span></span></div>
           <div class="kanban-col-body">
-            <article class="kanban-card"><div class="k-id">DS-110</div><div class="k-title">콤보박스 키보드 내비게이션</div><div class="k-foot"><span class="badge badge--primary">DEV</span><span class="avatar avatar--sm">JS</span></div></article>
-            <article class="kanban-card"><div class="k-id">DS-111</div><div class="k-title">토스트 스택 애니메이션</div><div class="k-foot"><span class="tag">motion</span><span class="avatar avatar--sm">KS</span></div></article>
+            <article class="kanban-card" data-card="DR-112">
+              <div class="k-top"><span class="k-id">DR-112</span><span class="k-move" role="group" aria-label="DR-112 열 이동"><button type="button" class="k-move-btn" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 12 12"><path d="M7.5 2.5L3.5 6l4 3.5"/></svg></button><button type="button" class="k-move-btn" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 12 12"><path d="M4.5 2.5l4 3.5-4 3.5"/></svg></button></span></div>
+              <div class="k-title">외벽 단면 상세 SD-04 작도</div>
+              <div class="k-foot"><span class="k-chips"><span class="tag">상세</span><span class="badge badge--warning">P2</span></span><span class="avatar avatar--sm">KS</span></div>
+            </article>
+            <article class="kanban-card" data-card="DR-109">
+              <div class="k-top"><span class="k-id">DR-109</span><span class="k-move" role="group" aria-label="DR-109 열 이동"><button type="button" class="k-move-btn" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 12 12"><path d="M7.5 2.5L3.5 6l4 3.5"/></svg></button><button type="button" class="k-move-btn" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 12 12"><path d="M4.5 2.5l4 3.5-4 3.5"/></svg></button></span></div>
+              <div class="k-title">3층 평면도 기둥 그리드 정렬</div>
+              <div class="k-foot"><span class="k-chips"><span class="tag">구조</span></span><span class="avatar avatar--sm">LD</span></div>
+            </article>
           </div>
         </section>
-        <!-- IN PROGRESS -->
-        <section class="kanban-col" role="listitem">
-          <div class="kanban-col-head"><span class="title">진행 중</span><span class="badge badge--primary"><span class="count">2</span></span></div>
+        <!-- IN PROGRESS (WIP-limited) -->
+        <section class="kanban-col" role="listitem" aria-label="진행 중">
+          <div class="kanban-col-head"><span class="head-lead"><span class="k-zone" aria-hidden="true">C</span><span class="title">진행 중</span></span><span class="head-meta"><span class="k-wip">WIP <span class="k-wip-now">2</span> / 3</span><span class="badge badge--primary"><span class="count">2</span></span></span></div>
           <div class="kanban-col-body">
-            <article class="kanban-card"><div class="k-id">DS-120</div><div class="k-title">데이터 그리드 정렬·선택</div><div class="k-foot"><span class="badge badge--primary"><span class="dot"></span>DEV</span><span class="avatar avatar--sm">LD</span></div></article>
-            <article class="kanban-card"><div class="k-id">DS-121</div><div class="k-title">⌘K 명령 팔레트 인덱싱</div><div class="k-foot"><span class="badge badge--danger">P1</span><span class="avatar avatar--sm">JS</span></div></article>
+            <article class="kanban-card" data-card="DR-104">
+              <div class="k-top"><span class="k-id">DR-104</span><span class="k-move" role="group" aria-label="DR-104 열 이동"><button type="button" class="k-move-btn" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 12 12"><path d="M7.5 2.5L3.5 6l4 3.5"/></svg></button><button type="button" class="k-move-btn" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 12 12"><path d="M4.5 2.5l4 3.5-4 3.5"/></svg></button></span></div>
+              <div class="k-title">전기 심볼 범례 표준화</div>
+              <div class="k-foot"><span class="k-chips"><span class="tag">전기</span><span class="badge badge--primary"><span class="dot"></span>작업중</span></span><span class="avatar avatar--sm">KS</span></div>
+            </article>
+            <article class="kanban-card" data-card="DR-101">
+              <div class="k-top"><span class="k-id">DR-101</span><span class="k-move" role="group" aria-label="DR-101 열 이동"><button type="button" class="k-move-btn" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 12 12"><path d="M7.5 2.5L3.5 6l4 3.5"/></svg></button><button type="button" class="k-move-btn" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 12 12"><path d="M4.5 2.5l4 3.5-4 3.5"/></svg></button></span></div>
+              <div class="k-title">1층 평면도 REV-C 반영</div>
+              <div class="k-foot"><span class="k-chips"><span class="tag">구조</span><span class="badge badge--danger">P1</span></span><span class="avatar avatar--sm">JS</span></div>
+            </article>
           </div>
         </section>
         <!-- REVIEW -->
-        <section class="kanban-col" role="listitem">
-          <div class="kanban-col-head"><span class="title">검토</span><span class="badge"><span class="count">1</span></span></div>
+        <section class="kanban-col" role="listitem" aria-label="검토">
+          <div class="kanban-col-head"><span class="head-lead"><span class="k-zone" aria-hidden="true">D</span><span class="title">검토</span></span><span class="head-meta"><span class="badge"><span class="count">1</span></span></span></div>
           <div class="kanban-col-body">
-            <article class="kanban-card"><div class="k-id">DS-130</div><div class="k-title">온보딩 위저드 접근성</div><div class="k-foot"><span class="badge badge--warning">REVIEW</span><span class="avatar avatar--sm">PC</span></div></article>
+            <article class="kanban-card" data-card="DR-096">
+              <div class="k-top"><span class="k-id">DR-096</span><span class="k-move" role="group" aria-label="DR-096 열 이동"><button type="button" class="k-move-btn" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 12 12"><path d="M7.5 2.5L3.5 6l4 3.5"/></svg></button><button type="button" class="k-move-btn" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 12 12"><path d="M4.5 2.5l4 3.5-4 3.5"/></svg></button></span></div>
+              <div class="k-title">입면도 개구부 치수 감리</div>
+              <div class="k-foot"><span class="k-chips"><span class="tag">검도</span><span class="badge badge--warning">감리</span></span><span class="avatar avatar--sm">PC</span></div>
+            </article>
           </div>
         </section>
         <!-- DONE -->
-        <section class="kanban-col" role="listitem">
-          <div class="kanban-col-head"><span class="title">완료</span><span class="badge badge--success"><span class="count">2</span></span></div>
+        <section class="kanban-col" role="listitem" aria-label="완료">
+          <div class="kanban-col-head"><span class="head-lead"><span class="k-zone" aria-hidden="true">E</span><span class="title">완료</span></span><span class="head-meta"><span class="badge badge--success"><span class="count">2</span></span></span></div>
           <div class="kanban-col-body">
-            <article class="kanban-card"><div class="k-id">DS-140</div><div class="k-title">토큰 스케일 풀세트</div><div class="k-foot"><span class="badge badge--success">DONE</span><span class="avatar avatar--sm">KS</span></div></article>
-            <article class="kanban-card"><div class="k-id">DS-141</div><div class="k-title">버튼 변형·상태 전부</div><div class="k-foot"><span class="badge badge--success">DONE</span><span class="avatar avatar--sm">LD</span></div></article>
+            <article class="kanban-card" data-card="DR-090">
+              <div class="k-top"><span class="k-id">DR-090</span><span class="k-move" role="group" aria-label="DR-090 열 이동"><button type="button" class="k-move-btn" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 12 12"><path d="M7.5 2.5L3.5 6l4 3.5"/></svg></button><button type="button" class="k-move-btn" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 12 12"><path d="M4.5 2.5l4 3.5-4 3.5"/></svg></button></span></div>
+              <div class="k-title">구조 계산서 승인</div>
+              <div class="k-foot"><span class="k-chips"><span class="tag">구조</span><span class="badge badge--success">완료</span></span><span class="avatar avatar--sm">PC</span></div>
+            </article>
+            <article class="kanban-card" data-card="DR-088">
+              <div class="k-top"><span class="k-id">DR-088</span><span class="k-move" role="group" aria-label="DR-088 열 이동"><button type="button" class="k-move-btn" data-move="prev" aria-label="이전 열로 이동"><svg viewBox="0 0 12 12"><path d="M7.5 2.5L3.5 6l4 3.5"/></svg></button><button type="button" class="k-move-btn" data-move="next" aria-label="다음 열로 이동"><svg viewBox="0 0 12 12"><path d="M4.5 2.5l4 3.5-4 3.5"/></svg></button></span></div>
+              <div class="k-title">대지경계 측량 도면 등록</div>
+              <div class="k-foot"><span class="k-chips"><span class="tag">측량</span><span class="badge badge--success">완료</span></span><span class="avatar avatar--sm">LD</span></div>
+            </article>
           </div>
         </section>
       </div>
@@ -102,14 +203,14 @@
   <span class="bp-frame-corner tl" aria-hidden="true"></span><span class="bp-frame-corner tr" aria-hidden="true"></span><span class="bp-frame-corner bl" aria-hidden="true"></span><span class="bp-frame-corner br" aria-hidden="true"></span>
   <div class="modal-head"><div><span class="caption">NEW · TASK</span><h2 class="modal-title" id="nc-t">작업 추가</h2></div><button class="btn btn--icon btn--ghost btn--sm" data-close-modal aria-label="닫기"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg></button></div>
   <div class="modal-body stack gap-4">
-    <div class="field"><label class="field-label" for="nc-title">제목</label><input class="input" id="nc-title" placeholder="작업 제목…" autofocus></div>
+    <div class="field"><label class="field-label" for="nc-title">제목</label><input class="input" id="nc-title" placeholder="예: 4층 평면도 REV-A 반영"></div>
     <div class="row gap-4">
-      <div class="field flex-1"><label class="field-label">컬럼</label><select class="select"><option>백로그</option><option>할 일</option><option>진행 중</option></select></div>
-      <div class="field flex-1"><label class="field-label">우선순위</label><select class="select"><option>P1</option><option>P2</option><option>P3</option></select></div>
+      <div class="field flex-1"><label class="field-label" for="nc-col">컬럼</label><select class="select" id="nc-col"><option>백로그</option><option>할 일</option><option>진행 중</option><option>검토</option></select></div>
+      <div class="field flex-1"><label class="field-label" for="nc-pri">우선순위</label><select class="select" id="nc-pri"><option>P1</option><option>P2</option><option>P3</option></select></div>
     </div>
-    <div class="field"><label class="field-label">담당자</label><div class="chipinput"><span class="chip">JS <button type="button" aria-label="제거"><svg viewBox="0 0 10 10" stroke="currentColor"><path d="M1 1l8 8M9 1l-8 8"/></svg></button></span><input placeholder="추가…"></div></div>
+    <div class="field"><label class="field-label">담당자</label><div class="chipinput"><span class="chip">진섭 <button type="button" aria-label="제거"><svg viewBox="0 0 10 10" stroke="currentColor"><path d="M1 1l8 8M9 1l-8 8"/></svg></button></span><input placeholder="이름 입력 후 Enter…" aria-label="담당자 추가"></div></div>
   </div>
-  <div class="modal-foot"><button class="btn btn--ghost" data-close-modal>취소</button><button class="btn btn--primary" data-close-modal data-toast="success" data-toast-title="작업 추가됨">추가</button></div>
+  <div class="modal-foot"><button class="btn btn--ghost" data-close-modal>취소</button><button class="btn btn--primary" data-close-modal data-toast="success" data-toast-title="작업 추가됨" data-toast-body="백로그 열에 카드가 생성되었습니다.">추가</button></div>
 </div>
 
 <!-- CMDK -->
@@ -127,5 +228,55 @@
 </div>
 
 <script src="../app.js"></script>
+<script>
+/* Kanban keyboard column-move — the CAD board moves without a mouse.
+   Complements app.js drag&drop with ◀ ▶ nudge buttons + live-region readout. */
+(function () {
+  var cols = Array.prototype.slice.call(document.querySelectorAll(".kanban-col"));
+  if (!cols.length) return;
+  var bodies = cols.map(function (c) { return c.querySelector(".kanban-col-body"); });
+  var live = document.getElementById("k-live");
+  function colName(col) { var t = col.querySelector(".kanban-col-head .title"); return t ? t.textContent.trim() : ""; }
+  function recount() {
+    cols.forEach(function (c) {
+      var n = c.querySelectorAll(".kanban-card").length;
+      var badge = c.querySelector(".kanban-col-head .count");
+      if (badge) badge.textContent = n;
+      Array.prototype.forEach.call(c.querySelectorAll(".k-wip-now"), function (w) { w.textContent = n; });
+      var wip = c.querySelector(".k-wip");
+      if (wip) wip.classList.toggle("is-full", n >= 3);
+    });
+  }
+  function refreshBtns() {
+    cols.forEach(function (col, ci) {
+      Array.prototype.forEach.call(col.querySelectorAll(".kanban-card"), function (card) {
+        var p = card.querySelector('[data-move="prev"]'), n = card.querySelector('[data-move="next"]');
+        if (p) p.disabled = ci === 0;
+        if (n) n.disabled = ci === cols.length - 1;
+      });
+    });
+  }
+  function move(card, dir) {
+    var ci = cols.indexOf(card.closest(".kanban-col"));
+    var ti = ci + dir;
+    if (ti < 0 || ti >= cols.length) return;
+    bodies[ti].appendChild(card);
+    recount(); refreshBtns();
+    if (live) live.textContent = (card.getAttribute("data-card") || "카드") + " · " + colName(cols[ti]) + " 열로 옮겼습니다.";
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest ? e.target.closest(".k-move-btn") : null;
+    if (!b) return;
+    var card = b.closest(".kanban-card");
+    var name = b.getAttribute("data-move");
+    move(card, name === "next" ? 1 : -1);
+    var same = card.querySelector('[data-move="' + name + '"]');
+    if (same && !same.disabled) same.focus();
+    else { var other = card.querySelector(".k-move-btn:not([disabled])"); if (other) other.focus(); }
+  });
+  document.addEventListener("dragend", function () { setTimeout(function () { recount(); refreshBtns(); }, 0); });
+  recount(); refreshBtns();
+})();
+</script>
 </body>
 </html>

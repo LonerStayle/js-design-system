@@ -1,9 +1,19 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark" data-grid="on" data-dims="on">
+<html lang="ko" data-grid="on" data-dims="on">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>인박스 · BLUEPRINT/DS</title>
+<script>
+/* Sync theme before first paint — no light flash on a saved-dark reload. */
+(function () {
+  try {
+    var t = localStorage.getItem("bp-theme");
+    if (t !== "light" && t !== "dark") t = "dark";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -11,6 +21,32 @@
 <link rel="stylesheet" href="../semantic.css">
 <link rel="stylesheet" href="../base.css">
 <link rel="stylesheet" href="../components/all.css">
+<style>
+  /* Label swatch dots — bound to semantic status inks (not raw ramp) so they
+     re-ink correctly across light/dark, matching the mail badge colors. */
+  .lbl-dot { width: 8px; height: 8px; border-radius: var(--radius-full); flex: none; background: var(--color-info); }
+  .lbl-dot--review  { background: var(--color-warning); }
+  .lbl-dot--approve { background: var(--color-success); }
+  /* Attached-drawing thumbnail inside the reading pane — a real wireframe of
+     the A-101 sheet the mail is asking to approve. */
+  .mail-plan {
+    border: var(--border-1) solid var(--color-border);
+    background:
+      linear-gradient(var(--motif-grid-fine) 1px, transparent 1px),
+      linear-gradient(90deg, var(--motif-grid-fine) 1px, transparent 1px);
+    background-size: var(--grid-fine-size) var(--grid-fine-size);
+    padding: var(--space-4);
+  }
+  /* Folders/labels are real <button> views (global reset strips button chrome;
+     .nav-item supplies padding/border-left/active). Full-width like the <a> was. */
+  .inbox-folders .nav-item { width: 100%; text-align: left; }
+  /* The shared layout hides .inbox-folders ≤980px — which would strip the ONLY
+     folder nav + the compose button, leaving mobile with no folder access.
+     Restore it as a stacked strip so no viewport loses navigation (§4-6-2). */
+  @media (max-width: 980px) {
+    .inbox-folders { display: block; padding: var(--space-4); }
+  }
+</style>
 </head>
 <body class="bp-grid">
 <a class="skip-link" href="#main">본문으로 건너뛰기</a>
@@ -35,28 +71,35 @@
   <aside class="inbox-folders" aria-label="폴더">
     <button class="btn btn--primary btn--block mb-4" data-open-modal="compose">+ 새 메일</button>
     <nav class="list--lines" aria-label="메일 폴더">
-      <a class="nav-item is-active" href="#" aria-current="page"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12v8H2zM2 4l6 5 6-5"/></svg><span class="lbl">받은편지함</span><span class="badge badge--primary">12</span></a>
-      <a class="nav-item" href="#"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3l6 6 6-6M2 13h12"/></svg><span class="lbl">보낸편지함</span></a>
-      <a class="nav-item" href="#"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8v12l-4-3-4 3z"/></svg><span class="lbl">중요</span><span class="badge">3</span></a>
-      <a class="nav-item" href="#"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M6 4V2h4v2M5 4l1 10h4l1-10"/></svg><span class="lbl">휴지통</span></a>
+      <button type="button" class="nav-item is-active" data-view="inbox" aria-current="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12v8H2zM2 4l6 5 6-5"/></svg><span class="lbl">받은편지함</span><span class="badge badge--primary">12</span></button>
+      <button type="button" class="nav-item" data-view="sent"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3l6 6 6-6M2 13h12"/></svg><span class="lbl">보낸편지함</span></button>
+      <button type="button" class="nav-item" data-view="starred"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8v12l-4-3-4 3z"/></svg><span class="lbl">중요</span><span class="badge">3</span></button>
+      <button type="button" class="nav-item" data-view="trash"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M6 4V2h4v2M5 4l1 10h4l1-10"/></svg><span class="lbl">휴지통</span></button>
     </nav>
     <div class="sidebar-label mt-5">레이블</div>
-    <nav class="stack gap-1">
-      <a class="nav-item" href="#"><span class="dot" style="width:8px;height:8px;background:var(--cyan-400)"></span><span class="lbl">설계</span></a>
-      <a class="nav-item" href="#"><span class="dot" style="width:8px;height:8px;background:var(--amber-400)"></span><span class="lbl">검토</span></a>
-      <a class="nav-item" href="#"><span class="dot" style="width:8px;height:8px;background:var(--lime-400)"></span><span class="lbl">승인</span></a>
+    <nav class="stack gap-1" aria-label="레이블 필터">
+      <button type="button" class="nav-item" data-view="label:설계"><span class="lbl-dot" aria-hidden="true"></span><span class="lbl">설계</span></button>
+      <button type="button" class="nav-item" data-view="label:검토"><span class="lbl-dot lbl-dot--review" aria-hidden="true"></span><span class="lbl">검토</span></button>
+      <button type="button" class="nav-item" data-view="label:승인"><span class="lbl-dot lbl-dot--approve" aria-hidden="true"></span><span class="lbl">승인</span></button>
     </nav>
   </aside>
 
   <!-- LIST -->
   <section class="inbox-list" aria-label="메일 목록">
-    <div class="table-toolbar"><span class="card-label">받은편지함 · 12</span><span class="grow"></span><button class="btn btn--icon btn--ghost btn--sm" aria-label="새로고침"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 8a5 5 0 11-1.5-3.5M13 2v3h-3"/></svg></button></div>
-    <div role="list">
-      <article class="mail-row is-active is-unread" role="listitem" tabindex="0"><div class="mail-from"><span>김설계</span><span class="text-2xs text-subtle">09:42</span></div><div class="mail-subj">A-101 평면도 REV-A 승인 요청</div><div class="mail-prev">검토 부탁드립니다. 격자 A1–A3 정렬 완료했고…</div></article>
-      <article class="mail-row is-unread" role="listitem" tabindex="0"><div class="mail-from"><span>이도면</span><span class="text-2xs text-subtle">08:15</span></div><div class="mail-subj">치수 충돌 보고 #27</div><div class="mail-prev">A2 격자에서 간섭이 감지되어 공유드립니다…</div></article>
-      <article class="mail-row" role="listitem" tabindex="0"><div class="mail-from"><span>박치수</span><span class="text-2xs text-subtle">어제</span></div><div class="mail-subj">주간 스프린트 정리</div><div class="mail-prev">이번 주 완료 6건 / 진행 4건. 상세는 보드 참고…</div></article>
-      <article class="mail-row" role="listitem" tabindex="0"><div class="mail-from"><span>시스템</span><span class="text-2xs text-subtle">어제</span></div><div class="mail-subj">백업 v1.0.4 완료</div><div class="mail-prev">자동 백업이 정상 완료되었습니다. 12개 시트…</div></article>
-      <article class="mail-row" role="listitem" tabindex="0"><div class="mail-from"><span>드래프트랩</span><span class="text-2xs text-subtle">06-19</span></div><div class="mail-subj">신규 거래 #TX-9003</div><div class="mail-prev">₩2,310,000 결제가 처리 중입니다…</div></article>
+    <div class="table-toolbar"><span class="card-label" id="mail-count">받은편지함 · 5건</span><span class="grow"></span><button class="btn btn--icon btn--ghost btn--sm" aria-label="새로고침"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 8a5 5 0 11-1.5-3.5M13 2v3h-3"/></svg></button></div>
+    <div role="list" id="mail-list">
+      <article class="mail-row is-active is-unread" role="listitem" tabindex="0" data-folder="inbox" data-star="1" data-labels="설계 검토"><div class="mail-from"><span>김설계</span><span class="text-2xs text-subtle">09:42</span></div><div class="mail-subj">A-101 평면도 REV-A 승인 요청</div><div class="mail-prev">검토 부탁드립니다. 격자 A1–A3 정렬 완료했고…</div></article>
+      <article class="mail-row is-unread" role="listitem" tabindex="0" data-folder="inbox" data-star="1" data-labels="검토"><div class="mail-from"><span>이도면</span><span class="text-2xs text-subtle">08:15</span></div><div class="mail-subj">치수 충돌 보고 #27</div><div class="mail-prev">A2 격자에서 간섭이 감지되어 공유드립니다…</div></article>
+      <article class="mail-row" role="listitem" tabindex="0" data-folder="inbox" data-star="1" data-labels=""><div class="mail-from"><span>박치수</span><span class="text-2xs text-subtle">어제</span></div><div class="mail-subj">주간 스프린트 정리</div><div class="mail-prev">이번 주 완료 6건 / 진행 4건. 상세는 보드 참고…</div></article>
+      <article class="mail-row" role="listitem" tabindex="0" data-folder="inbox" data-labels=""><div class="mail-from"><span>시스템</span><span class="text-2xs text-subtle">어제</span></div><div class="mail-subj">백업 v1.0.4 완료</div><div class="mail-prev">자동 백업이 정상 완료되었습니다. 12개 시트…</div></article>
+      <article class="mail-row" role="listitem" tabindex="0" data-folder="inbox" data-labels="승인"><div class="mail-from"><span>드래프트랩</span><span class="text-2xs text-subtle">06.19</span></div><div class="mail-subj">신규 거래 #TX-9003</div><div class="mail-prev">₩2,310,000 결제가 처리 중입니다…</div></article>
+      <article class="mail-row" role="listitem" tabindex="0" data-folder="sent" data-labels="설계" hidden><div class="mail-from"><span>→ 김설계</span><span class="text-2xs text-subtle">09:58</span></div><div class="mail-subj">RE: A-101 평면도 REV-A 승인 요청</div><div class="mail-prev">격자 정렬 확인했습니다. REV-A 승인 처리했어요…</div></article>
+      <article class="mail-row" role="listitem" tabindex="0" data-folder="sent" data-labels="" hidden><div class="mail-from"><span>→ 박치수</span><span class="text-2xs text-subtle">어제</span></div><div class="mail-subj">6월 마감 도면 목록 정리</div><div class="mail-prev">이번 주 승인 완료된 시트 목록 공유드립니다…</div></article>
+    </div>
+    <div class="empty mt-4" id="mail-empty" aria-live="polite" hidden>
+      <svg viewBox="0 0 56 56"><path d="M14 18h28M20 18v-4h16v4M17 18l1.5 26h19L38 18" stroke-dasharray="5 4"/></svg>
+      <div class="empty-title" id="mail-empty-title">휴지통이 비어 있습니다</div>
+      <p class="empty-text" id="mail-empty-text">삭제한 메일은 30일간 보관됩니다. 지금은 비어 있어요.</p>
     </div>
   </section>
 
@@ -67,7 +110,7 @@
         <h1 class="text-xl weight-semibold">A-101 평면도 REV-A 승인 요청</h1>
         <div class="row gap-3 mt-2 items-center">
           <span class="avatar avatar--sm">KS</span>
-          <div><div class="text-sm">김설계 <span class="text-subtle">&lt;design@atelier.north&gt;</span></div><div class="text-2xs text-subtle">받는사람: 나 · 2026-06-21 09:42</div></div>
+          <div><div class="text-sm">김설계 <span class="text-subtle">&lt;ks.kim@blueprint.co.kr&gt;</span></div><div class="text-2xs text-subtle">받는사람: 나 · 2026-06-21 09:42</div></div>
         </div>
       </div>
       <div class="row gap-2">
@@ -86,7 +129,33 @@
         <li>치수선 전체 폭 300mm 명기</li>
       </ul>
       <p class="mt-3">첨부 도면 확인 후 승인 여부 회신 부탁드립니다.</p>
-      <div class="file-item mt-4"><span class="badge badge--primary">DXF</span><span class="name truncate">A-101_REV-A.dxf</span><span class="text-subtle text-xs">248 KB</span><button class="btn btn--icon btn--sm btn--ghost" aria-label="다운로드"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg></button></div>
+      <!-- inline wireframe preview of the very sheet under review — grid A1–A3,
+           Ø52 node and the 300mm span the message describes. -->
+      <figure class="mail-plan bp-schematic mt-4" aria-label="A-101 평면도 미리보기 — 폭 300mm, 중앙 노드 지름 52, 격자 A1부터 A3.">
+        <svg viewBox="0 0 320 150" fill="none" width="100%">
+          <!-- top dimension: 300 -->
+          <line class="s-cyan" x1="24" y1="18" x2="296" y2="18"/>
+          <line class="s-cyan" x1="24" y1="13" x2="24" y2="23"/><line class="s-cyan" x1="296" y1="13" x2="296" y2="23"/>
+          <rect x="148" y="10" width="24" height="16" style="fill:var(--color-bg)"/>
+          <text class="f-cyan2" x="160" y="22" font-size="9" text-anchor="middle">300</text>
+          <!-- plan outline + A1–A3 grid -->
+          <rect class="s-ink" x="24" y="36" width="272" height="96"/>
+          <line class="s-faint" x1="115" y1="36" x2="115" y2="132" stroke-dasharray="3 3"/>
+          <line class="s-faint" x1="205" y1="36" x2="205" y2="132" stroke-dasharray="3 3"/>
+          <text class="f-label" x="30" y="50" font-size="8">A1</text>
+          <text class="f-label" x="121" y="50" font-size="8">A2</text>
+          <text class="f-label" x="211" y="50" font-size="8">A3</text>
+          <!-- central Ø52 node -->
+          <circle class="s-cyan" cx="160" cy="84" r="24"/>
+          <line class="s-cyan" x1="160" y1="60" x2="160" y2="108" stroke-dasharray="2 2"/>
+          <line class="s-cyan" x1="136" y1="84" x2="184" y2="84" stroke-dasharray="2 2"/>
+          <circle class="f-cyan2" cx="160" cy="84" r="2"/>
+          <path class="s-cyan2" d="M184 84 L232 62"/>
+          <text class="f-cyan2" x="236" y="60" font-size="8">Ø52 · NODE</text>
+        </svg>
+        <figcaption class="caption mt-3">A-101 평면도 · 축척 1:50 · REV-A · 제도 김설계</figcaption>
+      </figure>
+      <div class="file-item mt-4"><span class="badge badge--primary">DXF</span><span class="name truncate">A-101_REV-A.dxf</span><span class="text-subtle text-xs">248 KB</span><button class="btn btn--icon btn--sm btn--ghost" data-toast="info" data-toast-title="내려받는 중" data-toast-body="A-101_REV-A.dxf" aria-label="다운로드"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v8M5 7l3 3 3-3M3 13h10"/></svg></button></div>
       <div class="card-foot row gap-3"><button class="btn btn--primary" data-toast="success" data-toast-title="승인됨" data-toast-body="REV-A 가 승인되었습니다.">승인</button><button class="btn btn--secondary" data-open-modal="del-confirm">반려</button></div>
     </div>
   </section>
@@ -98,7 +167,7 @@
   <span class="bp-frame-corner tl" aria-hidden="true"></span><span class="bp-frame-corner tr" aria-hidden="true"></span><span class="bp-frame-corner bl" aria-hidden="true"></span><span class="bp-frame-corner br" aria-hidden="true"></span>
   <div class="modal-head"><div><span class="caption">COMPOSE</span><h2 class="modal-title" id="cp-t">새 메일</h2></div><button class="btn btn--icon btn--ghost btn--sm" data-close-modal aria-label="닫기"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg></button></div>
   <div class="modal-body stack gap-4">
-    <div class="field"><label class="field-label" for="cp-to">받는사람</label><input class="input" id="cp-to" placeholder="email@domain.com" autofocus></div>
+    <div class="field"><label class="field-label" for="cp-to">받는사람</label><input class="input" id="cp-to" type="email" placeholder="이름@blueprint.co.kr"></div>
     <div class="field"><label class="field-label" for="cp-sub">제목</label><input class="input" id="cp-sub" placeholder="제목…"></div>
     <div class="field"><label class="field-label" for="cp-body">내용</label><textarea class="textarea" id="cp-body" placeholder="메시지를 입력하세요…"></textarea></div>
   </div>
@@ -128,5 +197,61 @@
 </div>
 
 <script src="../app.js"></script>
+<script>
+/* Folder + label views — real filtering so the sidebar is functional (no
+   dummy links) and the 휴지통(trash) folder demonstrates the empty state. */
+(function () {
+  var folders = document.querySelector(".inbox-folders");
+  var listEl  = document.getElementById("mail-list");
+  var emptyEl = document.getElementById("mail-empty");
+  if (!folders || !listEl || !emptyEl) return;
+  var emptyTitle = document.getElementById("mail-empty-title");
+  var emptyText  = document.getElementById("mail-empty-text");
+  var countEl    = document.getElementById("mail-count");
+  var rows    = Array.prototype.slice.call(listEl.querySelectorAll(".mail-row"));
+  var buttons = Array.prototype.slice.call(folders.querySelectorAll("[data-view]"));
+  var NAMES = { inbox: "받은편지함", sent: "보낸편지함", starred: "중요", trash: "휴지통" };
+
+  function matches(row, view) {
+    if (view === "trash") return false;
+    if (view === "starred") return row.getAttribute("data-star") === "1";
+    if (view.indexOf("label:") === 0) {
+      var want = view.slice(6);
+      return (row.getAttribute("data-labels") || "").split(/\s+/).indexOf(want) !== -1;
+    }
+    return row.getAttribute("data-folder") === view; // inbox / sent
+  }
+  function labelFor(view) {
+    return view.indexOf("label:") === 0 ? "레이블 · " + view.slice(6) : (NAMES[view] || view);
+  }
+  function apply(view) {
+    var shown = 0;
+    rows.forEach(function (row) { var ok = matches(row, view); row.hidden = !ok; if (ok) shown++; });
+    if (shown === 0) {
+      emptyEl.hidden = false;
+      if (view === "trash") {
+        emptyTitle.textContent = "휴지통이 비어 있습니다";
+        emptyText.textContent  = "삭제한 메일은 30일간 보관됩니다. 지금은 비어 있어요.";
+      } else {
+        emptyTitle.textContent = "메일이 없습니다";
+        emptyText.textContent  = "이 조건에 해당하는 메일이 없습니다.";
+      }
+    } else {
+      emptyEl.hidden = true;
+    }
+    if (countEl) countEl.textContent = labelFor(view) + " · " + shown + "건";
+  }
+  buttons.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      buttons.forEach(function (b) { b.classList.remove("is-active"); b.removeAttribute("aria-current"); });
+      btn.classList.add("is-active");
+      btn.setAttribute("aria-current", "true");
+      apply(btn.getAttribute("data-view"));
+    });
+  });
+  var init = buttons.filter(function (b) { return b.classList.contains("is-active"); })[0] || buttons[0];
+  if (init) apply(init.getAttribute("data-view"));
+})();
+</script>
 </body>
 </html>

@@ -1,8 +1,17 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+/* FOUC 방지 — 스타일 로드 전 data-theme 확정(다크 정본). app.js 와 동일 키 */
+(function () {
+  try {
+    var t = localStorage.getItem("theme19-mode") || "dark";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
+})();
+</script>
 <title>셋업 위저드 · INDUSTRIAL UTILITY</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,9 +29,31 @@
 <style>
   .wizard-wrap { max-width: 760px; margin: 0 auto; padding: var(--space-9) var(--space-5) var(--space-12); }
   .wizard-body { min-height: 300px; }
+  .setup-serial { display: inline-flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; justify-content: center; margin-bottom: var(--space-4); }
+
   .equip-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: var(--space-4); }
-  .equip-card { border: var(--border-2) solid var(--color-border); padding: var(--space-4); display:flex; gap:var(--space-3); align-items:center; cursor:pointer; }
+  .equip-card { border: var(--border-2) solid var(--color-border); padding: var(--space-4); display:flex; gap:var(--space-3); align-items:center; cursor:pointer; transition: border-color var(--duration-fast), background var(--duration-fast); }
+  .equip-card:hover { border-color: var(--color-text-subtle); }
   .equip-card:has(input:checked) { border-color: var(--color-primary); background: var(--color-primary-soft); }
+  /* 숨긴 체크박스에 포커스 시 카드 전체에 링(sr-only input 은 링이 안 보이므로) */
+  .equip-card:focus-within { outline: var(--ring-width) solid var(--ring-color); outline-offset: 2px; }
+
+  /* ── 완료 명판 = 시그니처 모먼트: 셋업 요약을 각인 명판 + 검사필 도장으로 ── */
+  .done-plate { position: relative; padding: var(--space-8) var(--space-6) var(--space-6); }
+  .done-plate__title { font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: var(--tracking-wider); color: var(--color-text-muted); }
+  .done-plate__head { font-family: var(--font-display); text-transform: uppercase; letter-spacing: var(--tracking-wide); font-size: var(--text-2xl); color: var(--color-primary); margin-top: var(--space-2); line-height: var(--leading-tight); }
+  .done-spec { margin-top: var(--space-5); border-top: var(--border-1) solid var(--color-border); }
+  .done-spec > div { display:flex; justify-content:space-between; gap: var(--space-4); padding: var(--space-3) 0; border-bottom: var(--border-1) dashed var(--color-border); font-family: var(--font-mono); font-size: var(--text-2xs); }
+  .done-spec span { color: var(--color-text-muted); letter-spacing: var(--tracking-wide); }
+  .done-spec b { color: var(--color-text); font-weight: var(--weight-bold); font-variant-numeric: tabular-nums lining-nums; white-space: nowrap; }
+  .done-stamp {
+    position: absolute; right: var(--space-6); top: -20px;
+    width: 76px; height: 76px; border-radius: var(--radius-full);
+    border: 3px solid var(--color-success); color: var(--color-success);
+    display: grid; place-items: center; text-align: center;
+    font-family: var(--font-mono); font-size: 9px; letter-spacing: .12em; line-height: 1.35;
+    transform: rotate(-12deg); background: var(--color-surface); box-shadow: var(--shadow-sm);
+  }
 </style>
 </head>
 <body>
@@ -31,14 +62,20 @@
 <header class="navbar navbar--sticky">
   <a class="brand" href="../index.html"><span class="brand__mark">19</span><span class="brand__name">CTRL OPS<small>SETUP</small></span></a>
   <span class="spacer"></span>
-  <button class="btn btn--icon btn--secondary" data-action="toggle-theme" aria-label="테마 전환"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg></button>
+  <button class="breaker" data-action="toggle-theme" aria-pressed="false" aria-label="조명 전환 · 다크/라이트" title="차단기 레버 — 조명 전환">
+    <span class="breaker__slot" aria-hidden="true"><span class="breaker__lever"></span></span>
+    <span class="breaker__label" aria-hidden="true">DARK</span>
+  </button>
   <a href="dashboard.html" class="btn btn--ghost">나중에 하기</a>
 </header>
 
 <main id="main" class="wizard-wrap" data-wizard>
   <div class="text-center mb-9">
-    <div class="label mb-3">초기 설정 · 5 STEPS</div>
-    <h1 class="t-4xl stencil">공장 셋업</h1>
+    <div class="setup-serial">
+      <span class="badge badge--solid badge--primary">SETUP</span>
+      <span class="cluster" style="gap:var(--space-2)"><span class="live-dot" aria-hidden="true"></span><span class="label">UNIT NO. DS-019 · 초기 셋업 · 5 STEPS</span></span>
+    </div>
+    <h1 class="t-4xl stencil stencil--bridge">공장 셋업</h1>
   </div>
 
   <!-- STEPS MARKERS -->
@@ -58,9 +95,13 @@
       <div class="label--yellow label mb-3">STEP 01 · 조직 정보</div>
       <h2 class="t-2xl mb-5">회사 정보를 입력하세요</h2>
       <div class="stack" style="--stack-gap: var(--space-5)">
-        <div class="field"><label class="field__label" for="w-co">회사명 <span class="req">*</span></label><input class="input" id="w-co" placeholder="예: 대한정밀공업㈜"></div>
+        <div class="field">
+          <label class="field__label" for="w-co">회사명 <span class="req">*</span></label>
+          <input class="input" id="w-co" placeholder="예: 대한정밀공업㈜" aria-describedby="w-co-err" autocomplete="organization">
+          <span class="field__error" id="w-co-err" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><path d="M12 8v5M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>회사명을 입력해야 다음 단계로 넘어갈 수 있습니다.</span>
+        </div>
         <div class="grid grid-2" style="--grid-gap:var(--space-4)">
-          <div class="field"><label class="field__label" for="w-biz">사업자등록번호</label><input class="input" id="w-biz" placeholder="000-00-00000"></div>
+          <div class="field"><label class="field__label" for="w-biz">사업자등록번호</label><input class="input" id="w-biz" placeholder="000-00-00000" inputmode="numeric"></div>
           <div class="field"><label class="field__label" for="w-lines">예상 라인 수</label><select class="select" id="w-lines"><option>1개</option><option selected>2–5개</option><option>6개 이상</option></select></div>
         </div>
       </div>
@@ -72,10 +113,10 @@
       <h2 class="t-2xl mb-5">생산 라인을 등록하세요</h2>
       <div class="stack" style="--stack-gap: var(--space-5)">
         <div class="field"><label class="field__label">라인 이름 (입력 후 Enter)</label>
-          <div class="chipinput" data-chipinput><span class="chip">조립 LINE A<button class="chip__x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><path d="M6 6l12 12M18 6 6 18"/></svg></button></span><span class="chip">도장 LINE B<button class="chip__x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><path d="M6 6l12 12M18 6 6 18"/></svg></button></span><input placeholder="라인 추가…" aria-label="라인 이름"></div></div>
+          <div class="chipinput" data-chipinput><span class="chip">조립 LINE A<button class="chip__x" aria-label="조립 LINE A 제거"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><path d="M6 6l12 12M18 6 6 18"/></svg></button></span><span class="chip">도장 LINE B<button class="chip__x" aria-label="도장 LINE B 제거"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12"><path d="M6 6l12 12M18 6 6 18"/></svg></button></span><input placeholder="라인 추가…" aria-label="라인 이름"></div></div>
         <div class="grid grid-2" style="--grid-gap:var(--space-4)">
           <div class="field"><label class="field__label" for="w-shift">가동 시간</label><select class="select" id="w-shift"><option>주간 1교대 (08–17)</option><option selected>2교대 (06–22)</option><option>24시간 3교대</option></select></div>
-          <div class="field"><label class="field__label">단위계</label><div class="segmented" data-segmented style="width:fit-content"><span class="segmented__thumb"></span><button class="segmented__option" aria-selected="true">미터</button><button class="segmented__option" aria-selected="false">야드</button></div></div>
+          <div class="field"><label class="field__label" id="w-unit-lbl">단위계</label><div class="segmented" data-segmented role="radiogroup" aria-labelledby="w-unit-lbl" style="width:fit-content"><span class="segmented__thumb" aria-hidden="true"></span><button class="segmented__option" role="radio" aria-checked="true">미터</button><button class="segmented__option" role="radio" aria-checked="false" tabindex="-1">야드</button></div></div>
         </div>
       </div>
     </section>
@@ -84,10 +125,10 @@
     <section data-wizard-step hidden>
       <div class="label--yellow label mb-3">STEP 03 · 장비 연결</div>
       <h2 class="t-2xl mb-5">연결할 장비 유형을 선택하세요</h2>
-      <div class="equip-grid mb-7">
+      <div class="equip-grid mb-7" role="group" aria-label="장비 유형">
         <label class="equip-card"><input type="checkbox" class="sr-only" checked><span class="checkbox__box" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span><span class="t-sm">CNC 머신</span></label>
         <label class="equip-card"><input type="checkbox" class="sr-only" checked><span class="checkbox__box" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span><span class="t-sm">프레스</span></label>
-        <label class="equip-card"><input type="checkbox" class="sr-only"><span class="checkbox__box" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span><span class="t-sm">용접 로봇</span></label>
+        <label class="equip-card"><input type="checkbox" class="sr-only" checked><span class="checkbox__box" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span><span class="t-sm">용접 로봇</span></label>
         <label class="equip-card"><input type="checkbox" class="sr-only" checked><span class="checkbox__box" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span><span class="t-sm">컨베이어</span></label>
         <label class="equip-card"><input type="checkbox" class="sr-only"><span class="checkbox__box" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span><span class="t-sm">도장 부스</span></label>
       </div>
@@ -100,10 +141,10 @@
       <h2 class="t-2xl mb-5">팀원을 초대하세요</h2>
       <div class="stack" style="--stack-gap: var(--space-5)">
         <div class="grid grid-2" style="--grid-gap:var(--space-4)">
-          <div class="field"><label class="field__label">이메일 (입력 후 Enter)</label><div class="chipinput" data-chipinput><input placeholder="name@company.com" aria-label="이메일"></div></div>
+          <div class="field"><label class="field__label" for="w-invite">이메일 (입력 후 Enter)</label><div class="chipinput" data-chipinput><input id="w-invite" placeholder="name@daehan.co" aria-label="초대 이메일" inputmode="email"></div></div>
           <div class="field"><label class="field__label" for="w-role">역할</label><select class="select" id="w-role"><option>관리자</option><option selected>현장 책임</option><option>작업자</option><option>조회 전용</option></select></div>
         </div>
-        <div><div class="label mb-3">초대 예정 멤버</div>
+        <div><div class="label mb-3">초대 예정 멤버 · 3명</div>
           <ul class="list">
             <li class="list__item"><span class="avatar avatar--sm">JS</span><div class="grow"><div class="list__title">정세훈</div><div class="list__meta">sehoon@daehan.co</div></div><span class="badge badge--primary badge--solid">관리자</span></li>
             <li class="list__item"><span class="avatar avatar--sm">KM</span><div class="grow"><div class="list__title">김민재</div><div class="list__meta">minjae@daehan.co</div></div><span class="badge">현장 책임</span></li>
@@ -116,13 +157,27 @@
     <!-- STEP 5 -->
     <section data-wizard-step hidden>
       <div class="label--yellow label mb-3">STEP 05 · 완료</div>
-      <h2 class="t-2xl mb-5">알림을 설정하고 마무리하세요</h2>
+      <h2 class="t-2xl mb-5">가동 준비 · 최종 점검</h2>
       <div class="card" style="background:var(--color-surface-2)"><div class="card__body">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-5);padding:var(--space-3) 0;border-bottom:var(--border-1) solid var(--color-border-subtle)"><div class="t-sm">장비 알람 즉시 알림</div><label class="toggle"><input type="checkbox" checked><span class="toggle__track"></span><span class="toggle__state">ON</span></label></div>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-5);padding:var(--space-3) 0;border-bottom:var(--border-1) solid var(--color-border-subtle)"><div class="t-sm">일일 생산 리포트 이메일</div><label class="toggle"><input type="checkbox" checked><span class="toggle__track"></span><span class="toggle__state">ON</span></label></div>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-5);padding:var(--space-3) 0"><div class="t-sm">주간 요약 SMS</div><label class="toggle"><input type="checkbox"><span class="toggle__track"></span><span class="toggle__state">OFF</span></label></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-5);padding:var(--space-3) 0;border-bottom:var(--border-1) solid var(--color-border-subtle)"><div class="t-sm">장비 알람 즉시 알림</div><label class="toggle"><input type="checkbox" checked aria-label="장비 알람 즉시 알림"><span class="toggle__track" aria-hidden="true"></span><span class="toggle__state">ON</span></label></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-5);padding:var(--space-3) 0;border-bottom:var(--border-1) solid var(--color-border-subtle)"><div class="t-sm">일일 생산 리포트 이메일</div><label class="toggle"><input type="checkbox" checked aria-label="일일 생산 리포트 이메일"><span class="toggle__track" aria-hidden="true"></span><span class="toggle__state">ON</span></label></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-5);padding:var(--space-3) 0"><div class="t-sm">주간 요약 SMS</div><label class="toggle"><input type="checkbox" aria-label="주간 요약 SMS"><span class="toggle__track" aria-hidden="true"></span><span class="toggle__state">OFF</span></label></div>
       </div></div>
-      <div class="alert alert--success mt-5"><span class="alert__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></span><div class="alert__body"><div class="alert__title">준비 완료</div><div class="alert__msg">조직·라인·장비·팀 설정이 모두 입력되었습니다. 완료를 눌러 콘솔로 이동하세요.</div></div></div>
+
+      <!-- 완료 명판 (시그니처 모먼트) -->
+      <div class="metal-panel has-rivets done-plate mt-7" aria-label="셋업 요약 명판">
+        <span class="rivet-corner tl"></span><span class="rivet-corner tr"></span><span class="rivet-corner bl"></span><span class="rivet-corner br"></span>
+        <div class="done-stamp" aria-hidden="true">검사필<br>QC·PASS</div>
+        <div class="done-plate__title">셋업 요약 · SETUP RECORD</div>
+        <div class="done-plate__head">라인 투입 준비 완료</div>
+        <div class="done-spec">
+          <div><span>조직</span><b>대한정밀공업㈜</b></div>
+          <div><span>등록 라인</span><b>2개 · A/B</b></div>
+          <div><span>연결 장비</span><b>4종</b></div>
+          <div><span>초대 인원</span><b>3명</b></div>
+          <div><span>적용 규격</span><b>KS-P · 공장</b></div>
+        </div>
+      </div>
     </section>
   </div></div>
 
@@ -131,12 +186,58 @@
     <button class="btn btn--ghost" data-wizard-prev><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>이전</button>
     <div class="cluster">
       <button class="btn btn--primary" data-wizard-next>다음<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg></button>
-      <a class="btn btn--primary" data-wizard-finish href="dashboard.html" hidden>셋업 완료<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></a>
+      <a class="btn btn--primary" data-wizard-finish href="dashboard.html" hidden>가동 시작<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></a>
     </div>
   </div>
 </main>
 
 <a href="../index.html" class="btn btn--secondary btn--sm demo-return">← 시스템 허브</a>
 <script src="../app.js"></script>
+<script>
+/* 페이지 전용 위저드 보강:
+   1) STEP 01 회사명 필수값 검증 — 미입력 시 '다음' 차단 + 에러 시연(app.js 진행 전 캡처 단계에서 정지)
+   2) 숨김 상태로 초기화된 segmented 썸 위치 보정(단계 전환 후 재정렬) */
+(function () {
+  var co = document.getElementById("w-co");
+  var err = document.getElementById("w-co-err");
+
+  function clearErr() {
+    if (!co) return;
+    co.removeAttribute("aria-invalid");
+    if (err) err.hidden = true;
+  }
+  if (co) on(co, "input", function () { if (co.value.trim()) clearErr(); });
+
+  // 캡처 단계에서 검증 — app.js 의 next 핸들러(버블)보다 먼저 실행되어 진행을 막는다
+  document.addEventListener("click", function (e) {
+    var next = e.target.closest("[data-wizard-next]");
+    if (!next || !co) return;
+    var step1 = co.closest("[data-wizard-step]");
+    if (step1 && !step1.hidden && !co.value.trim()) {
+      e.stopPropagation();
+      co.setAttribute("aria-invalid", "true");
+      if (err) err.hidden = false;
+      co.focus();
+    }
+  }, true);
+
+  function fixSegments() {
+    document.querySelectorAll("[data-segmented]").forEach(function (seg) {
+      var active = seg.querySelector('.segmented__option[aria-checked="true"]') || seg.querySelector(".segmented__option");
+      var thumb = seg.querySelector(".segmented__thumb");
+      if (active && thumb && active.offsetWidth) {
+        thumb.style.width = active.offsetWidth + "px";
+        thumb.style.transform = "translateX(" + (active.offsetLeft - 3) + "px)";
+      }
+    });
+  }
+  // 단계 전환(다음/이전) 후 레이아웃이 잡히면 썸 재정렬
+  document.addEventListener("click", function (e) {
+    if (e.target.closest("[data-wizard-next],[data-wizard-prev]")) requestAnimationFrame(fixSegments);
+  });
+
+  function on(el, ev, fn) { el && el.addEventListener(ev, fn); }
+})();
+</script>
 </body>
 </html>

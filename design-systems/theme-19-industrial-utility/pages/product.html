@@ -1,8 +1,17 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+/* FOUC 방지 — 스타일 로드 전 data-theme 확정(다크가 정본). app.js 와 동일 키 */
+(function () {
+  try {
+    var t = localStorage.getItem("theme19-mode") || "dark";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
+})();
+</script>
 <title>BX-18V 무선 임팩트 드릴 · INDUSTRIAL UTILITY</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,12 +29,35 @@
 <style>
   .pdp { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-9); margin-top: var(--space-8); }
   @media (max-width: 900px) { .pdp { grid-template-columns: 1fr; gap: var(--space-7); } }
-  .gallery-main { aspect-ratio: 4/3; background: var(--metal-surface); border: var(--border-3) solid var(--color-border-strong); display: grid; place-items: center; position: relative; box-shadow: var(--shadow-inset-metal); }
-  .gallery-thumbs { display: grid; grid-template-columns: repeat(4,1fr); gap: var(--space-3); margin-top: var(--space-4); }
-  .gallery-thumb { aspect-ratio: 1; background: var(--color-surface-2); border: var(--border-2) solid var(--color-border); display: grid; place-items: center; cursor: pointer; }
-  .gallery-thumb.is-active, .gallery-thumb:hover { border-color: var(--color-primary); }
-  .tool-illu { width: 55%; color: var(--concrete-200); filter: drop-shadow(4px 6px 0 rgba(0,0,0,.4)); }
-  .price-big { font-family: var(--font-display); font-weight: 700; font-size: var(--text-5xl); line-height: 1; color: var(--color-text); }
+  .gallery-main { aspect-ratio: 4/3; background: var(--metal-surface); border: var(--border-3) solid var(--color-border-strong); display: grid; place-items: center; position: relative; box-shadow: var(--shadow-inset-metal); overflow: hidden; }
+  /* 작업대 발판 — 공구가 체커 플레이트 위에 놓인 느낌(하단 그라운드) */
+  .gallery-main::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 32%; background: var(--plate-texture); background-size: 12px 12px; -webkit-mask-image: linear-gradient(transparent, #000 82%); mask-image: linear-gradient(transparent, #000 82%); opacity: .5; pointer-events: none; z-index: 0; }
+  .tool-illu { width: 55%; color: var(--color-text-muted); filter: drop-shadow(4px 6px 0 rgba(0,0,0,.4)); position: relative; z-index: 1; }
+  .price-big { font-family: var(--font-display); font-weight: 700; font-size: var(--text-5xl); line-height: 1; color: var(--color-text); font-variant-numeric: tabular-nums lining-nums; }
+  .prod-illu { color: var(--color-text-muted); }
+
+  /* 출고·재고 상황판 — PDP 시그니처(창고 실시간 계기 보드). LED 판독기를 커머스 장면에 배치 */
+  .dispatch { margin-top: var(--space-9); padding: var(--space-6) var(--space-7) var(--space-7); }
+  .dispatch__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding-bottom: var(--space-5); margin-bottom: var(--space-6); border-bottom: var(--border-2) dashed var(--color-border); }
+  .dispatch__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-6); }
+  .dispatch__cell { display: flex; flex-direction: column; gap: var(--space-3); }
+  .dispatch__cell .led { align-self: flex-start; font-size: var(--text-3xl); }
+  .dispatch__big { font-family: var(--font-display); font-size: var(--text-3xl); font-weight: var(--weight-bold); line-height: 1; letter-spacing: var(--tracking-tight); color: var(--color-text); font-variant-numeric: tabular-nums lining-nums; }
+  @media (max-width: 620px) { .dispatch__grid { grid-template-columns: 1fr; gap: var(--space-5); } }
+
+  /* 제품 규격 명판 — PDP 시그니처(각인 스펙 플레이트 + 검사필 QC 도장) */
+  .pspec { margin: var(--space-12) 0 0; padding: var(--space-8) var(--space-7); display: grid; grid-template-columns: auto 1fr; gap: var(--space-7); align-items: center; }
+  .pspec__head { border-right: var(--border-2) dashed var(--color-border); padding-right: var(--space-7); }
+  .pspec__model { font-size: var(--text-4xl); color: var(--color-primary); line-height: 1; margin-top: var(--space-2); }
+  .pspec__specs { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-5) var(--space-6); }
+  .pspec__specs > div { display: flex; flex-direction: column; gap: var(--space-2); border-left: 3px solid var(--color-primary); padding-left: var(--space-4); }
+  .pspec__specs b { font-family: var(--font-display); font-size: var(--text-xl); font-weight: var(--weight-bold); letter-spacing: var(--tracking-tight); font-variant-numeric: tabular-nums lining-nums; }
+  .pspec__stamp { position: absolute; right: var(--space-6); top: -18px; width: 72px; height: 72px; border-radius: var(--radius-full); border: 3px solid var(--color-success); color: var(--color-success); display: grid; place-items: center; text-align: center; font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em; line-height: 1.35; transform: rotate(-11deg); background: var(--color-surface); box-shadow: var(--shadow-sm); }
+  @media (max-width: 900px) {
+    .pspec { grid-template-columns: 1fr; gap: var(--space-6); }
+    .pspec__head { border-right: none; border-bottom: var(--border-2) dashed var(--color-border); padding-right: 0; padding-bottom: var(--space-5); }
+  }
+  @media (max-width: 560px) { .pspec__specs { grid-template-columns: repeat(2, 1fr); } .pspec__stamp { display: none; } }
 </style>
 </head>
 <body>
@@ -34,19 +66,22 @@
 <header class="navbar navbar--sticky">
   <a class="brand" href="../index.html"><span class="brand__mark">19</span><span class="brand__name">철물 스토어<small>INDUSTRIAL SUPPLY</small></span></a>
   <nav class="navbar__links" aria-label="카테고리">
-    <a class="navbar__link is-active" href="#">전동공구</a>
-    <a class="navbar__link" href="#">수공구</a>
-    <a class="navbar__link" href="#">안전장비</a>
-    <a class="navbar__link" href="#">소모품</a>
+    <a class="navbar__link is-active" href="../index.html" aria-current="page">전동공구</a>
+    <a class="navbar__link" href="../index.html">수공구</a>
+    <a class="navbar__link" href="../index.html">안전장비</a>
+    <a class="navbar__link" href="../index.html">소모품</a>
   </nav>
   <span class="spacer"></span>
-  <button class="searchbar" data-action="open-cmdk" style="width:180px" aria-label="검색"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><span class="t-xs text-subtle mono">SEARCH</span></button>
-  <button class="btn btn--icon btn--secondary" data-action="toggle-theme" aria-label="테마 전환"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg></button>
+  <button class="searchbar" data-action="open-cmdk" style="width:180px" aria-label="검색"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><span class="t-xs text-subtle mono">검색</span></button>
+  <button class="breaker" data-action="toggle-theme" aria-pressed="false" aria-label="조명 전환 · 다크/라이트" title="차단기 레버 — 조명 전환">
+    <span class="breaker__slot" aria-hidden="true"><span class="breaker__lever"></span></span>
+    <span class="breaker__label" aria-hidden="true">DARK</span>
+  </button>
   <button class="btn btn--icon btn--primary" aria-label="장바구니"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="18" cy="21" r="1"/><path d="M3 3h2l2 12h11l2-8H6"/></svg></button>
 </header>
 
 <main id="main" class="container">
-  <nav class="breadcrumb" aria-label="위치" style="margin-top:var(--space-6)"><a class="breadcrumb__item" href="../index.html">홈</a><span class="breadcrumb__sep"></span><a class="breadcrumb__item" href="#">전동공구</a><span class="breadcrumb__sep"></span><span class="breadcrumb__item" aria-current="page">임팩트 드릴</span></nav>
+  <nav class="breadcrumb" aria-label="위치" style="margin-top:var(--space-6)"><a class="breadcrumb__item" href="../index.html">홈</a><span class="breadcrumb__sep"></span><a class="breadcrumb__item" href="../index.html">전동공구</a><span class="breadcrumb__sep"></span><span class="breadcrumb__item" aria-current="page">임팩트 드릴</span></nav>
 
   <div class="pdp">
     <!-- GALLERY -->
@@ -62,13 +97,13 @@
           <button class="carousel__nav prev" aria-label="이전"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M15 18l-6-6 6-6"/></svg></button>
           <button class="carousel__nav next" aria-label="다음"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M9 6l6 6-6 6"/></svg></button>
         </div>
-        <div class="carousel__dots"><button class="carousel__dot is-active" aria-label="1"></button><button class="carousel__dot" aria-label="2"></button><button class="carousel__dot" aria-label="3"></button></div>
+        <div class="carousel__dots"><button class="carousel__dot is-active" aria-label="1번 사진" aria-current="true"></button><button class="carousel__dot" aria-label="2번 사진"></button><button class="carousel__dot" aria-label="3번 사진"></button></div>
       </div>
     </div>
 
     <!-- INFO -->
     <div class="stack" style="--stack-gap: var(--space-5)">
-      <div class="cluster"><span class="badge badge--accent">BOLTEX</span><span class="badge badge--success"><span class="dot dot--green"></span>재고 있음</span><span class="label mono">SKU · BX-18V-IMP</span></div>
+      <div class="cluster"><span class="badge badge--accent">BOLTEX</span><span class="badge badge--warning"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 9v4M12 17h.01"/></svg>재고 7개 남음</span><span class="label mono">SKU · BX-18V-IMP</span></div>
       <h1 class="t-4xl">BX-18V 무선 임팩트 드릴</h1>
       <div class="cluster">
         <span class="rating" data-rating data-readonly="true" data-value="4" aria-label="별점 4점">
@@ -78,7 +113,7 @@
           <svg class="rating__star is-on" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3 7 7 .5-5.5 4.5 1.8 6.8L12 17l-6.1 3.8 1.8-6.8L2 9.5 9 9z"/></svg>
           <svg class="rating__star" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3 7 7 .5-5.5 4.5 1.8 6.8L12 17l-6.1 3.8 1.8-6.8L2 9.5 9 9z"/></svg>
         </span>
-        <span class="label">4.2 · 리뷰 184건 · 누적 판매 2,400+</span>
+        <span class="label">4.2 · 리뷰 184건 · 누적 판매 2,418</span>
       </div>
       <div class="cluster" style="align-items:baseline;gap:var(--space-4)">
         <span class="price-big">₩189,000</span>
@@ -106,14 +141,56 @@
         <button class="btn btn--icon btn--secondary btn--lg" aria-label="위시리스트"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.5 1-1a5.5 5.5 0 0 0 0-7.9z"/></svg></button>
       </div>
       <div class="stack" style="--stack-gap: var(--space-2)">
-        <div class="care-label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9l-3 3 3 3M19 9l3 3-3 3M3 12h18"/></svg>무료 배송 · 내일(화) 도착 예정</div>
+        <div class="care-label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9l-3 3 3 3M19 9l3 3-3 3M3 12h18"/></svg>무료 배송 · 오늘 결제 시 내일 도착</div>
         <div class="care-label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z"/></svg>제조사 정품 보증 2년 · 무상 A/S</div>
       </div>
     </div>
   </div>
 
+  <!-- DISPATCH BOARD — 출고·재고 실시간 상황판(PDP 시그니처) -->
+  <section class="dispatch metal-panel has-rivets" aria-label="출고·재고 현황">
+    <span class="rivet-corner tl"></span><span class="rivet-corner tr"></span><span class="rivet-corner bl"></span><span class="rivet-corner br"></span>
+    <div class="dispatch__head">
+      <span class="label label--strong">출고·재고 현황 · DISPATCH BOARD</span>
+      <span class="cluster" style="gap:var(--space-2)"><span class="live-dot" aria-hidden="true"></span><span class="label">실시간 · 3번 창고</span></span>
+    </div>
+    <div class="dispatch__grid">
+      <div class="dispatch__cell">
+        <span class="label">잔여 재고 · IN STOCK</span>
+        <span class="led led--amber" role="img" aria-label="잔여 재고 7개">07</span>
+        <span class="t-2xs text-muted">이번 입고분 소진 임박 · 서두르세요</span>
+      </div>
+      <div class="dispatch__cell">
+        <span class="label">당일 출고 마감</span>
+        <span class="dispatch__big">14:00</span>
+        <span class="t-2xs text-muted">지금 담으면 오늘 바로 출고</span>
+      </div>
+      <div class="dispatch__cell">
+        <span class="label">재입고 리드타임</span>
+        <span class="dispatch__big">D+5</span>
+        <span class="t-2xs text-muted">추가 물량 5영업일 내 입고</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- SPEC PLATE — 각인 규격 명판(PDP 시그니처) -->
+  <section class="pspec metal-panel has-rivets" aria-label="제품 규격 명판">
+    <span class="rivet-corner tl"></span><span class="rivet-corner tr"></span><span class="rivet-corner bl"></span><span class="rivet-corner br"></span>
+    <div class="pspec__stamp" aria-hidden="true">검사필<br>QC·PASS</div>
+    <div class="pspec__head">
+      <div class="label">규격 명세 · SPEC PLATE</div>
+      <div class="pspec__model stencil">BX-18V</div>
+    </div>
+    <div class="pspec__specs">
+      <div><span class="label">정격 전압</span><b>18V DC</b></div>
+      <div><span class="label">최대 토크</span><b>180 N·m</b></div>
+      <div><span class="label">보호 등급</span><b>IP54</b></div>
+      <div><span class="label">중량</span><b>1.4 kg</b></div>
+    </div>
+  </section>
+
   <!-- SPEC TABS -->
-  <section style="margin-top:var(--space-12)" data-tabs>
+  <section style="margin-top:var(--space-10)" data-tabs>
     <div class="tabs__list" role="tablist" aria-label="상품 정보">
       <button class="tabs__tab" role="tab" id="st1" aria-controls="sp1" aria-selected="true">상세 사양</button>
       <button class="tabs__tab" role="tab" id="st2" aria-controls="sp2" aria-selected="false" tabindex="-1">구성품</button>
@@ -138,10 +215,10 @@
     </div>
     <div class="tabs__panel" role="tabpanel" id="sp2" aria-labelledby="st2" hidden>
       <ul class="list" style="max-width:520px">
-        <li class="list__item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg><span class="list__title">BX-18V 임팩트 드릴 본체 ×1</span></li>
-        <li class="list__item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg><span class="list__title">2.0Ah 리튬이온 배터리 ×2</span></li>
-        <li class="list__item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg><span class="list__title">급속 충전기 ×1</span></li>
-        <li class="list__item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg><span class="list__title">비트 세트 (10P) + 휴대 케이스</span></li>
+        <li class="list__item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="stroke:var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg><span class="list__title">BX-18V 임팩트 드릴 본체 ×1</span></li>
+        <li class="list__item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="stroke:var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg><span class="list__title">2.0Ah 리튬이온 배터리 ×2</span></li>
+        <li class="list__item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="stroke:var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg><span class="list__title">급속 충전기 ×1</span></li>
+        <li class="list__item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="stroke:var(--color-success)" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg><span class="list__title">비트 세트 (10P) + 휴대 케이스</span></li>
       </ul>
     </div>
     <div class="tabs__panel" role="tabpanel" id="sp3" aria-labelledby="st3" hidden>
@@ -162,10 +239,10 @@
   <section style="margin:var(--space-12) 0">
     <div class="section-head"><span class="section-head__bar"></span><div><div class="section-head__title">함께 본 장비</div><div class="section-head__meta">FREQUENTLY BOUGHT</div></div></div>
     <div class="grid grid-4" style="--grid-gap: var(--space-5)">
-      <div class="card"><div class="card__body stack" style="--stack-gap:var(--space-3)"><div style="aspect-ratio:1;background:var(--metal-surface);border:var(--border-2) solid var(--color-border);display:grid;place-items:center"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--concrete-300)" stroke-width="1.5"><path d="M14 4l6 6-9 9H5v-6z"/></svg></div><div class="t-sm" style="font-weight:600">앵글 그라인더 18V</div><div class="cluster between"><span class="t-base" style="font-weight:700">₩142,000</span><button class="btn btn--icon btn--ghost btn--sm" aria-label="담기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div></div></div>
-      <div class="card"><div class="card__body stack" style="--stack-gap:var(--space-3)"><div style="aspect-ratio:1;background:var(--metal-surface);border:var(--border-2) solid var(--color-border);display:grid;place-items:center"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--concrete-300)" stroke-width="1.5"><rect x="4" y="8" width="16" height="8"/><path d="M8 8V5h8v3"/></svg></div><div class="t-sm" style="font-weight:600">예비 배터리 4.0Ah</div><div class="cluster between"><span class="t-base" style="font-weight:700">₩68,000</span><button class="btn btn--icon btn--ghost btn--sm" aria-label="담기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div></div></div>
-      <div class="card"><div class="card__body stack" style="--stack-gap:var(--space-3)"><div style="aspect-ratio:1;background:var(--metal-surface);border:var(--border-2) solid var(--color-border);display:grid;place-items:center"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--concrete-300)" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div class="t-sm" style="font-weight:600">소켓 비트 세트 32P</div><div class="cluster between"><span class="t-base" style="font-weight:700">₩29,000</span><button class="btn btn--icon btn--ghost btn--sm" aria-label="담기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div></div></div>
-      <div class="card"><div class="card__body stack" style="--stack-gap:var(--space-3)"><div style="aspect-ratio:1;background:var(--metal-surface);border:var(--border-2) solid var(--color-border);display:grid;place-items:center"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--concrete-300)" stroke-width="1.5"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z"/></svg></div><div class="t-sm" style="font-weight:600">안전장갑 (절단방지)</div><div class="cluster between"><span class="t-base" style="font-weight:700">₩12,000</span><button class="btn btn--icon btn--ghost btn--sm" aria-label="담기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div></div></div>
+      <div class="card"><div class="card__body stack" style="--stack-gap:var(--space-3)"><div style="aspect-ratio:1;background:var(--metal-surface);border:var(--border-2) solid var(--color-border);display:grid;place-items:center"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" class="prod-illu" stroke="currentColor" stroke-width="1.5"><path d="M14 4l6 6-9 9H5v-6z"/></svg></div><div class="t-sm" style="font-weight:600">앵글 그라인더 18V</div><div class="cluster between"><span class="t-base" style="font-weight:700">₩142,000</span><button class="btn btn--icon btn--ghost btn--sm" aria-label="담기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div></div></div>
+      <div class="card"><div class="card__body stack" style="--stack-gap:var(--space-3)"><div style="aspect-ratio:1;background:var(--metal-surface);border:var(--border-2) solid var(--color-border);display:grid;place-items:center"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" class="prod-illu" stroke="currentColor" stroke-width="1.5"><rect x="4" y="8" width="16" height="8"/><path d="M8 8V5h8v3"/></svg></div><div class="t-sm" style="font-weight:600">예비 배터리 4.0Ah</div><div class="cluster between"><span class="t-base" style="font-weight:700">₩68,000</span><button class="btn btn--icon btn--ghost btn--sm" aria-label="담기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div></div></div>
+      <div class="card"><div class="card__body stack" style="--stack-gap:var(--space-3)"><div style="aspect-ratio:1;background:var(--metal-surface);border:var(--border-2) solid var(--color-border);display:grid;place-items:center"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" class="prod-illu" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div class="t-sm" style="font-weight:600">소켓 비트 세트 32P</div><div class="cluster between"><span class="t-base" style="font-weight:700">₩29,000</span><button class="btn btn--icon btn--ghost btn--sm" aria-label="담기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div></div></div>
+      <div class="card"><div class="card__body stack" style="--stack-gap:var(--space-3)"><div style="aspect-ratio:1;background:var(--metal-surface);border:var(--border-2) solid var(--color-border);display:grid;place-items:center"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" class="prod-illu" stroke="currentColor" stroke-width="1.5"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z"/></svg></div><div class="t-sm" style="font-weight:600">안전장갑 (절단방지)</div><div class="cluster between"><span class="t-base" style="font-weight:700">₩12,000</span><button class="btn btn--icon btn--ghost btn--sm" aria-label="담기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div></div></div>
     </div>
   </section>
 </main>
@@ -177,19 +254,46 @@
 
 <!-- COMMAND PALETTE -->
 <div class="cmdk-overlay" id="cmdk" data-open="false" role="dialog" aria-modal="true" aria-label="명령 팔레트">
-  <div class="cmdk"><div class="cmdk__search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input placeholder="상품 검색…" aria-label="검색"><kbd>ESC</kbd></div>
-    <div class="cmdk__list"><div class="cmdk__group"><div class="cmdk__group-label">이동</div>
-      <a class="cmdk__item" href="../index.html" aria-selected="true">시스템 허브</a>
-      <a class="cmdk__item" href="pricing.html">요금제</a></div>
-    </div><div class="cmdk__foot"><span>↑↓ 이동</span><span>↵ 선택</span></div>
+  <div class="cmdk">
+    <div class="cmdk__search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input placeholder="상품 또는 화면 검색…" aria-label="상품 검색" role="combobox" aria-expanded="true" aria-controls="cmdk-listbox" aria-autocomplete="list" aria-activedescendant="">
+      <kbd>ESC</kbd>
+    </div>
+    <div class="cmdk__list" id="cmdk-listbox" role="listbox" aria-label="명령 및 화면 결과">
+      <div class="cmdk__group" role="group" aria-label="화면 이동">
+        <div class="cmdk__group-label" aria-hidden="true">화면 이동</div>
+        <a class="cmdk__item" id="cmdk-opt-hub" role="option" href="../index.html" aria-selected="true" data-label="시스템 허브"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 12l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>시스템 허브</a>
+        <a class="cmdk__item" id="cmdk-opt-price" role="option" href="pricing.html" data-label="요금제"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>요금제</a>
+      </div>
+      <div class="cmdk__group" role="group" aria-label="동작">
+        <div class="cmdk__group-label" aria-hidden="true">동작</div>
+        <button class="cmdk__item" id="cmdk-opt-cart" role="option" data-label="장바구니 담기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="18" cy="21" r="1"/><path d="M3 3h2l2 12h11l2-8H6"/></svg>장바구니에 담기</button>
+        <button class="cmdk__item" id="cmdk-opt-theme" role="option" data-label="조명 전환" data-action="toggle-theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>조명(다크/라이트) 전환<kbd>T</kbd></button>
+      </div>
+      <div class="cmdk__empty" role="status" hidden>
+        <span class="label">검색 결과 없음</span>
+        <span class="t-xs text-muted mono">다른 키워드로 다시 조회하세요</span>
+      </div>
+    </div>
+    <div class="cmdk__foot"><span>↑↓ 이동</span><span>↵ 선택</span><span>ESC 닫기</span></div>
   </div>
 </div>
 
 <a href="../index.html" class="btn btn--secondary btn--sm demo-return">← 시스템 허브</a>
 <script src="../app.js"></script>
 <script>
-  // 썸네일 ↔ 캐러셀 동기화 (장식 수준)
-  document.querySelectorAll('.gallery-thumb').forEach(function(t,i){t.addEventListener('click',function(){document.querySelectorAll('.gallery-thumb').forEach(function(x){x.classList.remove('is-active');});t.classList.add('is-active');var dots=document.querySelectorAll('.carousel__dot');if(dots[i])dots[i].click();});});
+/* 캐러셀 점 aria-current 동기화 — app.js 의 .is-active 토글을 관찰만 해 현재 슬라이드를 알림.
+   (인라인 핸들러 없음 · app.js 의 이벤트 아키텍처 비간섭 · 접근성 보강) */
+(function () {
+  var dots = document.querySelectorAll('[data-carousel] .carousel__dot');
+  if (!dots.length || typeof MutationObserver === 'undefined') return;
+  function sync(d) { if (d.classList.contains('is-active')) d.setAttribute('aria-current', 'true'); else d.removeAttribute('aria-current'); }
+  dots.forEach(function (d) {
+    sync(d);
+    new MutationObserver(function () { sync(d); }).observe(d, { attributes: true, attributeFilter: ['class'] });
+  });
+})();
 </script>
 </body>
 </html>

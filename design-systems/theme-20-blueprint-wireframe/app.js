@@ -9,6 +9,9 @@
 
   var d = document;
   var root = d.documentElement;
+  /* Mark JS as live immediately: the plotter-reveal hiding is scoped to
+     html.js, so a JS-off / failed load never traps content at opacity:0. */
+  root.classList.add("js");
   var STORE = {
     get: function (k, f) { try { var v = localStorage.getItem(k); return v === null ? f : v; } catch (e) { return f; } },
     set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
@@ -214,19 +217,21 @@
     });
   }
 
-  /* Basic focus trap */
+  /* Focus trap — one handler per container (idempotent), scoped to the
+     element itself so repeated opens never stack document-level listeners. */
   function trapFocus(container) {
-    function handler(e) {
+    if (container._bpTrap) return;
+    container._bpTrap = true;
+    container.addEventListener("keydown", function (e) {
       if (e.key !== "Tab") return;
-      if (container.getAttribute("data-open") !== "true") { d.removeEventListener("keydown", handler); return; }
+      if (container.getAttribute("data-open") !== "true") return;
       var f = $$('a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])', container)
         .filter(function (el) { return el.offsetParent !== null; });
       if (!f.length) return;
       var first = f[0], last = f[f.length - 1];
       if (e.shiftKey && d.activeElement === first) { e.preventDefault(); last.focus(); }
       else if (!e.shiftKey && d.activeElement === last) { e.preventDefault(); first.focus(); }
-    }
-    d.addEventListener("keydown", handler);
+    });
   }
 
   /* ================================================================== */
@@ -459,8 +464,13 @@
     chosen.forEach(function (opt) {
       var chip = d.createElement("span");
       chip.className = "combo-chip";
-      chip.innerHTML = opt.textContent.trim() + ' <button aria-label="제거" type="button">' + ICONS.x + '</button>';
-      on($("button", chip), "click", function (e) { e.stopPropagation(); opt.setAttribute("aria-selected", "false"); renderMultiChips(combo); });
+      chip.appendChild(d.createTextNode(opt.textContent.trim() + " "));
+      var del = d.createElement("button");
+      del.type = "button";
+      del.setAttribute("aria-label", "제거");
+      del.innerHTML = ICONS.x;
+      chip.appendChild(del);
+      on(del, "click", function (e) { e.stopPropagation(); opt.setAttribute("aria-selected", "false"); renderMultiChips(combo); });
       control.insertBefore(chip, input || null);
     });
   }
@@ -525,8 +535,13 @@
     var input = $("input", ci);
     var chip = d.createElement("span");
     chip.className = "chip";
-    chip.innerHTML = text + ' <button type="button" aria-label="제거">' + ICONS.x + '</button>';
-    on($("button", chip), "click", function () { chip.remove(); });
+    chip.appendChild(d.createTextNode(text + " "));
+    var del = d.createElement("button");
+    del.type = "button";
+    del.setAttribute("aria-label", "제거");
+    del.innerHTML = ICONS.x;
+    chip.appendChild(del);
+    on(del, "click", function () { chip.remove(); });
     ci.insertBefore(chip, input);
   }
 
@@ -548,8 +563,21 @@
         Array.prototype.forEach.call(files, function (f) {
           var row = d.createElement("div");
           row.className = "file-item";
-          row.innerHTML = '<span class="badge badge--primary">FILE</span><span class="name truncate">' + f.name + '</span><span class="text-subtle text-xs">' + Math.max(1, Math.round((f.size || 0) / 1024)) + ' KB</span><button class="btn btn--icon btn--sm btn--ghost" aria-label="제거">' + ICONS.x + '</button>';
-          on($("button", row), "click", function () { row.remove(); });
+          var badge = d.createElement("span");
+          badge.className = "badge badge--primary";
+          badge.textContent = "FILE";
+          var name = d.createElement("span");
+          name.className = "name truncate";
+          name.textContent = f.name;
+          var size = d.createElement("span");
+          size.className = "text-subtle text-xs";
+          size.textContent = Math.max(1, Math.round((f.size || 0) / 1024)) + " KB";
+          var del = d.createElement("button");
+          del.className = "btn btn--icon btn--sm btn--ghost";
+          del.setAttribute("aria-label", "제거");
+          del.innerHTML = ICONS.x;
+          row.appendChild(badge); row.appendChild(name); row.appendChild(size); row.appendChild(del);
+          on(del, "click", function () { row.remove(); });
           list.appendChild(row);
         });
       }
@@ -567,7 +595,7 @@
           var idx = Array.prototype.indexOf.call(th.parentNode.children, th);
           var cur = th.getAttribute("aria-sort");
           var asc = cur !== "ascending";
-          $$("th", table).forEach(function (h) { h.removeAttribute("aria-sort"); });
+          $$("th.sortable", table).forEach(function (h) { h.setAttribute("aria-sort", "none"); });
           th.setAttribute("aria-sort", asc ? "ascending" : "descending");
           var tbody = $("tbody", table);
           var rows = $$("tr", tbody);
@@ -789,11 +817,91 @@
   /* 22. SCROLL REVEAL                                                  */
   /* ================================================================== */
   function initReveal() {
-    if (!("IntersectionObserver" in window)) return;
+    var items = $$("[data-reveal]");
+    if (!("IntersectionObserver" in window)) {
+      items.forEach(function (el) { el.classList.add("in-view"); });   // no IO → show all
+      return;
+    }
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add("in-view"); io.unobserve(en.target); } });
     }, { threshold: 0.12 });
-    $$("[data-reveal]").forEach(function (el) { io.observe(el); });
+    items.forEach(function (el) { io.observe(el); });
+  }
+
+  /* ================================================================== */
+  /* 23. SEGMENTED CONTROL (radiogroup / pressed-group)                 */
+  /* ================================================================== */
+  function initSegmented() {
+    $$(".segmented").forEach(function (seg) {
+      if (seg.hasAttribute("data-tabs")) return;         // real tablists are handled by initTabs
+      var btns = $$("button", seg);
+      if (!btns.length) return;
+      // preserve whichever authored aria attribute the group already uses
+      var attr = btns[0].hasAttribute("aria-checked") ? "aria-checked"
+               : btns[0].hasAttribute("aria-pressed") ? "aria-pressed"
+               : btns[0].hasAttribute("aria-selected") ? "aria-selected" : null;
+      var isRadio = btns[0].getAttribute("role") === "radio";
+      function select(idx, focus) {
+        btns.forEach(function (b, i) {
+          var on_ = i === idx;
+          if (attr) b.setAttribute(attr, String(on_));
+          b.classList.toggle("is-active", on_);
+          if (isRadio) b.tabIndex = on_ ? 0 : -1;
+        });
+        if (focus && btns[idx]) btns[idx].focus();
+      }
+      var cur = btns.findIndex(function (b) { return attr && b.getAttribute(attr) === "true"; });
+      if (cur < 0) cur = 0;
+      select(cur, false);
+      btns.forEach(function (b, i) {
+        on(b, "click", function () { cur = i; select(cur, false); });
+        on(b, "keydown", function (e) {
+          if (!isRadio) return;
+          var dir = (e.key === "ArrowRight" || e.key === "ArrowDown") ? 1
+                  : (e.key === "ArrowLeft" || e.key === "ArrowUp") ? -1 : 0;
+          if (!dir) return;
+          e.preventDefault();
+          cur = (i + dir + btns.length) % btns.length;
+          select(cur, true);
+        });
+      });
+    });
+  }
+
+  /* ================================================================== */
+  /* 24. DRAFTING CROSSHAIR CURSOR (CAD pointer, showcase pages)        */
+  /* ================================================================== */
+  function pad4(n) { n = String(Math.max(0, Math.round(n))); while (n.length < 4) n = "0" + n; return n; }
+  function initCrosshair() {
+    if (!d.body || !d.body.hasAttribute("data-crosshair")) return;
+    if (!window.matchMedia) return;
+    if (window.matchMedia("(pointer: coarse)").matches) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var layer = d.createElement("div");
+    layer.className = "bp-crosshair";
+    layer.setAttribute("aria-hidden", "true");
+    var v = d.createElement("span"); v.className = "xh-v";
+    var h = d.createElement("span"); h.className = "xh-h";
+    var read = d.createElement("span"); read.className = "xh-read";
+    layer.appendChild(v); layer.appendChild(h); layer.appendChild(read);
+    d.body.appendChild(layer);
+    var raf = 0, lx = 0, ly = 0;
+    function paint() {
+      raf = 0;
+      v.style.left = lx + "px";
+      h.style.top = ly + "px";
+      read.style.left = lx + "px";
+      read.style.top = ly + "px";
+      read.textContent = "X:" + pad4(lx) + "  Y:" + pad4(ly);
+    }
+    on(d, "pointermove", function (e) {
+      if (e.pointerType === "touch") return;
+      layer.classList.add("is-live");
+      lx = e.clientX; ly = e.clientY;
+      if (!raf) raf = requestAnimationFrame(paint);
+    });
+    on(d, "pointerleave", function () { layer.classList.remove("is-live"); });
+    on(window, "blur", function () { layer.classList.remove("is-live"); });
   }
 
   /* ================================================================== */
@@ -803,7 +911,8 @@
     initTheme(); initGrid(); initTabs(); initAccordion(); initModals(); initDrawers();
     initToasts(); initCmdk(); initMenus(); initCombos(); initInputs(); initDropzones();
     initTables(); initKanban(); initCarousels(); initCalendars(); initRings();
-    initSidebar(); initCopy(); initWizard(); initKeyboard(); initReveal();
+    initSidebar(); initCopy(); initWizard(); initKeyboard(); initSegmented();
+    initCrosshair(); initReveal();
     root.setAttribute("data-js", "ready");
   }
   if (d.readyState === "loading") on(d, "DOMContentLoaded", boot); else boot();

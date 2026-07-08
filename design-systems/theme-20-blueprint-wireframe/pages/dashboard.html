@@ -1,9 +1,19 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark" data-grid="on" data-dims="on">
+<html lang="ko" data-grid="on" data-dims="on">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>분석 대시보드 · BLUEPRINT/DS</title>
+<script>
+/* Sync theme before first paint — no light flash on a saved-dark reload. */
+(function () {
+  try {
+    var t = localStorage.getItem("bp-theme");
+    if (t !== "light" && t !== "dark") t = "dark";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -11,6 +21,37 @@
 <link rel="stylesheet" href="../semantic.css">
 <link rel="stylesheet" href="../base.css">
 <link rel="stylesheet" href="../components/all.css">
+<style>
+  /* Page-scoped layout — asymmetric KPI bento + responsive main/side split.
+     Grid columns live in classes (never inline) so media queries can reflow
+     them cleanly across 360–1920px with no dead zone. */
+  .stat-bento {
+    display: grid; gap: var(--space-5);
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-areas: "hero hero a b" "hero hero c c";
+  }
+  .stat-bento .a-hero { grid-area: hero; }
+  .stat-bento .a-1 { grid-area: a; }
+  .stat-bento .a-2 { grid-area: b; }
+  .stat-bento .a-3 { grid-area: c; }
+  /* the hero KPI carries the week's headline number at display scale */
+  .stat--hero { justify-content: space-between; }
+  .stat--hero .stat-value { font-size: var(--text-5xl); }
+  .stat--hero .stat-label { color: var(--color-primary); }
+  @media (max-width: 980px) {
+    .stat-bento { grid-template-columns: 1fr 1fr; grid-template-areas: "hero hero" "a b" "c c"; }
+    .stat--hero .stat-value { font-size: var(--text-4xl); }
+  }
+  @media (max-width: 560px) {
+    .stat-bento { grid-template-columns: 1fr; grid-template-areas: "hero" "a" "b" "c"; }
+  }
+  .dash-split { display: grid; gap: var(--space-6); grid-template-columns: 2fr 1fr; }
+  @media (max-width: 980px) { .dash-split { grid-template-columns: 1fr; } }
+  /* donut legend keys — line swatches that match the ring segment colors */
+  .dash-swatch { width: 14px; height: 0; border-top: 2px solid var(--color-primary); flex: none; }
+  .dash-swatch--2 { border-color: var(--amber-400); }   /* matches .donut-seg-2 */
+  .dash-swatch--3 { border-color: var(--neutral-300); } /* matches .donut-seg-3 */
+</style>
 </head>
 <body class="bp-grid">
 <a class="skip-link" href="#main">본문으로 건너뛰기</a>
@@ -54,52 +95,62 @@
     <main id="main" class="app-content">
       <div class="page-head row between wrap gap-4">
         <div>
-          <p class="caption">SHEET 01 · OPERATIONS</p>
+          <p class="caption">SCR-01 · OPERATIONS</p>
           <h1 class="page-title">분석 대시보드</h1>
-          <p class="page-sub">2026-06-21 기준 · 실시간 동기화</p>
+          <p class="page-sub">2026-06-21 기준 · 6월 마감 주간 · 실시간 동기화</p>
         </div>
         <div class="row gap-3">
-          <div class="segmented" role="group" aria-label="기간">
-            <button aria-selected="false">일</button><button aria-selected="true">주</button><button aria-selected="false">월</button>
+          <div class="segmented" role="radiogroup" aria-label="집계 기간">
+            <button type="button" role="radio" aria-checked="false">일</button><button type="button" role="radio" aria-checked="true">주</button><button type="button" role="radio" aria-checked="false">월</button>
           </div>
           <button class="btn btn--primary" data-open-drawer="filter-drawer">필터</button>
         </div>
       </div>
 
-      <!-- STAT CARDS -->
-      <div class="grid grid-4 keep-2" data-reveal>
-        <div class="stat">
-          <span class="stat-label">총 매출</span>
-          <span class="stat-value">₩48.2M</span>
+      <!-- Anomaly banner — this week's outlier surfaced as a notification:
+           render-queue load + the issue spike the KPIs flag. Demonstrates the
+           warning alert state inside the scene (§6-3). -->
+      <div class="alert alert--warning mt-4" role="status">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2l8 15H2z"/><path d="M10 8v4M10 14.5v.2"/></svg>
+        <div>
+          <div class="alert-title">렌더 큐 부하 주의</div>
+          <div class="alert-body">렌더 큐 사용률 83% · 미해결 이슈 5건 신규(치수 충돌 포함). 마감 전 병목 확인이 필요합니다.</div>
+        </div>
+      </div>
+
+      <!-- STAT CARDS — asymmetric bento: the week's headline number leads,
+           three supporting KPIs at grid scale. -->
+      <div class="stat-bento" data-reveal>
+        <div class="stat stat--hero a-hero card--dim" data-dim="주간 · 6일">
+          <span class="stat-label">주간 수주액</span>
+          <span class="stat-value">₩2.67억</span>
           <span class="stat-delta up">▲ 12.4% <span class="text-subtle">vs 지난주</span></span>
           <svg class="sparkline stat-spark" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><path class="spark-area" d="M0 26 L15 22 L30 24 L45 16 L60 18 L75 10 L90 13 L105 6 L120 8 L120 32 L0 32 Z"/><path d="M0 26 L15 22 L30 24 L45 16 L60 18 L75 10 L90 13 L105 6 L120 8"/></svg>
         </div>
-        <div class="stat">
-          <span class="stat-label">활성 사용자</span>
-          <span class="stat-value">12,840</span>
+        <div class="stat a-1">
+          <span class="stat-label">진행 도면</span>
+          <span class="stat-value">128</span>
+          <span class="stat-delta up">▲ 6건 <span class="text-subtle">이번 주</span></span>
+        </div>
+        <div class="stat a-2">
+          <span class="stat-label">REV 승인율</span>
+          <span class="stat-value">84.2%</span>
           <span class="stat-delta up">▲ 3.1%</span>
-          <svg class="sparkline stat-spark" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><path class="spark-area" d="M0 20 L15 18 L30 22 L45 14 L60 19 L75 12 L90 16 L105 9 L120 12 L120 32 L0 32 Z"/><path d="M0 20 L15 18 L30 22 L45 14 L60 19 L75 12 L90 16 L105 9 L120 12"/></svg>
         </div>
-        <div class="stat">
-          <span class="stat-label">전환율</span>
-          <span class="stat-value">3.84%</span>
-          <span class="stat-delta down">▼ 0.6%</span>
-          <svg class="sparkline sparkline--down stat-spark" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><path d="M0 8 L15 12 L30 9 L45 16 L60 14 L75 20 L90 18 L105 24 L120 22"/></svg>
-        </div>
-        <div class="stat">
+        <div class="stat a-3">
           <span class="stat-label">미해결 이슈</span>
-          <span class="stat-value">27</span>
-          <span class="stat-delta up">▲ 5 신규</span>
-          <svg class="sparkline stat-spark" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><path d="M0 18 L15 16 L30 20 L45 12 L60 17 L75 14 L90 19 L105 11 L120 15"/></svg>
+          <span class="stat-value">18</span>
+          <span class="stat-delta down" title="이슈 급증 — 확인 필요">▲ 5 신규 <span class="text-subtle">치수 충돌 포함</span></span>
+          <svg class="sparkline sparkline--down stat-spark" viewBox="0 0 120 32" preserveAspectRatio="none" aria-hidden="true"><path d="M0 20 L15 19 L30 18 L45 17 L60 16 L75 13 L90 14 L105 9 L120 6"/></svg>
         </div>
       </div>
 
       <!-- CHART + SIDE WIDGETS -->
-      <div class="grid mt-6" style="grid-template-columns:2fr 1fr" data-reveal>
+      <div class="dash-split mt-6" data-reveal>
         <article class="card card--static">
-          <div class="card-head"><span class="card-title">매출 추이 · 라인 차트</span><span class="card-label">FIG.02 · 1:1</span></div>
+          <div class="card-head"><span class="card-title">일별 수주액 추이</span><span class="card-label">FIG.02 · 단위 백만 원</span></div>
           <div class="chart">
-            <svg viewBox="0 0 560 240" preserveAspectRatio="xMidYMid meet" role="img" aria-label="주간 매출 추이 라인 차트">
+            <svg viewBox="0 0 560 240" preserveAspectRatio="xMidYMid meet" role="img" aria-label="이번 주 일별 수주액 추이 — 월요일 3,200만 원에서 시작해 토요일 5,800만 원으로 상승, 주간 합계 2.67억 원. 지난주 대비 12.4퍼센트 증가.">
               <!-- gridlines -->
               <g>
                 <line class="gridline" x1="40" y1="40" x2="540" y2="40"/>
@@ -110,22 +161,22 @@
                 <line class="axis-major" x1="40" y1="200" x2="540" y2="200"/>
               </g>
               <!-- y labels -->
-              <text class="tick-label" x="34" y="44" text-anchor="end">60M</text>
-              <text class="tick-label" x="34" y="94" text-anchor="end">40M</text>
-              <text class="tick-label" x="34" y="144" text-anchor="end">20M</text>
+              <text class="tick-label" x="34" y="44" text-anchor="end">60</text>
+              <text class="tick-label" x="34" y="94" text-anchor="end">40</text>
+              <text class="tick-label" x="34" y="144" text-anchor="end">20</text>
               <text class="tick-label" x="34" y="194" text-anchor="end">0</text>
               <!-- x labels -->
-              <text class="tick-label" x="70" y="214">MON</text><text class="tick-label" x="150" y="214">TUE</text><text class="tick-label" x="230" y="214">WED</text><text class="tick-label" x="310" y="214">THU</text><text class="tick-label" x="390" y="214">FRI</text><text class="tick-label" x="470" y="214">SAT</text>
+              <text class="tick-label" x="70" y="214">월</text><text class="tick-label" x="150" y="214">화</text><text class="tick-label" x="230" y="214">수</text><text class="tick-label" x="310" y="214">목</text><text class="tick-label" x="390" y="214">금</text><text class="tick-label" x="470" y="214">토</text>
               <!-- area + series -->
               <path class="series-area" d="M70 160 L150 130 L230 145 L310 95 L390 110 L470 60 L520 75 L520 200 L70 200 Z"/>
               <path class="series animate" d="M70 160 L150 130 L230 145 L310 95 L390 110 L470 60 L520 75"/>
               <!-- secondary dashed -->
               <path class="series series--2" d="M70 175 L150 165 L230 170 L310 150 L390 158 L470 140 L520 148"/>
               <!-- nodes -->
-              <circle class="node" cx="70" cy="160" r="3"/><circle class="node" cx="150" cy="130" r="3"/><circle class="node" cx="230" cy="145" r="3"/><circle class="node node-hot" cx="310" cy="95" r="3.5"/><circle class="node" cx="390" cy="110" r="3"/><circle class="node" cx="470" cy="60" r="3"/><circle class="node" cx="520" cy="75" r="3"/>
+              <circle class="node" cx="70" cy="160" r="3"/><circle class="node" cx="150" cy="130" r="3"/><circle class="node" cx="230" cy="145" r="3"/><circle class="node" cx="310" cy="95" r="3"/><circle class="node" cx="390" cy="110" r="3"/><circle class="node node-hot" cx="470" cy="60" r="3.5"/><circle class="node" cx="520" cy="75" r="3"/>
               <!-- annotation callout on peak -->
               <line class="marker-line" x1="470" y1="60" x2="470" y2="30"/>
-              <text class="marker-label" x="470" y="26" text-anchor="middle">PEAK 58M</text>
+              <text class="marker-label" x="470" y="26" text-anchor="middle">토 5,800만</text>
             </svg>
             <div class="chart-legend"><span class="li"><span class="swatch"></span>이번 주</span><span class="li"><span class="swatch swatch--2"></span>지난 주</span></div>
           </div>
@@ -133,39 +184,44 @@
 
         <div class="stack gap-6">
           <article class="card card--static">
-            <div class="card-head"><span class="card-title">채널 분포</span><span class="card-label">DONUT</span></div>
+            <div class="card-head"><span class="card-title">수주 유입 경로</span><span class="card-label">DONUT</span></div>
             <div class="row gap-5 items-center">
-              <svg class="donut" viewBox="0 0 120 120" role="img" aria-label="채널 분포 도넛 차트">
+              <svg class="donut" viewBox="0 0 120 120" role="img" aria-label="수주 유입 경로 — 재의뢰 50퍼센트, 소개 30퍼센트, 신규 20퍼센트.">
                 <circle class="donut-track" cx="60" cy="60" r="48"/>
                 <circle class="donut-seg" cx="60" cy="60" r="48" transform="rotate(-90 60 60)" stroke-dasharray="150 302" stroke-dashoffset="0"/>
                 <circle class="donut-seg-2" cx="60" cy="60" r="48" transform="rotate(-90 60 60)" stroke-dasharray="90 302" stroke-dashoffset="-150"/>
                 <circle class="donut-seg-3" cx="60" cy="60" r="48" transform="rotate(-90 60 60)" stroke-dasharray="62 302" stroke-dashoffset="-240"/>
               </svg>
               <ul class="stack gap-2 text-sm" role="list">
-                <li class="row gap-2"><span class="swatch" style="width:14px;border-top:2px solid var(--cyan-400)"></span>유기 50%</li>
-                <li class="row gap-2"><span class="swatch" style="width:14px;border-top:2px solid var(--amber-400)"></span>광고 30%</li>
-                <li class="row gap-2"><span class="swatch" style="width:14px;border-top:2px solid var(--neutral-300)"></span>추천 20%</li>
+                <li class="row gap-2"><span class="dash-swatch dash-swatch--1" aria-hidden="true"></span>재의뢰 50%</li>
+                <li class="row gap-2"><span class="dash-swatch dash-swatch--2" aria-hidden="true"></span>소개 30%</li>
+                <li class="row gap-2"><span class="dash-swatch dash-swatch--3" aria-hidden="true"></span>신규 20%</li>
               </ul>
             </div>
           </article>
           <article class="card card--static">
-            <div class="card-head"><span class="card-title">서버 부하</span><span class="card-label">GAUGE</span></div>
+            <div class="card-head"><span class="card-title">시스템 부하</span><span class="card-label">GAUGE</span></div>
             <div class="stack gap-3">
               <div><div class="row between text-sm mb-1"><span>CPU</span><span class="text-primary">62%</span></div><div class="progress"><div class="progress-bar" data-pct="62"></div></div></div>
               <div><div class="row between text-sm mb-1"><span>MEM</span><span class="text-primary">48%</span></div><div class="progress"><div class="progress-bar" data-pct="48"></div></div></div>
-              <div><div class="row between text-sm mb-1"><span>DISK</span><span class="text-warning">83%</span></div><div class="progress"><div class="progress-bar" data-pct="83"></div></div></div>
+              <div><div class="row between text-sm mb-1"><span>렌더 큐</span><span class="text-warning">83%</span></div><div class="progress"><div class="progress-bar" data-pct="83"></div></div></div>
             </div>
           </article>
         </div>
       </div>
 
       <!-- DATA GRID + ACTIVITY -->
-      <div class="grid mt-6" style="grid-template-columns:2fr 1fr" data-reveal>
+      <div class="dash-split mt-6" data-reveal>
         <article class="card card--static" style="padding:0">
           <div class="table-toolbar"><span class="card-title">최근 거래</span><span class="card-label">DATA GRID</span><span class="grow"></span><button class="btn btn--sm btn--ghost" data-context aria-label="옵션">우클릭 메뉴</button></div>
           <div class="table-wrap" data-context>
             <table class="table">
-              <thead><tr><th class="sortable" data-type="string">ID</th><th class="sortable" data-type="string">고객</th><th class="sortable" data-type="string">상태</th><th class="sortable num" data-type="number">금액</th></tr></thead>
+              <thead><tr>
+                <th class="sortable" data-type="string" aria-sort="none"><button type="button" class="th-sort">거래번호</button></th>
+                <th class="sortable" data-type="string" aria-sort="none"><button type="button" class="th-sort">고객사</button></th>
+                <th class="sortable" data-type="string" aria-sort="none"><button type="button" class="th-sort">상태</button></th>
+                <th class="sortable num" data-type="number" aria-sort="none"><button type="button" class="th-sort">금액</button></th>
+              </tr></thead>
               <tbody>
                 <tr><td>#TX-9001</td><td>아틀리에 노스</td><td><span class="badge badge--success">완료</span></td><td class="num">₩1,240,000</td></tr>
                 <tr><td>#TX-9002</td><td>스튜디오 메리디안</td><td><span class="badge badge--warning">대기</span></td><td class="num">₩880,500</td></tr>
@@ -175,18 +231,33 @@
               </tbody>
             </table>
           </div>
-          <div class="table-foot"><span>5 / 128 표시</span><nav class="pagination" aria-label="페이지"><button disabled>‹</button><button aria-current="page">1</button><button>2</button><button>3</button><button>›</button></nav></div>
+          <div class="table-foot"><span>최근 5건 · 이번 주 42건</span><nav class="pagination" aria-label="페이지"><button aria-label="이전" disabled>‹</button><button aria-current="page">1</button><button>2</button><button>3</button><button aria-label="다음">›</button></nav></div>
         </article>
 
         <article class="card card--static">
-          <div class="card-head"><span class="card-title">활동 로그</span><span class="card-label">TIMELINE</span></div>
+          <div class="card-head"><span class="card-title">활동 로그</span><span class="card-label">06-21 · 오전</span></div>
           <div class="timeline">
-            <div class="timeline-item is-done"><div class="timeline-time">09:42</div><div class="timeline-title">REV-A 승인됨</div><div class="timeline-body">김설계 · A-101 평면도</div></div>
-            <div class="timeline-item is-done"><div class="timeline-time">09:15</div><div class="timeline-title">신규 거래 #TX-9005</div><div class="timeline-body">섹션 컴퍼니 · ₩1.97M</div></div>
-            <div class="timeline-item"><div class="timeline-time">08:50</div><div class="timeline-title">배포 v1.0.4</div><div class="timeline-body">자동 백업 완료</div></div>
-            <div class="timeline-item"><div class="timeline-time">08:02</div><div class="timeline-title">이슈 #27 보고</div><div class="timeline-body">치수 충돌 · A2 격자</div></div>
+            <div class="timeline-item"><div class="timeline-time">09:42</div><div class="timeline-title">REV-A 승인 요청</div><div class="timeline-body">김설계 · A-101 평면도 · 검토 대기</div></div>
+            <div class="timeline-item is-done"><div class="timeline-time">09:15</div><div class="timeline-title">신규 거래 #TX-9005</div><div class="timeline-body">섹션 컴퍼니 · ₩1,975,000</div></div>
+            <div class="timeline-item is-done"><div class="timeline-time">08:50</div><div class="timeline-title">백업 v1.0.4 완료</div><div class="timeline-body">시트 12개 동기화</div></div>
+            <div class="timeline-item"><div class="timeline-time">08:15</div><div class="timeline-title">이슈 #27 접수</div><div class="timeline-body">이도면 · 치수 충돌 · A2 격자</div></div>
           </div>
         </article>
+      </div>
+
+      <!-- Sheet title-block — the whole dashboard reads as a plotted drawing.
+           제도/검도/승인 서명은 정본 담당자로, 활동 로그·인박스에 등장하는
+           같은 인물과 교차 일치. cell 단위로 플로터가 그려지듯 스태거 등장. -->
+      <div class="caption mt-8 mb-2">TITLE BLOCK · 표제란</div>
+      <div class="title-block" data-reveal aria-label="도면 표제란">
+        <div class="cell"><span class="k">TITLE</span><span class="v">분석 대시보드 · SCR-01</span></div>
+        <div class="cell"><span class="k">SCALE</span><span class="v">1:1</span></div>
+        <div class="cell"><span class="k">GRID</span><span class="v">20mm</span></div>
+        <div class="cell"><span class="k">REV</span><span class="v">1.0</span></div>
+        <div class="cell"><span class="k">SIGN · 서명</span><span class="v">제도 김설계 · 검도 이도면 · 승인 박치수</span></div>
+        <div class="cell"><span class="k">DATE</span><span class="v">2026-06-21</span></div>
+        <div class="cell"><span class="k">SHEET</span><span class="v">01 / 20</span></div>
+        <div class="cell"><span class="k">STATUS</span><span class="v text-success">동기화됨</span></div>
       </div>
     </main>
   </div>
@@ -204,7 +275,7 @@
         <label class="check"><input type="checkbox"><span class="box"><svg viewBox="0 0 16 16"><path d="M3 8.5l3.5 3.5L13 4"/></svg></span> 취소</label>
       </div>
     </div>
-    <div class="field"><label class="field-label">최소 금액</label><div class="slider slider-row"><input type="range" min="0" max="100" value="20" aria-label="최소 금액"><span class="slider-value" data-prefix="₩" data-suffix="M">20M</span></div></div>
+    <div class="field"><label class="field-label">최소 금액</label><div class="slider slider-row"><input type="range" min="0" max="500" value="120" aria-label="최소 금액"><span class="slider-value" data-prefix="₩" data-suffix="만">120만</span></div></div>
   </div>
   <div class="drawer-foot row gap-3"><button class="btn btn--ghost flex-1" data-close-drawer>초기화</button><button class="btn btn--primary flex-1" data-close-drawer data-toast="success" data-toast-title="필터 적용됨">적용</button></div>
 </aside>

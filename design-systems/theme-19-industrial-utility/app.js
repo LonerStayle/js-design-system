@@ -12,6 +12,67 @@
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   /* =========================================================================
+     FOCUS TRAP — 오버레이/드로어/모바일 사이드바 공용. 요소별 WeakMap 핸들러.
+     ========================================================================= */
+  var FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+  var trapHandlers = new WeakMap();
+  function focusables(container) {
+    return $$(FOCUSABLE, container).filter(function (n) {
+      return n.offsetWidth > 0 || n.offsetHeight > 0 || n === document.activeElement;
+    });
+  }
+  function trapFocus(container) {
+    if (!container || trapHandlers.has(container)) return;
+    function handler(e) {
+      if (e.key !== "Tab") return;
+      var nodes = focusables(container);
+      if (!nodes.length) return;
+      var first = nodes[0], last = nodes[nodes.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+    container.addEventListener("keydown", handler);
+    trapHandlers.set(container, handler);
+  }
+  function releaseFocus(container) {
+    if (!container) return;
+    var h = trapHandlers.get(container);
+    if (h) { container.removeEventListener("keydown", h); trapHandlers.delete(container); }
+  }
+
+  /* =========================================================================
+     MOBILE SIDEBAR (app-shell 오프캔버스) — 스크림 + 포커스 트랩 + ESC + 복원
+     ========================================================================= */
+  var mobileNavShell = null, mobileNavTrigger = null;
+  function ensureAppScrim() {
+    var s = $(".app-scrim");
+    if (!s) { s = document.createElement("div"); s.className = "app-scrim"; document.body.appendChild(s); on(s, "click", closeMobileNav); }
+    return s;
+  }
+  function openMobileNav(shell, trigger) {
+    mobileNavShell = shell; mobileNavTrigger = trigger || null;
+    shell.setAttribute("data-mobile-open", "true");
+    ensureAppScrim().classList.add("is-on");
+    document.body.style.overflow = "hidden";
+    var sb = $(".sidebar", shell);
+    if (sb) { trapFocus(sb); var f = sb.querySelector("a,button,[tabindex]"); if (f) setTimeout(function () { f.focus(); }, 60); }
+  }
+  function closeMobileNav() {
+    var shell = mobileNavShell || $(".app-shell[data-mobile-open='true']");
+    if (!shell) return;
+    shell.setAttribute("data-mobile-open", "false");
+    var scrim = $(".app-scrim"); if (scrim) scrim.classList.remove("is-on");
+    document.body.style.overflow = "";
+    var sb = $(".sidebar", shell); if (sb) releaseFocus(sb);
+    if (mobileNavTrigger) mobileNavTrigger.focus();
+    mobileNavShell = null; mobileNavTrigger = null;
+  }
+  // 사이드바 링크 클릭 시(같은 페이지 이동 포함) 오프캔버스 닫기
+  on(document, "click", function (e) {
+    if (mobileNavShell && e.target.closest(".sidebar a")) closeMobileNav();
+  });
+
+  /* =========================================================================
      THEME TOGGLE (dark 정본 / light) — localStorage 영속
      ========================================================================= */
   var STORE_KEY = "theme19-mode";
@@ -19,15 +80,30 @@
     document.documentElement.setAttribute("data-theme", mode);
     $$("[data-action='toggle-theme']").forEach(function (b) {
       b.setAttribute("aria-pressed", String(mode === "light"));
-      var lab = $(".theme-label", b);
+      var lab = $(".theme-label", b) || $(".breaker__label", b);
       if (lab) lab.textContent = mode === "light" ? "LIGHT" : "DARK";
     });
   }
   (function initTheme() {
     var saved;
     try { saved = localStorage.getItem(STORE_KEY); } catch (e) {}
-    applyTheme(saved || "dark");
+    // FOUC 방지 head 스니펫이 이미 data-theme 를 세팅함 — 여기선 상태 UI(라벨/aria)만 동기화
+    applyTheme(document.documentElement.getAttribute("data-theme") || saved || "dark");
   })();
+
+  // 계전기 절환 플래시 오버레이 1회 주입(테마 토글 시 명멸)
+  var relayFlash = document.createElement("div");
+  relayFlash.className = "relay-flash";
+  relayFlash.setAttribute("aria-hidden", "true");
+  document.addEventListener("DOMContentLoaded", function () { document.body.appendChild(relayFlash); });
+  function relayFlick() {
+    if (reduceMotion) return;
+    var h = document.documentElement;
+    h.classList.remove("is-switching");
+    void h.offsetWidth;            // reflow 로 애니메이션 재기동
+    h.classList.add("is-switching");
+    setTimeout(function () { h.classList.remove("is-switching"); }, 160);
+  }
 
   /* =========================================================================
      DELEGATED CLICK ROUTER — data-action 모음
@@ -40,6 +116,7 @@
     if (action === "toggle-theme") {
       var next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
       applyTheme(next);
+      relayFlick();
       try { localStorage.setItem(STORE_KEY, next); } catch (er) {}
     }
     if (action === "toggle-sidebar") {
@@ -48,14 +125,14 @@
     }
     if (action === "toggle-mobile-nav") {
       var sh = $(".app-shell");
-      if (sh) sh.setAttribute("data-mobile-open", sh.getAttribute("data-mobile-open") === "true" ? "false" : "true");
+      if (sh) { sh.getAttribute("data-mobile-open") === "true" ? closeMobileNav() : openMobileNav(sh, t); }
     }
     if (action === "open-cmdk") openCmdk();
     if (action === "demo-toast") {
       Toast.show({
         type: t.getAttribute("data-type") || "info",
-        title: t.getAttribute("data-title") || "SYSTEM NOTICE",
-        msg: t.getAttribute("data-msg") || "Operation acknowledged."
+        title: t.getAttribute("data-title") || "시스템 알림",
+        msg: t.getAttribute("data-msg") || "요청을 처리했습니다."
       });
     }
   });
@@ -151,13 +228,15 @@
     var ov = document.getElementById(id); if (!ov) return;
     lastFocus = document.activeElement;
     ov.setAttribute("data-open", "true");
-    var f = ov.querySelector("input,button,[tabindex]");
+    trapFocus(ov);
+    var f = ov.querySelector("input:not([type='hidden']),button,[tabindex]");
     if (f) setTimeout(function () { f.focus(); }, 60);
     document.body.style.overflow = "hidden";
   }
   function closeModal(ov) {
     if (!ov) return;
     ov.setAttribute("data-open", "false");
+    releaseFocus(ov);
     document.body.style.overflow = "";
     if (lastFocus) lastFocus.focus();
   }
@@ -172,16 +251,24 @@
   /* =========================================================================
      DRAWER
      ========================================================================= */
+  var drawerLastFocus = null;
   function openDrawer(id) {
     var d = document.getElementById(id); if (!d) return;
+    drawerLastFocus = document.activeElement;
     d.setAttribute("data-open", "true");
     var bd = $("[data-drawer-backdrop]");
     if (bd) bd.setAttribute("data-open", "true");
+    document.body.style.overflow = "hidden";
+    trapFocus(d);
+    var f = d.querySelector("input:not([type='hidden']),button,a,[tabindex]");
+    if (f) setTimeout(function () { f.focus(); }, 60);
   }
   function closeDrawers() {
-    $$(".drawer[data-open='true']").forEach(function (d) { d.setAttribute("data-open", "false"); });
+    $$(".drawer[data-open='true']").forEach(function (d) { d.setAttribute("data-open", "false"); releaseFocus(d); });
     var bd = $("[data-drawer-backdrop]");
     if (bd) bd.setAttribute("data-open", "false");
+    document.body.style.overflow = "";
+    if (drawerLastFocus) { drawerLastFocus.focus(); drawerLastFocus = null; }
   }
   on(document, "click", function (e) {
     var o = e.target.closest("[data-drawer-open]");
@@ -197,6 +284,7 @@
       var open = $(".overlay[data-open='true']"); if (open) closeModal(open);
       closeDrawers(); closeAllMenus();
       var ck = $(".cmdk-overlay[data-open='true']"); if (ck) closeCmdk();
+      if ($(".app-shell[data-mobile-open='true']")) closeMobileNav();
     }
   });
 
@@ -221,7 +309,7 @@
       el.className = "toast toast--" + type; el.style.position = "relative";
       el.innerHTML =
         '<span class="toast__icon">' + (icons[type] || icons.info) + '</span>' +
-        '<div class="toast__body"><div class="toast__title">' + (opt.title || "NOTICE") + '</div>' +
+        '<div class="toast__body"><div class="toast__title">' + (opt.title || "알림") + '</div>' +
         '<div class="toast__msg">' + (opt.msg || "") + '</div></div>' +
         '<button class="toast__close" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6 6 18"/></svg></button>' +
         '<span class="toast__progress"></span>';
@@ -243,24 +331,35 @@
   function openCmdk() {
     var ov = $("#cmdk"); if (!ov) return;
     ov.setAttribute("data-open", "true");
+    trapFocus(ov);
     var inp = $(".cmdk__search input", ov);
     if (inp) { inp.value = ""; filterCmdk(""); setTimeout(function () { inp.focus(); }, 50); }
     document.body.style.overflow = "hidden";
   }
-  function closeCmdk() { var ov = $("#cmdk"); if (ov) { ov.setAttribute("data-open", "false"); document.body.style.overflow = ""; } }
+  function closeCmdk() { var ov = $("#cmdk"); if (ov) { ov.setAttribute("data-open", "false"); releaseFocus(ov); document.body.style.overflow = ""; } }
   function cmdkItems() { return $$("#cmdk .cmdk__item").filter(function (i) { return !i.hidden && !i.closest("[hidden]"); }); }
+  function cmdkSetActive(item) {
+    var inp = $("#cmdk .cmdk__search input");
+    $$("#cmdk .cmdk__item").forEach(function (i) { i.setAttribute("aria-selected", String(i === item)); });
+    if (inp) inp.setAttribute("aria-activedescendant", item ? item.id : "");
+    if (item) item.scrollIntoView({ block: "nearest" });
+  }
   function filterCmdk(q) {
     q = (q || "").toLowerCase();
+    var visible = 0;
     $$("#cmdk .cmdk__item").forEach(function (it) {
       var txt = (it.textContent || "").toLowerCase();
       it.hidden = q && txt.indexOf(q) === -1;
+      if (!it.hidden) visible++;
     });
     $$("#cmdk .cmdk__group").forEach(function (g) {
       var any = $$(".cmdk__item", g).some(function (i) { return !i.hidden; });
       g.hidden = !any;
     });
-    var items = cmdkItems(); items.forEach(function (i) { i.setAttribute("aria-selected", "false"); });
-    if (items[0]) items[0].setAttribute("aria-selected", "true");
+    var empty = $("#cmdk .cmdk__empty");
+    if (empty) empty.hidden = visible !== 0;
+    var items = cmdkItems();
+    cmdkSetActive(items[0] || null);
   }
   on(document, "keydown", function (e) {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
@@ -272,6 +371,8 @@
   (function bindCmdk() {
     var ov = $("#cmdk"); if (!ov) return;
     var inp = $(".cmdk__search input", ov);
+    // 각 옵션에 안정적 id 부여(aria-activedescendant 대상)
+    $$(".cmdk__item", ov).forEach(function (it, n) { if (!it.id) it.id = "cmdk-opt-" + n; });
     on(inp, "input", function () { filterCmdk(inp.value); });
     on(ov, "click", function (e) { if (e.target === ov) closeCmdk(); });
     on(ov, "keydown", function (e) {
@@ -279,17 +380,17 @@
       var cur = items.findIndex(function (i) { return i.getAttribute("aria-selected") === "true"; });
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         e.preventDefault();
-        items[cur < 0 ? 0 : cur].setAttribute("aria-selected", "false");
-        var ni = e.key === "ArrowDown" ? (cur + 1) % items.length : (cur - 1 + items.length) % items.length;
-        items[ni].setAttribute("aria-selected", "true");
-        items[ni].scrollIntoView({ block: "nearest" });
+        var ni = e.key === "ArrowDown" ? ((cur < 0 ? -1 : cur) + 1) % items.length : (cur - 1 + items.length) % items.length;
+        cmdkSetActive(items[ni]);
       }
-      if (e.key === "Enter" && items[cur]) { items[cur].click(); }
+      if (e.key === "Enter" && items[cur]) { e.preventDefault(); items[cur].click(); }
     });
     $$(".cmdk__item", ov).forEach(function (it) {
       on(it, "click", function () {
+        var isNav = it.tagName === "A" && it.getAttribute("href");
         closeCmdk();
-        Toast.show({ type: "info", title: "ACTION", msg: (it.getAttribute("data-label") || it.textContent.trim()) + " 실행" });
+        if (isNav) return;   // 실제 링크는 브라우저 이동에 맡김
+        Toast.show({ type: "info", title: "실행", msg: (it.getAttribute("data-label") || it.textContent.trim()) + " · 명령을 실행했습니다" });
       });
     });
   })();
@@ -300,12 +401,29 @@
   $$("[data-segmented]").forEach(function (seg) {
     var opts = $$(".segmented__option", seg);
     var thumb = $(".segmented__thumb", seg);
-    function move(opt) {
-      opts.forEach(function (o) { o.setAttribute("aria-selected", String(o === opt)); });
+    var isRadio = seg.getAttribute("role") === "radiogroup";
+    function move(opt, focusIt) {
+      opts.forEach(function (o) {
+        var sel = o === opt;
+        o.setAttribute("aria-checked", String(sel));   // radiogroup 표준
+        o.removeAttribute("aria-selected");             // 무효 ARIA 잔재 제거
+        if (isRadio) o.tabIndex = sel ? 0 : -1;
+      });
       if (thumb) { thumb.style.width = opt.offsetWidth + "px"; thumb.style.transform = "translateX(" + (opt.offsetLeft - 3) + "px)"; }
+      if (focusIt) opt.focus();
     }
-    opts.forEach(function (o) { on(o, "click", function () { move(o); }); });
-    var init = seg.querySelector(".segmented__option[aria-selected='true']") || opts[0];
+    opts.forEach(function (o, i) {
+      on(o, "click", function () { move(o); });
+      if (isRadio) on(o, "keydown", function (e) {
+        var idx = null;
+        if (e.key === "ArrowRight" || e.key === "ArrowDown") idx = (i + 1) % opts.length;
+        if (e.key === "ArrowLeft" || e.key === "ArrowUp") idx = (i - 1 + opts.length) % opts.length;
+        if (e.key === "Home") idx = 0;
+        if (e.key === "End") idx = opts.length - 1;
+        if (idx !== null) { e.preventDefault(); move(opts[idx], true); }
+      });
+    });
+    var init = seg.querySelector(".segmented__option[aria-checked='true'],.segmented__option[aria-selected='true']") || opts[0];
     if (init) requestAnimationFrame(function () { move(init); });
   });
 
@@ -437,8 +555,10 @@
      ========================================================================= */
   $$("[data-sortable-table]").forEach(function (table) {
     var tbody = $("tbody", table);
-    $$("th.sortable", table).forEach(function (th, ci) {
-      on(th, "click", function () {
+    $$("th.sortable", table).forEach(function (th) {
+      // 키보드 조작 — th 를 포커스 가능하게 하고 Enter/Space 로 정렬(마우스 전용 금지)
+      if (!th.hasAttribute("tabindex")) th.tabIndex = 0;
+      function sort() {
         var idx = Array.prototype.indexOf.call(th.parentElement.children, th);
         var asc = th.getAttribute("aria-sort") !== "ascending";
         $$("th", table).forEach(function (h) { h.removeAttribute("aria-sort"); });
@@ -452,20 +572,20 @@
           return asc ? av.localeCompare(bv) : bv.localeCompare(av);
         });
         rows.forEach(function (r) { tbody.appendChild(r); });
-      });
+      }
+      on(th, "click", sort);
+      on(th, "keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sort(); } });
     });
   });
   $$("[data-select-all]").forEach(function (master) {
     var scope = master.closest("table") || document;
+    function markRow(cb) { var tr = cb.closest("tr"); if (tr) tr.classList.toggle("is-selected", cb.checked); }
     on(master, "change", function () {
-      $$("[data-row-select]", scope).forEach(function (cb) {
-        cb.checked = master.checked;
-        var tr = cb.closest("tr"); if (tr) tr.setAttribute("aria-selected", String(master.checked));
-      });
+      $$("[data-row-select]", scope).forEach(function (cb) { cb.checked = master.checked; markRow(cb); });
     });
     $$("[data-row-select]", scope).forEach(function (cb) {
       on(cb, "change", function () {
-        var tr = cb.closest("tr"); if (tr) tr.setAttribute("aria-selected", String(cb.checked));
+        markRow(cb);
         var all = $$("[data-row-select]", scope);
         master.checked = all.every(function (c) { return c.checked; });
         master.indeterminate = !master.checked && all.some(function (c) { return c.checked; });
@@ -500,7 +620,7 @@
     var sel = btn.getAttribute("data-copy");
     var src = sel ? document.querySelector(sel) : btn.closest(".codeblock");
     var text = src ? (src.innerText || src.textContent) : "";
-    var done = function () { Toast.show({ type: "success", title: "COPIED", msg: "클립보드에 복사됨" }); };
+    var done = function () { Toast.show({ type: "success", title: "복사됨", msg: "클립보드에 복사했습니다" }); };
     if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, done); else done();
   });
 
@@ -569,7 +689,7 @@
     }
     on($("[data-wizard-next]", wiz), "click", function () { show(cur + 1); });
     on($("[data-wizard-prev]", wiz), "click", function () { show(cur - 1); });
-    on($("[data-wizard-finish]", wiz), "click", function () { Toast.show({ type: "success", title: "SETUP COMPLETE", msg: "온보딩이 완료되었습니다." }); });
+    on($("[data-wizard-finish]", wiz), "click", function () { Toast.show({ type: "success", title: "설정 완료", msg: "온보딩을 마쳤습니다. 작업대에 오신 걸 환영합니다." }); });
     show(0);
   });
 

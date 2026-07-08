@@ -243,10 +243,15 @@
     function close() { if (!el) return; el.classList.remove("is-open"); document.body.style.overflow = ""; if (lastFocus) lastFocus.focus(); }
     function visible() { return items.filter((i) => i.style.display !== "none"); }
     function setActive(n) {
-      const v = visible(); if (!v.length) return;
+      items.forEach((i) => { i.classList.remove("is-active"); i.setAttribute("aria-selected", "false"); });
+      const v = visible();
+      if (!v.length) { if (input) input.removeAttribute("aria-activedescendant"); return; }
       active = (n + v.length) % v.length;
-      v.forEach((i, idx) => i.classList.toggle("is-active", idx === active));
-      v[active].scrollIntoView({ block: "nearest" });
+      const cur = v[active];
+      cur.classList.add("is-active");
+      cur.setAttribute("aria-selected", "true");
+      if (input && cur.id) input.setAttribute("aria-activedescendant", cur.id);
+      cur.scrollIntoView({ block: "nearest" });
     }
     function filter(q) {
       q = q.toLowerCase().trim();
@@ -271,7 +276,13 @@
         if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); el.classList.contains("is-open") ? close() : open(); }
       });
       $$("[data-cmdk-open]").forEach((b) => on(b, "click", open));
-      on(el, "click", (e) => { if (e.target === el) close(); const it = e.target.closest(".cmdk__item"); if (it) { close(); if (it.dataset.href) location.href = it.dataset.href; } });
+      on(el, "click", (e) => {
+        if (e.target === el) close();
+        const it = e.target.closest(".cmdk__item"); if (!it) return;
+        close();
+        if (it.dataset.href) location.href = it.dataset.href;
+        else if (it.dataset.cmdkAction === "theme-toggle") Theme.toggle();
+      });
       input = $(".cmdk__search input", el);
       on(input, "input", () => filter(input.value));
       on(el, "keydown", (e) => {
@@ -545,6 +556,15 @@
     $$(".bar-chart__bar[data-h]").forEach((b) => { requestAnimationFrame(() => { b.style.height = b.dataset.h; }); });
   }
 
+  /* -------------------------------------------------------------- BANNER */
+  function initBanner() {
+    on(document, "click", (e) => {
+      const b = e.target.closest("[data-banner-close]"); if (!b) return;
+      const el = document.getElementById(b.dataset.bannerClose) || b.closest(".banner");
+      if (el) el.remove();
+    });
+  }
+
   /* ----------------------------------------------------------------- BOOT */
   function boot() {
     Theme.init(); Modal.init(); Drawer.init(); Toast.init(); Cmdk.init();
@@ -552,6 +572,7 @@
     initStepper(); initCarousel(); initSidebar(); initCopy(); initTableSort();
     initSelectAll(); initCombobox(); initMultiselect(); initFileUpload(); initRating();
     initContextMenu(); initWizard(); initBillingToggle(); initScrollReveal(); initBarAnim();
+    initBanner();
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();

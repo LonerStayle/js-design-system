@@ -1,8 +1,17 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+/* FOUC 방지 — 스타일 로드 전 data-theme 확정(다크가 정본). app.js 와 동일 키 */
+(function () {
+  try {
+    var t = localStorage.getItem("theme19-mode") || "dark";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
+})();
+</script>
 <title>작업자 프로필 · INDUSTRIAL UTILITY</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,13 +31,43 @@
   @media (max-width: 980px) { .profile-layout { grid-template-columns: 1fr; } }
   .profile-hero { display: flex; gap: var(--space-7); align-items: center; flex-wrap: wrap; padding: var(--space-7); }
   @media (max-width: 560px){ .profile-hero { gap: var(--space-5); } }
+
+  /* 무재해 목표 진척 게이지 폭 제한 */
+  .safety-goal { width: 100%; max-width: 280px; }
+
+  /* 무재해 기록판 — 프로필 시그니처(공장 안전 스코어보드) */
+  .safety-board { border: var(--border-3) solid var(--color-border-strong); background: var(--metal-surface); box-shadow: var(--shadow-md), var(--shadow-inset-metal); }
+  .safety-board__body { display: grid; grid-template-columns: auto 1fr; gap: var(--space-8); padding: var(--space-7); align-items: center; }
+  .safety-board__hero { display: flex; flex-direction: column; gap: var(--space-3); border-right: var(--border-2) dashed var(--color-border); padding-right: var(--space-8); }
+  .safety-board .led { font-size: var(--text-6xl); padding: var(--space-2) var(--space-5); line-height: 1; }
+  .safety-board__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-5); }
+  .safety-board__stats > div { display: flex; flex-direction: column; gap: var(--space-2); border-left: 3px solid var(--color-primary); padding-left: var(--space-4); }
+  .sb-val { font-family: var(--font-display); font-size: var(--text-3xl); font-weight: var(--weight-bold); line-height: 1; letter-spacing: var(--tracking-tight); font-variant-numeric: tabular-nums lining-nums; }
+  .sb-val small { font-size: var(--text-sm); color: var(--color-text-muted); font-weight: var(--weight-regular); }
+  @media (max-width: 860px) {
+    .safety-board__body { grid-template-columns: 1fr; gap: var(--space-6); }
+    .safety-board__hero { border-right: none; border-bottom: var(--border-2) dashed var(--color-border); padding-right: 0; padding-bottom: var(--space-5); }
+  }
+  @media (max-width: 520px) {
+    .safety-board__stats { grid-template-columns: 1fr; }
+    .safety-board .led { font-size: var(--text-5xl); }
+  }
+
+  /* 토프바 — 모바일에서 데스크톱 접기 버튼 숨김 + 브레이커 라벨/검색 축소(360px 대응) */
+  @media (max-width: 1024px) { .topbar__collapse { display: none; } }
+  @media (max-width: 720px) {
+    .topbar .breaker__label { display: none; }
+    .topbar .breaker { padding-inline: var(--space-3); }
+    .topbar .searchbar { width: auto !important; padding-inline: var(--space-3); }
+    .topbar .searchbar kbd { display: none; }
+  }
 </style>
 </head>
 <body>
 <a href="#main" class="skip-link">본문으로 건너뛰기</a>
 <div class="app-shell" data-collapsed="false" data-mobile-open="false">
 
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar__head"><a class="brand" href="../index.html"><span class="brand__mark">19</span><span class="brand__name sidebar__label">CTRL<small>OPS CONSOLE</small></span></a></div>
     <nav aria-label="주 메뉴" style="overflow:auto">
       <div class="sidebar__group">
@@ -47,11 +86,15 @@
   </aside>
 
   <header class="topbar">
-    <button class="btn btn--icon btn--ghost" data-action="toggle-sidebar" aria-label="사이드바 토글"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    <button class="topbar__burger" data-action="toggle-mobile-nav" aria-label="메뉴 열기" aria-controls="sidebar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+    <button class="btn btn--icon btn--ghost topbar__collapse" data-action="toggle-sidebar" aria-label="사이드바 접기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
     <nav class="breadcrumb" aria-label="위치"><a class="breadcrumb__item" href="../index.html">SYSTEM</a><span class="breadcrumb__sep"></span><span class="breadcrumb__item" aria-current="page">프로필</span></nav>
     <span class="spacer"></span>
     <button class="searchbar" data-action="open-cmdk" style="width:160px" aria-label="명령 팔레트"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><kbd>⌘K</kbd></button>
-    <button class="btn btn--icon btn--secondary" data-action="toggle-theme" aria-label="테마 전환"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg></button>
+    <button class="breaker" data-action="toggle-theme" aria-pressed="false" aria-label="조명 전환 · 다크/라이트" title="차단기 레버 — 조명 전환">
+      <span class="breaker__slot" aria-hidden="true"><span class="breaker__lever"></span></span>
+      <span class="breaker__label" aria-hidden="true">DARK</span>
+    </button>
     <div class="menu"><button class="avatar" data-menu-toggle aria-haspopup="true" aria-expanded="false" aria-label="계정 메뉴">JS</button>
       <div class="menu__panel" hidden><a class="menu__item" href="settings.html">설정</a><div class="menu__sep"></div><button class="menu__item menu__item--danger">로그아웃</button></div>
     </div>
@@ -64,19 +107,31 @@
       <span class="avatar avatar--lg avatar--ring" style="width:80px;height:80px;font-size:var(--text-3xl)">JS</span>
       <div class="grow">
         <div class="cluster mb-3"><h1 class="t-3xl" style="margin:0">정세훈</h1><span class="badge badge--success"><span class="dot dot--green"></span>근무중</span></div>
-        <div class="label">생산관리 책임 · 조립1팀 · 사번 OP-2049</div>
-        <div class="cluster mt-3"><span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7l9 6 9-6"/><rect x="3" y="5" width="18" height="14"/></svg>sehoon@daehan.co</span><span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L8.1 9.6a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.8.3 1.7.5 2.6.6a2 2 0 0 1 1.7 2z"/></svg>010-2049-XXXX</span></div>
+        <div class="label">생산관리 책임 · 조립1팀 · 사번 <span class="label--yellow">OP-2049</span></div>
+        <div class="cluster mt-3"><span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7l9 6 9-6"/><rect x="3" y="5" width="18" height="14"/></svg>sehoon@daehan.co.kr</span><span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L8.1 9.6a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.8.3 1.7.5 2.6.6a2 2 0 0 1 1.7 2z"/></svg>010-2049-7736</span></div>
       </div>
       <button class="btn btn--primary" data-drawer-open="edit-drawer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4v16h16v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>프로필 편집</button>
     </div>
 
-    <!-- STAT ROW -->
-    <div class="grid grid-4 mb-6" style="--grid-gap: var(--space-5)">
-      <div class="statcard"><div class="statcard__label">근속</div><div class="statcard__value">6<small>년 2개월</small></div></div>
-      <div class="statcard statcard--green"><div class="statcard__label">담당 라인</div><div class="statcard__value">3</div></div>
-      <div class="statcard"><div class="statcard__label">처리 작업지시</div><div class="statcard__value">1,284</div></div>
-      <div class="statcard statcard--orange"><div class="statcard__label">무사고 일수</div><div class="statcard__value">412<small>일</small></div></div>
-    </div>
+    <!-- 무재해 기록판 — 시그니처(공장 안전 스코어보드) -->
+    <section class="safety-board mb-6" aria-label="무재해 기록판">
+      <div class="hazard-band hazard-band--fine" aria-hidden="true"></div>
+      <div class="safety-board__body">
+        <div class="safety-board__hero">
+          <div class="label">무재해 연속 조업 · CONSECUTIVE SAFE DAYS</div>
+          <div class="cluster" style="align-items:baseline;gap:var(--space-3)">
+            <span class="led" role="img" aria-label="무재해 연속 412일">412</span>
+            <span class="t-2xl" style="font-weight:600">일</span>
+          </div>
+          <div class="t-xs text-muted">기록 시작 2025-05-22 · 다음 목표 500일</div>
+        </div>
+        <div class="safety-board__stats">
+          <div><div class="statcard__label">근속</div><div class="sb-val">6<small>년 2개월</small></div></div>
+          <div><div class="statcard__label">담당 라인</div><div class="sb-val">3<small>개 라인</small></div></div>
+          <div><div class="statcard__label">처리 작업지시</div><div class="sb-val">1,284<small>건</small></div></div>
+        </div>
+      </div>
+    </section>
 
     <div class="profile-layout">
       <!-- LEFT: tabs -->
@@ -137,7 +192,7 @@
             </div>
             <div class="grid grid-2" style="--grid-gap:var(--space-4)">
               <div class="field"><label class="field__label" for="ac-dept">소속</label><input class="input" id="ac-dept" value="조립1팀"></div>
-              <div class="field"><label class="field__label" for="ac-phone">연락처</label><input class="input" id="ac-phone" value="010-2049-0000"></div>
+              <div class="field"><label class="field__label" for="ac-phone">연락처</label><input class="input" id="ac-phone" value="010-2049-7736"></div>
             </div>
           </div>
           <div class="card__foot"><span class="spacer"></span><button class="btn btn--secondary">비밀번호 변경</button><button class="btn btn--primary" data-action="demo-toast" data-type="success" data-title="저장됨" data-msg="계정 정보가 갱신되었습니다.">저장</button></div></div>
@@ -152,6 +207,11 @@
           <div class="full stack" style="--stack-gap: var(--space-3)">
             <div class="metric-row"><span class="label" style="width:64px">정시율</span><div class="metric-row__bar"><i data-value="88" style="width:0"></i></div><span class="metric-row__val">88%</span></div>
             <div class="metric-row"><span class="label" style="width:64px">품질</span><div class="metric-row__bar"><i data-value="96" style="width:0"></i></div><span class="metric-row__val">96%</span></div>
+          </div>
+          <div class="full lgauge lgauge--live">
+            <div class="cluster between"><span class="label">설비 가동률(OEE)</span><span class="label label--yellow">78%</span></div>
+            <div class="lgauge__track"><div class="lgauge__fill" data-value="78" style="width:0"></div><div class="lgauge__needle" data-value="78" style="left:0"></div></div>
+            <div class="lgauge__ticks" aria-hidden="true"><span>0</span><span>50</span><span>100</span></div>
           </div>
         </div></div>
 
@@ -177,7 +237,7 @@
   <div class="drawer__body stack" style="--stack-gap: var(--space-5)">
     <div class="field"><label class="field__label" for="ed-name">이름</label><input class="input" id="ed-name" value="정세훈"></div>
     <div class="field"><label class="field__label" for="ed-dept">부서</label><input class="input" id="ed-dept" value="조립1팀"></div>
-    <div class="field"><label class="field__label" for="ed-phone">연락처</label><input class="input" id="ed-phone" value="010-2049-0000"></div>
+    <div class="field"><label class="field__label" for="ed-phone">연락처</label><input class="input" id="ed-phone" value="010-2049-7736"></div>
     <div class="field"><label class="field__label" for="ed-bio">소개</label><textarea class="textarea" id="ed-bio">6년차 생산관리 책임. 라인 A·B·C 정비 총괄.</textarea></div>
     <button class="btn btn--primary btn--block" data-drawer-close data-action="demo-toast" data-type="success" data-title="저장됨" data-msg="프로필이 업데이트되었습니다.">저장</button>
   </div>
@@ -185,11 +245,29 @@
 
 <!-- COMMAND PALETTE -->
 <div class="cmdk-overlay" id="cmdk" data-open="false" role="dialog" aria-modal="true" aria-label="명령 팔레트">
-  <div class="cmdk"><div class="cmdk__search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input placeholder="명령 검색…" aria-label="검색"><kbd>ESC</kbd></div>
-    <div class="cmdk__list"><div class="cmdk__group"><div class="cmdk__group-label">이동</div>
-      <a class="cmdk__item" href="dashboard.html" aria-selected="true">대시보드</a>
-      <a class="cmdk__item" href="settings.html">설정</a></div>
-    </div><div class="cmdk__foot"><span>↑↓ 이동</span><span>↵ 선택</span></div>
+  <div class="cmdk">
+    <div class="cmdk__search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input placeholder="명령 또는 화면 검색…" aria-label="명령 검색" role="combobox" aria-expanded="true" aria-controls="cmdk-listbox" aria-autocomplete="list" aria-activedescendant="">
+      <kbd>ESC</kbd>
+    </div>
+    <div class="cmdk__list" id="cmdk-listbox" role="listbox" aria-label="명령 및 화면 결과">
+      <div class="cmdk__group" role="group" aria-label="화면 이동">
+        <div class="cmdk__group-label" aria-hidden="true">화면 이동</div>
+        <a class="cmdk__item" id="cmdk-opt-dash" role="option" href="dashboard.html" aria-selected="true" data-label="대시보드"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>관제 대시보드</a>
+        <a class="cmdk__item" id="cmdk-opt-settings" role="option" href="settings.html" data-label="설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.6-2-3.4-2.4 1a7 7 0 0 0-1.7-1l-.4-2.5h-4l-.4 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7 7 0 0 0 1.7-1l2.4 1 2-3.4-2-1.6c.1-.3.1-.7.1-1z"/></svg>환경 설정</a>
+      </div>
+      <div class="cmdk__group" role="group" aria-label="동작">
+        <div class="cmdk__group-label" aria-hidden="true">동작</div>
+        <button class="cmdk__item" id="cmdk-opt-handover" role="option" data-label="인수인계 작성"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M11 4H4v16h16v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>인수인계 작성</button>
+        <button class="cmdk__item" id="cmdk-opt-theme" role="option" data-label="조명 전환" data-action="toggle-theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>조명(다크/라이트) 전환<kbd>T</kbd></button>
+      </div>
+      <div class="cmdk__empty" role="status" hidden>
+        <span class="label">검색 결과 없음</span>
+        <span class="t-xs text-muted mono">다른 키워드로 다시 조회하세요</span>
+      </div>
+    </div>
+    <div class="cmdk__foot"><span>↑↓ 이동</span><span>↵ 선택</span><span>ESC 닫기</span></div>
   </div>
 </div>
 

@@ -541,34 +541,18 @@ html[data-grid="off"] .bp-grid {
   }
 }
 
-/* line-draw reveal used for page-load orchestration */
-@keyframes bp-draw-x {
-  from { transform: scaleX(0); }
-  to   { transform: scaleX(1); }
-}
-@keyframes bp-fade-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: none; }
-}
-@keyframes bp-blink {
-  0%, 49% { opacity: 1; }
-  50%, 100% { opacity: 0; }
-}
+/* ---- Signature keyframes ---- */
+@keyframes bp-draw-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes bp-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
 @keyframes bp-spin { to { transform: rotate(360deg); } }
 @keyframes bp-dash { to { stroke-dashoffset: 0; } }
-
-.anim-reveal > * {
-  opacity: 0;
-  animation: bp-fade-up var(--duration-slow) var(--ease-out) forwards;
+/* the plotter pass: content is "drawn" left→right like a pen plotter,
+   not faded up. This is the system's one reveal grammar. */
+@keyframes bp-plot {
+  from { opacity: 0; clip-path: inset(0 100% 0 0); }
+  60%  { opacity: 1; }
+  to   { opacity: 1; clip-path: inset(0 0 0 0); }
 }
-.anim-reveal > *:nth-child(1) { animation-delay: 40ms; }
-.anim-reveal > *:nth-child(2) { animation-delay: 90ms; }
-.anim-reveal > *:nth-child(3) { animation-delay: 140ms; }
-.anim-reveal > *:nth-child(4) { animation-delay: 190ms; }
-.anim-reveal > *:nth-child(5) { animation-delay: 240ms; }
-.anim-reveal > *:nth-child(6) { animation-delay: 290ms; }
-.anim-reveal > *:nth-child(7) { animation-delay: 340ms; }
-.anim-reveal > *:nth-child(8) { animation-delay: 390ms; }
 
 .blink { animation: bp-blink 1.1s steps(1) infinite; }
 
@@ -579,10 +563,123 @@ html[data-dims="off"] .bp-scalebar,
 html[data-dims="off"] .card--dim::after,
 html[data-dims="off"] .bp-reg-mark { opacity: 0; transition: opacity var(--duration-base) var(--ease-standard); }
 
-/* JS-driven: scroll reveal */
-[data-reveal] { opacity: 0; transform: translateY(12px); transition: opacity var(--duration-slow) var(--ease-out), transform var(--duration-slow) var(--ease-out); }
-[data-reveal].in-view { opacity: 1; transform: none; }
-@media (prefers-reduced-motion: reduce) { [data-reveal] { opacity: 1; transform: none; } }
+/* ---- Scroll reveal = the plotter draws each member in turn ----
+   Hiding is gated on html.js so a JS-off/failed load never traps content
+   at opacity:0 (the class is added synchronously at script start). */
+html.js [data-reveal] > * { opacity: 0; }
+[data-reveal].in-view > * {
+  animation: bp-plot var(--duration-slow) var(--ease-out) both;
+}
+[data-reveal].in-view > *:nth-child(1) { animation-delay: 0ms; }
+[data-reveal].in-view > *:nth-child(2) { animation-delay: 55ms; }
+[data-reveal].in-view > *:nth-child(3) { animation-delay: 110ms; }
+[data-reveal].in-view > *:nth-child(4) { animation-delay: 165ms; }
+[data-reveal].in-view > *:nth-child(5) { animation-delay: 220ms; }
+[data-reveal].in-view > *:nth-child(6) { animation-delay: 275ms; }
+[data-reveal].in-view > *:nth-child(7) { animation-delay: 330ms; }
+[data-reveal].in-view > *:nth-child(8) { animation-delay: 385ms; }
+[data-reveal].in-view > *:nth-child(9) { animation-delay: 440ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  html.js [data-reveal] > * { opacity: 1 !important; clip-path: none !important; transform: none !important; animation: none !important; }
+}
+
+/* Signature accent: horizontal reference rules DRAW themselves left→right on
+   load — "drawn, not filled" made literal on the section datum lines. Sparse
+   targets only (section rules + datum lines), never the many card dim-lines,
+   so the page reads composed, not busy. JS-gated (no-JS shows them complete);
+   reduced-motion shows them static. */
+html.js .section-head .rule,
+html.js .datum-line {
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: bp-draw-x var(--duration-draw) var(--ease-out) 0.15s forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  html.js .section-head .rule,
+  html.js .datum-line { transform: none; animation: none; }
+}
+
+/* ----------------------------------------------------------------- *
+ * 13. HERO SCHEMATIC — inline SVG figure color classes               *
+ * (never put var() in SVG stroke/fill attrs — bind via CSS instead)  *
+ * All resolve to semantic tokens so the drawing re-inks light↔dark.  *
+ * ----------------------------------------------------------------- */
+.bp-schematic text { font-family: var(--font-mono); }
+.bp-schematic .s-ink   { stroke: var(--color-text); }
+.bp-schematic .s-cyan  { stroke: var(--color-primary); }
+.bp-schematic .s-cyan2 { stroke: var(--color-info); }
+.bp-schematic .s-ghost { stroke: var(--color-text-subtle); }
+.bp-schematic .s-faint { stroke: var(--color-border-strong); }
+.bp-schematic .f-cyan2 { fill: var(--color-info); }
+.bp-schematic .f-label { fill: var(--color-text-subtle); }
+.bp-schematic .f-ink   { fill: var(--color-text); }
+/* on load the schematic strokes ink themselves in (auto-play, no JS class —
+   gated on html.js so a JS-off load simply shows the finished drawing) */
+html.js .bp-schematic .s-ink,
+html.js .bp-schematic .s-cyan,
+html.js .bp-schematic .s-cyan2,
+html.js .bp-schematic .s-ghost,
+html.js .bp-schematic .s-faint {
+  stroke-dasharray: 640; stroke-dashoffset: 640;
+  animation: bp-dash var(--duration-draw) var(--ease-out) 0.15s forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  html.js .bp-schematic .s-ink,
+  html.js .bp-schematic .s-cyan,
+  html.js .bp-schematic .s-cyan2,
+  html.js .bp-schematic .s-ghost,
+  html.js .bp-schematic .s-faint { stroke-dasharray: none; stroke-dashoffset: 0; animation: none; }
+}
+
+/* ----------------------------------------------------------------- *
+ * 14. DRAFTING CROSSHAIR CURSOR — CAD pointer on showcase pages       *
+ * JS builds the lines + coord readout; hidden for touch/reduced.     *
+ * ----------------------------------------------------------------- */
+.bp-crosshair {
+  position: fixed; inset: 0;
+  z-index: var(--z-cursor);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+.bp-crosshair.is-live { opacity: 1; }
+.bp-crosshair .xh-v,
+.bp-crosshair .xh-h { position: absolute; background: var(--color-primary); opacity: 0.55; }
+.bp-crosshair .xh-v { top: 0; bottom: 0; width: 1px; }
+.bp-crosshair .xh-h { left: 0; right: 0; height: 1px; }
+.bp-crosshair .xh-read {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-primary);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-active);
+  padding: 1px var(--space-1);
+  white-space: nowrap;
+  transform: translate(8px, 8px);
+}
+@media (pointer: coarse), (prefers-reduced-motion: reduce) {
+  .bp-crosshair { display: none !important; }
+}
+
+/* Hero wordmark scales down to fit narrow sheets (mono glyphs are wide). */
+.hero-title { font-size: clamp(2.75rem, 12vw, var(--text-6xl)); }
+
+/* ================================================================= *
+ * HANGUL REFINEMENT LAYER — assumes <html lang="ko"> + stack order.  *
+ * Base values; the mono/technical voice keeps captions Latin-cased.  *
+ * ================================================================= */
+:lang(ko) { word-break: keep-all; overflow-wrap: break-word; line-break: strict; }
+:lang(ko) :is(h1, h2, h3, .card-title, .page-title) { line-height: var(--leading-heading-ko); }
+:lang(ko) .display { line-height: var(--leading-display-ko); }
+:lang(ko) :is(h1, h2, h3, .card-title, .hero-title) { text-wrap: balance; }
+:lang(ko) p { text-wrap: pretty; }
+/* wide uppercase caption caps are Latin drawing stamps; Korean words inside
+   them drop the upper-casing + clamp tracking so they stay legible. */
+:lang(ko) :is(em, i, cite) { font-style: normal; font-weight: var(--weight-semibold); }
+:lang(ko) :is(.table td, .stat-value, .price-amount, .spec-v) { font-variant-numeric: tabular-nums lining-nums; }
 
 /* utility visibility */
 .hidden { display: none !important; }

@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Eames 라운지 체어 · Atomic Store</title>
 <meta name="description" content="임스 컬렉션 — Eames 라운지 체어 & 오토만. 월넛 원목과 부클레 패브릭의 미드센추리 모던 라운지 체어." />
-<!-- Prevent theme flash -->
-<script>try{var t=localStorage.getItem("mcm-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<!-- Prevent theme flash — resolve saved choice or OS preference before paint -->
+<script>(function(){try{var t=localStorage.getItem("mcm-theme");if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700;900&family=Poppins:wght@300;400;500;600&family=Bitter:ital,wght@0,600;1,500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
@@ -14,6 +14,40 @@
 <link rel="stylesheet" href="../semantic.css" />
 <link rel="stylesheet" href="../base.css" />
 <link rel="stylesheet" href="../components/index.css" />
+<style>
+  /* Product page-scoped composition (promoted from inline grid — responsive) */
+  .product-hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: var(--space-10); align-items: start; }
+  @media (max-width: 860px) { .product-hero { grid-template-columns: 1fr; gap: var(--space-8); } }
+
+  /* Narrow-viewport safety: grid/flex children shrink instead of forcing overflow (360px). */
+  .product-hero > *, main .grid > * { min-width: 0; }
+
+  /* Price hero — geometric display numerals; scales down so ₩1,890,000 never clips at 360px. */
+  .product-price {
+    font-family: var(--font-display); font-weight: var(--weight-black);
+    font-size: clamp(var(--text-4xl), 10vw, var(--text-5xl));
+    line-height: 1; letter-spacing: var(--tracking-tight); color: var(--color-secondary);
+  }
+
+  /* Wood-finish swatches (radiogroup). Colors are product content, not palette. */
+  .wood-swatch {
+    width: 42px; height: 42px; border-radius: 50%; cursor: pointer;
+    border: 3px solid transparent; box-shadow: var(--shadow-xs);
+    transition: box-shadow var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard);
+  }
+  .wood-swatch--walnut { background: #5C3A21; } /* intentional: 월넛 원목 색 */
+  .wood-swatch--teak   { background: #A9743B; } /* intentional: 티크 원목 색 */
+  .wood-swatch--oak    { background: #D8B888; } /* intentional: 오크 원목 색 */
+  .wood-swatch:hover { transform: translateY(-1px); }
+  .wood-swatch[aria-checked="true"] {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-surface), 0 0 0 5px var(--color-primary);
+  }
+  .wood-swatch:focus-visible { outline: 2px solid var(--ring-teal); outline-offset: 3px; }
+
+  /* Perk check icons — currentColor drives success stroke (no var() in SVG attr) */
+  .perk-check { color: var(--color-success); }
+</style>
 </head>
 <body>
 <a href="#main" class="skip-link">본문으로 건너뛰기</a>
@@ -68,7 +102,7 @@
   </nav>
 
   <!-- Product hero -->
-  <section class="grid" style="grid-template-columns:1.05fr 1fr;gap:var(--space-10);align-items:start">
+  <section class="product-hero">
 
     <!-- LEFT · Gallery -->
     <div class="stack stack-4">
@@ -129,7 +163,7 @@
       </div>
 
       <div class="cluster cluster-2" style="align-items:baseline">
-        <span style="font-family:var(--font-display);font-weight:var(--weight-black);font-size:var(--text-5xl);line-height:1;letter-spacing:var(--tracking-tight);color:var(--color-secondary)">₩1,890,000</span>
+        <span class="product-price">₩1,890,000</span>
         <span style="font-size:var(--text-lg);color:var(--color-text-subtle);text-decoration:line-through">₩2,250,000</span>
         <span class="tag tag--orange">16% 할인</span>
       </div>
@@ -140,11 +174,11 @@
 
       <!-- Color swatches -->
       <fieldset class="field" style="border:0;padding:0;margin:0">
-        <legend class="field__label" style="padding:0;margin-bottom:var(--space-1)">원목 마감 · <span style="color:var(--color-text-muted);font-weight:var(--weight-medium)">월넛</span></legend>
-        <div class="cluster cluster-2" role="radiogroup" aria-label="원목 마감 선택">
-          <button type="button" role="radio" aria-checked="true" aria-label="월넛" title="월넛" style="width:42px;height:42px;border-radius:50%;background:#5C3A21;cursor:pointer;border:3px solid var(--color-primary);box-shadow:0 0 0 3px var(--color-surface),0 0 0 5px var(--color-primary)"></button>
-          <button type="button" role="radio" aria-checked="false" aria-label="티크" title="티크" style="width:42px;height:42px;border-radius:50%;background:#A9743B;cursor:pointer;border:3px solid transparent;box-shadow:var(--shadow-xs)"></button>
-          <button type="button" role="radio" aria-checked="false" aria-label="오크" title="오크" style="width:42px;height:42px;border-radius:50%;background:#D8B888;cursor:pointer;border:3px solid transparent;box-shadow:var(--shadow-xs)"></button>
+        <legend class="field__label" style="padding:0;margin-bottom:var(--space-1)">원목 마감 · <span id="wood-current" style="color:var(--color-text-muted);font-weight:var(--weight-medium)">월넛</span></legend>
+        <div class="cluster cluster-2 wood-group" role="radiogroup" aria-label="원목 마감 선택">
+          <button type="button" class="wood-swatch wood-swatch--walnut" role="radio" aria-checked="true" aria-label="월넛" title="월넛"></button>
+          <button type="button" class="wood-swatch wood-swatch--teak" role="radio" aria-checked="false" aria-label="티크" title="티크" tabindex="-1"></button>
+          <button type="button" class="wood-swatch wood-swatch--oak" role="radio" aria-checked="false" aria-label="오크" title="오크" tabindex="-1"></button>
         </div>
       </fieldset>
 
@@ -171,7 +205,7 @@
       </div>
 
       <div class="cluster" style="margin-top:var(--space-1)">
-        <button class="btn btn--primary btn--lg grow" data-toast="success" data-toast-title="장바구니 담기 완료" data-toast-msg="Eames 라운지 체어 · 월넛 · 부클레가 담겼습니다.">
+        <button id="addToCart" class="btn btn--primary btn--lg grow" data-toast="success" data-toast-title="장바구니 담기 완료" data-toast-msg="월넛 · 부클레 구성을 장바구니에 담았어요.">
           <svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>
           장바구니 담기
         </button>
@@ -189,9 +223,9 @@
 
       <!-- Perks -->
       <ul class="stack stack-2" style="list-style:none;padding:0;margin-top:var(--space-2)">
-        <li class="cluster cluster-2"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--color-success)" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> <span style="font-size:var(--text-sm)">전국 무료 배송 &amp; 방문 설치</span></li>
-        <li class="cluster cluster-2"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--color-success)" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> <span style="font-size:var(--text-sm)">프레임 5년 품질 보증</span></li>
-        <li class="cluster cluster-2"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="var(--color-success)" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> <span style="font-size:var(--text-sm)">30일 이내 무료 반품 &amp; 교환</span></li>
+        <li class="cluster cluster-2"><svg class="perk-check" viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> <span style="font-size:var(--text-sm)">전국 무료 배송 &amp; 방문 설치</span></li>
+        <li class="cluster cluster-2"><svg class="perk-check" viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> <span style="font-size:var(--text-sm)">프레임 5년 품질 보증</span></li>
+        <li class="cluster cluster-2"><svg class="perk-check" viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> <span style="font-size:var(--text-sm)">30일 이내 무료 반품 &amp; 교환</span></li>
       </ul>
     </div>
   </section>
@@ -209,7 +243,7 @@
     <div class="tabs__panel" role="tabpanel" id="tp-detail" aria-labelledby="tt-detail">
       <div class="grid grid-2" style="gap:var(--space-8);align-items:start">
         <div class="stack stack-4">
-          <h3 class="font-display">시대를 넘어선 안락함</h3>
+          <h3 class="font-display">시대를 넘어선 <span class="accent-word">안락함</span></h3>
           <p class="text-muted" style="line-height:var(--leading-relaxed)">찰스 &amp; 레이 임스 부부는 "오래 길들인 야구 글러브처럼 따뜻하게 감싸는 의자"를 꿈꿨습니다. 그 결과물이 바로 이 라운지 체어입니다. 세 장의 성형 합판 셸이 등과 머리, 좌석을 자연스럽게 받쳐주고, 부드러운 부클레 쿠션이 몸을 감쌉니다.</p>
           <p class="text-muted" style="line-height:var(--leading-relaxed)">15도 뒤로 기운 셸 각도는 휴식에 최적화되어 있으며, 함께 제공되는 오토만에 다리를 올리면 완전한 라운징 자세가 완성됩니다. 거실 한 켠, 서재, 혹은 독서 코너 어디에 두어도 공간의 중심이 됩니다.</p>
           <div class="cluster">
@@ -416,22 +450,22 @@
 </div>
 </main>
 
-<!-- Footer -->
-<footer style="background:var(--block-brown-bg);color:var(--block-brown-fg);padding-block:var(--space-12)">
+<!-- Footer / colophon -->
+<footer class="wash" style="background:var(--block-brown-bg);color:var(--block-brown-fg);padding-block:var(--space-12)">
   <div class="container">
     <div class="grid grid-auto">
       <div>
         <div class="navbar__brand" style="color:inherit;font-size:var(--text-xl)">
-          <svg class="navbar__brand-mark" viewBox="0 0 32 32" aria-hidden="true"><g fill="none" stroke="#E0A526" stroke-width="2"><ellipse cx="16" cy="16" rx="14" ry="5"/><ellipse cx="16" cy="16" rx="14" ry="5" transform="rotate(60 16 16)"/><ellipse cx="16" cy="16" rx="14" ry="5" transform="rotate(120 16 16)"/></g><circle cx="16" cy="16" r="3.6" fill="#C65D34"/></svg>
+          <svg class="navbar__brand-mark" viewBox="0 0 32 32" aria-hidden="true"><g fill="none" style="stroke:var(--color-accent)" stroke-width="2"><ellipse cx="16" cy="16" rx="14" ry="5"/><ellipse cx="16" cy="16" rx="14" ry="5" transform="rotate(60 16 16)"/><ellipse cx="16" cy="16" rx="14" ry="5" transform="rotate(120 16 16)"/></g><circle cx="16" cy="16" r="3.6" style="fill:var(--color-secondary)"/></svg>
           ATOMIC
         </div>
-        <p style="opacity:.8;margin-top:var(--space-3);max-width:36ch">Mid-Century Modern 디자인 시스템. 따뜻한 원자시대의 낙관을 코드로.</p>
+        <p style="opacity:.82;margin-top:var(--space-3);max-width:34ch">임스 시대의 낙관을 담은 미드센추리 모던 가구. 오리지널 42점을 월넛과 티크로 짓습니다.</p>
       </div>
-      <div><h6 style="color:var(--mustard-400)">리소스</h6><div class="stack stack-2 mt-3"><a href="../README.md" style="color:inherit;opacity:.85">README</a><a href="../CHECKLIST.md" style="color:inherit;opacity:.85">체크리스트</a><a href="../index.html#tokens" style="color:inherit;opacity:.85">토큰 레퍼런스</a></div></div>
-      <div><h6 style="color:var(--mustard-400)">데모</h6><div class="stack stack-2 mt-3"><a href="dashboard.html" style="color:inherit;opacity:.85">대시보드</a><a href="pricing.html" style="color:inherit;opacity:.85">가격표</a><a href="product.html" style="color:inherit;opacity:.85">상품 상세</a></div></div>
+      <div><h6 style="color:var(--mustard-400)">컬렉션</h6><div class="stack stack-2 mt-3"><a href="product.html" style="color:inherit;opacity:.85">라운지 체어</a><a href="product.html" style="color:inherit;opacity:.85">테이블 · 데스크</a><a href="product.html" style="color:inherit;opacity:.85">조명</a><a href="product.html" style="color:inherit;opacity:.85">수납장</a></div></div>
+      <div><h6 style="color:var(--mustard-400)">고객 지원</h6><div class="stack stack-2 mt-3"><a href="product.html#tt-ship" style="color:inherit;opacity:.85">배송·설치 안내</a><a href="product.html#tt-ship" style="color:inherit;opacity:.85">반품·교환</a><a href="pricing.html" style="color:inherit;opacity:.85">자주 묻는 질문</a><a href="mailto:hello@atomic.studio" style="color:inherit;opacity:.85">문의하기</a></div></div>
     </div>
     <hr style="border-color:rgba(255,255,255,.15);margin-block:var(--space-8)">
-    <div class="cluster between"><small style="opacity:.7">Theme 18 · Mid-Century Modern · 2026</small><small style="opacity:.7">순수 CSS + 바닐라 JS · 프레임워크 0</small></div>
+    <div class="cluster between"><small style="opacity:.72">© 2026 ATOMIC · 미드센추리 모던 컬렉션</small><small class="font-slab" style="opacity:.72">전국 무료 설치 배송 · 5년 품질 보증</small></div>
   </div>
 </footer>
 
@@ -442,7 +476,7 @@
     <div class="modal__header"><div><p class="eyebrow">즉시 결제</p><h3 class="modal__title" id="buyModalTitle">바로 구매</h3></div></div>
     <div class="modal__body">
       <div class="list">
-        <div class="list__item"><span class="avatar avatar--square avatar--orange">🪑</span><div class="list__main"><div class="list__title">Eames 라운지 체어 &amp; 오토만</div><div class="list__sub">월넛 · 부클레 · 수량 1</div></div><span class="list__trail" style="font-weight:var(--weight-bold);color:var(--color-secondary)">₩1,890,000</span></div>
+        <div class="list__item"><span class="avatar avatar--square avatar--orange"><svg viewBox="0 0 24 24" width="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 11V8a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v3"/><path d="M4 11a2 2 0 0 1 2 2v3h12v-3a2 2 0 0 1 2-2"/><path d="M6 19v-3M18 19v-3"/></svg></span><div class="list__main"><div class="list__title">Eames 라운지 체어 &amp; 오토만</div><div class="list__sub" data-buy-config>월넛 · 부클레 · 수량 1</div></div><span class="list__trail" style="font-weight:var(--weight-bold);color:var(--color-secondary)">₩1,890,000</span></div>
       </div>
       <label class="checkbox mt-4"><input type="checkbox" checked /><span class="checkbox__box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 6 9 17l-5-5"/></svg></span> 프리미엄 직물 보호 처리 추가 (+₩45,000)</label>
     </div>
@@ -455,8 +489,8 @@
   <div class="drawer__header"><h3 class="drawer__title" id="cartDrawerTitle">장바구니</h3><button class="btn btn--ghost btn--icon" data-drawer-close aria-label="닫기"><svg viewBox="0 0 24 24" width="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
   <div class="drawer__body">
     <div class="list">
-      <div class="list__item"><span class="avatar avatar--square avatar--teal">🪑</span><div class="list__main"><div class="list__title">Eames 라운지 체어</div><div class="list__sub">월넛 · 부클레</div></div><span class="list__trail">₩1,890,000</span></div>
-      <div class="list__item"><span class="avatar avatar--square avatar--orange">🛋️</span><div class="list__main"><div class="list__title">키드니 커피 테이블</div><div class="list__sub">티크</div></div><span class="list__trail">₩740,000</span></div>
+      <div class="list__item"><span class="avatar avatar--square avatar--teal"><svg viewBox="0 0 24 24" width="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 11V8a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v3"/><path d="M4 11a2 2 0 0 1 2 2v3h12v-3a2 2 0 0 1 2-2"/><path d="M6 19v-3M18 19v-3"/></svg></span><div class="list__main"><div class="list__title">Eames 라운지 체어</div><div class="list__sub" data-cart-config>월넛 · 부클레</div></div><span class="list__trail">₩1,890,000</span></div>
+      <div class="list__item"><span class="avatar avatar--square avatar--orange"><svg viewBox="0 0 24 24" width="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="3" rx="1.5"/><path d="M6 11v6M18 11v6"/></svg></span><div class="list__main"><div class="list__title">키드니 커피 테이블</div><div class="list__sub">티크</div></div><span class="list__trail">₩740,000</span></div>
     </div>
     <div class="cluster between" style="margin-top:var(--space-5)"><strong class="font-display">합계</strong><strong class="font-display" style="font-size:var(--text-xl);color:var(--color-secondary)">₩2,630,000</strong></div>
   </div>
@@ -475,7 +509,7 @@
       <div class="cmdk__item" role="option" data-href="inbox.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 6 10-6"/></svg> 이메일 인박스</div>
       <div class="cmdk__item" role="option" data-href="pricing.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0l-7.2-7.2A2 2 0 0 1 3 12V4a1 1 0 0 1 1-1h8a2 2 0 0 1 1.4.6l7.2 7.2a2 2 0 0 1 0 2.6z"/></svg> 가격표</div>
       <div class="cmdk__group-label">테마</div>
-      <div class="cmdk__item" role="option" onclick="window.MCM.Theme.toggle()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg> 다크/라이트 모드 전환</div>
+      <div class="cmdk__item" role="option" data-cmdk-action="theme-toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg> 다크/라이트 모드 전환</div>
       <div class="cmdk__empty" hidden>일치하는 결과가 없습니다.</div>
     </div>
     <div class="cmdk__footer"><span><kbd>↑</kbd><kbd>↓</kbd> 이동</span><span><kbd>↵</kbd> 선택</span><span><kbd>esc</kbd> 닫기</span></div>
@@ -483,5 +517,59 @@
 </div>
 
 <script src="../app.js"></script>
+<script>
+/* Product configurator — wood radiogroup keyboard nav (roving tabindex + arrows)
+   + live sync of the chosen wood/fabric into the label, cart, buy modal & toast.
+   Page-scoped; event listeners only (no inline handlers). */
+(function () {
+  var state = { wood: "월넛", fabric: "부클레" };
+  var woodLabel = document.getElementById("wood-current");
+  var addBtn = document.getElementById("addToCart");
+  var buyConfig = document.querySelector("[data-buy-config]");
+  var cartConfig = document.querySelector("[data-cart-config]");
+
+  function sync() {
+    var line = state.wood + " · " + state.fabric;
+    if (woodLabel) woodLabel.textContent = state.wood;
+    if (addBtn) addBtn.setAttribute("data-toast-msg", line + " 구성을 장바구니에 담았어요.");
+    if (buyConfig) buyConfig.textContent = line + " · 수량 1";
+    if (cartConfig) cartConfig.textContent = line;
+  }
+
+  var woodGroup = document.querySelector(".wood-group");
+  if (woodGroup) {
+    var radios = Array.prototype.slice.call(woodGroup.querySelectorAll('[role="radio"]'));
+    var select = function (radio) {
+      radios.forEach(function (r) {
+        var on = r === radio;
+        r.setAttribute("aria-checked", on ? "true" : "false");
+        r.tabIndex = on ? 0 : -1;
+      });
+      state.wood = radio.getAttribute("aria-label") || state.wood;
+      sync();
+    };
+    radios.forEach(function (r, i) {
+      r.addEventListener("click", function () { select(r); r.focus(); });
+      r.addEventListener("keydown", function (e) {
+        var idx = null;
+        if (e.key === "ArrowRight" || e.key === "ArrowDown") idx = (i + 1) % radios.length;
+        else if (e.key === "ArrowLeft" || e.key === "ArrowUp") idx = (i - 1 + radios.length) % radios.length;
+        else if (e.key === "Home") idx = 0;
+        else if (e.key === "End") idx = radios.length - 1;
+        if (idx !== null) { e.preventDefault(); select(radios[idx]); radios[idx].focus(); }
+      });
+    });
+  }
+
+  var fabricSeg = document.querySelector('.segmented[aria-label="패브릭 선택"]');
+  if (fabricSeg) {
+    var MAP = { boucle: "부클레", leather: "가죽", fabric: "패브릭" };
+    fabricSeg.addEventListener("segmentchange", function (e) {
+      state.fabric = MAP[e.detail && e.detail.value] || state.fabric;
+      sync();
+    });
+  }
+})();
+</script>
 </body>
 </html>
