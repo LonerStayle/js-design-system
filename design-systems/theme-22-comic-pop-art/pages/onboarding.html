@@ -1,9 +1,22 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Onboarding — Comic Pop Art</title>
+<title>온보딩 — 코믹 팝 아트</title>
+<meta name="description" content="제22호 · 코믹 팝아트 — 신규 히어로 등록 4컷 온보딩." />
+<script>
+/* FOUC guard — set theme before first paint (key shared with app.js) */
+(function () {
+  try {
+    var t = localStorage.getItem("comic-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="../theme.css" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='14' fill='%23E8222B'/><text x='50' y='74' font-size='66' text-anchor='middle' fill='%23FFD400' font-family='Impact'>!</text></svg>" />
 <style>
@@ -11,7 +24,7 @@
 .onb-main { max-width: 880px; margin-inline: auto; }
 
 /* speech-bubble color variants (page-local helpers — base only ships plain bubble) */
-.speech-bubble.bubble-primary { background: var(--blue-500); color: #fff; }
+.speech-bubble.bubble-primary { background: var(--blue-500); color: var(--fixed-white); }
 .speech-bubble.bubble-primary::before { border-top-color: var(--blue-500); }
 .speech-bubble.bubble-accent  { background: var(--yellow-400); color: var(--neutral-900); }
 .speech-bubble.bubble-accent::before { border-top-color: var(--yellow-400); }
@@ -19,6 +32,20 @@
 /* each wizard panel is a comic cell */
 .onb-cell { padding: var(--space-7); }
 @media (max-width: 560px){ .onb-cell { padding: var(--space-5); } }
+
+/* comic narration caption box — the yellow "1컷" panel label */
+.cut-caption {
+  display: inline-flex; align-items: baseline; gap: 10px;
+  margin-bottom: var(--space-5);
+  padding: var(--space-2) var(--space-4);
+  background: var(--yellow-400); color: var(--neutral-900);
+  border: var(--border-w-3) solid var(--ink);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-comic-sm);
+  font-weight: var(--weight-black);
+  transform: rotate(-1.4deg);
+}
+.cut-caption .cut-no { font-family: var(--font-action); font-size: var(--text-lg); letter-spacing: 0.02em; }
 
 /* hero-class selectable radio cards */
 .hero-grid { gap: var(--space-4); }
@@ -36,132 +63,158 @@
 }
 .hero-card:hover { transform: translate(-2px,-2px); box-shadow: var(--shadow-comic); }
 .hero-card input { position: absolute; opacity: 0; width: 0; height: 0; }
-.hero-card .hc-emoji { font-size: var(--text-4xl); line-height: 1; }
+.hero-card .hc-emoji { flex: none; width: 44px; height: 44px; display: grid; place-items: center; color: var(--ink); }
+.hero-card .hc-emoji svg { width: 40px; height: 40px; }
 .hero-card .hc-name  { font-weight: var(--weight-black); font-size: var(--text-lg); }
 .hero-card .hc-desc  { font-size: var(--text-sm); color: var(--color-text-muted); font-weight: var(--weight-medium); }
-.hero-card:focus-within { outline: var(--border-w-3) solid var(--blue-500); outline-offset: 3px; }
+.hero-card:focus-within { outline: var(--ring-width) solid var(--focus-ring-color); outline-offset: 3px; }
 /* selected state via :has() — modern path */
 .hero-card:has(input:checked) {
   background: var(--yellow-400);
   border-width: var(--border-w-4);
   box-shadow: var(--shadow-comic);
 }
-.hero-card:has(input:checked) .hc-desc { color: var(--ink); }
-/* no-:has fallback (older engines): keep the card readable + outlined */
+.hero-card:has(input:checked) .hc-emoji { color: var(--neutral-900); transform: scale(1.06); }
+.hero-card:has(input:checked) .hc-name,
+.hero-card:has(input:checked) .hc-desc { color: var(--neutral-900); }
+/* no-:has fallback (older engines): still show a selection cue */
 .hero-card input:checked ~ .hc-emoji { transform: scale(1.06); }
 
 .genre-grid { gap: var(--space-3) var(--space-4); }
 .onb-skip { margin-top: var(--space-6); }
+
+/* "다음 화에 계속…" teaser — the completion signature */
+.next-issue {
+  display: grid; gap: 4px; text-align: center;
+  padding: var(--space-5) var(--space-6);
+  border: var(--border-w-3) dashed var(--ink);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+}
+.next-issue .ni-kicker { font-family: var(--font-mono); font-size: var(--text-2xs); font-weight: var(--weight-black); letter-spacing: var(--tracking-widest); color: var(--color-text-muted); }
+.next-issue .ni-title { font-family: var(--font-action); font-size: var(--text-2xl); color: var(--red-500); -webkit-text-stroke: 1.5px var(--ink); paint-order: stroke fill; }
+[data-theme="dark"] .next-issue .ni-title { color: var(--yellow-400); }
+.next-issue .ni-sub { font-weight: var(--weight-bold); color: var(--color-text); }
+
+.sum-list .li-meta { font-weight: var(--weight-black); color: var(--color-text); }
 </style>
 </head>
 <body class="paper-bg">
-<a class="skip-link" href="#main">Skip to content</a>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
 
-<nav class="navbar" aria-label="Primary">
+<nav class="navbar" aria-label="주 메뉴">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true">!</span><span class="hide-mobile">COMIC POP</span></a>
   <div class="nav-links">
-    <a class="nav-link" href="dashboard.html">Dashboard</a>
-    <a class="nav-link" href="kanban.html">Kanban</a>
-    <a class="nav-link" href="inbox.html">Inbox</a>
-    <a class="nav-link" href="pricing.html">Pricing</a>
+    <a class="nav-link" href="dashboard.html">대시보드</a>
+    <a class="nav-link" href="kanban.html">제작 라인</a>
+    <a class="nav-link" href="inbox.html">받은편지함</a>
+    <a class="nav-link" href="pricing.html">요금제</a>
   </div>
   <div class="nav-right">
-    <button class="btn btn-ghost btn-sm" data-cmdk-open aria-label="Search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><kbd class="hide-mobile">⌘K</kbd></button>
-    <button class="btn btn-icon btn-sm btn-outline" data-theme-toggle aria-label="Toggle dark mode"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg></button>
-    <span class="avatar sm red">JS</span>
+    <button class="btn btn-ghost btn-sm" data-cmdk-open aria-label="명령 팔레트 열기"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><kbd class="hide-mobile">⌘K</kbd></button>
+    <button class="btn btn-icon btn-sm btn-outline" data-theme-toggle aria-pressed="false" aria-label="다크 모드 전환" title="테마 전환"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg></button>
   </div>
 </nav>
 
 <main id="main" class="container onb-main" style="padding-block:var(--space-7)">
-  <!-- breadcrumb -->
-  <nav class="breadcrumb mb-4" aria-label="Breadcrumb">
-    <a href="../index.html">Home</a><span class="sep" aria-hidden="true">›</span><span class="current">Get Started</span>
+  <div class="running-head" style="margin-bottom:var(--space-4)">
+    <span class="rh-issue">제22호 · 코믹 팝아트</span>
+    <span>신규 히어로 등록 · 4컷</span>
+  </div>
+  <nav class="breadcrumb mb-4" aria-label="현재 위치">
+    <a href="../index.html">홈</a><span class="sep" aria-hidden="true">›</span><span class="current">시작하기</span>
   </nav>
+
+  <div class="sr-only" role="alert" aria-live="assertive" id="onb-live"></div>
 
   <!-- ===== PAGE CONTENT ===== -->
   <header class="stack stack-4 text-center mb-8">
-    <h1 class="comic-title red" style="font-size:var(--text-6xl)">YOUR ORIGIN STORY</h1>
+    <h1 class="comic-title red" style="font-size:var(--text-6xl)">나의 탄생 비화</h1>
     <div class="row center">
-      <p class="speech-bubble bubble-primary" style="max-width:520px">Every hero starts somewhere. Let's make yours.</p>
+      <p class="speech-bubble bubble-primary" style="max-width:520px">모든 히어로에겐 시작이 있죠. 지금 당신의 이야기를 만들어요.</p>
     </div>
   </header>
 
   <div data-wizard>
     <!-- STEP INDICATOR -->
-    <ol class="steps mb-8" aria-label="Onboarding progress">
-      <li class="step is-active"><span class="step-num" aria-hidden="true">1</span><span class="step-label">Welcome</span></li>
-      <li class="step"><span class="step-num" aria-hidden="true">2</span><span class="step-label">Your Hero</span></li>
-      <li class="step"><span class="step-num" aria-hidden="true">3</span><span class="step-label">Powers</span></li>
-      <li class="step"><span class="step-num" aria-hidden="true">4</span><span class="step-label">Launch</span></li>
+    <ol class="steps mb-8" aria-label="온보딩 진행 단계">
+      <li class="step is-active"><span class="step-num" aria-hidden="true">1</span><span class="step-label">환영</span></li>
+      <li class="step"><span class="step-num" aria-hidden="true">2</span><span class="step-label">히어로</span></li>
+      <li class="step"><span class="step-num" aria-hidden="true">3</span><span class="step-label">파워</span></li>
+      <li class="step"><span class="step-num" aria-hidden="true">4</span><span class="step-label">발행</span></li>
     </ol>
 
-    <!-- ===== PANEL 1 — WELCOME ===== -->
+    <!-- ===== 1컷 — 환영 ===== -->
     <div data-wizard-panel>
       <section class="panel ink-outline-4 comic-shadow onb-cell halftone-fade">
+        <span class="cut-caption"><span class="cut-no" aria-hidden="true">1컷</span> 모든 전설은 이름에서 시작되죠.</span>
         <div class="stack stack-6">
           <div class="row center">
-            <span class="burst-wrap"><span class="burst-ink"></span><span class="burst lg blue">HELLO!</span></span>
+            <span class="burst-wrap"><span class="burst-ink"></span><span class="burst lg blue">안녕!</span></span>
           </div>
           <div class="row center">
-            <p class="speech-bubble bubble-accent" style="max-width:560px">Welcome to Comic Pop Studios — tell us who you are and we'll roll out the red carpet.</p>
+            <p class="speech-bubble bubble-accent" style="max-width:560px">코믹 팝 스튜디오에 오신 걸 환영해요 — 몇 가지만 알려주시면 레드카펫을 깔아 둘게요.</p>
           </div>
           <div class="grid grid-2">
             <div class="field">
-              <label class="field-label" for="o-name">Full name <span class="req">*</span></label>
-              <input class="input" id="o-name" placeholder="Dana 'Halftone' Reyes" autocomplete="name" autofocus />
+              <label class="field-label" for="o-name">이름 <span class="req">*</span></label>
+              <input class="input" id="o-name" placeholder="예: 김도현" autocomplete="name" aria-describedby="o-name-err" />
+              <p class="field-error" id="o-name-err" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20z"/><path d="M12 10v4"/><path d="M12 17.5v.5"/></svg> <span data-msg>히어로 이름을 알려주세요.</span></p>
             </div>
             <div class="field">
-              <label class="field-label" for="o-email">Email <span class="req">*</span></label>
+              <label class="field-label" for="o-email">이메일 <span class="req">*</span></label>
               <div class="input-group">
-                <span class="adornment" aria-hidden="true">✉️</span>
-                <input class="input" id="o-email" type="email" placeholder="dana@comicpop.io" autocomplete="email" />
+                <span class="adornment" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span>
+                <input class="input" id="o-email" type="email" placeholder="you@example.com" autocomplete="email" aria-describedby="o-email-err" />
               </div>
+              <p class="field-error" id="o-email-err" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20z"/><path d="M12 10v4"/><path d="M12 17.5v.5"/></svg> <span data-msg>올바른 이메일 형식으로 입력해 주세요.</span></p>
             </div>
           </div>
-          <p class="text-muted text-sm">No spam, ever. We'll only ping you about your studio — unsubscribe in one click.</p>
+          <p class="text-muted text-sm">스팸은 절대 없어요. 스튜디오 소식만 보내드리고, 언제든 한 번에 구독을 해지할 수 있어요.</p>
         </div>
       </section>
     </div>
 
-    <!-- ===== PANEL 2 — YOUR HERO ===== -->
+    <!-- ===== 2컷 — 히어로 클래스 ===== -->
     <div data-wizard-panel hidden>
       <section class="panel ink-outline-4 comic-shadow onb-cell speed-lines">
+        <span class="cut-caption"><span class="cut-no" aria-hidden="true">2컷</span> 당신의 싸움 스타일은?</span>
         <div class="stack stack-6">
           <div class="text-center">
-            <h2 class="comic-title blue" style="font-size:var(--text-4xl)">Choose your class</h2>
-            <p class="text-muted weight-bold mt-2">Every legend has a fighting style. Pick the one that's yours.</p>
+            <h2 class="comic-title blue" style="font-size:var(--text-4xl)">클래스를 골라요</h2>
+            <p class="text-muted weight-bold mt-2">모든 전설에겐 고유한 싸움 스타일이 있죠. 당신의 것을 고르세요.</p>
           </div>
-          <div class="grid grid-2 hero-grid" role="radiogroup" aria-label="Hero class">
+          <div class="grid grid-2 hero-grid" role="radiogroup" aria-label="히어로 클래스">
             <label class="hero-card">
-              <input type="radio" name="class" value="speedster" checked />
-              <span class="hc-emoji" aria-hidden="true">⚡</span>
+              <input type="radio" name="class" value="speedster" data-label="스피드스터" checked />
+              <span class="hc-emoji" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></span>
               <span class="stack">
-                <span class="hc-name">Speedster</span>
-                <span class="hc-desc">Ships pages faster than a panel can dry.</span>
+                <span class="hc-name">스피드스터</span>
+                <span class="hc-desc">잉크가 마르기도 전에 원고를 넘겨요.</span>
               </span>
             </label>
             <label class="hero-card">
-              <input type="radio" name="class" value="brainiac" />
-              <span class="hc-emoji" aria-hidden="true">🧠</span>
+              <input type="radio" name="class" value="strategist" data-label="전략가" />
+              <span class="hc-emoji" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></span>
               <span class="stack">
-                <span class="hc-name">Brainiac</span>
-                <span class="hc-desc">Plots twists three issues ahead of everyone.</span>
+                <span class="hc-name">전략가</span>
+                <span class="hc-desc">세 화 앞선 반전을 미리 설계해요.</span>
               </span>
             </label>
             <label class="hero-card">
-              <input type="radio" name="class" value="tank" />
-              <span class="hc-emoji" aria-hidden="true">🛡️</span>
+              <input type="radio" name="class" value="guardian" data-label="수호형" />
+              <span class="hc-emoji" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/></svg></span>
               <span class="stack">
-                <span class="hc-name">Tank</span>
-                <span class="hc-desc">Holds the deadline line no matter the chaos.</span>
+                <span class="hc-name">수호형</span>
+                <span class="hc-desc">어떤 혼돈에도 마감선을 지켜내요.</span>
               </span>
             </label>
             <label class="hero-card">
-              <input type="radio" name="class" value="mystic" />
-              <span class="hc-emoji" aria-hidden="true">🔮</span>
+              <input type="radio" name="class" value="mystic" data-label="미스틱" />
+              <span class="hc-emoji" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg></span>
               <span class="stack">
-                <span class="hc-name">Mystic</span>
-                <span class="hc-desc">Conjures color palettes from thin air.</span>
+                <span class="hc-name">미스틱</span>
+                <span class="hc-desc">허공에서 색 팔레트를 소환해요.</span>
               </span>
             </label>
           </div>
@@ -169,67 +222,74 @@
       </section>
     </div>
 
-    <!-- ===== PANEL 3 — POWERS ===== -->
+    <!-- ===== 3컷 — 파워 ===== -->
     <div data-wizard-panel hidden>
       <section class="panel ink-outline-4 comic-shadow onb-cell halftone-fade">
+        <span class="cut-caption"><span class="cut-no" aria-hidden="true">3컷</span> 어떤 세계를 읽고, 그리나요?</span>
         <div class="stack stack-6">
           <div class="text-center">
-            <h2 class="comic-title red" style="font-size:var(--text-4xl)">Pick your powers</h2>
-            <p class="text-muted weight-bold mt-2">Which universes do you read, draw and dream in?</p>
+            <h2 class="comic-title red" style="font-size:var(--text-4xl)">파워를 정해요</h2>
+            <p class="text-muted weight-bold mt-2">좋아하는 장르를 고르면 맞춤 신간을 추천해 드려요.</p>
           </div>
           <fieldset class="comic-fieldset">
-            <legend>Favorite genres</legend>
+            <legend>좋아하는 장르</legend>
             <div class="grid grid-4 genre-grid">
-              <label class="checkbox"><input type="checkbox" checked /><span class="box" aria-hidden="true"></span> Action</label>
-              <label class="checkbox"><input type="checkbox" checked /><span class="box" aria-hidden="true"></span> Sci-Fi</label>
-              <label class="checkbox"><input type="checkbox" /><span class="box" aria-hidden="true"></span> Manga</label>
-              <label class="checkbox"><input type="checkbox" /><span class="box" aria-hidden="true"></span> Indie</label>
-              <label class="checkbox"><input type="checkbox" /><span class="box" aria-hidden="true"></span> Horror</label>
-              <label class="checkbox"><input type="checkbox" checked /><span class="box" aria-hidden="true"></span> Romance</label>
-              <label class="checkbox"><input type="checkbox" /><span class="box" aria-hidden="true"></span> Mystery</label>
-              <label class="checkbox"><input type="checkbox" checked /><span class="box" aria-hidden="true"></span> Cosmic</label>
+              <label class="checkbox"><input type="checkbox" checked /><span class="box" aria-hidden="true"></span> 액션</label>
+              <label class="checkbox"><input type="checkbox" checked /><span class="box" aria-hidden="true"></span> SF</label>
+              <label class="checkbox"><input type="checkbox" /><span class="box" aria-hidden="true"></span> 무협</label>
+              <label class="checkbox"><input type="checkbox" /><span class="box" aria-hidden="true"></span> 일상</label>
+              <label class="checkbox"><input type="checkbox" /><span class="box" aria-hidden="true"></span> 공포</label>
+              <label class="checkbox"><input type="checkbox" checked /><span class="box" aria-hidden="true"></span> 로맨스</label>
+              <label class="checkbox"><input type="checkbox" /><span class="box" aria-hidden="true"></span> 미스터리</label>
+              <label class="checkbox"><input type="checkbox" checked /><span class="box" aria-hidden="true"></span> 코스믹</label>
             </div>
           </fieldset>
 
           <div class="field">
-            <label class="field-label" for="o-titles">Favorite titles</label>
+            <label class="field-label" for="o-titles">인생 만화</label>
             <div class="combo" data-chip>
               <div class="combo-control">
-                <span class="chip">Nova Strike <button aria-label="Remove Nova Strike">✕</button></span>
-                <span class="chip">Panel Pals <button aria-label="Remove Panel Pals">✕</button></span>
-                <input type="text" id="o-titles" placeholder="add + Enter" aria-label="Add a favorite title" />
+                <span class="chip">노바 스트라이크 <button aria-label="노바 스트라이크 제거">✕</button></span>
+                <span class="chip">하프톤 히어로즈 <button aria-label="하프톤 히어로즈 제거">✕</button></span>
+                <input type="text" id="o-titles" placeholder="작품명 입력 후 Enter" aria-label="인생 만화 추가" />
               </div>
             </div>
-            <div class="field-hint">Type a comic name and hit Enter to add it to your shelf.</div>
+            <div class="field-hint">작품명을 입력하고 Enter를 누르면 내 서재에 담겨요.</div>
           </div>
 
           <label class="toggle">
             <input type="checkbox" checked />
             <span class="track"><span class="knob"></span></span>
-            Email me weekly drops
+            매주 신간 소식을 메일로 받기
           </label>
         </div>
       </section>
     </div>
 
-    <!-- ===== PANEL 4 — LAUNCH ===== -->
+    <!-- ===== 4컷 — 발행 ===== -->
     <div data-wizard-panel hidden>
       <section class="panel ink-outline-4 comic-shadow onb-cell speed-lines">
+        <span class="cut-caption"><span class="cut-no" aria-hidden="true">4컷</span> 데뷔 준비 완료!</span>
         <div class="stack stack-6 text-center">
           <div class="row center">
-            <span class="burst-wrap"><span class="burst-ink"></span><span class="burst lg yellow">READY!</span></span>
+            <span class="burst-wrap"><span class="burst-ink"></span><span class="burst lg yellow">완성!</span></span>
           </div>
           <div>
-            <h2 class="comic-title blue" style="font-size:var(--text-4xl)">Your origin is locked in</h2>
-            <p class="text-muted weight-bold mt-2">Here's your hero sheet — double-check it before you leap.</p>
+            <h2 class="comic-title blue" style="font-size:var(--text-4xl)">히어로 시트를 확인해요</h2>
+            <p class="text-muted weight-bold mt-2">아래 내용을 확인하고 세상에 뛰어들어요.</p>
           </div>
-          <div class="list" style="text-align:left">
-            <div class="list-item"><span class="li-title">Hero name</span><span class="li-meta">Dana 'Halftone' Reyes</span></div>
-            <div class="list-item"><span class="li-title">Class</span><span class="li-meta">⚡ Speedster</span></div>
-            <div class="list-item"><span class="li-title">Powers</span><span class="li-meta">Action · Sci-Fi · Romance · Cosmic</span></div>
+          <div class="list sum-list" style="text-align:left">
+            <div class="list-item"><span class="li-title">히어로 이름</span><span class="li-meta" id="sum-name">이름 미입력</span></div>
+            <div class="list-item"><span class="li-title">클래스</span><span class="li-meta" id="sum-class">스피드스터</span></div>
+            <div class="list-item"><span class="li-title">파워</span><span class="li-meta" id="sum-powers">액션 · SF · 로맨스 · 코스믹</span></div>
           </div>
           <div class="row center">
-            <p class="speech-bubble bubble-accent" style="max-width:560px">KA-POW! You're officially a Comic Pop hero. Time to make some noise!</p>
+            <p class="speech-bubble bubble-accent" style="max-width:560px">콰광! 이제 당신도 코믹 팝의 히어로예요. 크게 한 방 터뜨려 봐요!</p>
+          </div>
+          <div class="next-issue" role="note">
+            <span class="ni-kicker">NEXT ISSUE · 제23호</span>
+            <strong class="ni-title">다음 화에 계속…</strong>
+            <span class="ni-sub">첫 미션이 기다리고 있어요. THE END? 아니요, 이제 시작이죠!</span>
           </div>
         </div>
       </section>
@@ -237,43 +297,109 @@
 
     <!-- NAV ROW -->
     <div class="row gap-4 between mt-6">
-      <button class="btn btn-ghost" data-wizard-back>Back</button>
+      <button class="btn btn-ghost" data-wizard-back>이전</button>
       <div class="row gap-3">
-        <button class="btn btn-primary" data-wizard-next>Next →</button>
+        <button class="btn btn-primary" data-wizard-next>다음 →</button>
         <button class="btn btn-primary" data-wizard-done style="display:none"
-          data-burst="LAUNCH!" data-toast="success" data-toast-title="You're in!"
-          data-toast-body="Welcome to the Comic Pop universe.">Launch me! 🚀</button>
+          data-burst="쾅!" data-toast="success" data-toast-title="발행 완료!"
+          data-toast-body="코믹 팝 유니버스에 데뷔했어요.">발행하기!</button>
       </div>
     </div>
   </div>
 
   <p class="text-center onb-skip">
-    <a class="btn btn-ghost btn-sm" href="../index.html">Skip for now</a>
+    <a class="btn btn-ghost btn-sm" href="../index.html">나중에 할게요</a>
   </p>
 </main>
 
-<!-- command palette (keep identical on every page) -->
-<div class="cmdk-overlay" role="dialog" aria-modal="true" aria-label="Command palette">
+<!-- 명령 팔레트 (전 페이지 공통) -->
+<div class="cmdk-overlay" role="dialog" aria-modal="true" aria-label="명령 팔레트">
   <div class="cmdk">
-    <div class="cmdk-input-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input class="cmdk-input" placeholder="Type a command…" aria-label="Command input" /><kbd>ESC</kbd></div>
-    <div class="cmdk-list">
-      <div class="cmdk-group"><div class="cmdk-group-label">Navigate</div>
-        <div class="cmdk-item" data-href="dashboard.html"><span class="cmdk-ico">📊</span> Dashboard</div>
-        <div class="cmdk-item" data-href="kanban.html"><span class="cmdk-ico">🗂️</span> Kanban Board</div>
-        <div class="cmdk-item" data-href="inbox.html"><span class="cmdk-ico">✉️</span> Inbox</div>
-        <div class="cmdk-item" data-href="pricing.html"><span class="cmdk-ico">💰</span> Pricing</div>
-        <div class="cmdk-item" data-href="settings.html"><span class="cmdk-ico">⚙️</span> Settings</div>
-        <div class="cmdk-item" data-href="profile.html"><span class="cmdk-ico">🦸</span> Profile</div>
-        <div class="cmdk-item" data-href="../index.html"><span class="cmdk-ico">🏠</span> Home</div>
+    <div class="cmdk-input-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input class="cmdk-input" placeholder="명령을 입력하거나 검색하세요…" aria-label="명령 팔레트 입력" /><kbd>ESC</kbd></div>
+    <div class="cmdk-list" role="listbox" aria-label="명령 목록">
+      <div class="cmdk-group" role="group" aria-label="이동">
+        <div class="cmdk-group-label" aria-hidden="true">이동</div>
+        <div class="cmdk-item" role="option" data-href="dashboard.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span> 대시보드로 이동</div>
+        <div class="cmdk-item" role="option" data-href="kanban.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"><rect x="3.5" y="5" width="4.3" height="14" rx="1"/><rect x="9.8" y="5" width="4.3" height="9" rx="1"/><rect x="16.2" y="5" width="4.3" height="12" rx="1"/></svg></span> 제작 라인으로 이동</div>
+        <div class="cmdk-item" role="option" data-href="inbox.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span> 받은편지함 열기</div>
+        <div class="cmdk-item" role="option" data-href="pricing.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 12 22l-9-9V4h9z"/><circle cx="7.5" cy="7.5" r="1.4"/></svg></span> 요금제로 이동</div>
+        <div class="cmdk-item" role="option" data-href="settings.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></span> 설정 열기</div>
       </div>
-      <div class="cmdk-group"><div class="cmdk-group-label">Actions</div>
-        <div class="cmdk-item" data-action="toggle-theme"><span class="cmdk-ico">🌗</span> Toggle dark mode</div>
+      <div class="cmdk-group" role="group" aria-label="작업">
+        <div class="cmdk-group-label" aria-hidden="true">작업</div>
+        <div class="cmdk-item" role="option" data-action="toggle-theme"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></span> 다크 모드 전환 <kbd class="cmdk-kbd">T</kbd></div>
       </div>
-      <div class="cmdk-empty" style="display:none">No results.</div>
+      <div class="cmdk-empty" style="display:none">결과가 없어요 — 다른 단어로 검색해 보세요, 히어로.</div>
     </div>
   </div>
 </div>
 
 <script src="../app.js"></script>
+<script>
+/* Page-local onboarding logic:
+   1) required-field validation on step 1 (intercepts the wizard's Next), and
+   2) a live "hero sheet" summary in step 4 that reflects the user's choices. */
+(function () {
+  var wiz = document.querySelector("[data-wizard]");
+  if (!wiz) return;
+  var nameI = document.getElementById("o-name");
+  var emailI = document.getElementById("o-email");
+  var nameErr = document.getElementById("o-name-err");
+  var emailErr = document.getElementById("o-email-err");
+  var live = document.getElementById("onb-live");
+  var nextBtn = wiz.querySelector("[data-wizard-next]");
+
+  function setInvalid(input, errEl, on) {
+    input.classList.toggle("is-invalid", on);
+    input.setAttribute("aria-invalid", on ? "true" : "false");
+    if (errEl) errEl.hidden = !on;
+  }
+  var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  function validateStep1() {
+    var firstBad = null;
+    var nameOk = !!nameI.value.trim();
+    setInvalid(nameI, nameErr, !nameOk); if (!nameOk) firstBad = firstBad || nameI;
+    var emailOk = EMAIL_RE.test(emailI.value.trim());
+    setInvalid(emailI, emailErr, !emailOk); if (!emailOk) firstBad = firstBad || emailI;
+    if (firstBad) {
+      if (live) live.textContent = "필수 항목을 확인해 주세요. " + (nameOk ? "" : "이름이 비어 있어요. ") + (emailOk ? "" : "이메일 형식이 올바르지 않아요.");
+      firstBad.focus();
+      return false;
+    }
+    return true;
+  }
+  /* Capture phase so we can block the wizard's own bubble-phase Next handler. */
+  if (nextBtn) {
+    nextBtn.addEventListener("click", function (e) {
+      var p1 = nameI.closest("[data-wizard-panel]");
+      if (p1 && !p1.hidden && !validateStep1()) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+      }
+    }, true);
+  }
+  nameI.addEventListener("input", function () { if (nameI.value.trim()) setInvalid(nameI, nameErr, false); });
+  emailI.addEventListener("input", function () { if (EMAIL_RE.test(emailI.value.trim())) setInvalid(emailI, emailErr, false); });
+
+  /* Live hero-sheet summary */
+  var sumName = document.getElementById("sum-name");
+  var sumClass = document.getElementById("sum-class");
+  var sumPowers = document.getElementById("sum-powers");
+  function updateSummary() {
+    var n = nameI.value.trim();
+    sumName.textContent = n || "이름 미입력";
+    var cls = wiz.querySelector('input[name="class"]:checked');
+    sumClass.textContent = cls ? cls.getAttribute("data-label") : "-";
+    var genres = Array.prototype.map.call(
+      wiz.querySelectorAll(".genre-grid input:checked"),
+      function (c) { return c.closest(".checkbox").textContent.trim(); }
+    );
+    sumPowers.textContent = genres.length ? genres.join(" · ") : "아직 선택 안 함";
+  }
+  wiz.addEventListener("input", updateSummary);
+  wiz.addEventListener("change", updateSummary);
+  updateSummary();
+})();
+</script>
 </body>
 </html>

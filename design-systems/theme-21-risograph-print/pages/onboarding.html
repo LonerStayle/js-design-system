@@ -4,7 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>온보딩 · RISO·PRESS</title>
-<script>document.documentElement.className = "js";</script>
+<script>
+(function () {
+  try { var t = localStorage.getItem("riso-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+  document.documentElement.className = "js";
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -92,6 +99,17 @@
   box-shadow: var(--shadow-flat);
 }
 .ob-celebrate__art svg { width: 3.4rem; height: 3.4rem; }
+
+/* .field__error is display:flex, which beats [hidden]'s UA display:none — so
+   force the hidden state explicitly. */
+.field__error[hidden] { display: none; }
+
+/* completion panel — the "first plate is registered" press strip */
+.ob-celebrate__press {
+  display: flex; align-items: center; justify-content: center;
+  gap: var(--space-4); flex-wrap: wrap; margin-top: var(--space-6);
+}
+.ob-celebrate__press .calibration-bar { width: 14rem; max-width: 70%; }
 
 @media (max-width: 720px) {
   .purpose-grid { grid-template-columns: 1fr; }
@@ -190,8 +208,9 @@
             </div>
             <div class="field">
               <label class="field__label" for="ob-email">이메일 <span class="req">*</span></label>
-              <input class="input" id="ob-email" type="email" value="ara@neonpress.kr" autocomplete="email">
-              <span class="field__hint">에디션 발행 알림과 교정 링크가 이 주소로 발송됩니다.</span>
+              <input class="input" id="ob-email" type="email" placeholder="이름@스튜디오.kr (예: ara@neonpress.kr)" autocomplete="email" aria-describedby="ob-email-hint ob-email-err">
+              <span class="field__hint" id="ob-email-hint">에디션 발행 알림과 교정 링크가 이 주소로 발송됩니다.</span>
+              <span class="field__error" id="ob-email-err" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>이메일 주소를 입력해 주세요. 에디션 발행 알림이 이 주소로 발송됩니다.</span>
             </div>
             <div class="field">
               <label class="field__label" for="ob-pw">비밀번호 <span class="req">*</span></label>
@@ -332,6 +351,12 @@
               <p class="eyebrow" style="justify-content:center">셋업 완료 · 첫 판이 준비됐습니다</p>
               <h2 class="misregister" data-misregister-auto style="font-family:var(--font-display);font-weight:900;font-size:clamp(1.8rem,5vw,2.6rem);text-transform:uppercase;letter-spacing:var(--tracking-tight);margin:var(--space-3) 0">환영합니다, 아라!</h2>
               <p class="text-muted" style="max-width:40ch;margin:0 auto">네온 프레스 워크스페이스가 만들어졌습니다. 아래 설정으로 바로 인쇄를 시작할 수 있어요.</p>
+              <div class="ob-celebrate__press">
+                <div class="calibration-bar" role="img" aria-label="형광 스폿 4색과 하프톤 계조 캘리브레이션 바">
+                  <span class="cal-pink"></span><span class="cal-blue"></span><span class="cal-yellow"></span><span class="cal-green"></span><span class="cal-tone"></span>
+                </div>
+                <span class="edition-stamp">№ 001 / 첫 에디션</span>
+              </div>
             </div>
 
             <div class="card card--flat" style="margin-top:var(--space-6)">
@@ -360,7 +385,7 @@
         <!-- ===== WIZARD NAV ===== -->
         <div class="ob-foot">
           <button class="btn btn--ghost" data-wizard-prev>← 이전</button>
-          <span class="text-muted" style="font-size:var(--text-xs);font-family:var(--font-mono)">RISO·PRESS 온보딩 · v21</span>
+          <span class="text-muted" style="font-size:var(--text-xs);font-family:var(--font-mono)">RISO·PRESS · 형광 2도 셋업</span>
           <button class="btn btn--primary" data-wizard-next>다음 →</button>
         </div>
 
@@ -371,5 +396,55 @@
 </div>
 
 <script src="../app.js" defer></script>
+<script>
+/* Onboarding page-local: required-field validation on the account step + a
+   "plate registers" flash the moment the completion panel appears. */
+(function(){
+  var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  var email = document.getElementById('ob-email');
+  var err = document.getElementById('ob-email-err');
+  if(!email) return;
+
+  function setError(show){
+    if(show){ email.setAttribute('aria-invalid','true'); if(err) err.hidden = false; }
+    else { email.removeAttribute('aria-invalid'); if(err) err.hidden = true; }
+  }
+
+  /* Block the wizard's "다음" (app.js listens in the bubble phase on the wizard
+     container) when the account step's required email is empty/invalid. Capture
+     phase runs first, so stopImmediatePropagation prevents the advance. */
+  document.addEventListener('click', function(e){
+    var next = e.target.closest('[data-wizard-next]');
+    if(!next) return;
+    var panel = email.closest('[data-wizard-panel]');
+    if(!panel || panel.hidden) return;            // only guard the account step
+    if(EMAIL_RE.test(email.value.trim())) { setError(false); return; }
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    setError(true);
+    email.focus();
+    if(window.Riso) Riso.toast({ title:'입력 확인', msg:'이메일 주소를 입력해 주세요.', variant:'danger' });
+  }, true);
+
+  /* Clear the error as soon as a valid address is typed (no nagging per keystroke). */
+  email.addEventListener('input', function(){ if(EMAIL_RE.test(email.value.trim())) setError(false); });
+
+  /* Signature moment: when the last (completion) panel becomes visible, re-slip
+     the pink/blue plates and snap them back into register. */
+  var panels = document.querySelectorAll('[data-wizard-panel]');
+  var last = panels[panels.length - 1];
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(last && !reduce){
+    new MutationObserver(function(){
+      if(last.hidden) return;
+      var h = last.querySelector('.misregister');
+      if(!h) return;
+      h.classList.remove('reprint-flash'); void h.offsetWidth;
+      h.classList.add('reprint-flash');
+      setTimeout(function(){ h.classList.remove('reprint-flash'); }, 650);
+    }).observe(last, { attributes:true, attributeFilter:['hidden'] });
+  }
+})();
+</script>
 </body>
 </html>

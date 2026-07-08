@@ -1,9 +1,13 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Product — Hand-drawn Sketch</title>
+<title>메이커 스케치북 A5 — sketchbook 스토어</title>
+<script>
+/* Apply saved/system theme before first paint — no cream flash for dark users. */
+(function(){try{var t=localStorage.getItem("sketch-theme");if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.setAttribute("data-theme",t);}catch(e){}})();
+</script>
 <link rel="stylesheet" href="../theme.css" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='16' fill='%23f7f1e3' stroke='%23243042' stroke-width='6'/><path d='M24 64 C40 40 60 40 76 60' fill='none' stroke='%23243042' stroke-width='7' stroke-linecap='round'/><circle cx='70' cy='34' r='7' fill='%23ffe45c' stroke='%23243042' stroke-width='4'/></svg>" />
 <style>
@@ -14,7 +18,7 @@
   .gallery { position: sticky; top: var(--space-6); }
   .main-photo { position: relative; aspect-ratio: 4 / 3; display: grid; place-items: center; padding: var(--space-5); overflow: hidden; }
   .main-photo svg { width: min(86%, 380px); height: auto; }
-  .photo-tape { position: absolute; top: -14px; left: 50%; transform: translateX(-50%) rotate(-2deg); z-index: 2; }
+  .photo-tape { position: absolute; top: -14px; left: 50%; transform: translateX(-50%) rotate(-2deg); z-index: 2; font-family: var(--font-hand); font-weight: var(--weight-bold); font-size: var(--text-sm); }
   .thumbs { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-3); margin-top: var(--space-4); }
   .thumb { aspect-ratio: 1; padding: var(--space-2); background: var(--color-surface); border: var(--border-2); border-radius: var(--radius-sm); box-shadow: var(--sketch-shadow-sm); cursor: pointer; display: grid; place-items: center; transition: transform var(--duration-fast) var(--ease-wobble); }
   .thumb:nth-child(even){ transform: rotate(-1.2deg); }
@@ -24,11 +28,12 @@
 
   /* details */
   .price-line { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-3); }
-  .price-now { font-family: var(--font-display); font-size: var(--text-5xl); font-weight: var(--weight-bold); line-height: 1; color: var(--color-text); }
-  .price-was { font-family: var(--font-sans); font-size: var(--text-xl); color: var(--color-text-subtle); text-decoration: line-through; }
+  .price-now { font-family: var(--font-display); font-size: var(--text-5xl); font-weight: var(--weight-bold); line-height: 1; color: var(--color-text); font-variant-numeric: tabular-nums lining-nums; }
+  .price-was { font-family: var(--font-sans); font-size: var(--text-xl); color: var(--color-text-subtle); text-decoration: line-through; font-variant-numeric: tabular-nums lining-nums; }
   .variant-label { font-family: var(--font-display); font-size: var(--text-lg); font-weight: var(--weight-bold); display: block; margin-bottom: var(--space-2); }
   .cta-row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: stretch; }
   .cta-row .btn-primary { flex: 1 1 220px; }
+  .perk-ico { width: 22px; height: 22px; flex: none; color: var(--color-secondary); }
 
   /* reviews */
   .review-card { padding: var(--space-5); }
@@ -36,11 +41,13 @@
   .spec-table { width: 100%; border-collapse: collapse; font-family: var(--font-sans); }
   .spec-table th, .spec-table td { text-align: left; padding: var(--space-2) var(--space-1); border-bottom: var(--border-w-1) dashed var(--color-divider); font-size: var(--text-sm); }
   .spec-table th { font-family: var(--font-display); font-weight: var(--weight-bold); color: var(--color-text-muted); width: 42%; }
+  .spec-table td { font-variant-numeric: tabular-nums lining-nums; }
 
   /* related */
   .rel-media { aspect-ratio: 4 / 3; display: grid; place-items: center; padding: var(--space-3); }
   .rel-media svg { width: 72%; height: auto; }
   .rel-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+  .rel-price { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: var(--weight-bold); font-variant-numeric: tabular-nums lining-nums; }
 
   @media (max-width: 860px) {
     .product-grid { grid-template-columns: 1fr; }
@@ -48,135 +55,156 @@
   }
 </style>
 </head>
-<body class="paper-bg">
-<a class="skip-link" href="#main">Skip to content</a>
+<body class="paper-bg with-margin">
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
 
 <!-- rough-edge SVG filter (enables .rough-edge wobble) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="roughpaper"><feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="3" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2.2"/></filter></svg>
 
-<nav class="navbar" aria-label="Primary">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true">✎</span><span class="hide-mobile">sketchbook</span></a>
+<!-- hand-drawn icon sprite (single-ink, currentColor — recolors with theme) -->
+<svg class="ico-defs" width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="ic-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19 L4 20 L5 15 L16 4 a2 2 0 0 1 3 3 L8 18 Z"/><path d="M14 6 l3 3"/></symbol>
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5 V20 H20"/><path d="M8 20 V14"/><path d="M12.5 20 V9"/><path d="M17 20 V12"/></symbol>
+  <symbol id="ic-board" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="6" width="9.5" height="9.5" rx="1.5" transform="rotate(-4 8 11)"/><rect x="11.5" y="9" width="9.5" height="9.5" rx="1.5" transform="rotate(5 16 14)"/></symbol>
+  <symbol id="ic-inbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M4 8 L12 14 L20 8"/></symbol>
+  <symbol id="ic-product" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8 H18 L17 20 H7 Z"/><path d="M9 8 V6.6 A3 3 0 0 1 15 6.6 V8"/></symbol>
+  <symbol id="ic-pricing" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 L11 4 H19 V12 L12 19 Z"/><circle cx="15.4" cy="8.6" r="1.4"/></symbol>
+  <symbol id="ic-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8 H20"/><circle cx="9" cy="8" r="2.2"/><path d="M4 15 H20"/><circle cx="15" cy="15" r="2.2"/></symbol>
+  <symbol id="ic-face" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><path d="M9 10.4 v1.2"/><path d="M15 10.4 v1.2"/><path d="M8.6 14.2 C10 16, 14 16, 15.4 14.2"/></symbol>
+  <symbol id="ic-theme" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><circle cx="12" cy="12" r="7.4"/><path d="M12 4.6 a7.4 7.4 0 0 0 0 14.8 Z" fill="currentColor" stroke="none"/></symbol>
+</svg>
+
+<!-- marginalia — decorative "used notebook" scribbles in the gutters -->
+<div class="marginalia" aria-hidden="true">
+  <span class="mg-star"  style="top:18%;left:1.5%;--mg-rot:-9deg"></span>
+  <span class="mg-note"  style="top:30%;right:2%;--mg-rot:7deg">잘 팔림!</span>
+  <span class="mg-ring"  style="bottom:26%;left:2%;--mg-rot:-4deg"></span>
+  <span class="mg-arrow" style="bottom:15%;right:3%;--mg-rot:-14deg"></span>
+</div>
+
+<nav class="navbar" aria-label="주요 메뉴">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><use href="#ic-pencil"/></svg></span><span>sketchbook</span></a>
   <div class="nav-links">
-    <a class="nav-link" href="dashboard.html">Dashboard</a>
-    <a class="nav-link" href="kanban.html">Board</a>
-    <a class="nav-link" href="inbox.html">Inbox</a>
-    <a class="nav-link" href="pricing.html">Pricing</a>
+    <a class="nav-link" href="../index.html">홈</a>
+    <a class="nav-link" href="dashboard.html">대시보드</a>
+    <a class="nav-link" href="kanban.html">보드</a>
+    <a class="nav-link" href="pricing.html">요금제</a>
   </div>
   <div class="nav-right">
-    <button class="btn btn-ghost btn-sm" data-cmdk-open aria-label="Search"><svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3" stroke-linecap="round"/></svg><kbd class="hide-mobile">⌘K</kbd></button>
-    <button class="btn btn-icon btn-sm btn-outline" data-theme-toggle aria-label="Toggle dark mode"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19" stroke-linecap="round"/></svg></button>
-    <span class="avatar sm">JS</span>
+    <button class="btn btn-ghost btn-sm" data-cmdk-open aria-label="명령 팔레트 열기"><svg width="16" height="16" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3" stroke-linecap="round"/></svg><kbd class="hide-mobile">⌘K</kbd></button>
+    <button class="btn btn-icon btn-sm btn-outline" data-theme-toggle aria-label="다크 모드 전환"><svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19" stroke-linecap="round"/></svg></button>
+    <span class="avatar sm">서진</span>
   </div>
 </nav>
 
 <main id="main" class="container" style="padding-block:var(--space-7)">
-  <nav class="breadcrumb mb-4" aria-label="Breadcrumb"><a href="../index.html">Home</a><span class="sep" aria-hidden="true">→</span><a href="../index.html#pages">Store</a><span class="sep" aria-hidden="true">→</span><span class="current">Sketchbook</span></nav>
+  <nav class="breadcrumb mb-4" aria-label="탐색 경로"><a href="../index.html">홈</a><span class="sep" aria-hidden="true">→</span><a href="../index.html#pages">스토어</a><span class="sep" aria-hidden="true">→</span><span class="current">메이커 스케치북</span></nav>
 
   <!-- ============ HERO: gallery + details ============ -->
   <section class="product-grid" data-reveal>
 
     <!-- LEFT — gallery -->
     <div class="gallery">
-      <div class="panel main-photo rough-edge" aria-label="The Maker's Sketchbook, A5, cream cover">
-        <span class="tape photo-tape" aria-hidden="true">photo</span>
-        <svg viewBox="0 0 320 240" fill="none" role="img" aria-label="Sketch of an open sketchbook with a fountain pen">
+      <div class="panel main-photo rough-edge">
+        <span class="tape photo-tape" aria-hidden="true">표지컷</span>
+        <svg class="sketchpad" viewBox="0 0 320 240" fill="none" role="img" aria-label="펼쳐 놓은 스케치북과 만년필 그림">
           <!-- back cover -->
-          <rect x="36" y="44" width="210" height="156" rx="14" transform="rotate(-2 141 122)" fill="var(--color-surface-3)" stroke="var(--color-border)" stroke-width="3"/>
+          <rect x="36" y="44" width="210" height="156" rx="14" transform="rotate(-2 141 122)" pathLength="1" class="draw" style="fill:var(--color-surface-3);stroke:var(--color-border);--draw-delay:0s" stroke-width="3"/>
           <!-- open pages -->
-          <path d="M150 54 C 120 48 86 52 60 62 L 60 196 C 86 186 120 184 150 192 Z" fill="var(--color-surface)" stroke="var(--color-border)" stroke-width="3" stroke-linejoin="round"/>
-          <path d="M150 54 C 180 48 214 52 240 62 L 240 196 C 214 186 180 184 150 192 Z" fill="var(--color-surface-2)" stroke="var(--color-border)" stroke-width="3" stroke-linejoin="round"/>
-          <path d="M150 54 L150 192" stroke="var(--color-border)" stroke-width="2.4"/>
+          <path d="M150 54 C 120 48 86 52 60 62 L 60 196 C 86 186 120 184 150 192 Z" pathLength="1" class="draw" style="fill:var(--color-surface);stroke:var(--color-border);--draw-delay:.25s" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M150 54 C 180 48 214 52 240 62 L 240 196 C 214 186 180 184 150 192 Z" pathLength="1" class="draw" style="fill:var(--color-surface-2);stroke:var(--color-border);--draw-delay:.4s" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M150 54 L150 192" pathLength="1" class="draw" style="stroke:var(--color-border);--draw-delay:.55s" stroke-width="2.4"/>
           <!-- ruled lines -->
-          <path d="M74 84 h62 M74 104 h58 M74 124 h62 M74 144 h54 M74 164 h60" stroke="var(--color-text-subtle)" stroke-width="2.4" stroke-linecap="round"/>
+          <path d="M74 84 h62 M74 104 h58 M74 124 h62 M74 144 h54 M74 164 h60" pathLength="1" class="draw" style="stroke:var(--color-text-subtle);--draw-delay:.7s" stroke-width="2.4" stroke-linecap="round"/>
           <!-- a little doodle on the right page -->
-          <circle cx="196" cy="104" r="22" fill="var(--hl-yellow-300)" stroke="var(--color-border)" stroke-width="3"/>
-          <path d="M186 104 l7 8 l16 -18" stroke="var(--ink-800)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M170 150 h54 M170 166 h40" stroke="var(--color-text-subtle)" stroke-width="2.4" stroke-linecap="round"/>
+          <circle cx="196" cy="104" r="22" pathLength="1" class="draw" style="fill:var(--hl-yellow-300);stroke:var(--color-border);--draw-delay:.9s" stroke-width="3"/>
+          <path d="M186 104 l7 8 l16 -18" pathLength="1" class="draw" style="stroke:var(--ink-800);--draw-delay:1.05s" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M170 150 h54 M170 166 h40" pathLength="1" class="draw" style="stroke:var(--color-text-subtle);--draw-delay:1.15s" stroke-width="2.4" stroke-linecap="round"/>
           <!-- fountain pen lying across -->
-          <path d="M250 178 L300 128" stroke="var(--pen-blue)" stroke-width="9" stroke-linecap="round"/>
-          <path d="M298 130 l14 -14 l8 8 l-14 14 z" fill="var(--ink-700)" stroke="var(--color-border)" stroke-width="2.4" stroke-linejoin="round"/>
-          <path d="M252 176 l-10 12 l16 -4 z" fill="var(--hl-mint-300)" stroke="var(--color-border)" stroke-width="2.4" stroke-linejoin="round"/>
+          <path d="M250 178 L300 128" pathLength="1" class="draw" style="stroke:var(--pen-blue);--draw-delay:1.3s" stroke-width="9" stroke-linecap="round"/>
+          <path d="M298 130 l14 -14 l8 8 l-14 14 z" pathLength="1" class="draw" style="fill:var(--ink-700);stroke:var(--color-border);--draw-delay:1.45s" stroke-width="2.4" stroke-linejoin="round"/>
+          <path d="M252 176 l-10 12 l16 -4 z" pathLength="1" class="draw" style="fill:var(--hl-mint-300);stroke:var(--color-border);--draw-delay:1.55s" stroke-width="2.4" stroke-linejoin="round"/>
         </svg>
       </div>
-      <div class="thumbs" role="group" aria-label="Product thumbnails">
-        <button class="thumb is-active" aria-label="View cover" aria-pressed="true">
-          <svg viewBox="0 0 60 60" fill="none" aria-hidden="true"><rect x="10" y="6" width="40" height="48" rx="6" fill="var(--hl-yellow-300)" stroke="var(--color-border)" stroke-width="3"/><path d="M22 20 h16 M22 30 h12" stroke="var(--ink-800)" stroke-width="3" stroke-linecap="round"/></svg>
+      <div class="thumbs" role="group" aria-label="상품 썸네일">
+        <button class="thumb is-active" aria-label="표지 보기" aria-pressed="true">
+          <svg viewBox="0 0 60 60" fill="none" aria-hidden="true"><rect x="10" y="6" width="40" height="48" rx="6" style="fill:var(--hl-yellow-300);stroke:var(--color-border)" stroke-width="3"/><path d="M22 20 h16 M22 30 h12" style="stroke:var(--ink-800)" stroke-width="3" stroke-linecap="round"/></svg>
         </button>
-        <button class="thumb" aria-label="View open pages" aria-pressed="false">
-          <svg viewBox="0 0 60 60" fill="none" aria-hidden="true"><path d="M30 12 C20 10 12 12 8 16 V48 C12 44 20 44 30 46 V12Z" fill="var(--color-surface-2)" stroke="var(--color-border)" stroke-width="3"/><path d="M30 12 C40 10 48 12 52 16 V48 C48 44 40 44 30 46 V12Z" fill="var(--color-surface)" stroke="var(--color-border)" stroke-width="3"/></svg>
+        <button class="thumb" aria-label="펼친 면 보기" aria-pressed="false">
+          <svg viewBox="0 0 60 60" fill="none" aria-hidden="true"><path d="M30 12 C20 10 12 12 8 16 V48 C12 44 20 44 30 46 V12Z" style="fill:var(--color-surface-2);stroke:var(--color-border)" stroke-width="3"/><path d="M30 12 C40 10 48 12 52 16 V48 C48 44 40 44 30 46 V12Z" style="fill:var(--color-surface);stroke:var(--color-border)" stroke-width="3"/></svg>
         </button>
-        <button class="thumb" aria-label="View paper dots" aria-pressed="false">
-          <svg viewBox="0 0 60 60" fill="none" aria-hidden="true"><rect x="10" y="8" width="40" height="44" rx="5" fill="var(--color-surface)" stroke="var(--color-border)" stroke-width="3"/><circle cx="22" cy="22" r="2" fill="var(--color-text-muted)"/><circle cx="32" cy="22" r="2" fill="var(--color-text-muted)"/><circle cx="42" cy="22" r="2" fill="var(--color-text-muted)"/><circle cx="22" cy="34" r="2" fill="var(--color-text-muted)"/><circle cx="32" cy="34" r="2" fill="var(--color-text-muted)"/><circle cx="42" cy="34" r="2" fill="var(--color-text-muted)"/></svg>
+        <button class="thumb" aria-label="도트 종이 보기" aria-pressed="false">
+          <svg viewBox="0 0 60 60" fill="none" aria-hidden="true"><rect x="10" y="8" width="40" height="44" rx="5" style="fill:var(--color-surface);stroke:var(--color-border)" stroke-width="3"/><circle cx="22" cy="22" r="2" style="fill:var(--color-text-muted)"/><circle cx="32" cy="22" r="2" style="fill:var(--color-text-muted)"/><circle cx="42" cy="22" r="2" style="fill:var(--color-text-muted)"/><circle cx="22" cy="34" r="2" style="fill:var(--color-text-muted)"/><circle cx="32" cy="34" r="2" style="fill:var(--color-text-muted)"/><circle cx="42" cy="34" r="2" style="fill:var(--color-text-muted)"/></svg>
         </button>
-        <button class="thumb" aria-label="View pen kit" aria-pressed="false">
-          <svg viewBox="0 0 60 60" fill="none" aria-hidden="true"><path d="M16 44 L40 20" stroke="var(--pen-blue)" stroke-width="7" stroke-linecap="round"/><path d="M39 21 l8 -8 l5 5 l-8 8 z" fill="var(--ink-700)" stroke="var(--color-border)" stroke-width="2.4" stroke-linejoin="round"/><path d="M17 43 l-5 7 l9 -3 z" fill="var(--hl-pink-300)" stroke="var(--color-border)" stroke-width="2.4" stroke-linejoin="round"/></svg>
+        <button class="thumb" aria-label="펜 구성 보기" aria-pressed="false">
+          <svg viewBox="0 0 60 60" fill="none" aria-hidden="true"><path d="M16 44 L40 20" style="stroke:var(--pen-blue)" stroke-width="7" stroke-linecap="round"/><path d="M39 21 l8 -8 l5 5 l-8 8 z" style="fill:var(--ink-700);stroke:var(--color-border)" stroke-width="2.4" stroke-linejoin="round"/><path d="M17 43 l-5 7 l9 -3 z" style="fill:var(--hl-pink-300);stroke:var(--color-border)" stroke-width="2.4" stroke-linejoin="round"/></svg>
         </button>
       </div>
     </div>
 
     <!-- RIGHT — details -->
     <div class="stack stack-4">
-      <h1 class="scrawl" style="font-size:clamp(2.4rem,6vw,3.6rem);line-height:.95">The Maker's Sketchbook — A5</h1>
+      <h1 class="scrawl" style="font-size:clamp(2.4rem,6vw,3.6rem);line-height:1.05">메이커 스케치북 — A5</h1>
 
       <div class="row gap-3 items-center wrap">
-        <div class="rating" role="radiogroup" aria-label="Average rating: 5 of 5 stars" data-value="5">
-          <button role="radio" aria-checked="false" aria-label="1 star"></button>
-          <button role="radio" aria-checked="false" aria-label="2 stars"></button>
-          <button role="radio" aria-checked="false" aria-label="3 stars"></button>
-          <button role="radio" aria-checked="false" aria-label="4 stars"></button>
-          <button role="radio" aria-checked="true" aria-label="5 stars"></button>
+        <div class="rating" role="radiogroup" aria-label="평균 평점: 5점 만점에 5점" data-value="5">
+          <button role="radio" aria-checked="false" aria-label="별 1개"></button>
+          <button role="radio" aria-checked="false" aria-label="별 2개"></button>
+          <button role="radio" aria-checked="false" aria-label="별 3개"></button>
+          <button role="radio" aria-checked="false" aria-label="별 4개"></button>
+          <button role="radio" aria-checked="true" aria-label="별 5개"></button>
         </div>
-        <a href="#reviews" class="font-sans text-sm text-muted">(214 reviews)</a>
+        <a href="#reviews" class="font-sans text-sm text-muted">리뷰 214개</a>
       </div>
 
       <div class="price-line">
-        <span class="price-now">$28</span>
-        <span class="price-was">$36</span>
-        <span class="badge pink">SAVE 22%</span>
+        <span class="price-now">₩28,000</span>
+        <span class="price-was">₩36,000</span>
+        <span class="badge pink">22% 할인</span>
       </div>
 
-      <p class="text-lg">A hardcover A5 notebook built for people who think with a pen — lays perfectly flat, bleed-proof FSC paper, and an elastic strap to keep your half-finished ideas safe. Ships with a smooth-flow felt-tip pen.</p>
+      <p class="text-lg">펜으로 생각하는 사람을 위해 만든 하드커버 A5 노트예요. 완전히 펼쳐지고, 잉크가 번지지 않는 FSC 종이에, 반쯤 그리다 만 아이디어를 지켜 줄 고무밴드까지 달렸어요. 부드럽게 써지는 펠트펜도 함께 넣어드려요.</p>
 
       <!-- VARIANTS -->
       <div class="field">
-        <span class="variant-label">Cover color</span>
-        <div class="segmented" role="group" aria-label="Cover color">
-          <button class="is-active" aria-pressed="true" data-value="cream">Cream</button>
-          <button aria-pressed="false" data-value="slate">Slate</button>
-          <button aria-pressed="false" data-value="kraft">Kraft</button>
+        <span class="variant-label">표지 색상</span>
+        <div class="segmented" role="group" aria-label="표지 색상">
+          <button class="is-active" aria-pressed="true" data-value="cream">크림</button>
+          <button aria-pressed="false" data-value="slate">슬레이트</button>
+          <button aria-pressed="false" data-value="kraft">크라프트</button>
         </div>
       </div>
       <div class="field">
-        <span class="variant-label">Paper</span>
-        <div class="segmented" role="group" aria-label="Paper style">
-          <button class="is-active" aria-pressed="true" data-value="dotted">Dotted</button>
-          <button aria-pressed="false" data-value="ruled">Ruled</button>
-          <button aria-pressed="false" data-value="blank">Blank</button>
+        <span class="variant-label">종이</span>
+        <div class="segmented" role="group" aria-label="종이 스타일">
+          <button class="is-active" aria-pressed="true" data-value="dotted">도트</button>
+          <button aria-pressed="false" data-value="ruled">줄</button>
+          <button aria-pressed="false" data-value="blank">무지</button>
         </div>
       </div>
 
       <div class="field" style="max-width:200px">
-        <span class="variant-label">Quantity</span>
+        <span class="variant-label">수량</span>
         <div class="stepper">
-          <button data-step="-" aria-label="Decrease quantity">−</button>
-          <input type="text" value="1" inputmode="numeric" min="1" max="20" aria-label="Quantity" />
-          <button data-step="+" aria-label="Increase quantity">+</button>
+          <button data-step="-" aria-label="수량 줄이기">−</button>
+          <input type="text" value="1" inputmode="numeric" min="1" max="20" aria-label="수량" />
+          <button data-step="+" aria-label="수량 늘리기">+</button>
         </div>
       </div>
 
       <!-- CTA -->
       <div class="cta-row">
-        <button class="btn btn-primary btn-lg" data-doodle="3" data-toast="success" data-toast-title="Added to cart!" data-toast-body="The Maker's Sketchbook — A5 (Cream · Dotted) ×1">Add to cart</button>
-        <button class="btn btn-outline btn-lg btn-icon" aria-label="Add to wishlist" aria-pressed="false">♡</button>
+        <button class="btn btn-primary btn-lg" data-doodle="3" data-toast="success" data-toast-title="담았어요!" data-toast-body="메이커 스케치북 — A5 (크림 · 도트) ×1">장바구니에 담기</button>
+        <button class="btn btn-outline btn-lg btn-icon" aria-label="위시리스트에 담기" aria-pressed="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 20 C 12 20 3 14 3 8.6 A 4.4 4.4 0 0 1 12 6 A 4.4 4.4 0 0 1 21 8.6 C 21 14 12 20 12 20 Z" stroke-linejoin="round"/></svg></button>
       </div>
 
-      <p class="inline-note success"><span class="dot" aria-hidden="true"></span> In stock · ships in 2 days</p>
+      <p class="inline-note success"><span class="dot" aria-hidden="true"></span> 재고 있음 · 2일 안에 배송돼요</p>
 
       <!-- perks -->
       <ul class="list" style="list-style:none;margin:0;padding:0">
-        <li class="list-item"><span aria-hidden="true">↺</span><div><div class="li-title">Free 60-day returns</div><div class="li-meta">Send it back if the doodles don't flow.</div></div></li>
-        <li class="list-item"><span aria-hidden="true">🌲</span><div><div class="li-title">FSC-certified paper</div><div class="li-meta">160gsm, bleed-proof, responsibly sourced.</div></div></li>
-        <li class="list-item"><span aria-hidden="true">✦</span><div><div class="li-title">Lifetime doodles</div><div class="li-meta">Free refill pen with every reorder, forever.</div></div></li>
+        <li class="list-item"><span class="perk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8 h9 a5 5 0 0 1 0 10 H8"/><path d="M7 5 L4 8 L7 11"/></svg></span><div><div class="li-title">60일 무료 반품</div><div class="li-meta">그림이 잘 안 풀리면 그대로 돌려보내세요.</div></div></li>
+        <li class="list-item"><span class="perk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20 C 5 11 11 5 20 5 C 20 14 14 20 5 20 Z"/><path d="M6 19 L15 10"/></svg></span><div><div class="li-title">FSC 인증 종이</div><div class="li-meta">160g, 번짐 없이 책임 있게 만든 종이예요.</div></div></li>
+        <li class="list-item"><span class="perk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><use href="#ic-pencil"/></svg></span><div><div class="li-title">평생 리필</div><div class="li-meta">재주문할 때마다 펠트펜을 무료로 넣어드려요.</div></div></li>
       </ul>
     </div>
   </section>
@@ -184,31 +212,31 @@
   <!-- ============ TABS ============ -->
   <section class="section-sm" id="details">
     <div class="tabs" data-reveal>
-      <div class="tablist" role="tablist" aria-label="Product details">
-        <button class="tab" id="t-desc" role="tab" aria-selected="true" aria-controls="p-desc">Description</button>
-        <button class="tab" id="t-spec" role="tab" aria-selected="false" aria-controls="p-spec" tabindex="-1">Specs</button>
-        <button class="tab" id="t-rev" role="tab" aria-selected="false" aria-controls="p-rev" tabindex="-1">Reviews <span class="badge yellow">3</span></button>
+      <div class="tablist" role="tablist" aria-label="상품 상세">
+        <button class="tab" id="t-desc" role="tab" aria-selected="true" aria-controls="p-desc">설명</button>
+        <button class="tab" id="t-spec" role="tab" aria-selected="false" aria-controls="p-spec" tabindex="-1">사양</button>
+        <button class="tab" id="t-rev" role="tab" aria-selected="false" aria-controls="p-rev" tabindex="-1">리뷰 <span class="badge yellow">3</span></button>
       </div>
 
       <!-- Description -->
       <div class="tabpanel stack stack-3" id="p-desc" role="tabpanel" aria-labelledby="t-desc">
-        <p>We made the notebook we always wanted on our own desks. The spine is sewn — not glued — so it falls open and <span class="mark">stays open</span> while both your hands are busy sketching. No more pinning the page down with a coffee mug.</p>
-        <p>Inside, 192 pages of warm cream stock take fountain ink, felt-tip, and pencil without a hint of bleed-through. The back of the book hides a gusseted pocket for loose scraps, tickets, and the receipts you keep meaning to file. Every sketchbook ships with our signature <span class="mark mark-mint">felt-tip pen</span> tucked under the elastic.</p>
-        <p class="text-muted font-sans text-sm">Hand-assembled in small batches. No two ship exactly the same — that's the point.</p>
+        <p>우리 책상 위에 두고 싶던 노트를 그대로 만들었어요. 등을 풀칠이 아니라 실로 꿰매서, 두 손이 바쁠 때도 저절로 펼쳐진 채 <span class="mark">그 자리에 머물러요.</span> 이제 컵으로 페이지를 눌러 둘 필요가 없어요.</p>
+        <p>안쪽 192페이지의 따뜻한 크림 종이는 만년필, 펠트펜, 연필을 전부 받아내면서도 뒷비침이 거의 없어요. 노트 뒤쪽에는 낱장 스크랩, 티켓, 미뤄 둔 영수증을 넣는 주머니가 숨어 있고요. 모든 스케치북에는 시그니처 <span class="mark mark-mint">펠트펜</span>이 고무밴드 아래 끼워져 배송돼요.</p>
+        <p class="text-muted font-sans text-sm">소량으로 손수 제본해요. 완전히 똑같은 두 권은 없어요 — 그게 바로 이 노트의 매력이에요.</p>
       </div>
 
       <!-- Specs -->
       <div class="tabpanel" id="p-spec" role="tabpanel" aria-labelledby="t-spec" hidden>
         <table class="spec-table">
           <tbody>
-            <tr><th scope="row">Size</th><td>A5 — 148 × 210 mm</td></tr>
-            <tr><th scope="row">Pages</th><td>192 (96 sheets)</td></tr>
-            <tr><th scope="row">Paper weight</th><td>160 gsm, bleed-proof</td></tr>
-            <tr><th scope="row">Cover</th><td>Hardcover, soft-touch linen</td></tr>
-            <tr><th scope="row">Binding</th><td>Sewn, lay-flat spine</td></tr>
-            <tr><th scope="row">Extras</th><td>Elastic strap · ribbon marker · back pocket</td></tr>
-            <tr><th scope="row">Includes</th><td>1× felt-tip pen (0.5 mm)</td></tr>
-            <tr><th scope="row">Weight</th><td>340 g</td></tr>
+            <tr><th scope="row">크기</th><td>A5 · 148 × 210 mm</td></tr>
+            <tr><th scope="row">페이지</th><td>192페이지 (96장)</td></tr>
+            <tr><th scope="row">종이 무게</th><td>160gsm · 번짐 방지</td></tr>
+            <tr><th scope="row">표지</th><td>하드커버 · 소프트터치 리넨</td></tr>
+            <tr><th scope="row">제본</th><td>실제본 · 끝까지 펼쳐지는 방식</td></tr>
+            <tr><th scope="row">구성</th><td>고무밴드 · 리본끈 · 뒷주머니</td></tr>
+            <tr><th scope="row">포함</th><td>펠트펜 0.5mm 1자루</td></tr>
+            <tr><th scope="row">무게</th><td>340g</td></tr>
           </tbody>
         </table>
       </div>
@@ -217,33 +245,33 @@
       <div class="tabpanel stack stack-4" id="p-rev" role="tabpanel" aria-labelledby="t-rev" hidden>
         <div class="card review-card panel-tilt">
           <div class="review-head">
-            <span class="avatar blue">MK</span>
+            <span class="avatar blue">민아</span>
             <div>
-              <div class="font-display text-xl">Mina Kwon</div>
-              <div class="rating" role="img" aria-label="Rated 5 of 5 stars" data-value="5"><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="true" class="is-on"></span></div>
+              <div class="font-display text-xl">권민아</div>
+              <div class="rating" role="img" aria-label="5점 만점에 5점" data-value="5"><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="true" class="is-on"></span></div>
             </div>
           </div>
-          <p>The lay-flat spine is no joke — I scan pages straight into sketchbook the app and they come out dead flat. Best $28 on my desk.</p>
+          <p>완전히 펼쳐지는 제본은 진짜예요 — 페이지를 그대로 스캔해서 sketchbook 앱에 넣으면 반듯하게 들어가요. 책상 위 ₩28,000 중에 최고예요.</p>
         </div>
         <div class="card review-card">
           <div class="review-head">
-            <span class="avatar mint">AR</span>
+            <span class="avatar mint">도현</span>
             <div>
-              <div class="font-display text-xl">Andre Ruiz</div>
-              <div class="rating" role="img" aria-label="Rated 4 of 5 stars" data-value="4"><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="false"></span></div>
+              <div class="font-display text-xl">유도현</div>
+              <div class="rating" role="img" aria-label="5점 만점에 4점" data-value="4"><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="false"></span></div>
             </div>
           </div>
-          <p>Fountain ink holds up beautifully, zero bleed. Knocked one star only because I wish the Kraft cover came with dotted paper by default.</p>
+          <p>만년필 잉크가 정말 잘 버텨요, 번짐 제로. 크라프트 표지가 기본으로 도트 종이면 더 좋았을 것 같아 별 하나만 뺐어요.</p>
         </div>
         <div class="card review-card panel-tilt-r">
           <div class="review-head">
-            <span class="avatar red">TL</span>
+            <span class="avatar red">세라</span>
             <div>
-              <div class="font-display text-xl">Thandi Letsie</div>
-              <div class="rating" role="img" aria-label="Rated 5 of 5 stars" data-value="5"><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="true" class="is-on"></span></div>
+              <div class="font-display text-xl">임세라</div>
+              <div class="rating" role="img" aria-label="5점 만점에 5점" data-value="5"><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="true" class="is-on"></span><span role="radio" aria-checked="true" class="is-on"></span></div>
             </div>
           </div>
-          <p>Bought one, came back for three more for the studio. The free refill pen with every reorder sealed the deal for our whole team.</p>
+          <p>한 권 사고 스튜디오에 두려고 세 권 더 주문했어요. 재주문마다 펠트펜을 무료로 주는 게 팀 전체를 붙잡았어요.</p>
         </div>
       </div>
     </div>
@@ -251,46 +279,46 @@
 
   <!-- ============ RELATED ============ -->
   <section class="section-sm" id="related">
-    <h2 class="scrawl mb-6">You might also like</h2>
+    <h2 class="scrawl mb-6">이런 것도 좋아요</h2>
     <div class="grid grid-4 stagger">
 
       <div class="card card-hover" data-reveal>
         <div class="card-media rel-media hatch-light">
-          <svg viewBox="0 0 120 90" fill="none" aria-label="Pocket notebook 3-pack"><rect x="22" y="14" width="58" height="64" rx="6" transform="rotate(-4 51 46)" fill="var(--hl-mint-300)" stroke="var(--color-border)" stroke-width="3"/><rect x="34" y="12" width="58" height="64" rx="6" fill="var(--color-surface)" stroke="var(--color-border)" stroke-width="3"/><path d="M46 30 h34 M46 42 h26" stroke="var(--color-text-subtle)" stroke-width="3" stroke-linecap="round"/></svg>
+          <svg viewBox="0 0 120 90" fill="none" role="img" aria-label="포켓 노트 3권"><rect x="22" y="14" width="58" height="64" rx="6" transform="rotate(-4 51 46)" style="fill:var(--hl-mint-300);stroke:var(--color-border)" stroke-width="3"/><rect x="34" y="12" width="58" height="64" rx="6" style="fill:var(--color-surface);stroke:var(--color-border)" stroke-width="3"/><path d="M46 30 h34 M46 42 h26" style="stroke:var(--color-text-subtle)" stroke-width="3" stroke-linecap="round"/></svg>
         </div>
         <div class="card-body stack stack-2">
-          <div class="font-display text-xl">Pocket Notes · 3-pack</div>
-          <div class="rel-foot"><span class="font-display text-2xl weight-bold">$14</span><button class="btn btn-sm btn-outline" data-toast="info" data-toast-title="Added!" data-toast-body="Pocket Notes · 3-pack ×1" data-doodle>Add</button></div>
+          <div class="font-display text-xl">포켓 노트 · 3권</div>
+          <div class="rel-foot"><span class="rel-price">₩14,000</span><button class="btn btn-sm btn-outline" data-toast="info" data-toast-title="담았어요!" data-toast-body="포켓 노트 · 3권 ×1" data-doodle>담기</button></div>
         </div>
       </div>
 
       <div class="card card-hover" data-reveal>
         <div class="card-media rel-media hatch-light">
-          <svg viewBox="0 0 120 90" fill="none" aria-label="Felt-tip pen set"><path d="M26 70 L70 26" stroke="var(--pen-blue)" stroke-width="9" stroke-linecap="round"/><path d="M68 28 l10 -10 l7 7 l-10 10 z" fill="var(--ink-700)" stroke="var(--color-border)" stroke-width="2.4" stroke-linejoin="round"/><path d="M40 64 L80 24" stroke="var(--pen-red)" stroke-width="9" stroke-linecap="round"/><path d="M78 26 l10 -10 l7 7 l-10 10 z" fill="var(--ink-700)" stroke="var(--color-border)" stroke-width="2.4" stroke-linejoin="round"/></svg>
+          <svg viewBox="0 0 120 90" fill="none" role="img" aria-label="펠트펜 세트"><path d="M26 70 L70 26" style="stroke:var(--pen-blue)" stroke-width="9" stroke-linecap="round"/><path d="M68 28 l10 -10 l7 7 l-10 10 z" style="fill:var(--ink-700);stroke:var(--color-border)" stroke-width="2.4" stroke-linejoin="round"/><path d="M40 64 L80 24" style="stroke:var(--pen-red)" stroke-width="9" stroke-linecap="round"/><path d="M78 26 l10 -10 l7 7 l-10 10 z" style="fill:var(--ink-700);stroke:var(--color-border)" stroke-width="2.4" stroke-linejoin="round"/></svg>
         </div>
         <div class="card-body stack stack-2">
-          <div class="font-display text-xl">Felt-tip Pen Set</div>
-          <div class="rel-foot"><span class="font-display text-2xl weight-bold">$19</span><button class="btn btn-sm btn-outline" data-toast="info" data-toast-title="Added!" data-toast-body="Felt-tip Pen Set ×1" data-doodle>Add</button></div>
+          <div class="font-display text-xl">펠트펜 세트</div>
+          <div class="rel-foot"><span class="rel-price">₩19,000</span><button class="btn btn-sm btn-outline" data-toast="info" data-toast-title="담았어요!" data-toast-body="펠트펜 세트 ×1" data-doodle>담기</button></div>
         </div>
       </div>
 
       <div class="card card-hover" data-reveal>
         <div class="card-media rel-media hatch-light">
-          <svg viewBox="0 0 120 90" fill="none" aria-label="Washi tape rolls"><circle cx="42" cy="46" r="26" fill="var(--hl-pink-300)" stroke="var(--color-border)" stroke-width="3"/><circle cx="42" cy="46" r="10" fill="var(--color-surface)" stroke="var(--color-border)" stroke-width="3"/><circle cx="78" cy="40" r="22" fill="var(--hl-yellow-300)" stroke="var(--color-border)" stroke-width="3"/><circle cx="78" cy="40" r="8" fill="var(--color-surface)" stroke="var(--color-border)" stroke-width="3"/></svg>
+          <svg viewBox="0 0 120 90" fill="none" role="img" aria-label="마스킹테이프 4롤"><circle cx="42" cy="46" r="26" style="fill:var(--hl-pink-300);stroke:var(--color-border)" stroke-width="3"/><circle cx="42" cy="46" r="10" style="fill:var(--color-surface);stroke:var(--color-border)" stroke-width="3"/><circle cx="78" cy="40" r="22" style="fill:var(--hl-yellow-300);stroke:var(--color-border)" stroke-width="3"/><circle cx="78" cy="40" r="8" style="fill:var(--color-surface);stroke:var(--color-border)" stroke-width="3"/></svg>
         </div>
         <div class="card-body stack stack-2">
-          <div class="font-display text-xl">Washi Tape · 4 rolls</div>
-          <div class="rel-foot"><span class="font-display text-2xl weight-bold">$11</span><button class="btn btn-sm btn-outline" data-toast="info" data-toast-title="Added!" data-toast-body="Washi Tape · 4 rolls ×1" data-doodle>Add</button></div>
+          <div class="font-display text-xl">마스킹테이프 · 4롤</div>
+          <div class="rel-foot"><span class="rel-price">₩11,000</span><button class="btn btn-sm btn-outline" data-toast="info" data-toast-title="담았어요!" data-toast-body="마스킹테이프 · 4롤 ×1" data-doodle>담기</button></div>
         </div>
       </div>
 
       <div class="card card-hover" data-reveal>
         <div class="card-media rel-media hatch-light">
-          <svg viewBox="0 0 120 90" fill="none" aria-label="Sketchbook tote bag"><path d="M38 30 v-6 a22 22 0 0 1 44 0 v6" stroke="var(--color-border)" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M30 30 h60 l-6 46 h-48 z" fill="var(--color-surface-2)" stroke="var(--color-border)" stroke-width="3" stroke-linejoin="round"/><path d="M52 48 l8 8 l14 -16" stroke="var(--ink-800)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg viewBox="0 0 120 90" fill="none" role="img" aria-label="메이커 에코백"><path d="M38 30 v-6 a22 22 0 0 1 44 0 v6" style="stroke:var(--color-border)" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M30 30 h60 l-6 46 h-48 z" style="fill:var(--color-surface-2);stroke:var(--color-border)" stroke-width="3" stroke-linejoin="round"/><path d="M52 48 l8 8 l14 -16" style="stroke:var(--ink-800)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
         <div class="card-body stack stack-2">
-          <div class="font-display text-xl">Maker's Tote Bag</div>
-          <div class="rel-foot"><span class="font-display text-2xl weight-bold">$24</span><button class="btn btn-sm btn-outline" data-toast="info" data-toast-title="Added!" data-toast-body="Maker's Tote Bag ×1" data-doodle>Add</button></div>
+          <div class="font-display text-xl">메이커 에코백</div>
+          <div class="rel-foot"><span class="rel-price">₩24,000</span><button class="btn btn-sm btn-outline" data-toast="info" data-toast-title="담았어요!" data-toast-body="메이커 에코백 ×1" data-doodle>담기</button></div>
         </div>
       </div>
 
@@ -299,23 +327,22 @@
 </main>
 
 <!-- command palette (keep on every page) -->
-<div class="cmdk-overlay" role="dialog" aria-modal="true" aria-label="Command palette">
+<div class="cmdk-overlay" role="dialog" aria-modal="true" aria-label="명령 팔레트">
   <div class="cmdk">
-    <div class="cmdk-input-row"><svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3" stroke-linecap="round"/></svg><input class="cmdk-input" placeholder="Type a command…" aria-label="Command input" /><kbd>ESC</kbd></div>
-    <div class="cmdk-list">
-      <div class="cmdk-group"><div class="cmdk-group-label">Go to</div>
-        <div class="cmdk-item" data-href="dashboard.html"><span class="cmdk-ico">📊</span> Dashboard</div>
-        <div class="cmdk-item" data-href="kanban.html"><span class="cmdk-ico">🗂️</span> Board</div>
-        <div class="cmdk-item" data-href="inbox.html"><span class="cmdk-ico">✉️</span> Inbox</div>
-        <div class="cmdk-item" data-href="pricing.html"><span class="cmdk-ico">🏷️</span> Pricing</div>
-        <div class="cmdk-item" data-href="settings.html"><span class="cmdk-ico">⚙️</span> Settings</div>
-        <div class="cmdk-item" data-href="profile.html"><span class="cmdk-ico">🙂</span> Profile</div>
-        <div class="cmdk-item" data-href="../index.html"><span class="cmdk-ico">🏠</span> Home</div>
+    <div class="cmdk-input-row"><svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3" stroke-linecap="round"/></svg><input class="cmdk-input" placeholder="명령어를 입력하세요…" aria-label="명령어 입력" role="combobox" aria-expanded="true" aria-controls="cmdk-listbox" aria-autocomplete="list" /><kbd>ESC</kbd></div>
+    <div class="cmdk-list" id="cmdk-listbox" role="listbox" aria-label="명령 결과">
+      <div class="cmdk-group"><div class="cmdk-group-label">이동</div>
+        <div class="cmdk-item" role="option" aria-selected="false" data-href="dashboard.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-dashboard"/></svg></span> 대시보드</div>
+        <div class="cmdk-item" role="option" aria-selected="false" data-href="kanban.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-board"/></svg></span> 보드</div>
+        <div class="cmdk-item" role="option" aria-selected="false" data-href="inbox.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-inbox"/></svg></span> 받은편지함</div>
+        <div class="cmdk-item" role="option" aria-selected="false" data-href="pricing.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-pricing"/></svg></span> 요금제</div>
+        <div class="cmdk-item" role="option" aria-selected="false" data-href="settings.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-settings"/></svg></span> 설정</div>
+        <div class="cmdk-item" role="option" aria-selected="false" data-href="profile.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-face"/></svg></span> 프로필</div>
       </div>
-      <div class="cmdk-group"><div class="cmdk-group-label">Actions</div>
-        <div class="cmdk-item" data-action="toggle-theme"><span class="cmdk-ico">🌗</span> Toggle dark mode</div>
+      <div class="cmdk-group"><div class="cmdk-group-label">동작</div>
+        <div class="cmdk-item" role="option" aria-selected="false" data-action="toggle-theme"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-theme"/></svg></span> 다크 모드 전환</div>
       </div>
-      <div class="cmdk-empty" style="display:none">No results.</div>
+      <div class="cmdk-empty" role="status" aria-live="polite" style="display:none">결과가 없어요.</div>
     </div>
   </div>
 </div>

@@ -39,13 +39,15 @@
     if (!t) return;
     var next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
     applyTheme(next); storeTheme(next);
-    burstAt(t, next === "dark" ? "ZAP!" : "POW!");
+    burstAt(t, next === "dark" ? "번쩍!" : "짠!");
   });
 
   /* =====================================================================
      2. ACTION BURST — a star "POW!" that pops at a point then fades
      ===================================================================== */
-  var BURST_WORDS = ["POW!", "BAM!", "ZAP!", "WHAM!", "BOOM!", "KAPOW!", "ZONK!", "OOF!"];
+  /* Korean onomatopoeia — the signature no other theme can copy (brief §5-②).
+     Black Han Sans renders these at full weight in the burst. */
+  var BURST_WORDS = ["쾅!", "펑!", "빠밤!", "우당탕!", "슈욱!", "두둥!", "콰광!", "빵!"];
   function burstAt(target, word) {
     if (prefersReduced) return;
     var rect = (target.getBoundingClientRect ? target.getBoundingClientRect() : { left: target.x, top: target.y, width: 0, height: 0 });
@@ -88,7 +90,7 @@
       r.className = "toast-region";
       r.setAttribute("role", "region");
       r.setAttribute("aria-live", "polite");
-      r.setAttribute("aria-label", "Notifications");
+      r.setAttribute("aria-label", "알림");
       document.body.appendChild(r);
     }
     return r;
@@ -108,9 +110,9 @@
     el.setAttribute("role", "status");
     el.innerHTML =
       '<span class="toast-icon" aria-hidden="true">' + (ICONS[type] || ICONS.info) + "</span>" +
-      '<div><div class="toast-title">' + (opts.title || "Done!") + "</div>" +
+      '<div><div class="toast-title">' + (opts.title || "완료!") + "</div>" +
       (opts.body ? '<div class="toast-body">' + opts.body + "</div>" : "") + "</div>" +
-      '<button class="toast-close btn-icon btn-sm btn-ghost" aria-label="Dismiss">✕</button>';
+      '<button class="toast-close btn-icon btn-sm btn-ghost" aria-label="닫기">✕</button>';
     region.appendChild(el);
     var ttl = opts.duration || 4200;
     var timer = setTimeout(close, ttl);
@@ -128,7 +130,7 @@
     if (!t) return;
     toast({
       type: t.getAttribute("data-toast") || "success",
-      title: t.getAttribute("data-toast-title") || "Nice!",
+      title: t.getAttribute("data-toast-title") || "완료!",
       body: t.getAttribute("data-toast-body") || ""
     });
   });
@@ -342,10 +344,30 @@
     if (empty) empty.style.display = any ? "none" : "block";
     var firstVisible = items.filter(function (i) { return i.style.display !== "none"; })[0];
     if (firstVisible) firstVisible.classList.add("is-active");
+    items.forEach(function (i) { i.setAttribute("aria-selected", String(i === firstVisible)); });
+    var input = $(".cmdk-input", cmdk);
+    if (input) input.setAttribute("aria-activedescendant", firstVisible ? firstVisible.id : "");
   }
   if (cmdk) {
+    /* Upgrade to a real listbox (P6): items were <div> with no role and no
+       active-descendant wiring. Progressive-enhance so every page benefits. */
+    var cmdkList = $(".cmdk-list", cmdk);
+    if (cmdkList) { cmdkList.setAttribute("role", "listbox"); if (!cmdkList.id) cmdkList.id = "cmdk-listbox"; }
+    $$(".cmdk-item", cmdk).forEach(function (it, i) {
+      it.setAttribute("role", "option");
+      it.setAttribute("aria-selected", "false");
+      if (!it.id) it.id = "cmdk-opt-" + i;
+    });
+    var cmdkEmpty0 = $(".cmdk-empty", cmdk);
+    if (cmdkEmpty0) { cmdkEmpty0.setAttribute("role", "status"); cmdkEmpty0.setAttribute("aria-live", "polite"); }
     var cInput = $(".cmdk-input", cmdk);
-    if (cInput) cInput.addEventListener("input", function () { filterCmdk(this.value); });
+    if (cInput) {
+      cInput.setAttribute("role", "combobox");
+      cInput.setAttribute("aria-expanded", "true");
+      cInput.setAttribute("aria-autocomplete", "list");
+      if (cmdkList) cInput.setAttribute("aria-controls", cmdkList.id);
+      cInput.addEventListener("input", function () { filterCmdk(this.value); });
+    }
     cmdk.addEventListener("click", function (e) { if (e.target === cmdk) closeCmdk(); });
     cmdk.addEventListener("keydown", function (e) {
       var visible = $$(".cmdk-item", cmdk).filter(function (i) { return i.style.display !== "none"; });
@@ -355,10 +377,12 @@
       else if (e.key === "Enter") { e.preventDefault(); if (visible[idx]) activate(visible[idx]); }
       function move(d) {
         if (!visible.length) return;
-        if (idx >= 0) visible[idx].classList.remove("is-active");
+        if (idx >= 0) { visible[idx].classList.remove("is-active"); visible[idx].setAttribute("aria-selected", "false"); }
         var ni = (idx + d + visible.length) % visible.length;
         visible[ni].classList.add("is-active");
+        visible[ni].setAttribute("aria-selected", "true");
         visible[ni].scrollIntoView({ block: "nearest" });
+        if (cInput) cInput.setAttribute("aria-activedescendant", visible[ni].id);
       }
     });
     $$(".cmdk-item", cmdk).forEach(function (it) {
@@ -370,7 +394,7 @@
       closeCmdk();
       if (href) { window.location.href = href; }
       else if (act === "toggle-theme") { var n = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark"; applyTheme(n); storeTheme(n); }
-      else { toast({ title: item.textContent.trim(), body: "Command executed", type: "info" }); }
+      else { toast({ title: item.textContent.trim(), body: "명령을 실행했어요", type: "info" }); }
     }
   }
   document.addEventListener("keydown", function (e) {
@@ -384,15 +408,48 @@
   });
 
   /* =====================================================================
-     12. SIDEBAR collapse + mobile toggle
+     12. MOBILE NAV — inject hamburger + off-canvas link panel
+          Fixes P1: navigation.css referenced a .navbar-toggle that never
+          existed in markup (dead ≤880px nav on every page). This makes the
+          navbar work on all pages from the system layer alone.
      ===================================================================== */
-  document.addEventListener("click", function (e) {
-    if (e.target.closest("[data-sidebar-collapse]")) {
-      var shell = $(".app-shell"); if (shell) shell.classList.toggle("collapsed");
+  $$(".navbar").forEach(function (bar) {
+    var links = $(".nav-links", bar);
+    if (!links) return;
+    if (!links.id) links.id = "nav-links-" + Math.random().toString(36).slice(2, 7);
+    var toggle = $(".navbar-toggle", bar);
+    if (!toggle) {
+      toggle = document.createElement("button");
+      toggle.className = "navbar-toggle";
+      toggle.type = "button";
+      toggle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+        'stroke-width="3" stroke-linecap="round" aria-hidden="true">' +
+        '<path d="M4 7h16M4 12h16M4 17h16"/></svg>';
+      var right = $(".nav-right", bar);
+      if (right) right.insertBefore(toggle, right.firstChild); else bar.appendChild(toggle);
     }
-    if (e.target.closest("[data-sidebar-toggle]")) {
-      var sb = $(".sidebar"); if (sb) sb.classList.toggle("is-open");
+    toggle.setAttribute("aria-controls", links.id);
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.setAttribute("aria-label", "메뉴 열기");
+    function setOpen(open) {
+      bar.classList.toggle("is-nav-open", open);
+      toggle.setAttribute("aria-expanded", String(open));
+      toggle.setAttribute("aria-label", open ? "메뉴 닫기" : "메뉴 열기");
     }
+    toggle.addEventListener("click", function (e) {
+      e.stopPropagation();
+      setOpen(!bar.classList.contains("is-nav-open"));
+    });
+    links.addEventListener("click", function (e) { if (e.target.closest("a")) setOpen(false); });
+    document.addEventListener("click", function (e) {
+      if (bar.classList.contains("is-nav-open") && !e.target.closest(".navbar")) setOpen(false);
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && bar.classList.contains("is-nav-open")) { setOpen(false); toggle.focus(); }
+    });
+    window.addEventListener("resize", function () {
+      if (window.innerWidth > 880 && bar.classList.contains("is-nav-open")) setOpen(false);
+    });
   });
 
   /* =====================================================================
@@ -513,8 +570,13 @@
       if (removeChipByLabel(label, true)) return; // already there
       var chip = document.createElement("span");
       chip.className = "chip";
-      chip.innerHTML = label + ' <button type="button" aria-label="Remove ' + label + '">✕</button>';
-      chip.querySelector("button").addEventListener("click", function (ev) {
+      chip.appendChild(document.createTextNode(label + " "));
+      var rm = document.createElement("button");
+      rm.type = "button";
+      rm.setAttribute("aria-label", label + " 제거");
+      rm.textContent = "✕";
+      chip.appendChild(rm);
+      rm.addEventListener("click", function (ev) {
         ev.stopPropagation(); chip.remove();
         if (opt) opt.setAttribute("aria-selected", "false");
       });
@@ -551,13 +613,18 @@
         var row = document.createElement("div");
         row.className = "file-row";
         row.innerHTML =
-          '<span aria-hidden="true">📄</span><span>' + f.name + "</span>" +
-          '<span class="file-meta">' + (f.size ? (f.size / 1024).toFixed(1) + " KB" : "") + "</span>" +
-          '<button class="btn-icon btn-sm btn-ghost" aria-label="Remove">✕</button>';
+          '<span class="file-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" ' +
+          'stroke="currentColor" stroke-width="2.5" stroke-linejoin="round">' +
+          '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>' +
+          '<path d="M14 3v5h5"/></svg></span>' +
+          '<span class="file-name"></span>' +
+          '<span class="file-meta">' + (f.size ? (f.size / 1024).toFixed(1) + "KB" : "") + "</span>" +
+          '<button class="btn-icon btn-sm btn-ghost" aria-label="파일 제거">✕</button>';
+        row.querySelector(".file-name").textContent = f.name;
         row.querySelector("button").addEventListener("click", function () { row.remove(); });
         list.appendChild(row);
       });
-      toast({ title: "File added!", body: files.length + " file(s) ready", type: "info" });
+      toast({ title: "파일을 추가했어요", body: "파일 " + files.length + "개 준비 완료", type: "info" });
     }
   });
 
@@ -573,7 +640,7 @@
     if (dotsWrap) {
       slides.forEach(function (_, idx) {
         var d = document.createElement("button");
-        d.setAttribute("aria-label", "Go to slide " + (idx + 1));
+        d.setAttribute("aria-label", (idx + 1) + "번 슬라이드로 이동");
         d.addEventListener("click", function () { go(idx); });
         dotsWrap.appendChild(d);
       });
@@ -671,14 +738,13 @@
     var title = $(".calendar-head .title", cal);
     var view = new Date();
     var selected = null;
-    var DOW = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-    var MON = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+    var DOW = ["일", "월", "화", "수", "목", "금", "토"];
     function render() {
       if (!grid) return;
       grid.innerHTML = "";
       DOW.forEach(function (d) { var el = document.createElement("div"); el.className = "dow"; el.textContent = d; grid.appendChild(el); });
       var y = view.getFullYear(), m = view.getMonth();
-      if (title) title.textContent = MON[m] + " " + y;
+      if (title) title.textContent = y + "년 " + (m + 1) + "월";
       var first = new Date(y, m, 1).getDay();
       var days = new Date(y, m + 1, 0).getDate();
       var today = new Date();
@@ -693,7 +759,7 @@
             selected = { d: dd, m: m, y: y };
             render();
             var out = document.getElementById(cal.getAttribute("data-output"));
-            if (out) out.value = (m + 1) + "/" + dd + "/" + y;
+            if (out) out.value = y + "년 " + (m + 1) + "월 " + dd + "일";
           });
         })(d);
         grid.appendChild(cell);
@@ -715,7 +781,7 @@
         el.textContent = yearly ? el.getAttribute("data-price-year") : el.getAttribute("data-price-month");
       });
       $$("[data-price-note]").forEach(function (el) {
-        el.textContent = yearly ? "/year · save 20%" : "/month";
+        el.textContent = yearly ? "/년 · 20% 할인" : "/월";
       });
     });
   });
@@ -729,9 +795,9 @@
     var sel = btn.getAttribute("data-copy");
     var text = sel ? (document.querySelector(sel) || {}).textContent : (btn.closest(".code-block") || {}).querySelector ? btn.closest(".code-block").querySelector("code").textContent : "";
     if (navigator.clipboard && text) {
-      navigator.clipboard.writeText(text).then(function () { toast({ title: "Copied!", type: "success", duration: 1800 }); });
+      navigator.clipboard.writeText(text).then(function () { toast({ title: "복사했어요", type: "success", duration: 1800 }); });
     } else {
-      toast({ title: "Copied!", type: "success", duration: 1800 });
+      toast({ title: "복사했어요", type: "success", duration: 1800 });
     }
   });
 
@@ -839,9 +905,9 @@
       if (done) done.style.display = cur === steps.length - 1 ? "" : "none";
     }
     wiz.addEventListener("click", function (e) {
-      if (e.target.closest("[data-wizard-next]")) { show(cur + 1); burstAt(e.target.closest("[data-wizard-next]"), "NEXT!"); }
+      if (e.target.closest("[data-wizard-next]")) { show(cur + 1); burstAt(e.target.closest("[data-wizard-next]"), "다음!"); }
       if (e.target.closest("[data-wizard-back]")) show(cur - 1);
-      if (e.target.closest("[data-wizard-done]")) { toast({ title: "All set!", body: "Welcome aboard, hero!", type: "success" }); burstAt(wiz, "HOORAY!"); }
+      if (e.target.closest("[data-wizard-done]")) { toast({ title: "완료!", body: "이제 시작이에요, 히어로!", type: "success" }); burstAt(wiz, "야호!"); }
     });
     show(0);
   });
@@ -851,10 +917,12 @@
      ===================================================================== */
   (function () {
     var s = document.createElement("style");
+    /* Signature reveal = STAMP-IN: element drops from a scaled/rotated state
+       and settles with the overshoot ease, like a rubber stamp hitting paper. */
     s.textContent =
-      "[data-reveal]{opacity:0;transform:translateY(22px) scale(.98);transition:opacity .5s var(--ease-out,ease),transform .5s var(--ease-emphasized,ease)}" +
+      "[data-reveal]{opacity:0;transform:scale(1.14) rotate(-2.5deg);transition:opacity .28s var(--ease-out,ease),transform .42s var(--ease-emphasized,ease)}" +
       "[data-reveal].in-view{opacity:1;transform:none}" +
-      "@media (prefers-reduced-motion: reduce){[data-reveal]{opacity:1!important;transform:none!important}}" +
+      "@media (prefers-reduced-motion: reduce){[data-reveal]{opacity:1!important;transform:none!important;transition:none!important}}" +
       "[data-kanban-col].is-drop .kanban-list{outline:3px dashed var(--blue-500);outline-offset:4px;border-radius:8px}";
     document.head.appendChild(s);
   })();
@@ -864,5 +932,5 @@
      ===================================================================== */
   $$("[data-year]").forEach(function (el) { el.textContent = new Date().getFullYear(); });
 
-  console.log("%c COMIC POP ART — design system ready! ", "background:#ffd400;color:#0a0a09;font-weight:900;padding:4px 10px;border-radius:4px");
+  console.log("%c 코믹 팝아트 — 디자인 시스템 준비 완료! ", "background:#ffd400;color:#0a0a09;font-weight:900;padding:4px 10px;border-radius:4px");
 })();

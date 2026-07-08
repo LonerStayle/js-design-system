@@ -782,6 +782,10 @@
   /* STAGGERED PAGE-LOAD REVEAL                                             */
   /* ---------------------------------------------------------------------- */
   function initReveal() {
+    // stagger index for the plate-register load motion (CSS reads --i)
+    $$("[data-reveal-stagger]").forEach(function (group) {
+      $$("[data-reveal]", group).forEach(function (el, i) { el.style.setProperty("--i", i); });
+    });
     if (prefersReduced || !("IntersectionObserver" in window)) {
       $$("[data-reveal]").forEach(function (el) { el.classList.add("is-in"); });
       return;
@@ -790,6 +794,27 @@
       entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add("is-in"); io.unobserve(en.target); } });
     }, { threshold: 0.12 });
     $$("[data-reveal]").forEach(function (el) { io.observe(el); });
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* LOADING DEMO — show the skeleton state as a real scene, then ink in.    */
+  /* Content is visible by default, so no-JS / JS-failure / reduced-motion   */
+  /* users always see the finished chart (skeleton only flashes when motion  */
+  /* is allowed).                                                            */
+  /* ---------------------------------------------------------------------- */
+  function initLoadingDemo() {
+    if (prefersReduced) return;
+    $$("[data-loading-demo]").forEach(function (host) {
+      var sk = host.querySelector("[data-load-skeleton]");
+      var real = host.querySelector("[data-load-content]");
+      if (!sk || !real) return;
+      sk.hidden = false;
+      real.hidden = true;
+      setTimeout(function () {
+        sk.hidden = true;
+        real.hidden = false;
+      }, 1000);
+    });
   }
 
   /* ---------------------------------------------------------------------- */
@@ -822,6 +847,7 @@
     initMisregister();
     initGlobalKeys();
     initReveal();
+    initLoadingDemo();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

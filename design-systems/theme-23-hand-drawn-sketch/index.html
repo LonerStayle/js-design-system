@@ -1,42 +1,111 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>sketchbook — Hand-drawn Sketch 디자인 시스템</title>
+<title>sketchbook — 손으로 생각하는 사람들을 위한 비주얼 노트</title>
+<script>
+/* Apply saved/system theme before first paint — no cream flash for dark users. */
+(function () {
+  try {
+    var t = localStorage.getItem("sketch-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
 <link rel="stylesheet" href="theme.css" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='16' fill='%23f7f1e3' stroke='%23243042' stroke-width='6'/><path d='M24 64 C40 40 60 40 76 60' fill='none' stroke='%23243042' stroke-width='7' stroke-linecap='round'/><circle cx='70' cy='34' r='7' fill='%23ffe45c' stroke='%23243042' stroke-width='4'/></svg>" />
 <style>
-  /* page-local layout for the hub */
-  .hero { position: relative; margin-top: var(--space-6); padding: clamp(var(--space-6), 5vw, var(--space-12)); overflow: hidden; }
-  .hero-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: var(--space-8); align-items: center; }
-  .hero h1 { font-size: clamp(3.2rem, 11vw, 7rem); line-height: .9; margin-bottom: var(--space-3); }
-  .hero .lead { font-size: var(--text-xl); max-width: 46ch; color: var(--color-text); }
-  .hero-art { position: relative; display: grid; place-items: center; min-height: 240px; }
-  .hero-art .scribble { width: min(320px, 80%); }
+  /* ---- HERO: a pinned-up whiteboard, not a two-column report -------------- */
+  .hero { position: relative; margin-top: var(--space-6); padding: clamp(var(--space-6), 4.5vw, var(--space-11)); overflow: clip; }
+  .hero-grid { display: grid; grid-template-columns: 1.12fr .88fr; gap: var(--space-8); align-items: center; }
+  .hero-copy { position: relative; z-index: 2; }
+  .hero .eyebrow { font-family: var(--font-display); font-size: var(--text-2xl); color: var(--color-secondary); transform: rotate(-1.6deg); display: inline-block; }
+  .hero h1.scrawl { font-size: clamp(3.4rem, 12vw, 7.4rem); line-height: .92; margin-bottom: var(--space-4); }
+  .hero .lead { font-size: var(--text-xl); max-width: 44ch; color: var(--color-text); line-height: var(--leading-relaxed); }
+  .hero .world-stat { margin-top: var(--space-5); font-family: var(--font-hand); font-size: var(--text-sm); color: var(--color-text-muted); }
+  .hero .world-stat b { font-family: var(--font-display); font-size: var(--text-lg); color: var(--color-text); }
+
+  .hero-art { position: relative; display: grid; place-items: center; min-height: 260px; }
+  .hero-art .sketchpad { width: min(340px, 92%); overflow: visible; }
+  /* a real taped note breaking out over the board's corner (§ grid-break) */
+  .pin-note {
+    position: absolute; top: calc(var(--space-8) * -1); right: -6px; z-index: 4;
+    width: 168px; padding: var(--space-3) var(--space-4);
+    background: var(--hl-yellow-200); color: var(--ink-800);
+    border: var(--border-w-2) solid var(--color-border); border-radius: var(--radius-md-alt);
+    box-shadow: var(--sketch-shadow); transform: rotate(4.5deg);
+    font-family: var(--font-hand); font-weight: var(--weight-bold); font-size: var(--text-md); line-height: var(--leading-snug);
+  }
+  .pin-note .pin-arrow { position: absolute; left: -46px; bottom: -30px; width: 60px; height: 40px;
+    background: var(--doodle-arrow) center / contain no-repeat; transform: rotate(150deg); pointer-events: none; }
+  .hero-art .art-star { position: absolute; left: 2%; bottom: 6%; width: 34px; height: 34px;
+    background: var(--doodle-star) center / contain no-repeat; transform: rotate(-12deg); pointer-events: none; opacity: .8; }
+
+  /* ---- kit / motif grid --------------------------------------------------- */
   .kit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-5); }
   .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px,1fr)); gap: var(--space-2); }
   .sw { height: 56px; border: var(--border-2); border-radius: var(--radius-sm); display: flex; align-items: flex-end; padding: 4px 6px; font-size: var(--text-2xs); font-family: var(--font-sans); font-weight: 600; box-shadow: var(--sketch-shadow-sm); }
-  .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-6); align-items: start; }
-  .pages-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-5); }
-  .page-card { display: block; padding: var(--space-5); text-decoration: none; color: inherit; transition: transform var(--duration-fast) var(--ease-wobble); }
-  .page-card:hover { transform: translate(-2px,-3px) rotate(-.8deg); }
-  .page-card .pc-emoji { font-size: 2rem; }
-  .page-card .pc-title { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 700; }
   .motif-cell { padding: var(--space-5); min-height: 130px; display: flex; flex-direction: column; gap: var(--space-3); justify-content: center; }
   .type-row { display: flex; align-items: baseline; gap: var(--space-4); border-bottom: var(--border-w-1) dashed var(--color-divider); padding: 8px 0; }
   .type-row .lbl { font-family: var(--font-sans); font-size: var(--text-2xs); color: var(--color-text-muted); width: 56px; flex: none; }
+
+  /* ---- component gallery + pages ----------------------------------------- */
+  .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-6); align-items: start; }
+  .pages-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: var(--space-5); }
+  .page-card { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-5); text-decoration: none; color: inherit; transition: transform var(--duration-fast) var(--ease-wobble); }
+  .page-card:hover { transform: translate(-2px,-3px) rotate(-.8deg); }
+  .page-card .pc-ico { width: 40px; height: 40px; color: var(--color-text); }
+  .page-card .pc-ico svg { width: 100%; height: 100%; }
+  .page-card .pc-ico.lg { width: 56px; height: 56px; }
+  .page-card .pc-title { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 700; line-height: var(--leading-tight); }
+  .page-card .pc-desc { color: var(--color-text-muted); font-size: var(--text-sm); font-family: var(--font-sans); }
+  .page-card.feature { grid-column: span 2; flex-direction: row; align-items: center; gap: var(--space-4); }
+  .page-card.feature .pc-body { display: flex; flex-direction: column; gap: 2px; }
+
+  .cmdk-ico svg { width: 18px; height: 18px; }
+  .mi-ico { width: 16px; height: 16px; flex: none; }
   .site-foot { margin-top: var(--space-12); padding: var(--space-8) 0; border-top: var(--border-w-2) dashed var(--color-border); }
-  @media (max-width: 880px){ .hero-grid{ grid-template-columns: 1fr; } .hero-art{ min-height: 180px; } }
+
+  @media (max-width: 880px){ .hero-grid{ grid-template-columns: 1fr; } .hero-art{ min-height: 210px; } .pin-note{ top: -18px; right: 4%; } }
+  @media (max-width: 560px){ .pin-note, .hero-art .art-star { display: none; } }
+  @media (max-width: 520px){ .page-card.feature { grid-column: span 1; flex-direction: column; align-items: flex-start; } }
 </style>
 </head>
-<body class="paper-bg">
+<body class="paper-bg with-margin">
 <a class="skip-link" href="#main">본문으로 건너뛰기</a>
 
+<!-- rough-edge turbulence filter (referenced by .rough-edge) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="roughpaper"><feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="3" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="2.2"/></filter></svg>
 
+<!-- hand-drawn icon sprite (single-ink, currentColor — recolors with theme) -->
+<svg class="ico-defs" width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="ic-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19 L4 20 L5 15 L16 4 a2 2 0 0 1 3 3 L8 18 Z"/><path d="M14 6 l3 3"/></symbol>
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5 V20 H20"/><path d="M8 20 V14"/><path d="M12.5 20 V9"/><path d="M17 20 V12"/></symbol>
+  <symbol id="ic-board" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="6" width="9.5" height="9.5" rx="1.5" transform="rotate(-4 8 11)"/><rect x="11.5" y="9" width="9.5" height="9.5" rx="1.5" transform="rotate(5 16 14)"/></symbol>
+  <symbol id="ic-inbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M4 8 L12 14 L20 8"/></symbol>
+  <symbol id="ic-product" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8 H18 L17 20 H7 Z"/><path d="M9 8 V6.6 A3 3 0 0 1 15 6.6 V8"/></symbol>
+  <symbol id="ic-pricing" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 L11 4 H19 V12 L12 19 Z"/><circle cx="15.4" cy="8.6" r="1.4"/></symbol>
+  <symbol id="ic-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8 H20"/><circle cx="9" cy="8" r="2.2"/><path d="M4 15 H20"/><circle cx="15" cy="15" r="2.2"/></symbol>
+  <symbol id="ic-compass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><path d="M8.6 15.4 L11 11 L15.4 8.6 L13 13 Z"/></symbol>
+  <symbol id="ic-face" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><path d="M9 10.4 v1.2"/><path d="M15 10.4 v1.2"/><path d="M8.6 14.2 C10 16, 14 16, 15.4 14.2"/></symbol>
+  <symbol id="ic-lost" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><path d="M9.6 9.6 A2.5 2.5 0 1 1 12 12.6 V13.6"/><path d="M12 16.6 v.01"/></symbol>
+  <symbol id="ic-theme" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><circle cx="12" cy="12" r="7.4"/><path d="M12 4.6 a7.4 7.4 0 0 0 0 14.8 Z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="ic-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8 V6 a2 2 0 0 0-2-2 H6 a2 2 0 0 0-2 2 v8 a2 2 0 0 0 2 2 h2"/></symbol>
+  <symbol id="ic-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7 H19"/><path d="M9 7 V5 a1 1 0 0 1 1-1 h4 a1 1 0 0 1 1 1 V7"/><path d="M7 7 L8 20 h8 L17 7"/></symbol>
+</svg>
+
+<!-- marginalia — decorative "used notebook" scribbles in the gutters -->
+<div class="marginalia" aria-hidden="true">
+  <span class="mg-ring"  style="top:15%;left:1.5%;--mg-rot:-6deg"></span>
+  <span class="mg-star"  style="top:34%;right:2.5%;--mg-rot:9deg"></span>
+  <span class="mg-note"  style="bottom:24%;left:2%;--mg-rot:-8deg">중요!</span>
+  <span class="mg-arrow" style="bottom:16%;right:3.5%;--mg-rot:-12deg"></span>
+</div>
+
 <nav class="navbar" aria-label="주요 메뉴">
-  <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">✎</span><span>sketchbook</span></a>
+  <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><use href="#ic-pencil"/></svg></span><span>sketchbook</span></a>
   <div class="nav-links">
     <a class="nav-link is-active" href="index.html">홈</a>
     <a class="nav-link" href="pages/dashboard.html">대시보드</a>
@@ -55,26 +124,28 @@
   <!-- HERO -->
   <section class="hero panel" data-reveal>
     <div class="hero-grid">
-      <div>
-        <p class="font-display text-2xl" style="color:var(--color-secondary);transform:rotate(-1.5deg)">메이커를 위한 디자인 시스템 ✦</p>
+      <div class="hero-copy">
+        <p class="eyebrow">손으로 생각하는 사람들을 위한 노트</p>
         <h1 class="scrawl">sketch<span style="color:var(--color-secondary)">book</span></h1>
-        <p class="lead"><span class="mark">손으로 그린 듯한</span> 프로덕션급 UI 킷 — 거친 잉크 테두리, 형광펜 강조, 낙서와 말풍선까지. 순수 CSS + 바닐라 JS. <span class="mark mark-mint">더블 클릭</span> 한 번이면 열립니다.</p>
+        <p class="lead">생각은 원래 삐뚤빼뚤하니까요. 끄적인 메모, <span class="mark">형광펜으로 그은 강조</span>, 화살표로 이은 아이디어까지 — 벽에 붙이듯 정리하는 비주얼 노트예요.</p>
         <div class="demo-row mt-6">
-          <a class="btn btn-primary btn-lg" href="pages/dashboard.html" data-doodle="3">바로 보기 →</a>
-          <a class="btn btn-outline btn-lg" href="#components">킷 둘러보기</a>
+          <a class="btn btn-primary btn-lg" href="pages/dashboard.html" data-doodle="3">둘러보기 →</a>
+          <a class="btn btn-outline btn-lg" href="#components">킷 살펴보기</a>
         </div>
-        <p class="text-muted mt-4 font-sans text-sm">프레임워크 없음 · 라이트 + 다크 · 키보드 &amp; 스크린리더 친화적</p>
+        <p class="world-stat">지금 벽에 붙은 노트 <b>1,284</b>개 · 오늘도 새 아이디어가 늘고 있어요.</p>
       </div>
-      <div class="hero-art" aria-hidden="true">
-        <svg class="scribble" viewBox="0 0 320 240" fill="none">
-          <rect x="20" y="40" width="200" height="130" rx="14" fill="var(--color-surface)" stroke="var(--color-border)" stroke-width="3"/>
-          <path d="M40 80 h150 M40 105 h120 M40 130 h140" stroke="var(--color-text-muted)" stroke-width="3" stroke-linecap="round"/>
-          <circle cx="250" cy="70" r="34" fill="var(--hl-yellow-300)" stroke="var(--color-border)" stroke-width="3"/>
-          <path d="M234 70 l10 10 l22 -22" stroke="var(--ink-800)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M250 130 C 250 170, 210 175, 195 178" stroke="var(--pen-red)" stroke-width="3" stroke-linecap="round"/>
-          <path d="M198 168 l-6 12 l13 -2" stroke="var(--pen-red)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M270 150 l4 9 l9 1 l-7 6 l2 9 l-8 -5 l-8 5 l2 -9 l-7 -6 l9 -1 z" fill="var(--hl-pink-300)" stroke="var(--color-border)" stroke-width="2.4" stroke-linejoin="round"/>
+      <div class="hero-art">
+        <svg class="sketchpad" viewBox="0 0 320 240" fill="none" aria-hidden="true">
+          <rect x="20" y="40" width="200" height="130" rx="14" pathLength="1" class="draw" style="fill:var(--color-surface);stroke:var(--color-border);--draw-delay:0s" stroke-width="3"/>
+          <path d="M40 80 h150 M40 105 h120 M40 130 h140" pathLength="1" class="draw" style="stroke:var(--color-text-muted);--draw-delay:.35s" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="250" cy="70" r="34" pathLength="1" class="draw" style="fill:var(--hl-yellow-300);stroke:var(--color-border);--draw-delay:.6s" stroke-width="3"/>
+          <path d="M234 70 l10 10 l22 -22" pathLength="1" class="draw" style="stroke:var(--ink-800);--draw-delay:.9s" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M250 130 C 250 170, 210 175, 195 178" pathLength="1" class="draw" style="stroke:var(--pen-red);--draw-delay:1s" stroke-width="3" stroke-linecap="round"/>
+          <path d="M198 168 l-6 12 l13 -2" pathLength="1" class="draw" style="stroke:var(--pen-red);--draw-delay:1.15s" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M270 150 l4 9 l9 1 l-7 6 l2 9 l-8 -5 l-8 5 l2 -9 l-7 -6 l9 -1 z" pathLength="1" class="draw" style="fill:var(--hl-pink-300);stroke:var(--color-border);--draw-delay:1.25s" stroke-width="2.4" stroke-linejoin="round"/>
         </svg>
+        <div class="pin-note" aria-hidden="true">여기에 아이디어를 붙여요 ✎<span class="pin-arrow"></span></div>
+        <span class="art-star" aria-hidden="true"></span>
       </div>
     </div>
   </section>
@@ -83,7 +154,7 @@
   <section class="section-sm" id="tokens">
     <h2 class="scrawl mb-6">잉크 &amp; 종이</h2>
     <div class="kit-grid">
-      <div class="panel motif-cell">
+      <div class="panel motif-cell" data-reveal>
         <h4>팔레트</h4>
         <div class="swatches">
           <span class="sw" style="background:var(--paper-200);color:var(--ink-700)">종이</span>
@@ -91,12 +162,12 @@
           <span class="sw" style="background:var(--hl-yellow-300);color:var(--ink-800)">형광·황</span>
           <span class="sw" style="background:var(--hl-pink-300);color:var(--ink-800)">형광·분</span>
           <span class="sw" style="background:var(--hl-mint-300);color:var(--ink-800)">형광·민</span>
-          <span class="sw" style="background:var(--pen-blue);color:#fff">파랑</span>
-          <span class="sw" style="background:var(--pen-red);color:#fff">빨강</span>
-          <span class="sw" style="background:var(--pen-green);color:#fff">초록</span>
+          <span class="sw" style="background:var(--pen-blue-dark);color:var(--paper-50)">파랑</span>
+          <span class="sw" style="background:var(--pen-red-dark);color:var(--paper-50)">빨강</span>
+          <span class="sw" style="background:var(--pen-green-dark);color:var(--paper-50)">초록</span>
         </div>
       </div>
-      <div class="panel motif-cell">
+      <div class="panel motif-cell" data-reveal>
         <h4>모티프</h4>
         <div class="demo-row">
           <span class="badge yellow">형광펜</span>
@@ -105,7 +176,7 @@
         </div>
         <p class="text-sm"><span class="underline-hand">손으로</span> 밑줄 긋고, <span class="hatch" style="padding:1px 8px;border:var(--border-1)">빗금</span>으로 음영을 넣어요.</p>
       </div>
-      <div class="panel motif-cell">
+      <div class="panel motif-cell" data-reveal>
         <h4>말풍선 &amp; 낙서</h4>
         <span class="tip" style="align-self:flex-start">
           <button class="btn btn-sm btn-accent">올려보세요</button>
@@ -116,10 +187,10 @@
           <span class="doodle-arrow" aria-hidden="true"></span>
         </div>
       </div>
-      <div class="panel motif-cell">
+      <div class="panel motif-cell" data-reveal>
         <h4>타이포</h4>
         <div class="type-row"><span class="lbl">display</span><span class="font-display text-3xl">Caveat 마커체</span></div>
-        <div class="type-row"><span class="lbl">body</span><span class="font-hand text-lg">Patrick Hand 깔끔한 본문</span></div>
+        <div class="type-row"><span class="lbl">body</span><span class="font-hand text-lg">Patrick Hand 손글씨 본문</span></div>
         <div class="type-row"><span class="lbl">mono</span><span class="font-mono text-sm">code = JetBrains</span></div>
       </div>
     </div>
@@ -127,8 +198,8 @@
 
   <!-- COMPONENT GALLERY -->
   <section class="section-sm" id="components">
-    <h2 class="scrawl mb-2">컴포넌트 킷</h2>
-    <p class="text-muted mb-6">50개가 넘는 컴포넌트 중 일부입니다. 아래 모든 요소는 실제로 동작합니다.</p>
+    <h2 class="scrawl mb-2">노트를 이루는 조각들</h2>
+    <p class="text-muted mb-6">버튼부터 달력까지, 전부 펜으로 그렸어요. 아래 요소는 모두 실제로 눌러볼 수 있어요.</p>
     <div class="gallery">
 
       <!-- Buttons -->
@@ -153,8 +224,8 @@
           <div class="demo-row">
             <button class="btn btn-primary is-loading">로딩 중</button>
             <button class="btn btn-primary" disabled>비활성</button>
-            <div class="btn-group" data-toggle role="group" aria-label="보기">
-              <button class="btn is-active">일</button><button class="btn">주</button><button class="btn">월</button>
+            <div class="btn-group" data-toggle role="group" aria-label="보기 기간">
+              <button class="btn is-active" aria-pressed="true">일</button><button class="btn" aria-pressed="false">주</button><button class="btn" aria-pressed="false">월</button>
             </div>
           </div>
         </div>
@@ -164,18 +235,20 @@
       <div class="card" data-reveal>
         <div class="card-header">폼 컨트롤</div>
         <div class="card-body stack stack-4">
-          <div class="field"><label class="field-label" for="i1">프로젝트 이름</label><input class="input" id="i1" placeholder="나의 멋진 아이디어…" /></div>
-          <div class="searchbar"><svg class="search-icon" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3" stroke-linecap="round"/></svg><input class="input" type="search" placeholder="노트 검색…" aria-label="검색" /><button class="clear-btn" aria-label="지우기">✕</button></div>
+          <div class="field"><label class="field-label" for="i1">프로젝트 이름</label><input class="input" id="i1" placeholder="예: 여름 캠페인 무드보드" /></div>
+          <div class="searchbar"><svg class="search-icon" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3" stroke-linecap="round"/></svg><input class="input" type="search" placeholder="노트 검색…" aria-label="검색" /><button class="clear-btn" aria-label="검색어 지우기">✕</button></div>
+          <!-- invalid state shown as a real example (§ state demonstration) -->
+          <div class="field"><label class="field-label" for="i-email">이메일</label><input class="input is-invalid" id="i-email" type="email" value="seoyeon@" aria-invalid="true" aria-describedby="i-email-err" /><p class="field-error" id="i-email-err">이메일 형식을 확인해 주세요 (예: seoyeon@example.com)</p></div>
           <div class="demo-row">
             <label class="checkbox"><input type="checkbox" checked /><span class="box" aria-hidden="true"></span> 스케치</label>
             <label class="radio"><input type="radio" name="r" checked /><span class="dot" aria-hidden="true"></span> 펜</label>
             <label class="toggle"><input type="checkbox" checked /><span class="track"><span class="knob"></span></span> 잉크</label>
           </div>
-          <div class="segmented" role="group" aria-label="도구"><button class="is-active" aria-pressed="true" data-value="pen">펜</button><button aria-pressed="false" data-value="marker">마커</button><button aria-pressed="false" data-value="pencil">연필</button></div>
+          <div class="segmented" role="group" aria-label="그리기 도구"><button class="is-active" aria-pressed="true" data-value="pen">펜</button><button aria-pressed="false" data-value="marker">마커</button><button aria-pressed="false" data-value="pencil">연필</button></div>
           <div class="slider"><div class="row between mb-2"><span>브러시</span><span class="slider-value">50</span></div><input type="range" min="0" max="100" value="50" data-suffix="px" aria-label="브러시 크기" /></div>
           <div class="row between">
             <div class="rating" role="radiogroup" aria-label="평점" data-value="4"><button role="radio" aria-checked="false" aria-label="별 1개"></button><button role="radio" aria-checked="false" aria-label="별 2개"></button><button role="radio" aria-checked="false" aria-label="별 3개"></button><button role="radio" aria-checked="true" aria-label="별 4개"></button><button role="radio" aria-checked="false" aria-label="별 5개"></button></div>
-            <div class="stepper"><button data-step="-" aria-label="감소">−</button><input type="text" value="3" inputmode="numeric" min="0" max="20" aria-label="수량" /><button data-step="+" aria-label="증가">+</button></div>
+            <div class="stepper"><button data-step="-" aria-label="수량 감소">−</button><input type="text" value="3" inputmode="numeric" min="0" max="20" aria-label="수량" /><button data-step="+" aria-label="수량 증가">+</button></div>
           </div>
         </div>
       </div>
@@ -207,9 +280,9 @@
         <div class="card-body stack stack-3">
           <div class="alert success"><span class="alert-icon" aria-hidden="true">✓</span><div><div class="alert-title">저장 완료!</div><div class="alert-body">스케치가 벽에 붙었어요.</div></div></div>
           <div class="alert warning"><span class="alert-icon" aria-hidden="true">!</span><div><div class="alert-title">잠깐만요</div><div class="alert-body">제목이 필요한 노트가 2개 있어요.</div></div></div>
-          <div class="inline-note danger"><span class="dot" aria-hidden="true"></span> 서버에 연결할 수 없습니다.</div>
+          <div class="inline-note danger"><span class="dot" aria-hidden="true"></span> 서버에 연결할 수 없어요.</div>
           <div class="demo-row">
-            <button class="btn btn-primary btn-sm" data-toast="success" data-toast-title="토스트!" data-toast-body="알림 메시지가 떴어요." data-doodle>토스트</button>
+            <button class="btn btn-primary btn-sm" data-toast="success" data-toast-title="붙였어요!" data-toast-body="노트가 벽에 추가됐어요." data-doodle>토스트</button>
             <button class="btn btn-outline btn-sm" data-modal-open="hub-modal">모달</button>
             <button class="btn btn-outline btn-sm" data-drawer-open="hub-drawer">드로어</button>
           </div>
@@ -221,7 +294,7 @@
         <div class="card-header">진행률 &amp; 탭</div>
         <div class="card-body stack stack-4">
           <div class="row gap-4 items-center">
-            <span class="progress-ring" data-value="72" aria-label="72 퍼센트"><svg width="76" height="76"><circle class="pr-track" cx="38" cy="38" r="30" fill="none" stroke-width="8"/><circle class="pr-fill" cx="38" cy="38" r="30" fill="none" stroke-width="8"/></svg><span class="pr-label">72%</span></span>
+            <span class="progress-ring" data-value="72" role="img" aria-label="진행률 72 퍼센트"><svg width="76" height="76"><circle class="pr-track" cx="38" cy="38" r="30" fill="none" stroke-width="8"/><circle class="pr-fill" cx="38" cy="38" r="30" fill="none" stroke-width="8"/></svg><span class="pr-label">72%</span></span>
             <div class="grow stack stack-2">
               <div class="progress" data-value="64"><div class="progress-fill"></div></div>
               <div class="progress green hatch" data-value="40"><div class="progress-fill"></div></div>
@@ -245,22 +318,22 @@
         <div class="card-body stack stack-4">
           <div class="accordion" data-single>
             <div class="accordion-item">
-              <button class="accordion-trigger" aria-expanded="true">sketchbook이 뭔가요? <span class="chev" aria-hidden="true">▾</span></button>
-              <div class="accordion-panel is-open"><div class="inner">펜으로 생각하는 사람들을 위한 비주얼 노트 앱입니다.</div></div>
+              <button class="accordion-trigger" aria-expanded="true">sketchbook은 어떤 앱인가요? <span class="chev" aria-hidden="true">▾</span></button>
+              <div class="accordion-panel is-open"><div class="inner">펜으로 생각하는 사람들을 위한 비주얼 노트 앱이에요.</div></div>
             </div>
             <div class="accordion-item">
               <button class="accordion-trigger" aria-expanded="false">오프라인에서도 되나요? <span class="chev" aria-hidden="true">▾</span></button>
-              <div class="accordion-panel"><div class="inner">물론이죠 — 여기 모든 페이지는 디스크에서 바로 열립니다.</div></div>
+              <div class="accordion-panel"><div class="inner">물론이죠 — 벽에 붙인 노트는 인터넷이 없어도 그대로 열려요.</div></div>
             </div>
           </div>
           <div class="row gap-3">
             <div class="menu-wrap">
               <button class="btn btn-outline btn-sm" data-menu="hub-menu" aria-expanded="false" aria-haspopup="true">메뉴 ▾</button>
               <div class="menu" id="hub-menu" role="menu">
-                <button class="menu-item" role="menuitem">✎ 이름 변경</button>
-                <button class="menu-item" role="menuitem">⧉ 복제</button>
+                <button class="menu-item" role="menuitem"><svg class="mi-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-pencil"/></svg> 이름 변경</button>
+                <button class="menu-item" role="menuitem"><svg class="mi-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-copy"/></svg> 복제</button>
                 <div class="menu-sep"></div>
-                <button class="menu-item danger" role="menuitem">🗑 삭제</button>
+                <button class="menu-item danger" role="menuitem"><svg class="mi-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-trash"/></svg> 삭제</button>
               </div>
             </div>
             <button class="btn btn-outline btn-sm" data-popover="hub-pop" aria-expanded="false">팝오버</button>
@@ -274,24 +347,24 @@
 
   <!-- PAGES -->
   <section class="section-sm" id="pages">
-    <h2 class="scrawl mb-2">실제 화면</h2>
-    <p class="text-muted mb-6">완성된 반응형 데모 9종 — 눌러서 들어가 보세요.</p>
+    <h2 class="scrawl mb-2">sketchbook 둘러보기</h2>
+    <p class="text-muted mb-6">완성된 반응형 화면 9종 — 눌러서 들어가 보세요.</p>
     <div class="pages-grid stagger">
-      <a class="page-card panel" href="pages/dashboard.html"><div class="pc-emoji">📊</div><div class="pc-title">대시보드</div><div class="text-muted text-sm font-sans">통계 · 스케치 차트 · 표</div></a>
-      <a class="page-card panel panel-alt" href="pages/kanban.html"><div class="pc-emoji">🗂️</div><div class="pc-title">보드</div><div class="text-muted text-sm font-sans">포스트잇 칸반</div></a>
-      <a class="page-card panel" href="pages/inbox.html"><div class="pc-emoji">✉️</div><div class="pc-title">받은편지함</div><div class="text-muted text-sm font-sans">3분할 메일</div></a>
-      <a class="page-card panel panel-alt" href="pages/product.html"><div class="pc-emoji">🛍️</div><div class="pc-title">상품</div><div class="text-muted text-sm font-sans">메이커 스토어 상세</div></a>
-      <a class="page-card panel" href="pages/pricing.html"><div class="pc-emoji">🏷️</div><div class="pc-title">요금제</div><div class="text-muted text-sm font-sans">플랜 · 월/연 결제</div></a>
-      <a class="page-card panel panel-alt" href="pages/settings.html"><div class="pc-emoji">⚙️</div><div class="pc-title">설정</div><div class="text-muted text-sm font-sans">탭 · 토글 · 위험 영역</div></a>
-      <a class="page-card panel" href="pages/onboarding.html"><div class="pc-emoji">🧭</div><div class="pc-title">온보딩</div><div class="text-muted text-sm font-sans">두들 마법사</div></a>
-      <a class="page-card panel panel-alt" href="pages/profile.html"><div class="pc-emoji">🙂</div><div class="pc-title">프로필</div><div class="text-muted text-sm font-sans">계정 · 타임라인</div></a>
-      <a class="page-card panel" href="pages/404.html"><div class="pc-emoji">🤷</div><div class="pc-title">404</div><div class="text-muted text-sm font-sans">길 잃은 페이지 두들</div></a>
+      <a class="page-card panel feature" href="pages/dashboard.html"><span class="pc-ico lg" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-dashboard"/></svg></span><span class="pc-body"><span class="pc-title">대시보드</span><span class="pc-desc">6월 마감 주간 · 스케치 차트 · 정렬 표</span></span></a>
+      <a class="page-card panel panel-alt" href="pages/kanban.html"><span class="pc-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-board"/></svg></span><span class="pc-title">보드</span><span class="pc-desc">포스트잇 칸반</span></a>
+      <a class="page-card panel" href="pages/inbox.html"><span class="pc-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-inbox"/></svg></span><span class="pc-title">받은편지함</span><span class="pc-desc">3분할 메일</span></a>
+      <a class="page-card panel panel-alt" href="pages/product.html"><span class="pc-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-product"/></svg></span><span class="pc-title">상품</span><span class="pc-desc">메이커 스토어 상세</span></a>
+      <a class="page-card panel" href="pages/pricing.html"><span class="pc-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-pricing"/></svg></span><span class="pc-title">요금제</span><span class="pc-desc">플랜 · 월/연 결제</span></a>
+      <a class="page-card panel panel-alt" href="pages/settings.html"><span class="pc-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-settings"/></svg></span><span class="pc-title">설정</span><span class="pc-desc">탭 · 토글 · 위험 영역</span></a>
+      <a class="page-card panel" href="pages/onboarding.html"><span class="pc-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-compass"/></svg></span><span class="pc-title">온보딩</span><span class="pc-desc">두들 마법사</span></a>
+      <a class="page-card panel panel-alt" href="pages/profile.html"><span class="pc-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-face"/></svg></span><span class="pc-title">프로필</span><span class="pc-desc">계정 · 타임라인</span></a>
+      <a class="page-card panel" href="pages/404.html"><span class="pc-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-lost"/></svg></span><span class="pc-title">404</span><span class="pc-desc">길 잃은 페이지 두들</span></a>
     </div>
   </section>
 
   <footer class="site-foot text-center">
     <p class="font-display text-2xl">픽셀이 아닌 펜으로 만들었어요 ✦</p>
-    <p class="text-muted font-sans text-sm mt-2">Theme 23 · Hand-drawn Sketch · 순수 CSS + 바닐라 JS · 라이트 &amp; 다크 · file:// 지원</p>
+    <p class="text-muted font-sans text-sm mt-2">sketchbook · 손그림 디자인 시스템 · 잉크와 종이, 그리고 형광펜 세 자루</p>
   </footer>
 </main>
 
@@ -303,7 +376,7 @@
       <p>이름을 정하면 새 빈 페이지를 벽에 붙여 드릴게요.</p>
       <div class="field mt-4"><label class="field-label" for="m-name">스케치 이름</label><input class="input" id="m-name" placeholder="제목 없는 아이디어" /></div>
     </div>
-    <div class="modal-footer"><button class="btn btn-ghost" data-modal-close>취소</button><button class="btn btn-primary" data-modal-close data-toast="success" data-toast-title="생성 완료!" data-toast-body="빈 페이지가 준비됐어요." data-doodle>만들기</button></div>
+    <div class="modal-footer"><button class="btn btn-ghost" data-modal-close>취소</button><button class="btn btn-primary" data-modal-close data-toast="success" data-toast-title="만들었어요!" data-toast-body="빈 페이지가 준비됐어요." data-doodle>만들기</button></div>
   </div>
 </div>
 
@@ -315,26 +388,26 @@
     <div class="field"><label class="field-label" for="d-note">노트</label><textarea class="textarea" id="d-note" rows="4" placeholder="간단히 적어보세요…"></textarea></div>
     <div class="field"><label class="field-label">색상</label><div class="demo-row"><label class="radio"><input type="radio" name="c" checked/><span class="dot"></span> 옐로</label><label class="radio"><input type="radio" name="c"/><span class="dot"></span> 핑크</label><label class="radio"><input type="radio" name="c"/><span class="dot"></span> 민트</label></div></div>
   </div>
-  <div class="drawer-footer"><button class="btn btn-primary btn-block" data-drawer-close="hub-drawer" data-toast="success" data-toast-title="고정 완료!" data-toast-body="노트가 벽에 추가됐어요.">붙이기</button></div>
+  <div class="drawer-footer"><button class="btn btn-primary btn-block" data-drawer-close="hub-drawer" data-toast="success" data-toast-title="붙였어요!" data-toast-body="노트가 벽에 추가됐어요.">붙이기</button></div>
 </aside>
 
 <!-- COMMAND PALETTE -->
 <div class="cmdk-overlay" role="dialog" aria-modal="true" aria-label="명령 팔레트">
   <div class="cmdk">
-    <div class="cmdk-input-row"><svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3" stroke-linecap="round"/></svg><input class="cmdk-input" placeholder="명령어를 입력하세요…" aria-label="명령어 입력" /><kbd>ESC</kbd></div>
-    <div class="cmdk-list">
+    <div class="cmdk-input-row"><svg width="20" height="20" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3" stroke-linecap="round"/></svg><input class="cmdk-input" placeholder="명령어를 입력하세요…" aria-label="명령어 입력" role="combobox" aria-expanded="true" aria-controls="cmdk-listbox" aria-autocomplete="list" /><kbd>ESC</kbd></div>
+    <div class="cmdk-list" id="cmdk-listbox" role="listbox" aria-label="명령 결과">
       <div class="cmdk-group"><div class="cmdk-group-label">이동</div>
-        <div class="cmdk-item" data-href="pages/dashboard.html"><span class="cmdk-ico">📊</span> 대시보드</div>
-        <div class="cmdk-item" data-href="pages/kanban.html"><span class="cmdk-ico">🗂️</span> 보드</div>
-        <div class="cmdk-item" data-href="pages/inbox.html"><span class="cmdk-ico">✉️</span> 받은편지함</div>
-        <div class="cmdk-item" data-href="pages/pricing.html"><span class="cmdk-ico">🏷️</span> 요금제</div>
-        <div class="cmdk-item" data-href="pages/settings.html"><span class="cmdk-ico">⚙️</span> 설정</div>
-        <div class="cmdk-item" data-href="pages/profile.html"><span class="cmdk-ico">🙂</span> 프로필</div>
+        <div class="cmdk-item" role="option" aria-selected="false" data-href="pages/dashboard.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-dashboard"/></svg></span> 대시보드</div>
+        <div class="cmdk-item" role="option" aria-selected="false" data-href="pages/kanban.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-board"/></svg></span> 보드</div>
+        <div class="cmdk-item" role="option" aria-selected="false" data-href="pages/inbox.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-inbox"/></svg></span> 받은편지함</div>
+        <div class="cmdk-item" role="option" aria-selected="false" data-href="pages/pricing.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-pricing"/></svg></span> 요금제</div>
+        <div class="cmdk-item" role="option" aria-selected="false" data-href="pages/settings.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-settings"/></svg></span> 설정</div>
+        <div class="cmdk-item" role="option" aria-selected="false" data-href="pages/profile.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-face"/></svg></span> 프로필</div>
       </div>
       <div class="cmdk-group"><div class="cmdk-group-label">동작</div>
-        <div class="cmdk-item" data-action="toggle-theme"><span class="cmdk-ico">🌗</span> 다크 모드 전환</div>
+        <div class="cmdk-item" role="option" aria-selected="false" data-action="toggle-theme"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#ic-theme"/></svg></span> 다크 모드 전환</div>
       </div>
-      <div class="cmdk-empty" style="display:none">결과가 없습니다.</div>
+      <div class="cmdk-empty" role="status" aria-live="polite" style="display:none">결과가 없어요.</div>
     </div>
   </div>
 </div>

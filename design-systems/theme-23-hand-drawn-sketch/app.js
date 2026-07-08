@@ -7,6 +7,9 @@
 (function () {
   "use strict";
   var doc = document, root = doc.documentElement;
+  /* mark JS on so CSS may safely hide-then-reveal (content stays visible if JS
+     never runs — see html.js gates in base.css) */
+  root.classList.add("js");
   var prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var $  = function (s, c) { return (c || doc).querySelector(s); };
   var $$ = function (s, c) { return Array.prototype.slice.call((c || doc).querySelectorAll(s)); };
@@ -47,11 +50,21 @@
     '<path d="M12 3 v18 M3 12 h18 M6 6 l12 12 M18 6 l-12 12" fill="none" stroke="CLR" stroke-width="1.8" stroke-linecap="round"/>', // sparkle
     '<circle cx="12" cy="12" r="8" fill="none" stroke="CLR" stroke-width="2.2" stroke-dasharray="3 4"/>'              // dotted ring
   ];
-  var DOODLE_COLORS = ["#e2503b", "#3e7cb1", "#f5c800", "#5a9367", "#8b6bb1"];
+  /* Read the (theme-aware) chart palette at click time so scribbles stay
+     visible on the chalkboard instead of dropping to dark navy/green. */
+  function doodlePalette() {
+    var cs = getComputedStyle(root), out = [];
+    for (var i = 1; i <= 6; i++) {
+      var v = cs.getPropertyValue("--chart-" + i).trim();
+      if (v) out.push(v);
+    }
+    return out.length ? out : ["#e2503b", "#3e7cb1", "#f5c800", "#5a9367", "#8b6bb1"];
+  }
   function doodleAt(x, y, color) {
     if (prefersReduced) return;
     var d = DOODLES[(Math.floor(x + y)) % DOODLES.length];
-    var clr = color || DOODLE_COLORS[(Math.floor(x)) % DOODLE_COLORS.length];
+    var pal = doodlePalette();
+    var clr = color || pal[(Math.floor(x)) % pal.length];
     var span = doc.createElement("span");
     span.setAttribute("aria-hidden", "true");
     span.style.cssText = "position:fixed;left:" + (x - 16) + "px;top:" + (y - 16) +
@@ -108,7 +121,7 @@
     el.innerHTML =
       '<span class="toast-icon" aria-hidden="true">' + (TOAST_ICON[type] || "✎") + "</span>" +
       '<div class="toast-content"><div class="toast-title"></div><div class="toast-body"></div></div>' +
-      '<button class="toast-close" aria-label="Dismiss">✕</button>';
+      '<button class="toast-close" aria-label="닫기">✕</button>';
     el.querySelector(".toast-title").textContent = opt.title || "";
     el.querySelector(".toast-body").textContent = opt.body || "";
     if (!opt.title) el.querySelector(".toast-title").remove();
@@ -218,10 +231,36 @@
    * COMMAND PALETTE (⌘K / Ctrl-K)
    * ---------------------------------------------------------------- */
   function cmdk() { return $(".cmdk-overlay"); }
+  /* Give the palette a real listbox/combobox contract so screen readers can
+     follow the arrow-key selection. Idempotent — assigns ids/roles only if the
+     page markup didn't already. */
+  function ensureCmdkA11y(o) {
+    var list = $(".cmdk-list", o);
+    if (list) {
+      if (!list.id) list.id = "cmdk-listbox";
+      list.setAttribute("role", "listbox");
+      if (!list.getAttribute("aria-label")) list.setAttribute("aria-label", "명령 결과");
+    }
+    $$(".cmdk-item", o).forEach(function (n, i) {
+      if (!n.id) n.id = "cmdk-opt-" + i;
+      n.setAttribute("role", "option");
+      if (!n.hasAttribute("aria-selected")) n.setAttribute("aria-selected", "false");
+    });
+    var inp = $(".cmdk-input", o);
+    if (inp) {
+      inp.setAttribute("role", "combobox");
+      inp.setAttribute("aria-autocomplete", "list");
+      inp.setAttribute("aria-expanded", "true");
+      if (list && list.id) inp.setAttribute("aria-controls", list.id);
+    }
+    var empty = $(".cmdk-empty", o);
+    if (empty) { empty.setAttribute("role", "status"); empty.setAttribute("aria-live", "polite"); }
+  }
   function openCmdk() {
     var o = cmdk(); if (!o) return;
     lastFocus = doc.activeElement;
     o.classList.add("is-open");
+    ensureCmdkA11y(o);
     var inp = $(".cmdk-input", o);
     if (inp) { inp.value = ""; filterCmdk(o, ""); setTimeout(function(){ inp.focus(); }, 30); }
     setActiveCmdk(o, 0);
@@ -229,13 +268,18 @@
   function closeCmdk() {
     var o = cmdk(); if (!o) return;
     o.classList.remove("is-open");
+    var inp = $(".cmdk-input", o);
+    if (inp) { inp.setAttribute("aria-expanded", "false"); inp.removeAttribute("aria-activedescendant"); }
     if (lastFocus) try { lastFocus.focus(); } catch (e) {}
   }
   function visibleItems(o) { return $$(".cmdk-item", o).filter(function (n){ return n.style.display !== "none"; }); }
   function setActiveCmdk(o, idx) {
+    $$(".cmdk-item", o).forEach(function (n) { n.classList.remove("is-active"); n.setAttribute("aria-selected", "false"); });
     var items = visibleItems(o);
-    items.forEach(function (n, i) { n.classList.toggle("is-active", i === idx); });
-    if (items[idx]) items[idx].scrollIntoView({ block: "nearest" });
+    var act = items[idx];
+    if (act) { act.classList.add("is-active"); act.setAttribute("aria-selected", "true"); act.scrollIntoView({ block: "nearest" }); }
+    var inp = $(".cmdk-input", o);
+    if (inp) { if (act) inp.setAttribute("aria-activedescendant", act.id); else inp.removeAttribute("aria-activedescendant"); }
   }
   function filterCmdk(o, q) {
     q = (q || "").toLowerCase();
@@ -502,7 +546,7 @@
       e.preventDefault();
       var chip = doc.createElement("span");
       chip.className = "chip";
-      chip.innerHTML = "<span></span> <button type='button' aria-label='Remove'>✕</button>";
+      chip.innerHTML = "<span></span> <button type='button' aria-label='제거'>✕</button>";
       chip.firstChild.textContent = inp.value.trim();
       inp.parentElement.insertBefore(chip, inp);
       inp.value = "";
@@ -527,13 +571,13 @@
   /* ---------------------------------------------------------------- *
    * CALENDAR / DATEPICKER
    * ---------------------------------------------------------------- */
-  var MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
-  var DOW = ["S","M","T","W","T","F","S"];
+  var MONTHS = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+  var DOW = ["일","월","화","수","목","금","토"];
   function renderCal(cal, year, month, selKey) {
     var grid = $(".calendar-grid", cal); if (!grid) return;
     cal._y = year; cal._m = month;
     var title = $(".calendar-head .title", cal);
-    if (title) title.textContent = MONTHS[month] + " " + year;
+    if (title) title.textContent = year + "년 " + MONTHS[month];
     grid.innerHTML = "";
     DOW.forEach(function (d) { var h = doc.createElement("span"); h.className = "cal-dow"; h.textContent = d; grid.appendChild(h); });
     var first = new Date(year, month, 1).getDay();
@@ -582,13 +626,13 @@
       if (list) {
         var row = doc.createElement("div");
         row.className = "file-row";
-        row.innerHTML = '<span class="file-ic" aria-hidden="true">📎</span><span class="file-name"></span><span class="file-size"></span><button class="file-del" aria-label="Remove">✕</button>';
+        row.innerHTML = '<span class="file-ic" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5 12 19a4.5 4.5 0 0 1-6.4-6.4l8-8a3 3 0 0 1 4.3 4.3l-8 8a1.5 1.5 0 0 1-2.2-2.1l7-7"/></svg></span><span class="file-name"></span><span class="file-size"></span><button class="file-del" aria-label="첨부 삭제">✕</button>';
         row.querySelector(".file-name").textContent = f.name;
-        row.querySelector(".file-size").textContent = (f.size/1024).toFixed(0) + " KB";
+        row.querySelector(".file-size").textContent = (f.size/1024).toFixed(0) + "KB";
         list.appendChild(row);
       }
     });
-    sketchToast({ type: "success", title: "Added", body: files.length + " file(s) attached." });
+    sketchToast({ type: "success", title: "첨부 완료", body: files.length + "개 파일을 붙였어요." });
   }
   $$(".dropzone").forEach(function (dz) {
     var input = doc.createElement("input"); input.type = "file"; input.multiple = true; input.style.display = "none";
@@ -611,7 +655,7 @@
     if (!track || !slides.length) return;
     var idx = 0, dotsWrap = $(".carousel-dots", c), timer = null;
     slides.forEach(function (_, i) {
-      if (dotsWrap) { var b = doc.createElement("button"); b.type="button"; b.setAttribute("aria-label","Slide "+(i+1));
+      if (dotsWrap) { var b = doc.createElement("button"); b.type="button"; b.setAttribute("aria-label",(i+1)+"번 슬라이드");
         b.addEventListener("click", function(){ go(i); });
         dotsWrap.appendChild(b); }
     });
@@ -702,6 +746,43 @@
   }
   updateCounts();
 
+  /* Keyboard alternative to drag & drop: buttons carrying
+     data-kanban-move="prev|next" shift their card to the adjacent column and
+     announce it — so the board is fully operable without a mouse. */
+  function kanbanAnnounce(msg) {
+    var r = $("#kanban-live");
+    if (!r) {
+      r = doc.createElement("div");
+      r.id = "kanban-live"; r.className = "sr-only";
+      r.setAttribute("role", "status"); r.setAttribute("aria-live", "polite");
+      doc.body.appendChild(r);
+    }
+    r.textContent = msg;
+  }
+  function colName(col) {
+    if (!col) return "";
+    if (col.getAttribute("data-col-name")) return col.getAttribute("data-col-name");
+    var t = $(".kanban-col-title, .kb-col-title, .kanban-head", col);
+    return t ? t.textContent.trim() : "";
+  }
+  doc.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-kanban-move]"); if (!btn) return;
+    var card = btn.closest(".kanban-card"); if (!card) return;
+    var board = card.closest("[data-kanban]"); if (!board) return;
+    var cols = $$("[data-kanban-col]", board);
+    var cur = card.closest("[data-kanban-col]");
+    var idx = cols.indexOf(cur);
+    var dir = btn.getAttribute("data-kanban-move") === "prev" ? -1 : 1;
+    var dest = cols[idx + dir];
+    if (!dest) { kanbanAnnounce("더 옮길 열이 없어요."); return; }
+    (($(".kanban-list", dest)) || dest).appendChild(card);
+    updateCounts();
+    var again = $("[data-kanban-move='" + btn.getAttribute("data-kanban-move") + "']", card);
+    if (again) again.focus(); else card.focus();
+    var title = $(".kc-title", card); title = title ? title.textContent.trim() : "카드";
+    kanbanAnnounce(title + "을(를) " + (colName(dest) || "옆 열") + "(으)로 옮겼어요.");
+  });
+
   /* ---------------------------------------------------------------- *
    * WIZARD
    * ---------------------------------------------------------------- */
@@ -770,13 +851,20 @@
   /* ---------------------------------------------------------------- *
    * SCROLL REVEAL
    * ---------------------------------------------------------------- */
-  if ("IntersectionObserver" in window && !prefersReduced) {
+  (function () {
+    var items = $$("[data-reveal]");
+    /* reduced-motion or no observer → drop straight to the finished state
+       (html.js hides [data-reveal] until .is-in, so we must always add it) */
+    if (prefersReduced || !("IntersectionObserver" in window)) {
+      items.forEach(function (el) { el.classList.add("is-in"); });
+      return;
+    }
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
-        if (en.isIntersecting) { en.target.style.animation = "fade-up var(--duration-base) var(--ease-out) both"; io.unobserve(en.target); }
+        if (en.isIntersecting) { en.target.classList.add("is-in"); io.unobserve(en.target); }
       });
     }, { threshold: 0.08 });
-    $$("[data-reveal]").forEach(function (el) { el.style.opacity = "0"; io.observe(el); el.addEventListener("animationstart", function(){ el.style.opacity=""; }); });
-  }
+    items.forEach(function (el) { io.observe(el); });
+  })();
 
 })();

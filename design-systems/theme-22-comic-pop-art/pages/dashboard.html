@@ -1,14 +1,67 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Analytics Dashboard — Comic Pop Art</title>
+<title>판매 대시보드 — 코믹 팝아트</title>
+<meta name="description" content="제22호 · 코믹 팝아트 — 6월 마감, 만화방 판매 현황을 한 장의 만화 페이지로 조판한 대시보드." />
+<script>
+/* FOUC guard — set theme before first paint (key shared with app.js) */
+(function () {
+  try {
+    var t = localStorage.getItem("comic-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="../theme.css" />
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='14' fill='%231E6FE8'/><text x='50' y='72' font-size='62' text-anchor='middle' fill='%23FFD400' font-family='Impact'>$</text></svg>" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='14' fill='%231E6FE8'/><text x='50' y='72' font-size='58' text-anchor='middle' fill='%23FFD400' font-family='Impact'>&#8361;</text></svg>" />
 <style>
-.dash-head { display:flex; align-items:flex-end; justify-content:space-between; gap:var(--space-4); flex-wrap:wrap; margin-bottom:var(--space-6); }
-.chart-bars { display:flex; align-items:flex-end; gap:var(--space-3); height:200px; padding-top:var(--space-4); }
+.dash-head { display:flex; align-items:flex-end; justify-content:space-between; gap:var(--space-4); flex-wrap:wrap; margin:var(--space-4) 0 var(--space-6); }
+
+/* ---- Comic-page BENTO: unequal panels, hero revenue cell breaks the grid ---- */
+.stat-bento {
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  grid-template-areas:
+    "rev rev ord rdr"
+    "rev rev ref rdr";
+  gap:var(--panel-gutter);
+  margin-bottom:var(--space-5);
+}
+.sb-rev { grid-area:rev; overflow:visible; display:flex; flex-direction:column; justify-content:center; gap:6px; }
+.sb-ord { grid-area:ord; }
+.sb-rdr { grid-area:rdr; display:flex; flex-direction:column; }
+.sb-ref { grid-area:ref; }
+.sb-rev .stat-value { font-size:clamp(2.4rem, 6.5vw, var(--text-6xl)); }
+.sb-rev .spark { height:44px; margin-top:var(--space-2); }
+.sb-rdr .spark { height:60px; margin-top:auto; }
+
+/* the burst that pokes OUT of the revenue panel (panel breakout) */
+.rev-burst {
+  position:absolute; top:-24px; right:-12px; z-index:3;
+  width:76px; font-size:var(--text-2xs);
+  transform:rotate(-12deg);
+}
+@media (max-width:900px) {
+  .stat-bento { grid-template-columns:repeat(2,1fr);
+    grid-template-areas:"rev rev" "ord rdr" "ref rdr"; }
+  .rev-burst { right:4px; }   /* keep breakout inside the viewport when rev spans full width */
+}
+@media (max-width:560px) {
+  .stat-bento { grid-template-columns:1fr;
+    grid-template-areas:"rev" "ord" "rdr" "ref"; }
+  .sb-rdr .spark { height:44px; }
+}
+
+/* charts row — class (never inline grid-template-columns) */
+.chart-row { display:grid; grid-template-columns:1.6fr 1fr; gap:var(--panel-gutter); margin-bottom:var(--space-6); }
+@media (max-width:860px) { .chart-row { grid-template-columns:1fr; } }
+
+.chart-bars { display:flex; align-items:flex-end; gap:var(--space-3); height:210px; padding-top:var(--space-5); }
 .chart-bars .bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:8px; height:100%; justify-content:flex-end; }
 .chart-bars .bar {
   width:100%; max-width:46px;
@@ -19,102 +72,123 @@
   position:relative; transition:height var(--duration-slow) var(--ease-emphasized);
 }
 .chart-bars .bar:hover { background-color:var(--red-500); }
+.chart-bars .bar.peak { background-color:var(--red-500); }   /* Saturday signing-day spike */
 .chart-bars .bar .bv { position:absolute; top:-22px; left:50%; transform:translateX(-50%); font-weight:900; font-size:var(--text-xs); white-space:nowrap; }
+.chart-bars .bar.peak .bv { color:var(--red-600); }
 .chart-bars .bl { font-size:var(--text-2xs); font-weight:900; color:var(--color-text-muted); }
+.chart-bars .bar-col.is-peak .bl { color:var(--red-600); }
+
 .donut-wrap { display:flex; align-items:center; gap:var(--space-6); flex-wrap:wrap; }
 .legend { display:flex; flex-direction:column; gap:var(--space-2); }
 .legend .lg-row { display:flex; align-items:center; gap:8px; font-weight:700; font-size:var(--text-sm); }
-.legend .sw { width:16px; height:16px; border:2px solid var(--ink); border-radius:4px; }
+.legend .lg-sw { width:16px; height:16px; border:2px solid var(--ink); border-radius:4px; flex:none; }
 .spark { display:flex; align-items:flex-end; gap:3px; height:48px; }
 .spark span { flex:1; background:var(--ink); border-radius:2px 2px 0 0; min-width:3px; }
+.spark.spark-blue span { background:var(--blue-500); }
+
+/* sortable header cue for keyboard users */
+table.table thead th.sortable:focus-visible { outline:var(--ring-width) solid var(--focus-ring-color); outline-offset:-3px; }
 </style>
 </head>
 <body class="paper-bg">
-<a class="skip-link" href="#main">Skip to content</a>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
 
-<nav class="navbar" aria-label="Primary">
+<nav class="navbar" aria-label="주 메뉴">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true">!</span><span class="hide-mobile">COMIC POP</span></a>
   <div class="nav-links">
-    <a class="nav-link is-active" href="dashboard.html">Dashboard</a>
-    <a class="nav-link" href="kanban.html">Kanban</a>
-    <a class="nav-link" href="inbox.html">Inbox</a>
-    <a class="nav-link" href="pricing.html">Pricing</a>
+    <a class="nav-link is-active" href="dashboard.html">대시보드</a>
+    <a class="nav-link" href="kanban.html">칸반</a>
+    <a class="nav-link" href="inbox.html">받은편지함</a>
+    <a class="nav-link" href="pricing.html">요금제</a>
   </div>
   <div class="nav-right">
-    <button class="btn btn-ghost btn-sm" data-cmdk-open aria-label="Search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><kbd class="hide-mobile">⌘K</kbd></button>
-    <button class="btn btn-icon btn-sm btn-outline" data-theme-toggle aria-label="Toggle dark mode"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg></button>
-    <span class="avatar sm red">JS</span>
+    <button class="btn btn-ghost btn-sm" data-cmdk-open aria-label="명령 팔레트 열기"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><kbd class="hide-mobile">⌘K</kbd></button>
+    <button class="btn btn-icon btn-sm btn-outline" data-theme-toggle aria-label="다크 모드 전환"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg></button>
+    <span class="avatar sm" aria-label="정해나">정</span>
   </div>
 </nav>
 
-<main id="main" class="container" style="padding-block:var(--space-7)">
-  <nav class="breadcrumb mb-4" aria-label="Breadcrumb">
-    <a href="../index.html">Home</a><span class="sep" aria-hidden="true">›</span><span class="current">Dashboard</span>
-  </nav>
+<main id="main" class="container" style="padding-block:var(--space-6)">
+  <div class="running-head">
+    <span class="rh-issue">제22호 · 판매 본부</span>
+    <span>6월 마감 · 최근 30일 결산</span>
+  </div>
 
   <div class="dash-head">
     <div>
-      <h1 class="comic-title" style="font-size:var(--text-4xl)">SALES HQ</h1>
-      <p class="text-muted weight-extra">Comic store performance · last 30 days</p>
+      <h1 class="comic-title" style="font-size:var(--text-4xl)">이번 달, 이만큼 팔렸어요!</h1>
+      <p class="text-muted weight-extra">만화방 판매 현황 · 매일 오전 6시 자동 집계</p>
     </div>
     <div class="demo-row">
-      <div class="segmented" role="group" aria-label="Range">
-        <button data-value="7">7D</button>
-        <button class="is-active" aria-pressed="true" data-value="30">30D</button>
-        <button data-value="90">90D</button>
+      <div class="segmented" role="group" aria-label="기간 선택">
+        <button aria-pressed="false" data-value="7">7일</button>
+        <button class="is-active" aria-pressed="true" data-value="30">30일</button>
+        <button aria-pressed="false" data-value="90">90일</button>
       </div>
-      <button class="btn btn-primary" data-burst="REPORT!" data-toast="success" data-toast-title="Exported!" data-toast-body="dashboard.csv is on its way.">Export</button>
+      <button class="btn btn-primary" data-burst="펑!" data-toast="success" data-toast-title="내보냈어요!" data-toast-body="dashboard.csv 를 준비했어요 · 잠시 후 다운로드됩니다.">CSV 내보내기</button>
     </div>
   </div>
 
-  <!-- STAT CARDS -->
-  <div class="grid grid-4 mb-6 stagger">
-    <div class="stat-card accent-top" data-reveal>
-      <div class="stat-label">Revenue</div><div class="stat-value">$84.2k</div>
-      <span class="stat-delta up">▲ 12.4%</span>
-      <div class="spark stat-spark" aria-hidden="true"><span style="height:40%"></span><span style="height:55%"></span><span style="height:48%"></span><span style="height:70%"></span><span style="height:62%"></span><span style="height:88%"></span><span style="height:100%"></span></div>
+  <!-- STAT BENTO -->
+  <div class="stat-bento">
+    <div class="stat-card accent-top sb-rev" data-reveal>
+      <span class="badge-burst blue rev-burst" aria-hidden="true">신기록!</span>
+      <div class="stat-label">6월 총매출</div>
+      <div class="stat-value">₩4,820만</div>
+      <div class="row gap-3 wrap">
+        <span class="stat-delta up">▲ 12.4%</span>
+        <span class="text-muted weight-extra text-sm">전월 대비 +₩532만</span>
+      </div>
+      <div class="spark spark-blue" aria-hidden="true"><span style="height:38%"></span><span style="height:46%"></span><span style="height:52%"></span><span style="height:44%"></span><span style="height:63%"></span><span style="height:58%"></span><span style="height:74%"></span><span style="height:70%"></span><span style="height:88%"></span><span style="height:100%"></span></div>
     </div>
-    <div class="stat-card" data-reveal>
-      <div class="stat-label">Orders</div><div class="stat-value">3,118</div>
+    <div class="stat-card sb-ord" data-reveal>
+      <div class="stat-label">주문</div><div class="stat-value">3,118</div>
       <span class="stat-delta up">▲ 6.1%</span>
     </div>
-    <div class="stat-card" data-reveal>
-      <div class="stat-label">New readers</div><div class="stat-value">947</div>
+    <div class="stat-card sb-rdr" data-reveal>
+      <div class="stat-label">신규 독자</div><div class="stat-value">947</div>
       <span class="stat-delta up">▲ 22%</span>
+      <div class="spark" aria-hidden="true"><span style="height:30%"></span><span style="height:42%"></span><span style="height:38%"></span><span style="height:55%"></span><span style="height:60%"></span><span style="height:78%"></span><span style="height:100%"></span></div>
     </div>
-    <div class="stat-card" data-reveal>
-      <div class="stat-label">Refunds</div><div class="stat-value">0.7%</div>
-      <span class="stat-delta down">▼ 1.2%</span>
+    <div class="stat-card sb-ref" data-reveal>
+      <div class="stat-label">환불률</div><div class="stat-value">0.7%</div>
+      <span class="stat-delta down">▼ 1.2%p</span>
     </div>
+  </div>
+
+  <!-- 이상치 알림 (토요일 급등) -->
+  <div class="alert info mb-6">
+    <span class="alert-icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></span>
+    <div><div class="alert-title">토요일 판매가 평소의 2배로 튀었어요</div><div class="alert-body">노바 스트라이크 #1 사인회 효과 — 하루에만 1,020부가 나갔습니다.</div></div>
   </div>
 
   <!-- CHARTS ROW -->
-  <div class="grid mb-6" style="grid-template-columns:1.6fr 1fr;gap:var(--panel-gutter)">
+  <div class="chart-row">
     <div class="card" data-reveal>
-      <div class="card-header">Weekly Issues Sold <span class="badge blue">Halftone</span></div>
+      <div class="card-header">주간 판매 부수 <span class="badge blue">하프톤</span></div>
       <div class="card-body">
-        <div class="chart-bars" id="barChart" role="img" aria-label="Bar chart of weekly issues sold">
-          <div class="bar-col"><div class="bar" style="height:42%"><span class="bv">420</span></div><span class="bl">Mon</span></div>
-          <div class="bar-col"><div class="bar" style="height:58%"><span class="bv">580</span></div><span class="bl">Tue</span></div>
-          <div class="bar-col"><div class="bar" style="height:50%"><span class="bv">500</span></div><span class="bl">Wed</span></div>
-          <div class="bar-col"><div class="bar" style="height:74%"><span class="bv">740</span></div><span class="bl">Thu</span></div>
-          <div class="bar-col"><div class="bar" style="height:66%"><span class="bv">660</span></div><span class="bl">Fri</span></div>
-          <div class="bar-col"><div class="bar" style="height:92%"><span class="bv">920</span></div><span class="bl">Sat</span></div>
-          <div class="bar-col"><div class="bar" style="height:100%"><span class="bv">1.0k</span></div><span class="bl">Sun</span></div>
+        <div class="chart-bars" role="img" aria-label="주간 판매 부수 막대그래프 — 월요일 420부에서 시작해 토요일 사인회에 1,020부로 최고치, 일요일 920부.">
+          <div class="bar-col"><div class="bar" style="height:41%"><span class="bv">420</span></div><span class="bl">월</span></div>
+          <div class="bar-col"><div class="bar" style="height:57%"><span class="bv">580</span></div><span class="bl">화</span></div>
+          <div class="bar-col"><div class="bar" style="height:49%"><span class="bv">500</span></div><span class="bl">수</span></div>
+          <div class="bar-col"><div class="bar" style="height:73%"><span class="bv">740</span></div><span class="bl">목</span></div>
+          <div class="bar-col"><div class="bar" style="height:65%"><span class="bv">660</span></div><span class="bl">금</span></div>
+          <div class="bar-col is-peak"><div class="bar peak" style="height:100%"><span class="bv">1,020</span></div><span class="bl">토</span></div>
+          <div class="bar-col"><div class="bar" style="height:90%"><span class="bv">920</span></div><span class="bl">일</span></div>
         </div>
       </div>
     </div>
     <div class="card" data-reveal>
-      <div class="card-header">Channel Mix</div>
+      <div class="card-header">판매 채널 비중</div>
       <div class="card-body donut-wrap">
-        <div class="progress-ring" data-value="64" style="--pr">
+        <div class="progress-ring" data-value="64" role="img" aria-label="판매 채널 비중 — 오프라인 매장 64%, 온라인 26%, 도매 10%">
           <svg width="120" height="120"><circle class="pr-track" cx="60" cy="60" r="48" fill="none" stroke-width="12"/><circle class="pr-fill" cx="60" cy="60" r="48" fill="none" stroke-width="12" style="stroke:var(--red-500)"/></svg>
           <span class="pr-label">64%</span>
         </div>
         <div class="legend">
-          <div class="lg-row"><span class="sw" style="background:var(--red-500)"></span> In-store 64%</div>
-          <div class="lg-row"><span class="sw" style="background:var(--blue-500)"></span> Online 26%</div>
-          <div class="lg-row"><span class="sw" style="background:var(--yellow-400)"></span> Wholesale 10%</div>
+          <div class="lg-row"><span class="lg-sw" style="background:var(--red-500)"></span> 오프라인 매장 64%</div>
+          <div class="lg-row"><span class="lg-sw" style="background:var(--blue-500)"></span> 온라인 26%</div>
+          <div class="lg-row"><span class="lg-sw" style="background:var(--yellow-400)"></span> 도매 10%</div>
         </div>
       </div>
     </div>
@@ -122,69 +196,82 @@
 
   <!-- TABLE -->
   <div class="card" data-reveal>
-    <div class="card-header">Top Titles <span class="badge solid">sortable</span></div>
+    <div class="card-header">잘 나가는 타이틀 <span class="badge solid">정렬 가능</span></div>
     <div class="card-body">
       <div class="table-toolbar">
         <div class="searchbar" style="max-width:280px">
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-          <input class="input" type="search" placeholder="Filter titles…" aria-label="Filter" />
-          <button class="clear-btn" aria-label="Clear">✕</button>
+          <input class="input" type="search" placeholder="타이틀 검색…" aria-label="타이틀 검색" />
+          <button class="clear-btn" type="button" aria-label="지우기">✕</button>
         </div>
-        <span class="text-muted weight-extra text-sm">4 of 124 titles</span>
+        <span class="text-muted weight-extra text-sm">전체 124종 중 4종 표시</span>
       </div>
       <div class="table-wrap">
         <table class="table" data-sortable>
           <thead>
             <tr>
-              <th><input type="checkbox" class="sr-only" data-select-all id="selall" aria-label="Select all" /><label class="checkbox" for="selall"><span class="box" aria-hidden="true"></span></label></th>
-              <th class="sortable" data-type="text">Title <span class="sort-ind" aria-hidden="true">↕</span></th>
-              <th class="sortable" data-type="text">Genre <span class="sort-ind" aria-hidden="true">↕</span></th>
-              <th class="sortable" data-type="number">Units <span class="sort-ind" aria-hidden="true">↕</span></th>
-              <th class="sortable" data-type="number">Revenue <span class="sort-ind" aria-hidden="true">↕</span></th>
-              <th>Status</th>
+              <th><input type="checkbox" class="sr-only" data-select-all id="selall" aria-label="전체 선택" /><label class="checkbox" for="selall"><span class="box" aria-hidden="true"></span></label></th>
+              <th class="sortable" scope="col" tabindex="0" data-type="text">제목 <span class="sort-ind" aria-hidden="true">↕</span></th>
+              <th scope="col">장르</th>
+              <th class="sortable" scope="col" tabindex="0" data-type="number">판매부수 <span class="sort-ind" aria-hidden="true">↕</span></th>
+              <th class="sortable" scope="col" tabindex="0" data-type="number">매출 <span class="sort-ind" aria-hidden="true">↕</span></th>
+              <th scope="col">상태</th>
             </tr>
           </thead>
           <tbody>
-            <tr><td><label class="checkbox"><input type="checkbox" data-row-select aria-label="Select row" /><span class="box" aria-hidden="true"></span></label></td><td><strong>Nova Strike</strong></td><td>Action</td><td data-sort="1240">1,240</td><td data-sort="6188">$6,188</td><td><span class="badge green dot">Live</span></td></tr>
-            <tr><td><label class="checkbox"><input type="checkbox" data-row-select aria-label="Select row" /><span class="box" aria-hidden="true"></span></label></td><td><strong>Halftone Heroes</strong></td><td>Sci-Fi</td><td data-sort="980">980</td><td data-sort="3424">$3,424</td><td><span class="badge green dot">Live</span></td></tr>
-            <tr><td><label class="checkbox"><input type="checkbox" data-row-select aria-label="Select row" /><span class="box" aria-hidden="true"></span></label></td><td><strong>Panel Pals</strong></td><td>Comedy</td><td data-sort="1530">1,530</td><td data-sort="9165">$9,165</td><td><span class="badge yellow">Reprint</span></td></tr>
-            <tr><td><label class="checkbox"><input type="checkbox" data-row-select aria-label="Select row" /><span class="box" aria-hidden="true"></span></label></td><td><strong>Ink &amp; Fury</strong></td><td>Action</td><td data-sort="640">640</td><td data-sort="3196">$3,196</td><td><span class="badge red">Low stock</span></td></tr>
+            <tr><td><label class="checkbox"><input type="checkbox" data-row-select aria-label="행 선택" /><span class="box" aria-hidden="true"></span></label></td><td><strong>노바 스트라이크 #1</strong></td><td>액션</td><td data-sort="1240">1,240</td><td data-sort="6076000">₩607.6만</td><td><span class="badge green dot">판매중</span></td></tr>
+            <tr><td><label class="checkbox"><input type="checkbox" data-row-select aria-label="행 선택" /><span class="box" aria-hidden="true"></span></label></td><td><strong>하프톤 히어로즈</strong></td><td>SF</td><td data-sort="980">980</td><td data-sort="3332000">₩333.2만</td><td><span class="badge green dot">판매중</span></td></tr>
+            <tr class="is-selected"><td><label class="checkbox"><input type="checkbox" data-row-select checked aria-label="행 선택" /><span class="box" aria-hidden="true"></span></label></td><td><strong>패널 클럽 특별판</strong></td><td>코미디</td><td data-sort="1530">1,530</td><td data-sort="9027000">₩902.7만</td><td><span class="badge yellow">재판 제작</span></td></tr>
+            <tr><td><label class="checkbox"><input type="checkbox" data-row-select aria-label="행 선택" /><span class="box" aria-hidden="true"></span></label></td><td><strong>잉크 앤 퓨리</strong></td><td>액션</td><td data-sort="640">640</td><td data-sort="3136000">₩313.6만</td><td><span class="badge red">재고 부족</span></td></tr>
           </tbody>
         </table>
       </div>
       <div class="table-footer">
-        <span class="text-muted weight-extra text-sm">Showing 1–4</span>
+        <span class="text-muted weight-extra text-sm">1–4 표시 중 · 패널 클럽 특별판 1건 선택됨</span>
         <div class="pagination">
-          <button aria-label="Previous" disabled>‹</button>
-          <button class="is-active" aria-current="page">1</button>
-          <button>2</button><button>3</button>
-          <span class="ellipsis">…</span>
-          <button>31</button>
-          <button aria-label="Next">›</button>
+          <button type="button" aria-label="이전 페이지" disabled>‹</button>
+          <button type="button" class="is-active" aria-current="page">1</button>
+          <button type="button">2</button><button type="button">3</button>
+          <span class="ellipsis" aria-hidden="true">…</span>
+          <button type="button">31</button>
+          <button type="button" aria-label="다음 페이지">›</button>
         </div>
       </div>
     </div>
   </div>
 </main>
 
-<!-- command palette (shared minimal) -->
-<div class="cmdk-overlay" role="dialog" aria-modal="true" aria-label="Command palette">
+<!-- command palette (전 페이지 공통) -->
+<div class="cmdk-overlay" role="dialog" aria-modal="true" aria-label="명령 팔레트">
   <div class="cmdk">
-    <div class="cmdk-input-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input class="cmdk-input" placeholder="Type a command…" aria-label="Command input" /><kbd>ESC</kbd></div>
-    <div class="cmdk-list">
-      <div class="cmdk-group"><div class="cmdk-group-label">Navigate</div>
-        <div class="cmdk-item" data-href="kanban.html"><span class="cmdk-ico">🗂️</span> Kanban Board</div>
-        <div class="cmdk-item" data-href="inbox.html"><span class="cmdk-ico">✉️</span> Inbox</div>
-        <div class="cmdk-item" data-href="../index.html"><span class="cmdk-ico">🏠</span> Home</div>
+    <div class="cmdk-input-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input class="cmdk-input" placeholder="명령을 입력하거나 검색하세요…" aria-label="명령 팔레트 입력" /><kbd>ESC</kbd></div>
+    <div class="cmdk-list" role="listbox" aria-label="명령 목록">
+      <div class="cmdk-group" role="group" aria-label="이동">
+        <div class="cmdk-group-label" aria-hidden="true">이동</div>
+        <div class="cmdk-item" role="option" data-href="kanban.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"><rect x="3.5" y="5" width="4.3" height="14" rx="1"/><rect x="9.8" y="5" width="4.3" height="9" rx="1"/><rect x="16.2" y="5" width="4.3" height="12" rx="1"/></svg></span> 칸반 보드로 이동</div>
+        <div class="cmdk-item" role="option" data-href="inbox.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/></svg></span> 받은편지함으로 이동</div>
+        <div class="cmdk-item" role="option" data-href="pricing.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 12 22l-9-9V4h9z"/><circle cx="7.5" cy="7.5" r="1.4"/></svg></span> 요금제로 이동</div>
+        <div class="cmdk-item" role="option" data-href="../index.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg></span> 홈으로 이동</div>
       </div>
-      <div class="cmdk-group"><div class="cmdk-group-label">Actions</div>
-        <div class="cmdk-item" data-action="toggle-theme"><span class="cmdk-ico">🌗</span> Toggle dark mode</div>
+      <div class="cmdk-group" role="group" aria-label="작업">
+        <div class="cmdk-group-label" aria-hidden="true">작업</div>
+        <div class="cmdk-item" role="option" data-action="toggle-theme"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></span> 다크 모드 전환 <kbd class="cmdk-kbd">T</kbd></div>
       </div>
-      <div class="cmdk-empty" style="display:none">No results.</div>
+      <div class="cmdk-empty" style="display:none">결과가 없어요 — 다른 단어로 검색해 보세요, 히어로.</div>
     </div>
   </div>
 </div>
 
 <script src="../app.js"></script>
+<script>
+/* page-local: 정렬 헤더를 키보드로도 조작 (Enter/Space → 정렬 토글) */
+(function () {
+  document.querySelectorAll("[data-sortable] th.sortable").forEach(function (th) {
+    th.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); th.click(); }
+    });
+  });
+})();
+</script>
 </body>
 </html>

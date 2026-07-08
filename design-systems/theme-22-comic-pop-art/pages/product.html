@@ -1,178 +1,343 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Nova Strike #1 — Comic Pop Art Store</title>
+<script>
+/* FOUC guard — set theme before first paint (key shared with app.js) */
+(function () {
+  try {
+    var t = localStorage.getItem("comic-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
+<title>노바 스트라이크 #1 — 팝! 스토어</title>
+<meta name="description" content="창간호 '노바 스트라이크 #1' 상세 페이지 — 만화책 표지, 벤데이 하프톤, 장바구니." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="../theme.css" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='14' fill='%2316b54a'/><text x='50' y='72' font-size='62' text-anchor='middle' fill='%23fff' font-family='Impact'>★</text></svg>" />
 <style>
+/* ---- PDP layout (page-local; tokens only) ---- */
 .pdp { display:grid; grid-template-columns:1fr 1fr; gap:var(--space-8); align-items:start; }
-@media (max-width:900px){ .pdp{ grid-template-columns:1fr;} }
+@media (max-width:900px){ .pdp{ grid-template-columns:1fr; } }
+
+/* Comic cover — a real printed issue cover (flat ink + halftone, NO gradient) */
+.cover-wrap { position:relative; }
 .cover-art {
-  position:relative; aspect-ratio:3/4; border:var(--border-w-4) solid var(--ink); border-radius:var(--radius-md);
+  position:relative; aspect-ratio:3/4;
+  border:var(--border-w-4) solid var(--ink); border-radius:var(--radius-md);
   box-shadow:var(--shadow-comic-lg); overflow:hidden;
-  background:linear-gradient(160deg,var(--blue-500) 0%, var(--blue-700) 100%);
-  display:grid; place-items:center; color:var(--paper);
+  background-color:var(--blue-500);
+  color:var(--fixed-white);
+  display:grid; grid-template-rows:auto 1fr auto;
+  padding:var(--space-4);
 }
-.cover-art::before{ content:""; position:absolute; inset:0; background:var(--speed-lines); opacity:.14; }
-.cover-art .ca-burst{ position:absolute; top:18px; right:14px; }
-.cover-art .ca-title{ position:relative; text-align:center; font-family:var(--font-display); font-size:var(--text-5xl); -webkit-text-stroke:3px var(--ink); paint-order:stroke fill; color:var(--yellow-400); text-shadow:5px 5px 0 var(--ink); line-height:.85; }
-.cover-art .ca-num{ position:absolute; bottom:14px; left:16px; font-family:var(--font-action); font-size:var(--text-3xl); -webkit-text-stroke:2px var(--ink); }
-.thumbs{ display:flex; gap:10px; margin-top:var(--space-4); }
-.thumb{ width:64px; height:64px; border:var(--border-w-3) solid var(--ink); border-radius:var(--radius-sm); box-shadow:var(--shadow-comic-xs); display:grid; place-items:center; font-weight:900; cursor:pointer; color:var(--neutral-900); }
-.thumb.is-active{ outline:4px solid var(--blue-500); outline-offset:2px; }
-.price-row{ display:flex; align-items:baseline; gap:12px; }
+.cover-art::before{ /* Ben-Day shading on the cover stock */
+  content:""; position:absolute; inset:0;
+  background-image:var(--halftone-blue); opacity:.5; pointer-events:none;
+}
+.cover-art::after{ /* radiating speed lines behind the logo */
+  content:""; position:absolute; inset:-30%;
+  background:var(--speed-lines); opacity:.10; pointer-events:none;
+}
+.cover-art > * { position:relative; z-index:1; }
+.ca-top { display:flex; align-items:center; justify-content:space-between; font-family:var(--font-mono); font-size:var(--text-2xs); font-weight:var(--weight-black); letter-spacing:var(--tracking-widest); }
+.ca-top .ca-price-flag { background:var(--yellow-400); color:var(--neutral-900); border:var(--border-w-2) solid var(--ink); border-radius:var(--radius-xs); padding:1px 7px; }
+.ca-center { align-self:center; text-align:center; }
+.ca-title {
+  font-family:var(--font-display);
+  font-size:clamp(2.4rem, 8vw, 3.6rem); line-height:.9;
+  color:var(--yellow-400);
+  -webkit-text-stroke:3px var(--ink); paint-order:stroke fill;
+  /* CMYK plate misregistration — cyan/magenta ghosts off-plate + ink drop */
+  text-shadow:-4px -3px 0 var(--misreg-cyan), 4px 3px 0 var(--misreg-magenta), 7px 7px 0 var(--ink);
+}
+.ca-tag { margin-top:var(--space-3); }
+.ca-bottom { display:flex; align-items:flex-end; justify-content:space-between; gap:var(--space-3); }
+.ca-issue { font-family:var(--font-action); font-size:var(--text-4xl); color:var(--fixed-white); -webkit-text-stroke:2px var(--ink); paint-order:stroke fill; line-height:.8; }
+.ca-credit { font-size:var(--text-2xs); font-weight:var(--weight-black); text-align:right; text-shadow:1px 1px 0 var(--ink); }
+.cover-art .ca-burst { position:absolute; top:14px; right:12px; z-index:2; }
+.cover-wrap .cover-sticker { position:absolute; left:-20px; bottom:-22px; z-index:3; }
+
+/* variant strip — non-interactive labelled swatches */
+.variant-strip { display:flex; gap:var(--space-3); margin-top:var(--space-4); flex-wrap:wrap; }
+.variant { text-align:center; }
+.variant .vswatch { width:60px; height:60px; border:var(--border-w-3) solid var(--ink); border-radius:var(--radius-sm); box-shadow:var(--shadow-comic-xs); display:grid; place-items:center; font-family:var(--font-action); font-size:var(--text-md); color:var(--fixed-white); -webkit-text-stroke:1px var(--ink); }
+.variant .vlabel { display:block; margin-top:5px; font-size:var(--text-2xs); font-weight:var(--weight-black); color:var(--color-text-muted); }
+
+/* price */
+.price-row{ display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
 .price{ font-family:var(--font-display); font-size:var(--text-5xl); letter-spacing:var(--tracking-wide); color:var(--color-primary); }
-.price-old{ font-size:var(--text-xl); color:var(--color-text-muted); text-decoration:line-through; font-weight:800; }
-.swatch-pick{ display:flex; gap:10px; }
-.swatch-pick button{ width:40px; height:40px; border:var(--border-w-3) solid var(--ink); border-radius:50%; box-shadow:var(--shadow-comic-xs); }
-.swatch-pick button[aria-pressed="true"]{ outline:4px solid var(--ink); outline-offset:3px; }
+.price-old{ font-size:var(--text-xl); color:var(--color-text-muted); text-decoration:line-through; font-weight:var(--weight-extra); }
+
+/* display-only star rating with real partial fill (4.8 / 5) */
+.stars { position:relative; display:inline-flex; line-height:0; }
+.stars .stars-base, .stars .stars-fill { display:flex; gap:2px; }
+.stars .stars-fill { position:absolute; inset:0; overflow:hidden; white-space:nowrap; }
+.stars svg { width:22px; height:22px; }
+.stars .stars-base svg { color:var(--neutral-300); }
+.stars .stars-fill svg { color:var(--yellow-400); }
+.stars .stars-fill svg path { stroke:var(--ink); stroke-width:1.4; paint-order:stroke; }
+
+/* edition radiogroup — swatch cards (native radios, keyboard-ready) */
+.edition-pick { display:flex; gap:var(--space-3); flex-wrap:wrap; }
+.edition {
+  position:relative; display:inline-flex; align-items:center; gap:var(--space-2);
+  padding:8px 14px 8px 10px;
+  border:var(--border-w-3) solid var(--ink); border-radius:var(--radius-md);
+  box-shadow:var(--shadow-comic-xs); background:var(--color-surface);
+  font-weight:var(--weight-bold); cursor:pointer;
+}
+.edition input { position:absolute; opacity:0; width:0; height:0; }
+.edition .edot { width:22px; height:22px; flex:none; border:var(--border-w-2) solid var(--ink); border-radius:50%; }
+.edition:has(input:checked) { background:var(--yellow-400); color:var(--neutral-900); }
+.edition:has(input:focus-visible) { outline:var(--ring-width) solid var(--focus-ring-color); outline-offset:2px; }
+.edition:has(input:disabled) { cursor:not-allowed; opacity:.6; background:var(--color-surface-2); }
+.edition .soldout { font-size:var(--text-2xs); font-weight:var(--weight-black); color:var(--color-danger); }
+
+/* trust list ink icons */
+.trust .li-ico { color:var(--blue-500); }
+
+/* related grid media */
+.rel-media { height:150px; display:grid; place-items:center; border-bottom:var(--border-w-3) solid var(--ink); font-family:var(--font-action); font-size:var(--text-2xl); -webkit-text-stroke:1.5px var(--ink); paint-order:stroke fill; }
 </style>
 </head>
 <body class="paper-bg">
-<a class="skip-link" href="#main">Skip to content</a>
-<nav class="navbar" aria-label="Primary">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true">!</span><span class="hide-mobile">POP STORE</span></a>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
+
+<nav class="navbar" aria-label="주 메뉴">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true">!</span><span class="hide-mobile">팝! 스토어</span></a>
   <div class="nav-links">
-    <a class="nav-link" href="#">Comics</a><a class="nav-link" href="#">Apparel</a><a class="nav-link" href="#">Figures</a><a class="nav-link" href="#">Sale</a>
+    <a class="nav-link" href="../index.html">홈</a>
+    <a class="nav-link" href="#related">신간</a>
+    <a class="nav-link" href="pricing.html">멤버십</a>
+    <a class="nav-link" href="profile.html">작가</a>
   </div>
   <div class="nav-right">
-    <button class="btn btn-ghost btn-sm" data-cmdk-open aria-label="Search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></button>
-    <button class="btn btn-icon btn-sm btn-outline" data-theme-toggle aria-label="Toggle dark mode"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg></button>
-    <button class="btn btn-icon btn-sm btn-primary" data-drawer-open="cart-drawer" aria-label="Cart">🛒</button>
+    <button class="btn btn-ghost btn-sm" data-cmdk-open aria-label="명령 팔레트 열기">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <kbd class="hide-mobile">⌘K</kbd>
+    </button>
+    <button class="btn btn-icon btn-sm btn-outline" data-theme-toggle aria-label="다크 모드 전환"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg></button>
+    <button class="btn btn-icon btn-sm btn-primary" data-drawer-open="cart-drawer" aria-label="장바구니 열기">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.2 12.2a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L22 7H6.2"/></svg>
+    </button>
   </div>
 </nav>
 
 <main id="main" class="container" style="padding-block:var(--space-7)">
-  <nav class="breadcrumb mb-6" aria-label="Breadcrumb"><a href="../index.html">Home</a><span class="sep" aria-hidden="true">›</span><a href="#">Comics</a><span class="sep" aria-hidden="true">›</span><span class="current">Nova Strike #1</span></nav>
+  <div class="running-head">
+    <span class="rh-issue">제22호 · 코믹 팝아트</span>
+    <span>신간 · 창간호 · 이번 주 최다 판매</span>
+  </div>
+
+  <nav class="breadcrumb mt-4 mb-6" aria-label="위치 경로"><a href="../index.html">홈</a><span class="sep" aria-hidden="true">›</span><a href="#related">만화책</a><span class="sep" aria-hidden="true">›</span><span class="current">노바 스트라이크 #1</span></nav>
 
   <div class="pdp">
-    <!-- GALLERY -->
-    <div>
+    <!-- ===== COVER (signature comic cover) ===== -->
+    <div class="cover-wrap">
       <div class="cover-art">
-        <span class="ca-burst burst lg" aria-hidden="true">1st<br>PRINT!</span>
-        <span class="ca-title">NOVA<br>STRIKE</span>
-        <span class="ca-num">#1</span>
+        <span class="ca-burst burst" aria-hidden="true">창간호!</span>
+        <div class="ca-top">
+          <span>제1호 · 32P</span>
+          <span class="ca-price-flag">₩4,900</span>
+        </div>
+        <div class="ca-center">
+          <div class="ca-title">노바<br>스트라이크</div>
+          <div class="ca-tag"><span class="speech-bubble tail-right">도시가… 픽셀로 부서진다!</span></div>
+        </div>
+        <div class="ca-bottom">
+          <span class="ca-issue">#1</span>
+          <span class="ca-credit">글 한서진<br>그림·잉킹 정지훈</span>
+        </div>
       </div>
-      <div class="thumbs" role="group" aria-label="Thumbnails">
-        <button class="thumb is-active" style="background:var(--blue-300)" aria-label="Cover A">A</button>
-        <button class="thumb" style="background:var(--red-300)" aria-label="Cover B">B</button>
-        <button class="thumb" style="background:var(--yellow-300)" aria-label="Variant">V</button>
-        <button class="thumb halftone" aria-label="Sketch">S</button>
-      </div>
+      <span class="price-sticker cover-sticker" aria-hidden="true">1쇄<br>한정</span>
     </div>
 
-    <!-- INFO -->
+    <div class="variant-strip" role="group" aria-label="표지 변형">
+      <div class="variant"><span class="vswatch" style="background:var(--blue-500)">A</span><span class="vlabel">표준 표지</span></div>
+      <div class="variant"><span class="vswatch" style="background:var(--red-500)">B</span><span class="vlabel">변형 표지</span></div>
+      <div class="variant"><span class="vswatch halftone" style="background-color:var(--yellow-400);color:var(--ink);-webkit-text-stroke:1px var(--ink)">F</span><span class="vlabel">포일 한정</span></div>
+      <div class="variant"><span class="vswatch" style="background:var(--neutral-700)">S</span><span class="vlabel">스케치</span></div>
+    </div>
+
+    <!-- ===== INFO ===== -->
     <div class="stack stack-5">
       <div>
-        <div class="demo-row mb-2"><span class="badge red">BESTSELLER</span><span class="badge blue">Limited</span></div>
-        <h1 style="font-size:var(--text-4xl)">Nova Strike #1</h1>
-        <div class="row gap-3 mt-2">
-          <div class="rating" role="img" aria-label="Rated 4.5 of 5" data-value="5" style="pointer-events:none">
-            <button class="is-on" tabindex="-1" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg></button>
-            <button class="is-on" tabindex="-1" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg></button>
-            <button class="is-on" tabindex="-1" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg></button>
-            <button class="is-on" tabindex="-1" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg></button>
-            <button class="is-on" tabindex="-1" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg></button>
-          </div>
-          <span class="weight-extra">4.8</span><span class="text-muted weight-extra">· 312 reviews</span>
+        <div class="demo-row mb-2"><span class="badge red">베스트셀러</span><span class="badge blue">한정판</span></div>
+        <h1 style="font-size:var(--text-4xl)">노바 스트라이크 #1</h1>
+        <div class="row gap-3 mt-2 wrap">
+          <span class="stars" role="img" aria-label="별점 5점 만점에 4.8점">
+            <span class="stars-base" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg>
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg>
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg>
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg>
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg>
+            </span>
+            <span class="stars-fill" style="width:96%" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg>
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg>
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg>
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg>
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg>
+            </span>
+          </span>
+          <span class="weight-black">4.8</span>
+          <span class="text-muted weight-bold">· 312개 평가 · 그림 <a href="profile.html">정지훈</a></span>
         </div>
       </div>
 
       <div class="price-row">
-        <span class="price">$4.99</span>
-        <span class="price-old">$6.99</span>
+        <span class="price">₩4,900</span>
+        <span class="price-old">₩6,900</span>
         <span class="badge-burst yellow" aria-hidden="true">-29%</span>
       </div>
 
-      <p class="weight-extra">The debut issue that started it all. When the printing presses gain sentience, only NOVA can save the city from total pixelation. 32 pages, full color, Ben-Day glory.</p>
+      <p class="weight-bold">모든 것을 시작한 창간호. 인쇄기가 자아를 얻던 날, 도시를 전면 픽셀화에서 구할 수 있는 건 오직 노바뿐. 32페이지 풀컬러, 벤데이 하프톤으로 한 점 한 점 찍었어요.</p>
 
-      <div class="field" style="max-width:340px">
-        <span class="field-label">Edition</span>
-        <div class="swatch-pick" role="group" aria-label="Cover edition">
-          <button aria-pressed="true" style="background:var(--blue-500)" aria-label="Standard"></button>
-          <button aria-pressed="false" style="background:var(--red-500)" aria-label="Variant"></button>
-          <button aria-pressed="false" style="background:var(--yellow-400)" aria-label="Foil"></button>
+      <div class="field" style="max-width:420px">
+        <span class="field-label">에디션</span>
+        <div class="edition-pick" role="radiogroup" aria-label="에디션 선택">
+          <label class="edition"><input type="radio" name="edition" value="standard" checked /><span class="edot" aria-hidden="true" style="background:var(--blue-500)"></span> 표준판</label>
+          <label class="edition"><input type="radio" name="edition" value="variant" /><span class="edot" aria-hidden="true" style="background:var(--red-500)"></span> 변형판</label>
+          <label class="edition"><input type="radio" name="edition" value="foil" disabled /><span class="edot" aria-hidden="true" style="background:var(--yellow-400)"></span> 포일 <span class="soldout">품절</span></label>
         </div>
+        <div class="field-hint">포일 한정판은 매진됐어요. 재입고 알림을 켜 두면 가장 먼저 알려드릴게요.</div>
       </div>
 
       <div class="row gap-4 wrap">
-        <div class="stepper" aria-label="Quantity"><button data-step="-" aria-label="Decrease">−</button><input type="text" value="1" inputmode="numeric" min="1" max="20" aria-label="Quantity" /><button data-step="+" aria-label="Increase">+</button></div>
-        <button class="btn btn-primary btn-lg grow" data-burst="ADDED!" data-drawer-open="cart-drawer">🛒 Add to Cart</button>
+        <div class="stepper" aria-label="수량"><button data-step="-" aria-label="수량 감소">−</button><input type="text" value="1" inputmode="numeric" min="1" max="20" aria-label="수량" /><button data-step="+" aria-label="수량 증가">+</button></div>
+        <button class="btn btn-primary btn-lg grow" data-burst="담았다!" data-drawer-open="cart-drawer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.2 12.2a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L22 7H6.2"/></svg>
+          장바구니에 담기
+        </button>
       </div>
-      <div class="row gap-3">
-        <button class="btn btn-outline" data-toast="info" data-toast-title="Wishlisted!" data-toast-body="Saved to your pull list.">♡ Pull List</button>
-        <button class="btn btn-ghost" data-popover="share-pop" data-popover-trigger aria-expanded="false">↗ Share</button>
+      <div class="row gap-3 wrap">
+        <button class="btn btn-outline" data-toast="success" data-toast-title="찜했어요!" data-toast-body="입고·세일 소식을 가장 먼저 알려드릴게요.">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.6-9.5-9A4.5 4.5 0 0 1 12 6a4.5 4.5 0 0 1 9.5 5c-2.5 4.4-9.5 9-9.5 9z"/></svg>
+          찜하기
+        </button>
+        <button class="btn btn-ghost" data-popover="share-pop" data-popover-trigger aria-expanded="false" aria-haspopup="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8 11 8-5M8 13l8 5"/></svg>
+          공유
+        </button>
       </div>
 
-      <ul class="list">
-        <li class="list-item"><span aria-hidden="true">🚚</span><span class="li-title">Free shipping over $25</span><span class="li-meta">2–4 days</span></li>
-        <li class="list-item"><span aria-hidden="true">↩️</span><span class="li-title">30-day returns</span><span class="li-meta">No fuss</span></li>
-        <li class="list-item"><span aria-hidden="true">🔒</span><span class="li-title">Bagged &amp; boarded</span><span class="li-meta">Mint</span></li>
+      <ul class="list trust" role="list">
+        <li class="list-item"><span class="li-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h11v9H3z"/><path d="M14 9h4l3 3v3h-7z"/><circle cx="7.5" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg></span><span class="li-title">3만원 이상 무료배송</span><span class="li-meta">2~4일</span></li>
+        <li class="list-item"><span class="li-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5 4 10l5 5"/><path d="M4 10h11a5 5 0 0 1 5 5"/></svg></span><span class="li-title">30일 이내 반품</span><span class="li-meta">간편하게</span></li>
+        <li class="list-item"><span class="li-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v6c0 4 3 6.6 7 9 4-2.4 7-5 7-9V6z"/><path d="m9 12 2 2 4-4"/></svg></span><span class="li-title">안전 포장 · 각지지 않게</span><span class="li-meta">새 책 그대로</span></li>
       </ul>
     </div>
   </div>
 
-  <!-- DETAILS TABS -->
+  <!-- ===== DETAILS TABS ===== -->
   <div class="tabs mt-8">
-    <div class="tablist" role="tablist" aria-label="Product details">
-      <button class="tab" id="pt1" role="tab" aria-selected="true" aria-controls="pp1">Details</button>
-      <button class="tab" id="pt2" role="tab" aria-selected="false" aria-controls="pp2" tabindex="-1">Reviews</button>
-      <button class="tab" id="pt3" role="tab" aria-selected="false" aria-controls="pp3" tabindex="-1">Shipping</button>
+    <div class="tablist" role="tablist" aria-label="상품 상세">
+      <button class="tab" id="pt1" role="tab" aria-selected="true" aria-controls="pp1">상세 정보</button>
+      <button class="tab" id="pt2" role="tab" aria-selected="false" aria-controls="pp2" tabindex="-1">리뷰 312</button>
+      <button class="tab" id="pt3" role="tab" aria-selected="false" aria-controls="pp3" tabindex="-1">배송·교환</button>
     </div>
     <div class="tabpanel" id="pp1" role="tabpanel" aria-labelledby="pt1">
       <div class="grid grid-2">
-        <div class="card"><div class="card-body"><h5 class="mb-2">Specs</h5><ul style="font-weight:600;display:flex;flex-direction:column;gap:6px"><li>32 pages · full color</li><li>Standard size 6.6"×10.2"</li><li>Writer: A. Halftone</li><li>Art: B. Benday</li></ul></div></div>
-        <div class="card"><div class="card-body"><h5 class="mb-2">In this issue</h5><p class="weight-extra">Origin story, first villain reveal, and the famous double-page KAPOW spread that fans line up for.</p></div></div>
+        <div class="card"><div class="card-body"><h5 class="mb-2">사양</h5><ul style="font-weight:var(--weight-bold);display:flex;flex-direction:column;gap:6px"><li>32페이지 · 풀컬러</li><li>판형 168×255mm</li><li>글 한서진</li><li>그림·잉킹 <a href="profile.html">정지훈</a></li></ul></div></div>
+        <div class="card"><div class="card-body"><h5 class="mb-2">이 이슈에서</h5><p class="weight-bold">노바의 탄생 비화, 첫 빌런의 등장, 그리고 팬들이 줄 서서 사는 그 유명한 양면 스프레드 "쾅!" 장면까지.</p></div></div>
       </div>
     </div>
     <div class="tabpanel" id="pp2" role="tabpanel" aria-labelledby="pt2" hidden>
       <div class="stack stack-4">
-        <div class="card"><div class="card-body row gap-3" style="align-items:flex-start"><span class="avatar red">M</span><div><strong>Maya R.</strong> <span class="badge green">Verified</span><p class="weight-extra mt-2">"The halftone print quality is unreal. Worth every penny — POW!"</p></div></div></div>
-        <div class="card"><div class="card-body row gap-3" style="align-items:flex-start"><span class="avatar blue">T</span><div><strong>Theo K.</strong><p class="weight-extra mt-2">"Bagged and boarded, arrived mint. The foil variant is gorgeous."</p></div></div></div>
+        <div class="row gap-4 wrap items-center">
+          <div><span class="price" style="font-size:var(--text-4xl)">4.8</span><span class="text-muted weight-bold"> / 5</span></div>
+          <div class="stack stack-2">
+            <span class="stars" role="img" aria-label="평균 별점 5점 만점에 4.8점">
+              <span class="stars-base" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg>
+              </span>
+              <span class="stars-fill" style="width:96%" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg>
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 18l-6 3.5 1.4-6.8L2.3 9l6.9-.7z"/></svg>
+              </span>
+            </span>
+            <span class="text-muted weight-bold text-sm">312개 평가 · 96%가 별 4개 이상</span>
+          </div>
+        </div>
+        <div class="card"><div class="card-body row gap-3" style="align-items:flex-start"><span class="avatar red" aria-hidden="true">서</span><div><strong>서지원</strong> <span class="badge green">구매 확인</span><p class="weight-bold mt-2">하프톤 인쇄 퀄이 미쳤어요. 스프레드 장면에서 진짜 "쾅!" 소리 날 뻔. 값어치 그 이상입니다.</p></div></div></div>
+        <div class="card"><div class="card-body row gap-3" style="align-items:flex-start"><span class="avatar blue" aria-hidden="true">오</span><div><strong>오세연</strong> <span class="badge green">구매 확인</span><p class="weight-bold mt-2">각 하나 안 잡히게 포장돼서 새 책 그대로 왔어요. 변형판도 다음엔 꼭 살 거예요.</p></div></div></div>
       </div>
     </div>
     <div class="tabpanel" id="pp3" role="tabpanel" aria-labelledby="pt3" hidden>
-      <p class="weight-extra">Ships in a rigid mailer within 1 business day. Free over $25. International 7–14 days.</p>
+      <div class="stack stack-3">
+        <p class="weight-bold">주문 다음 영업일 안에 단단한 우편함 박스로 발송돼요. 3만원 이상은 무료배송, 도서산간은 2~3일 더 걸릴 수 있어요.</p>
+        <p class="weight-bold text-muted">교환·반품은 받은 날부터 30일 이내. 개봉하지 않은 특전·부록이 포함된 상품은 가치 훼손이 없을 때만 가능해요.</p>
+      </div>
     </div>
   </div>
 
-  <!-- RELATED -->
-  <h2 class="mt-8 mb-6">You might also dig</h2>
+  <!-- ===== RELATED ===== -->
+  <h2 id="related" class="mt-8 mb-6">함께 보면 좋은 이슈</h2>
   <div class="grid grid-4 stagger">
-    <div class="card card-hover" data-reveal><div class="card-media" style="height:140px;background:var(--red-500);display:grid;place-items:center;color:var(--paper);font-family:var(--font-action);font-size:var(--text-2xl);-webkit-text-stroke:1.5px var(--ink)">FURY</div><div class="card-body"><strong>Ink &amp; Fury #3</strong><div class="price" style="font-size:var(--text-2xl)">$3.99</div></div></div>
-    <div class="card card-hover" data-reveal><div class="card-media" style="height:140px;background:var(--yellow-400);display:grid;place-items:center;color:var(--ink);font-family:var(--font-action);font-size:var(--text-2xl)">PALS</div><div class="card-body"><strong>Panel Pals #1</strong><div class="price" style="font-size:var(--text-2xl)">$5.99</div></div></div>
-    <div class="card card-hover" data-reveal><div class="card-media" style="height:140px;background:var(--blue-500);display:grid;place-items:center;color:var(--paper);font-family:var(--font-action);font-size:var(--text-2xl);-webkit-text-stroke:1.5px var(--ink)">HERO</div><div class="card-body"><strong>Halftone Heroes</strong><div class="price" style="font-size:var(--text-2xl)">$4.49</div></div></div>
-    <div class="card card-hover" data-reveal><div class="card-media halftone" style="height:140px;background-color:var(--purple-500);display:grid;place-items:center;color:var(--paper);font-family:var(--font-action);font-size:var(--text-2xl);-webkit-text-stroke:1.5px var(--ink)">VOID</div><div class="card-body"><strong>Void Walker #2</strong><div class="price" style="font-size:var(--text-2xl)">$3.49</div></div></div>
+    <div class="card card-hover" data-reveal><div class="rel-media" style="background:var(--red-500);color:var(--yellow-400)">퓨리</div><div class="card-body"><strong>잉크 &amp; 퓨리 #3</strong><div class="price" style="font-size:var(--text-2xl)">₩3,900</div></div></div>
+    <div class="card card-hover" data-reveal><div class="rel-media" style="background:var(--yellow-400);color:var(--ink)">팔즈</div><div class="card-body"><strong>패널 팔즈 #1</strong><div class="price" style="font-size:var(--text-2xl)">₩5,900</div></div></div>
+    <div class="card card-hover" data-reveal><div class="rel-media" style="background:var(--blue-500);color:var(--paper)">히어로즈</div><div class="card-body"><strong>하프톤 히어로즈</strong><div class="price" style="font-size:var(--text-2xl)">₩3,400</div></div></div>
+    <div class="card card-hover" data-reveal><div class="rel-media halftone" style="background-color:var(--purple-500);color:var(--paper)">보이드</div><div class="card-body"><strong>보이드 워커 #2</strong><div class="price" style="font-size:var(--text-2xl)">₩2,900</div></div></div>
   </div>
 </main>
 
 <!-- SHARE POPOVER (thought bubble) -->
-<div class="popover thought-bubble" id="share-pop" style="position:fixed;bottom:90px;left:40px;">
-  <div class="popover-title">Share this issue</div>
-  <div class="demo-row mt-2"><button class="btn btn-icon btn-sm btn-outline" aria-label="Copy link" data-toast="success" data-toast-title="Link copied!">🔗</button><button class="btn btn-icon btn-sm btn-outline" aria-label="Email">✉️</button><button class="btn btn-icon btn-sm btn-outline" aria-label="Tweet">🐦</button></div>
+<div class="popover thought-bubble" id="share-pop" style="position:fixed;bottom:96px;left:40px;">
+  <div class="popover-title">이 이슈 공유하기</div>
+  <div class="demo-row mt-2">
+    <button class="btn btn-icon btn-sm btn-outline" aria-label="링크 복사" data-toast="success" data-toast-title="링크를 복사했어요"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 15 15 9"/><path d="M11 7l1-1a4 4 0 0 1 6 6l-1 1"/><path d="M13 17l-1 1a4 4 0 0 1-6-6l1-1"/></svg></button>
+    <button class="btn btn-icon btn-sm btn-outline" aria-label="메일로 보내기" data-toast="info" data-toast-title="메일 앱을 열었어요"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></button>
+    <button class="btn btn-icon btn-sm btn-outline" aria-label="다른 앱으로 공유" data-toast="info" data-toast-title="공유 시트를 열었어요"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8 11 8-5M8 13l8 5"/></svg></button>
+  </div>
 </div>
 
 <!-- CART DRAWER -->
 <div class="overlay" id="cart-scrim" hidden></div>
-<aside class="drawer" id="cart-drawer" data-scrim="cart-scrim" role="dialog" aria-modal="true" aria-label="Shopping cart">
-  <div class="drawer-header"><span class="dh-title">🛒 Your Cart</span><button class="btn btn-icon btn-sm btn-outline" data-drawer-close="cart-drawer" aria-label="Close">✕</button></div>
+<aside class="drawer" id="cart-drawer" data-scrim="cart-scrim" role="dialog" aria-modal="true" aria-label="장바구니">
+  <div class="drawer-header"><span class="dh-title">장바구니</span><button class="btn btn-icon btn-sm btn-outline" data-drawer-close="cart-drawer" aria-label="장바구니 닫기">✕</button></div>
   <div class="drawer-body stack stack-3">
-    <div class="card"><div class="card-body row gap-3"><span class="thumb" style="background:var(--blue-300)" aria-hidden="true">A</span><div class="grow"><strong>Nova Strike #1</strong><div class="text-muted text-sm weight-extra">Standard · Qty 1</div></div><strong>$4.99</strong></div></div>
-    <div class="card"><div class="card-body row gap-3"><span class="thumb" style="background:var(--yellow-400)" aria-hidden="true">P</span><div class="grow"><strong>Panel Pals #1</strong><div class="text-muted text-sm weight-extra">Qty 1</div></div><strong>$5.99</strong></div></div>
-    <div class="inline-note success">Free shipping unlocked!</div>
+    <div class="card"><div class="card-body row gap-3"><span class="avatar blue" aria-hidden="true">노</span><div class="grow"><strong>노바 스트라이크 #1</strong><div class="text-muted text-sm weight-bold">표준판 · 수량 1</div></div><strong>₩4,900</strong></div></div>
+    <div class="card"><div class="card-body row gap-3"><span class="avatar" aria-hidden="true">팔</span><div class="grow"><strong>패널 팔즈 #1</strong><div class="text-muted text-sm weight-bold">수량 1</div></div><strong>₩5,900</strong></div></div>
+    <div class="inline-note warning">3만원까지 <strong>19,200원</strong> 남았어요 · 무료배송 코앞!</div>
   </div>
   <div class="drawer-footer stack stack-3">
-    <div class="row between"><span class="weight-extra">Subtotal</span><span class="price" style="font-size:var(--text-2xl)">$10.98</span></div>
-    <button class="btn btn-primary btn-block btn-lg" data-burst="CHA-CHING!" data-toast="success" data-toast-title="Order placed!" data-toast-body="Issue #5 on the way.">Checkout</button>
+    <div class="row between"><span class="weight-bold">소계</span><span class="price" style="font-size:var(--text-2xl)">₩10,800</span></div>
+    <button class="btn btn-primary btn-block btn-lg" data-burst="짜잔!" data-toast="success" data-toast-title="주문 완료!" data-toast-body="다음 영업일에 발송할게요.">결제하기</button>
   </div>
 </aside>
 
 <!-- command palette -->
-<div class="cmdk-overlay" role="dialog" aria-modal="true" aria-label="Command palette">
-  <div class="cmdk"><div class="cmdk-input-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input class="cmdk-input" placeholder="Search the store…" aria-label="Search" /><kbd>ESC</kbd></div>
-  <div class="cmdk-list"><div class="cmdk-group"><div class="cmdk-group-label">Jump to</div><div class="cmdk-item" data-href="../index.html"><span class="cmdk-ico">🏠</span> Home</div><div class="cmdk-item" data-href="pricing.html"><span class="cmdk-ico">💲</span> Pricing</div></div><div class="cmdk-empty" style="display:none">No results.</div></div></div>
+<div class="cmdk-overlay" role="dialog" aria-modal="true" aria-label="명령 팔레트">
+  <div class="cmdk">
+    <div class="cmdk-input-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input class="cmdk-input" placeholder="스토어에서 찾기…" aria-label="명령 팔레트 입력" /><kbd>ESC</kbd></div>
+    <div class="cmdk-list" role="listbox" aria-label="명령 목록">
+      <div class="cmdk-group" role="group" aria-label="이동">
+        <div class="cmdk-group-label" aria-hidden="true">이동</div>
+        <div class="cmdk-item" role="option" data-href="../index.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7"/><path d="M6 10v9h12v-9"/></svg></span> 홈으로 이동</div>
+        <div class="cmdk-item" role="option" data-href="#related"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="16" rx="1"/><rect x="13" y="4" width="7" height="16" rx="1"/></svg></span> 함께 보면 좋은 이슈</div>
+        <div class="cmdk-item" role="option" data-href="pricing.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 12 22l-9-9V4h9z"/><circle cx="7.5" cy="7.5" r="1.4"/></svg></span> 멤버십 요금제</div>
+        <div class="cmdk-item" role="option" data-href="profile.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span> 작가 정지훈 프로필</div>
+      </div>
+      <div class="cmdk-group" role="group" aria-label="작업">
+        <div class="cmdk-group-label" aria-hidden="true">작업</div>
+        <div class="cmdk-item" role="option" data-action="toggle-theme"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></span> 다크 모드 전환 <kbd class="cmdk-kbd">T</kbd></div>
+      </div>
+      <div class="cmdk-empty" style="display:none">결과가 없어요 — 다른 단어로 검색해 보세요, 히어로.</div>
+    </div>
+  </div>
 </div>
 
 <script src="../app.js"></script>

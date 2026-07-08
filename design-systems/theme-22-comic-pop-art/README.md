@@ -23,7 +23,7 @@ Comic Pop Art is **loud, exaggerated, and unmistakably hand-inked**. It is the o
 
 **Color** is strictly **flat primary ink**: Comic Red `#E8222B`, Pop Yellow `#FFD400`, Comic Blue `#1E6FE8`, plus black ink and paper white. **Shadows** are hard offset (`5px 5px 0 #000`) — printed, never blurred. **Motion** pops and bounces (`cubic-bezier(.2,1.6,.4,1)` overshoot) rather than easing smoothly.
 
-**Typography** pairs a comic letterer display face (**Bangers / Luckiest Guy**) used only on titles and action words, with a **bold, highly-readable sans** (**Nunito**) for all body copy — comic display faces are never used for running text, to protect readability.
+**Typography** pairs a comic letterer display face (**Bangers / Luckiest Guy**, with **Black Han Sans** as the Hangul display face) used only on titles and action words, with a **bold, highly-readable sans** (**Nunito** for Latin, **Gothic A1** for Hangul) for all body copy — comic display faces are never used for running text, to protect readability. The hub and all nine demo screens ship in Korean (`lang="ko"`, `word-break: keep-all`), with in-app JS strings (toasts, palette, calendar) localized too.
 
 ---
 
@@ -45,8 +45,8 @@ theme-22-comic-pop-art/
 │   │                     CodeBlock, Skeleton, EmptyState, Carousel
 │   ├── feedback.css      Alert/Banner, Toast, Modal, Drawer, CommandPalette,
 │   │                     Progress (bar + ring), Spinner, InlineNotification
-│   └── navigation.css    Navbar, Sidebar, Breadcrumb, Pagination, Menu,
-│                         ContextMenu, Steps/Wizard
+│   └── navigation.css    Navbar (+ injected mobile off-canvas), Breadcrumb,
+│                         Pagination, Menu, ContextMenu, Steps/Wizard
 ├── app.js                All interactions (vanilla JS, self-initializing)
 ├── index.html            Hub — comic cover hero + token/motif viz + gallery
 ├── pages/
@@ -122,7 +122,7 @@ Each primary has a full **50 → 900** ramp; signature value noted.
 
 `--color-bg` · `--color-bg-dots` · `--color-surface` / `-2` / `-3` · `--color-text` / `-muted` / `-subtle` / `-inverse` · `--color-primary` (+ hover/press/fg) · `--color-secondary` · `--color-accent` · `--color-border` · `--color-divider` · `--color-success` / `--warning` / `--danger` / `--info` (each + `-bg` / `-fg`) · `--focus-ring-color` · `--color-scrim`.
 
-**Component tokens** are namespaced: `--btn-*`, `--card-*`, `--input-*`, `--badge-*`, `--tooltip-*`, `--table-*`, `--nav-*`, `--sidebar-*`, `--modal-*`, `--toast-*`, `--progress-*`, `--chart-1…6`.
+**Component tokens** are namespaced: `--btn-*`, `--card-*`, `--input-*`, `--badge-*`, `--tooltip-*`, `--table-*`, `--nav-*`, `--modal-*`, `--toast-*`, `--cmdk-*`, `--progress-*`, `--chart-1…6`.
 
 ### Light & Dark
 
@@ -138,7 +138,7 @@ Both themes ship. **Light** = paper white + subtle yellow dot atmosphere, black 
 
 **Feedback / Overlay** — Alert/Banner (action words), Toast (stacked speech bubbles), Modal/Dialog (panel pop, focus-trapped), Drawer, CommandPalette (⌘K), Progress (bar + circular, halftone variants), Spinner (+ loading dots), InlineNotification.
 
-**Navigation** — Navbar, Sidebar (collapsible + mobile), Breadcrumb, Pagination, Menu/Dropdown, ContextMenu, Steps/Wizard (horizontal + vertical).
+**Navigation** — Navbar (with an auto-injected hamburger + off-canvas link panel below 880px, so every page keeps a nav path on mobile), Breadcrumb, Pagination, Menu/Dropdown, ContextMenu, Steps/Wizard (horizontal + vertical).
 
 Every interactive component ships with **keyboard support and ARIA** — see CHECKLIST.md for the per-component audit.
 
@@ -152,8 +152,7 @@ Every interactive component ships with **keyboard support and ARIA** — see CHE
 | `data-modal-open="id"` / `data-modal-close` | open/close modal |
 | `data-drawer-open="id"` / `data-drawer-close="id"` | open/close drawer |
 | `data-menu="id"` / `data-popover="id"` / `data-context-menu="id"` | overlays |
-| `data-cmdk-open` (or ⌘K / Ctrl-K) | command palette |
-| `data-sidebar-collapse` / `data-sidebar-toggle` | sidebar |
+| `data-cmdk-open` (or ⌘K / Ctrl-K) | command palette (`role="listbox"` + `role="option"`, ↑/↓/Enter) |
 | `data-sortable` + `th.sortable` + `data-row-select` / `data-select-all` | table behaviors |
 | `data-billing-toggle` + `data-price-month/-year` + `data-price-note` | pricing switch |
 | `data-wizard` + `data-wizard-panel/-next/-back/-done` | multi-step wizard |

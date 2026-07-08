@@ -4,7 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>칸반 보드 · RISO·PRESS</title>
-<script>document.documentElement.className = "js";</script>
+<script>
+(function () {
+  try { var t = localStorage.getItem("riso-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+  document.documentElement.className = "js";
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -19,6 +26,28 @@
 .kcol__body { padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); flex: 1; min-height: 4rem; transition: background var(--duration-fast); }
 .kcol__body.is-over { background: var(--fluoro-yellow-100); }
 .kcol__add { margin: 0 var(--space-3) var(--space-3); }
+
+/* print-shop chrome strip above the board */
+.board-meta { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-5); }
+.board-meta .calibration-bar { width: 12rem; max-width: 46vw; }
+.board-meta__spec { font-size: var(--text-2xs); letter-spacing: var(--tracking-wide); color: var(--color-text-muted); font-family: var(--font-mono); }
+
+/* keyboard move controls — the accessible alternative to pointer drag */
+.kanban-card__move { display: flex; gap: var(--space-2); margin-top: var(--space-3); padding-top: var(--space-2); border-top: var(--border-1) solid var(--color-border-muted); }
+.kmove {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 0.25em;
+  font-family: var(--font-mono); font-size: var(--text-2xs); font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wide);
+  padding: var(--space-1) var(--space-2);
+  border: var(--border-2) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface); color: var(--color-text);
+  transition: background var(--duration-fast), transform var(--duration-fast) var(--ease-stamp);
+}
+.kmove:hover:not(:disabled) { background: var(--fluoro-yellow-500); color: var(--ink-black); }
+.kmove:active:not(:disabled) { transform: translateY(1px); }
+.kmove:focus-visible { outline: var(--ring-width) solid var(--color-ring); outline-offset: 2px; }
+.kmove:disabled { opacity: 0.34; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -56,18 +85,27 @@
 
     <main class="app-content" id="main">
       <div class="page-head">
-        <div><h1 class="page-head__title">칸반 보드</h1><p class="page-head__sub">카드를 끌어 컬럼 사이로 옮기세요 · 키보드: Tab 후 Space</p></div>
+        <div><h1 class="page-head__title">칸반 보드</h1><p class="page-head__sub">카드를 끌어 옮기거나, 카드 아래 이동 버튼으로 제작 단계를 바꾸세요.</p></div>
         <div class="page-head__actions"><button class="btn btn--secondary btn--sm" data-drawer-open="board-drawer">보드 설정</button></div>
       </div>
+
+      <div class="board-meta">
+        <div class="calibration-bar" role="img" aria-label="형광 스폿 4색과 하프톤 계조 캘리브레이션 바">
+          <span class="cal-pink"></span><span class="cal-blue"></span><span class="cal-yellow"></span><span class="cal-green"></span><span class="cal-tone"></span>
+        </div>
+        <span class="board-meta__spec">작업지시 № 2026-0708 · 형광 2도 · 정합 ±2mm</span>
+      </div>
+
+      <div class="sr-only" role="status" aria-live="polite" data-kanban-live></div>
 
       <div class="board" data-kanban>
         <!-- BACKLOG -->
         <section class="kcol" aria-label="대기" data-col>
           <div class="kcol__head"><span class="kcol__dot" style="background:var(--paper-neutral-400)"></span><span class="kcol__title">대기</span><span class="kcol__count">3</span></div>
           <div class="kcol__body" data-dropzone-col>
-            <article class="kanban-card" draggable="true" data-card><div class="kanban-card__tags"><span class="badge badge--blue">표지</span></div><div class="kanban-card__title">네온 포레스트 표지 교정</div><div class="kanban-card__foot"><span class="badge badge--dot">우선</span><span class="avatar avatar--sm avatar--pink">KA</span></div></article>
-            <article class="kanban-card" draggable="true" data-card><div class="kanban-card__tags"><span class="badge badge--yellow">내지</span><span class="badge">32p</span></div><div class="kanban-card__title">플루오 시티 내지 조판</div><div class="kanban-card__foot"><span class="mono" style="font-size:var(--text-2xs);color:var(--color-text-muted)">RP-204</span><span class="avatar avatar--sm avatar--blue">RP</span></div></article>
-            <article class="kanban-card" draggable="true" data-card><div class="kanban-card__tags"><span class="badge badge--pink">스폿</span></div><div class="kanban-card__title">형광 핑크 색 견본 승인</div><div class="kanban-card__foot"><span class="mono" style="font-size:var(--text-2xs);color:var(--color-text-muted)">6/24</span><span class="avatar avatar--sm avatar--green">MK</span></div></article>
+            <article class="kanban-card" draggable="true" data-card><div class="kanban-card__tags"><span class="badge badge--blue">표지</span></div><div class="kanban-card__title">네온 포레스트 표지 교정</div><div class="kanban-card__foot"><span class="badge badge--dot">우선</span><span class="avatar avatar--sm avatar--pink">KA</span></div><div class="kanban-card__move"><button type="button" class="kmove" data-kmove="prev" aria-label="네온 포레스트 표지 교정 이전 단계로 이동">← 이전</button><button type="button" class="kmove" data-kmove="next" aria-label="네온 포레스트 표지 교정 다음 단계로 이동">다음 →</button></div></article>
+            <article class="kanban-card" draggable="true" data-card><div class="kanban-card__tags"><span class="badge badge--yellow">내지</span><span class="badge">32p</span></div><div class="kanban-card__title">플루오 시티 내지 조판</div><div class="kanban-card__foot"><span class="mono" style="font-size:var(--text-2xs);color:var(--color-text-muted)">RP-204</span><span class="avatar avatar--sm avatar--blue">RP</span></div><div class="kanban-card__move"><button type="button" class="kmove" data-kmove="prev" aria-label="플루오 시티 내지 조판 이전 단계로 이동">← 이전</button><button type="button" class="kmove" data-kmove="next" aria-label="플루오 시티 내지 조판 다음 단계로 이동">다음 →</button></div></article>
+            <article class="kanban-card" draggable="true" data-card><div class="kanban-card__tags"><span class="badge badge--pink">스폿</span></div><div class="kanban-card__title">형광 핑크 색 견본 승인</div><div class="kanban-card__foot"><span class="mono" style="font-size:var(--text-2xs);color:var(--color-text-muted)">6/24</span><span class="avatar avatar--sm avatar--green">MK</span></div><div class="kanban-card__move"><button type="button" class="kmove" data-kmove="prev" aria-label="형광 핑크 색 견본 승인 이전 단계로 이동">← 이전</button><button type="button" class="kmove" data-kmove="next" aria-label="형광 핑크 색 견본 승인 다음 단계로 이동">다음 →</button></div></article>
           </div>
           <button class="btn btn--ghost btn--sm kcol__add" data-modal-open="card-modal">+ 카드 추가</button>
         </section>
@@ -76,8 +114,8 @@
         <section class="kcol" aria-label="진행" data-col>
           <div class="kcol__head"><span class="kcol__dot" style="background:var(--fluoro-yellow-500)"></span><span class="kcol__title">진행</span><span class="kcol__count">2</span></div>
           <div class="kcol__body" data-dropzone-col>
-            <article class="kanban-card" draggable="true" data-card><div class="kanban-card__tags"><span class="badge badge--pink">스폿</span><span class="badge badge--blue">2도</span></div><div class="kanban-card__title">오버프린트 No.3 본 인쇄</div><div style="margin-top:var(--space-2)"><div class="progress" style="height:0.7rem"><div class="progress__fill" style="width:62%"></div></div></div><div class="kanban-card__foot"><span class="mono" style="font-size:var(--text-2xs);color:var(--color-text-muted)">62%</span><span class="avatar avatar--sm avatar--pink">KA</span></div></article>
-            <article class="kanban-card" draggable="true" data-card><div class="kanban-card__tags"><span class="badge badge--green">제본</span></div><div class="kanban-card__title">그레인 다이어리 중철 제본</div><div class="kanban-card__foot"><span class="badge badge--dot badge--yellow">검수</span><span class="avatar avatar--sm avatar--blue">RP</span></div></article>
+            <article class="kanban-card" draggable="true" data-card><div class="kanban-card__tags"><span class="badge badge--pink">스폿</span><span class="badge badge--blue">2도</span></div><div class="kanban-card__title">오버프린트 No.3 본 인쇄</div><div style="margin-top:var(--space-2)"><div class="progress" style="height:0.7rem"><div class="progress__fill" style="width:62%"></div></div></div><div class="kanban-card__foot"><span class="mono" style="font-size:var(--text-2xs);color:var(--color-text-muted)">62%</span><span class="avatar avatar--sm avatar--pink">KA</span></div><div class="kanban-card__move"><button type="button" class="kmove" data-kmove="prev" aria-label="오버프린트 No.3 본 인쇄 이전 단계로 이동">← 이전</button><button type="button" class="kmove" data-kmove="next" aria-label="오버프린트 No.3 본 인쇄 다음 단계로 이동">다음 →</button></div></article>
+            <article class="kanban-card" draggable="true" data-card><div class="kanban-card__tags"><span class="badge badge--green">제본</span></div><div class="kanban-card__title">그레인 다이어리 중철 제본</div><div class="kanban-card__foot"><span class="badge badge--dot badge--yellow">검수</span><span class="avatar avatar--sm avatar--blue">RP</span></div><div class="kanban-card__move"><button type="button" class="kmove" data-kmove="prev" aria-label="그레인 다이어리 중철 제본 이전 단계로 이동">← 이전</button><button type="button" class="kmove" data-kmove="next" aria-label="그레인 다이어리 중철 제본 다음 단계로 이동">다음 →</button></div></article>
           </div>
           <button class="btn btn--ghost btn--sm kcol__add" data-modal-open="card-modal">+ 카드 추가</button>
         </section>
@@ -86,8 +124,8 @@
         <section class="kcol" aria-label="검수" data-col>
           <div class="kcol__head"><span class="kcol__dot" style="background:var(--fluoro-blue-500)"></span><span class="kcol__title">검수</span><span class="kcol__count">2</span></div>
           <div class="kcol__body" data-dropzone-col>
-            <article class="kanban-card" draggable="true" data-card><div class="kanban-card__tags"><span class="badge badge--blue">표지</span></div><div class="kanban-card__title">미스레지스터 Vol.2 정합 확인</div><div class="kanban-card__foot"><span class="mono" style="font-size:var(--text-2xs);color:var(--color-text-muted)">±2mm</span><span class="avatar avatar--sm avatar--green">MK</span></div></article>
-            <article class="kanban-card" draggable="true" data-card><div class="kanban-card__tags"><span class="badge">사진</span></div><div class="kanban-card__title">하프톤 변환 QA</div><div class="kanban-card__foot"><span class="avatar-group"><span class="avatar avatar--sm avatar--pink">KA</span><span class="avatar avatar--sm avatar--blue">RP</span></span></div></article>
+            <article class="kanban-card" draggable="true" data-card><div class="kanban-card__tags"><span class="badge badge--blue">표지</span></div><div class="kanban-card__title">미스레지스터 Vol.2 정합 확인</div><div class="kanban-card__foot"><span class="mono" style="font-size:var(--text-2xs);color:var(--color-text-muted)">±2mm</span><span class="avatar avatar--sm avatar--green">MK</span></div><div class="kanban-card__move"><button type="button" class="kmove" data-kmove="prev" aria-label="미스레지스터 Vol.2 정합 확인 이전 단계로 이동">← 이전</button><button type="button" class="kmove" data-kmove="next" aria-label="미스레지스터 Vol.2 정합 확인 다음 단계로 이동">다음 →</button></div></article>
+            <article class="kanban-card" draggable="true" data-card><div class="kanban-card__tags"><span class="badge">사진</span></div><div class="kanban-card__title">하프톤 변환 QA</div><div class="kanban-card__foot"><span class="avatar-group"><span class="avatar avatar--sm avatar--pink">KA</span><span class="avatar avatar--sm avatar--blue">RP</span></span></div><div class="kanban-card__move"><button type="button" class="kmove" data-kmove="prev" aria-label="하프톤 변환 QA 이전 단계로 이동">← 이전</button><button type="button" class="kmove" data-kmove="next" aria-label="하프톤 변환 QA 다음 단계로 이동">다음 →</button></div></article>
           </div>
           <button class="btn btn--ghost btn--sm kcol__add" data-modal-open="card-modal">+ 카드 추가</button>
         </section>
@@ -96,8 +134,8 @@
         <section class="kcol" aria-label="완료" data-col>
           <div class="kcol__head"><span class="kcol__dot" style="background:var(--fluoro-green-500)"></span><span class="kcol__title">완료</span><span class="kcol__count">2</span></div>
           <div class="kcol__body" data-dropzone-col>
-            <article class="kanban-card" draggable="true" data-card style="opacity:.7"><div class="kanban-card__tags"><span class="badge badge--green">발행</span></div><div class="kanban-card__title">리소 핸드북 1쇄</div><div class="kanban-card__foot"><span class="inline-note inline-note--success" style="font-size:var(--text-2xs)"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.8"><path d="M20 6 9 17l-5-5"/></svg>완료</span></div></article>
-            <article class="kanban-card" draggable="true" data-card style="opacity:.7"><div class="kanban-card__tags"><span class="badge badge--green">발행</span></div><div class="kanban-card__title">스폿 컬러 포스터 세트</div><div class="kanban-card__foot"><span class="mono" style="font-size:var(--text-2xs);color:var(--color-text-muted)">320부</span></div></article>
+            <article class="kanban-card" draggable="true" data-card style="opacity:.7"><div class="kanban-card__tags"><span class="badge badge--green">발행</span></div><div class="kanban-card__title">리소 핸드북 1쇄</div><div class="kanban-card__foot"><span class="inline-note inline-note--success" style="font-size:var(--text-2xs)"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.8"><path d="M20 6 9 17l-5-5"/></svg>완료</span></div><div class="kanban-card__move"><button type="button" class="kmove" data-kmove="prev" aria-label="리소 핸드북 1쇄 이전 단계로 이동">← 이전</button><button type="button" class="kmove" data-kmove="next" aria-label="리소 핸드북 1쇄 다음 단계로 이동">다음 →</button></div></article>
+            <article class="kanban-card" draggable="true" data-card style="opacity:.7"><div class="kanban-card__tags"><span class="badge badge--green">발행</span></div><div class="kanban-card__title">스폿 컬러 포스터 세트</div><div class="kanban-card__foot"><span class="mono" style="font-size:var(--text-2xs);color:var(--color-text-muted)">320부</span></div><div class="kanban-card__move"><button type="button" class="kmove" data-kmove="prev" aria-label="스폿 컬러 포스터 세트 이전 단계로 이동">← 이전</button><button type="button" class="kmove" data-kmove="next" aria-label="스폿 컬러 포스터 세트 다음 단계로 이동">다음 →</button></div></article>
           </div>
         </section>
       </div>
@@ -146,12 +184,21 @@
 
 <script src="../app.js" defer></script>
 <script>
-/* Kanban drag & drop (page-local; degrades gracefully) */
+/* Kanban board (page-local; degrades gracefully). Pointer drag AND a keyboard
+   path — every card carries "이전/다음 단계" buttons, and moves are announced
+   through a polite live region so the board is fully operable without a mouse. */
 (function(){
+  var cols = Array.prototype.slice.call(document.querySelectorAll('[data-col]'));
+  var live = document.querySelector('[data-kanban-live]');
   var dragEl = null;
+
+  function colName(col){ return col.getAttribute('aria-label') || ''; }
+  function cardTitle(card){ var t = card.querySelector('.kanban-card__title'); return t ? t.textContent.trim() : '카드'; }
+
+  /* --- pointer drag --- */
   document.querySelectorAll('[data-card]').forEach(function(c){
     c.addEventListener('dragstart', function(){ dragEl = c; c.classList.add('is-dragging'); });
-    c.addEventListener('dragend', function(){ c.classList.remove('is-dragging'); dragEl = null; recount(); });
+    c.addEventListener('dragend', function(){ c.classList.remove('is-dragging'); dragEl = null; recount(); updateMoveButtons(); });
   });
   document.querySelectorAll('[data-dropzone-col]').forEach(function(z){
     z.addEventListener('dragover', function(e){ e.preventDefault(); z.classList.add('is-over');
@@ -171,12 +218,48 @@
       return closest;
     }, {offset:-Infinity}).element || null;
   }
+
+  /* --- keyboard / button move --- */
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('[data-kmove]');
+    if(!btn) return;
+    var card = btn.closest('[data-card]');
+    var col = btn.closest('[data-col]');
+    if(!card || !col) return;
+    var i = cols.indexOf(col);
+    var dir = btn.getAttribute('data-kmove') === 'prev' ? -1 : 1;
+    var target = cols[i + dir];
+    if(!target) return;
+    var zone = target.querySelector('[data-dropzone-col]');
+    if(!zone) return;
+    zone.appendChild(card);
+    recount();
+    updateMoveButtons();
+    if(live) live.textContent = "'" + cardTitle(card) + "' 카드를 '" + colName(target) + "' 단계로 옮겼습니다.";
+    /* keep keyboard focus sensible: if the pressed button is now disabled
+       (card reached an end column), hand focus to the other move button. */
+    if(btn.disabled){ var other = card.querySelector('.kmove:not(:disabled)'); if(other) other.focus(); }
+    else { btn.focus(); }
+  });
+
+  function updateMoveButtons(){
+    cols.forEach(function(col, i){
+      var prevEnd = i === 0, nextEnd = i === cols.length - 1;
+      col.querySelectorAll('[data-kmove]').forEach(function(b){
+        var isPrev = b.getAttribute('data-kmove') === 'prev';
+        b.disabled = isPrev ? prevEnd : nextEnd;
+      });
+    });
+  }
+
   function recount(){
-    document.querySelectorAll('[data-col]').forEach(function(col){
+    cols.forEach(function(col){
       var n = col.querySelectorAll('[data-card]').length;
       var c = col.querySelector('.kcol__count'); if(c) c.textContent = n;
     });
   }
+
+  updateMoveButtons();
 })();
 </script>
 </body>

@@ -6,9 +6,8 @@
      tokens.css → semantic.css → base.css → components/*.css
    ========================================================================== */
 
-/* Comic letterers + readable body. Robust fallbacks so file:// still reads
-   "comic" even fully offline. */
-@import url("https://fonts.googleapis.com/css2?family=Bangers&family=Luckiest+Guy&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,700&family=JetBrains+Mono:wght@400;700&display=swap");
+/* Fonts are loaded once, up in tokens.css (was a second @import here → two
+   render-blocking requests). Keep all @font declarations in that single call. */
 
 /* ---------------------------------------------------------------- *
  * RESET
@@ -34,6 +33,9 @@ body {
   background-color: var(--color-bg);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  word-break: keep-all;          /* Hangul wraps per-eojeol, not mid-word */
+  overflow-wrap: break-word;     /* safety net for long URLs / Latin tokens */
+  line-break: strict;
 }
 
 img, picture, svg, video, canvas {
@@ -227,6 +229,98 @@ h6 {
 }
 
 /* ---------------------------------------------------------------- *
+ * PRINT-FX  —  'a pro studio's offset print' details
+ *   All decorative: authors add aria-hidden="true" in markup.
+ * ---------------------------------------------------------------- */
+
+/* Halftone atmosphere — dot vignette masked to fade outward, giving a page
+   real print 濃淡 (density) depth instead of a flat fill. Scope to a section. */
+.halftone-atmos { position: relative; isolation: isolate; }
+.halftone-atmos::after {
+  content: "";
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(var(--halftone-atmos-color) 22%, transparent 23%),
+    radial-gradient(var(--halftone-atmos-color) 14%, transparent 15%);
+  background-size:
+    var(--halftone-atmos-size) var(--halftone-atmos-size),
+    calc(var(--halftone-atmos-size) * 2.4) calc(var(--halftone-atmos-size) * 2.4);
+  background-position: 0 0, calc(var(--halftone-atmos-size) / 2) calc(var(--halftone-atmos-size) / 2);
+  -webkit-mask-image: radial-gradient(ellipse 90% 80% at 72% 22%, #000 0%, transparent 74%);
+          mask-image: radial-gradient(ellipse 90% 80% at 72% 22%, #000 0%, transparent 74%);
+  pointer-events: none;
+  z-index: 0;
+}
+.halftone-atmos > * { position: relative; z-index: 1; }
+
+/* CMYK plate misregistration — cyan + magenta ghosts 1–2px off-plate.
+   Use on medium display text; the hero keeps its own ink drop shadow. */
+.misreg {
+  text-shadow:
+    var(--misreg-shift-x) var(--misreg-shift-y) 0 var(--misreg-magenta),
+    calc(var(--misreg-shift-x) * -1) calc(var(--misreg-shift-y) * -1) 0 var(--misreg-cyan);
+}
+
+/* Rubber approval stamp — rotated red ink, reads like "검열필" on a cover */
+.stamp {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  padding: 5px 13px;
+  font-family: var(--font-action);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-wider);
+  color: var(--red-600);
+  background: transparent;
+  border: 3px solid var(--red-600);
+  border-radius: var(--radius-sm);
+  transform: rotate(-7deg);
+  opacity: 0.9;
+}
+[data-theme="dark"] .stamp { color: var(--red-400); border-color: var(--red-400); }
+
+/* Vintage round price sticker */
+.price-sticker {
+  display: inline-grid; place-items: center;
+  width: 68px; aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--yellow-400);
+  color: var(--neutral-900);
+  border: var(--border-w-3) solid var(--ink);
+  box-shadow: var(--shadow-comic-xs);
+  font-family: var(--font-action);
+  font-size: var(--text-lg);
+  text-align: center; line-height: 0.9;
+  transform: rotate(-10deg);
+}
+
+/* Barcode strip (cover furniture) */
+.barcode {
+  width: 118px; height: 40px;
+  background-color: var(--paper);
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--ink) 0 2px, transparent 2px 4px,
+    var(--ink) 4px 7px, transparent 7px 9px,
+    var(--ink) 9px 10px, transparent 10px 13px);
+  border: var(--border-w-2) solid var(--ink);
+  border-radius: 2px;
+}
+
+/* Comic running head — "ISSUE #22 · PAGE 1" cover-furniture bar */
+.running-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--space-3); flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-black);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  border-bottom: var(--border-w-3) solid var(--ink);
+  padding-bottom: var(--space-2);
+}
+.running-head .rh-issue { color: var(--color-text); }
+
+/* ---------------------------------------------------------------- *
  * PANEL (comic cell) primitives
  * ---------------------------------------------------------------- */
 .panel {
@@ -259,7 +353,9 @@ h6 {
   border-radius: var(--radius-bubble);
   padding: var(--space-3) var(--space-4);
   box-shadow: var(--shadow-comic-sm);
-  font-weight: var(--weight-bold);
+  font-family: var(--font-bubble);   /* letterer's hand */
+  font-weight: var(--weight-normal);
+  line-height: var(--leading-snug);
 }
 /* tail — bottom-left pointing down */
 .speech-bubble::after {
@@ -296,7 +392,8 @@ h6 {
   border-radius: var(--radius-pill);
   padding: var(--space-3) var(--space-5);
   box-shadow: var(--shadow-comic-sm);
-  font-weight: var(--weight-bold);
+  font-family: var(--font-bubble);   /* letterer's hand */
+  font-weight: var(--weight-normal);
 }
 .thought-bubble::after {
   content: "";
@@ -321,7 +418,7 @@ h6 {
   width: 84px;
   aspect-ratio: 1;
   background: var(--red-600);   /* white burst text = 5.69:1 */
-  color: #fff;
+  color: var(--fixed-white);
   clip-path: var(--action-burst);
   font-family: var(--font-action);
   font-size: var(--text-lg);
@@ -543,3 +640,34 @@ h6 {
   border-radius: var(--radius-xs);
   flex: none;
 }
+
+/* ---------------------------------------------------------------- *
+ * HANGUL REFINEMENT LAYER
+ *   Premise: <html lang="ko"> + font-stack order (Latin → Hangul mood →
+ *   safety → system). Latin line-heights are too tight for Hangul stems.
+ * ---------------------------------------------------------------- */
+:lang(ko) {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-break: strict;
+  font-synthesis: none;          /* no faux-bold / faux-oblique on Korean */
+}
+:lang(ko) :is(h1, h2, h3, h4, h5) { line-height: var(--leading-heading-ko); }
+:lang(ko) :is(.display, .comic-title, .stat-value, .es-title) {
+  line-height: var(--leading-display-ko);
+}
+:lang(ko) p { line-height: var(--leading-body-ko); }
+/* uppercase / small-caps are no-ops on Hangul — size + tracking make the tier */
+:lang(ko) :is(.eyebrow, .demo-label, .field-label, .cmdk-group-label, .side-section, h6) {
+  letter-spacing: var(--tracking-caps-ko);
+  text-transform: none;
+  font-variant: normal;
+}
+:lang(ko) :is(em, i, cite) { font-style: normal; font-weight: var(--weight-bold); }
+/* Data digits render from the Latin face (tabular) even inside Korean runs */
+:lang(ko) :is(.table td, .stat-value, .slider-value, .price, kbd, .kbd, .cmdk-kbd) {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+/* Balance short Hangul headlines, tidy body rag */
+:lang(ko) :is(h1, h2, h3, .hero-title, .card-header, .modal-title) { text-wrap: balance; }
+:lang(ko) p { text-wrap: pretty; }

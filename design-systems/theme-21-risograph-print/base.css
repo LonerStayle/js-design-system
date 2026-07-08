@@ -21,7 +21,7 @@ html {
 }
 
 body {
-  min-height: 100vh;
+  min-height: 100dvh;
   font-family: var(--font-sans);
   font-size: var(--text-md);
   line-height: var(--leading-normal);
@@ -32,7 +32,10 @@ body {
   text-rendering: optimizeLegibility;
   font-feature-settings: "ss01", "cv11";
   position: relative;
-  overflow-x: hidden;
+  /* No global overflow-x:hidden — bleed/misregister is clipped on the specific
+     hero/section containers that produce it (.hero, .pricing-hero, .err,
+     .ob-page, .poster all set overflow:clip/hidden), and the grain sheet is
+     position:fixed so it never contributes scrollable overflow. */
 }
 
 img, picture, svg, video, canvas {
@@ -87,6 +90,7 @@ body::before {
   opacity: var(--grain-strength);
   mix-blend-mode: var(--grain-mode);
   animation: grain-drift 8s steps(6) infinite;
+  will-change: transform;
 }
 
 @keyframes grain-drift {
@@ -97,6 +101,9 @@ body::before {
   80%  { transform: translate(4%, 2%); }
   100% { transform: translate(0, 0); }
 }
+/* Freeze the drift on small screens — the full-viewport paint is the most
+   expensive thing on the page and mobile GPUs don't need it moving. */
+@media (max-width: 560px) { body::before { animation: none; } }
 
 /* Optional second registration sheet for extra ink-mottle on hero areas */
 .grain-heavy { position: relative; }
@@ -141,10 +148,10 @@ code, kbd, pre, samp { font-family: var(--font-mono); font-size: 0.92em; }
 
 /* The zine poster headline — oversized, optionally inked split */
 .display {
-  font-family: var(--font-display);
+  font-family: var(--font-poster);
   font-weight: var(--weight-black);
   font-size: clamp(var(--text-4xl), 9vw, var(--text-6xl));
-  line-height: 0.96;
+  line-height: 1.02;                 /* Latin poster; :lang(ko) relaxes to 1.1 */
   letter-spacing: var(--tracking-tighter);
   text-transform: uppercase;
 }
@@ -346,7 +353,7 @@ code, kbd, pre, samp { font-family: var(--font-mono); font-size: 0.92em; }
 }
 
 /* Section rhythm */
-.section { padding-block: var(--space-12); }
+.section { padding-block: var(--space-12); position: relative; }
 .section--tight { padding-block: var(--space-9); }
 
 /* Divider with a stamped caption */
@@ -354,6 +361,54 @@ code, kbd, pre, samp { font-family: var(--font-mono); font-size: 0.92em; }
   border-top: var(--border-3) solid var(--color-border);
   position: relative;
 }
+
+/* ============================================================================
+   PRINT-SHOP CHROME — the registration/press furniture that frames a real
+   riso print. Signature objects meant to recur across pages.
+   ============================================================================ */
+
+/* Colour calibration strip — the 4 spot inks + a halftone tone ramp, the
+   little bar a print shop tapes to the edge of a proof to check the run. */
+.calibration-bar {
+  display: flex; align-items: stretch;
+  height: 1.5rem;
+  border: var(--border-2) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: var(--shadow-flat-sm);
+}
+.calibration-bar > span { flex: 1; display: block; }
+.calibration-bar .cal-pink   { background: var(--fluoro-pink-500); }
+.calibration-bar .cal-blue   { background: var(--fluoro-blue-500); }
+.calibration-bar .cal-yellow { background: var(--fluoro-yellow-500); }
+.calibration-bar .cal-green  { background: var(--fluoro-green-500); }
+.calibration-bar .cal-tone {
+  flex: 2;
+  background-color: var(--color-surface);
+  color: var(--ink-black);
+  background-image: var(--halftone);
+  background-size: 6px 6px;
+  -webkit-mask-image: linear-gradient(to right, #000, transparent); /* intentional: alpha mask */
+  mask-image: linear-gradient(to right, #000, transparent);         /* intentional: alpha mask */
+}
+/* dark = "glow-in-the-dark" edition: the spot swatches lift on ink stock */
+[data-theme="dark"] .calibration-bar > span { mix-blend-mode: screen; }
+
+/* Edition numbering stamp — a rotated inked pill, e.g. "№ 047 / 200". */
+.edition-stamp {
+  display: inline-flex; align-items: center; gap: 0.4em;
+  font-family: var(--font-mono); font-weight: var(--weight-bold);
+  font-size: var(--text-2xs); letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fluoro-pink-600);
+  border: var(--border-2) solid currentColor;
+  border-radius: var(--radius-pill);
+  padding: 0.4em 0.9em;
+  rotate: -4deg;
+  background: var(--color-surface);
+  white-space: nowrap;
+}
+[data-theme="dark"] .edition-stamp { color: var(--fluoro-pink-400); }
 
 /* ============================================================================
    ACCESSIBILITY
@@ -415,15 +470,34 @@ code, kbd, pre, samp { font-family: var(--font-mono); font-size: 0.92em; }
    penalty for reduced-motion or no-JS users.
    ============================================================================ */
 @media (prefers-reduced-motion: no-preference) {
-  html.js [data-reveal] {
+  html.js [data-reveal] { opacity: 0; }
+  /* SIGNATURE LOAD MOTION — "the two-colour plate registers". The element
+     enters with its pink/blue separations slipped, then they snap into
+     register as it settles. Same misregistration grammar as the hover slip
+     and the reprint flash, so load/scroll/hover all speak one language. */
+  html.js [data-reveal].is-in {
+    animation: plate-register var(--duration-slow) var(--ease-out) both;
+    animation-delay: calc(var(--i, 0) * 70ms);   /* --i set by app.js on stagger groups */
+  }
+}
+@keyframes plate-register {
+  0% {
     opacity: 0;
     transform: translateY(14px);
-    transition: opacity var(--duration-slow) var(--ease-out),
-      transform var(--duration-slow) var(--ease-out);
+    filter: drop-shadow(3px 0 0 var(--fluoro-pink-500))
+            drop-shadow(-3px 0 0 var(--fluoro-blue-500));
   }
-  html.js [data-reveal].is-in { opacity: 1; transform: none; }
-  /* staggered children */
-  [data-reveal-stagger] > * { transition-delay: calc(var(--i, 0) * 60ms); }
+  60% {
+    opacity: 1;
+    filter: drop-shadow(1px 0 0 var(--fluoro-pink-500))
+            drop-shadow(-1px 0 0 var(--fluoro-blue-500));
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+    filter: none;   /* interpolates cleanly from the drop-shadows; leaves no
+                       persistent compositing layer on settled elements */
+  }
 }
 
 /* "Bad press run" — a quick chromatic mis-registration flash */
@@ -444,3 +518,29 @@ code, kbd, pre, samp { font-family: var(--font-mono); font-size: 0.92em; }
 .mono { font-family: var(--font-mono); }
 .center { text-align: center; }
 .nowrap { white-space: nowrap; }
+
+/* ============================================================================
+   HANGUL REFINEMENT — assumes <html lang="ko"> + the stack order in tokens.css.
+   Riso keeps its zine caps treatment for LATIN; here we relax only the Latin
+   metrics that hurt Korean (tight leading, faux-bold on single-weight faces,
+   ineffective transforms). Latin numerals still ride the Latin faces.
+   ============================================================================ */
+:lang(ko) { word-break: keep-all; overflow-wrap: break-word; line-break: strict; }
+
+:lang(ko) :is(h1, h2, h3, h4, h5, h6, .card__title, .section-head__title,
+  .page-head__title, .modal__title, .drawer__title, .empty__title) {
+  line-height: var(--leading-heading-ko);
+}
+:lang(ko) :is(.display, .hero__title, .hero__kr) {
+  line-height: var(--leading-display-ko);
+  font-synthesis-weight: none;   /* Do Hyeon / Black Han Sans ship one weight */
+}
+/* Wide-tracked mono stamps: uppercase does nothing to Hangul and the Latin
+   0.18em tracking is too airy — cap it. */
+:lang(ko) :is(.eyebrow, .label-stamp) { letter-spacing: var(--tracking-caps-ko); }
+/* No italic in Korean — swap the faux-oblique for a weight bump. */
+:lang(ko) :is(em, i, cite) { font-style: normal; font-weight: var(--weight-semibold); }
+/* Data reads tabular; numerals render on the Latin face so figures line up. */
+:lang(ko) :is(.table td, .statcard__value, .stat__value, .price, .stepper__input) {
+  font-variant-numeric: tabular-nums lining-nums;
+}

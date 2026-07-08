@@ -1,15 +1,31 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Settings — Comic Pop Art</title>
+<script>
+/* FOUC guard — set theme before first paint (key shared with app.js) */
+(function () {
+  try {
+    var t = localStorage.getItem("comic-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
+<title>설정 — 코믹 팝</title>
+<meta name="description" content="리더 계정 설정 — 프로필, 알림, 화면, 결제, 위험 구역." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="../theme.css" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='14' fill='%23E8222B'/><text x='50' y='74' font-size='66' text-anchor='middle' fill='%23FFD400' font-family='Impact'>!</text></svg>" />
 <style>
 /* PAGE-LOCAL layout only (design tokens). No re-coloring of components. */
 .settings-head { gap: var(--space-4); }
 .settings-head .head-actions { gap: var(--space-3); flex-wrap: wrap; }
+
+/* CMYK misregistration on the control-room title (cyan/magenta off-plate + ink drop) */
+.mc-title { text-shadow:-4px -3px 0 var(--misreg-cyan), 4px 3px 0 var(--misreg-magenta), 6px 6px 0 var(--ink); }
 
 /* GENERAL grid: bio spans both columns */
 .gen-grid .span-2 { grid-column: 1 / -1; }
@@ -43,7 +59,7 @@
 .plan-row { display: flex; align-items: center; gap: var(--space-5); flex-wrap: wrap; }
 .plan-row .plan-main { flex: 1 1 220px; }
 
-/* DANGER ZONE page-local panel (red border + halftone-red corner) */
+/* DANGER ZONE page-local panel (red border + halftone-red corner + stamp) */
 .danger-zone {
   position: relative;
   border-color: var(--red-500) !important;
@@ -52,117 +68,130 @@
 .danger-zone::after {
   content: "";
   position: absolute; top: 0; right: 0;
-  width: 120px; height: 120px;
+  width: 140px; height: 140px;
   background-image: var(--halftone-red);
+  /* intentional: mask alpha (luminance), not a themeable color — fades the halftone corner */
   -webkit-mask-image: radial-gradient(circle at top right, #000 0%, transparent 70%);
   mask-image: radial-gradient(circle at top right, #000 0%, transparent 70%);
   opacity: 0.55; pointer-events: none;
 }
 .danger-zone > * { position: relative; z-index: 1; }
+.danger-zone .dz-stamp { position: absolute; top: 18px; right: 20px; z-index: 2; }
 
 @media (max-width: 768px) {
   .gen-grid { grid-template-columns: 1fr !important; }
   .accent-cards { grid-template-columns: 1fr; }
   .opt-row { align-items: flex-start; flex-direction: column; }
+  .danger-zone .dz-stamp { position: static; display: inline-flex; margin-bottom: var(--space-3); }
 }
 </style>
 </head>
 <body class="paper-bg">
-<a class="skip-link" href="#main">Skip to content</a>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
 
-<nav class="navbar" aria-label="Primary">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true">!</span><span class="hide-mobile">COMIC POP</span></a>
+<nav class="navbar" aria-label="주 메뉴">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true">!</span><span class="hide-mobile">코믹 팝</span></a>
   <div class="nav-links">
-    <a class="nav-link" href="dashboard.html">Dashboard</a>
-    <a class="nav-link" href="kanban.html">Kanban</a>
-    <a class="nav-link" href="inbox.html">Inbox</a>
-    <a class="nav-link" href="pricing.html">Pricing</a>
+    <a class="nav-link" href="dashboard.html">대시보드</a>
+    <a class="nav-link" href="kanban.html">칸반</a>
+    <a class="nav-link" href="inbox.html">받은편지함</a>
+    <a class="nav-link" href="pricing.html">요금제</a>
   </div>
   <div class="nav-right">
-    <button class="btn btn-ghost btn-sm" data-cmdk-open aria-label="Search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><kbd class="hide-mobile">⌘K</kbd></button>
-    <button class="btn btn-icon btn-sm btn-outline" data-theme-toggle aria-label="Toggle dark mode"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg></button>
-    <span class="avatar sm red">JS</span>
+    <button class="btn btn-ghost btn-sm" data-cmdk-open aria-label="명령 팔레트 열기"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><kbd class="hide-mobile">⌘K</kbd></button>
+    <button class="btn btn-icon btn-sm btn-outline" data-theme-toggle aria-label="다크 모드 전환"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg></button>
+    <span class="avatar sm red" role="img" aria-label="김도현">도</span>
   </div>
 </nav>
 
 <main id="main" class="container" style="padding-block:var(--space-7)">
-  <!-- breadcrumb -->
-  <nav class="breadcrumb mb-4" aria-label="Breadcrumb">
-    <a href="../index.html">Home</a><span class="sep" aria-hidden="true">›</span><span class="current">Settings</span>
+  <div class="running-head mb-4">
+    <span class="rh-issue">제22호 · 코믹 팝아트</span>
+    <span>리더 계정 · @dohyun</span>
+  </div>
+
+  <nav class="breadcrumb mb-4" aria-label="위치 경로">
+    <a href="../index.html">홈</a><span class="sep" aria-hidden="true">›</span><span class="current">설정</span>
   </nav>
 
   <!-- ===== PAGE HEAD ===== -->
   <div class="row between wrap settings-head mb-6">
     <div>
-      <h1 class="comic-title" style="font-size:var(--text-5xl);line-height:1">MISSION CONTROL</h1>
-      <p class="text-muted weight-bold" style="margin-top:6px">Tune your reader account.</p>
+      <h1 class="comic-title mc-title" style="font-size:var(--text-5xl);line-height:1">관제실</h1>
+      <p class="text-muted weight-bold" style="margin-top:10px">리더 계정을 마음대로 조율하세요.</p>
     </div>
     <div class="row head-actions items-start">
-      <button class="btn btn-primary" data-toast="success" data-toast-title="Saved!" data-toast-body="Your settings are locked in." data-burst="SAVED!">Save changes</button>
-      <button class="btn btn-ghost">Discard</button>
+      <button class="btn btn-primary" id="save-all" data-burst="저장!">변경 저장</button>
+      <button class="btn btn-ghost">되돌리기</button>
     </div>
   </div>
 
   <!-- ===== TABS ===== -->
   <div class="tabs">
-    <div class="tablist pills" role="tablist" aria-label="Settings sections">
-      <button class="tab" id="tab-general" role="tab" aria-selected="true" aria-controls="panel-general">General</button>
-      <button class="tab" id="tab-notif" role="tab" aria-selected="false" aria-controls="panel-notif" tabindex="-1">Notifications</button>
-      <button class="tab" id="tab-appear" role="tab" aria-selected="false" aria-controls="panel-appear" tabindex="-1">Appearance</button>
-      <button class="tab" id="tab-billing" role="tab" aria-selected="false" aria-controls="panel-billing" tabindex="-1">Billing</button>
-      <button class="tab" id="tab-danger" role="tab" aria-selected="false" aria-controls="panel-danger" tabindex="-1">Danger Zone</button>
+    <div class="tablist pills" role="tablist" aria-label="설정 섹션">
+      <button class="tab" id="tab-general" role="tab" aria-selected="true" aria-controls="panel-general">일반</button>
+      <button class="tab" id="tab-notif" role="tab" aria-selected="false" aria-controls="panel-notif" tabindex="-1">알림</button>
+      <button class="tab" id="tab-appear" role="tab" aria-selected="false" aria-controls="panel-appear" tabindex="-1">화면</button>
+      <button class="tab" id="tab-billing" role="tab" aria-selected="false" aria-controls="panel-billing" tabindex="-1">결제</button>
+      <button class="tab" id="tab-danger" role="tab" aria-selected="false" aria-controls="panel-danger" tabindex="-1">위험 구역</button>
     </div>
 
     <!-- ===== GENERAL ===== -->
     <div class="tabpanel" id="panel-general" role="tabpanel" aria-labelledby="tab-general">
       <div class="card">
-        <div class="card-header">Reader profile</div>
-        <div class="card-body">
+        <div class="card-header">리더 프로필</div>
+        <div class="card-body stack stack-6">
+          <div class="alert danger" role="alert" id="save-alert">
+            <span class="alert-icon" aria-hidden="true">!</span>
+            <div>
+              <div class="alert-title">변경 사항을 저장하지 못했어요</div>
+              <div class="alert-body">이메일 주소 형식을 확인한 뒤 다시 저장해 주세요.</div>
+            </div>
+          </div>
           <div class="grid grid-2 gen-grid">
             <div class="field">
-              <label class="field-label" for="g-name">Display name</label>
-              <input class="input" id="g-name" value="Jay Spark" />
+              <label class="field-label" for="g-name">표시 이름</label>
+              <input class="input" id="g-name" value="김도현" />
             </div>
             <div class="field">
-              <label class="field-label" for="g-user">Username</label>
-              <div class="input-group"><span class="adornment" aria-hidden="true">@</span><input class="input" id="g-user" value="jayspark" /></div>
-              <div class="field-hint">This is your public pull-list handle.</div>
+              <label class="field-label" for="g-user">아이디</label>
+              <div class="input-group"><span class="adornment" aria-hidden="true">@</span><input class="input" id="g-user" value="dohyun" /></div>
+              <div class="field-hint">공개 풀리스트에 표시되는 아이디예요.</div>
             </div>
             <div class="field">
-              <label class="field-label" for="g-email">Email</label>
-              <input class="input" id="g-email" type="email" value="jay.spark@comicpop.io" />
-              <div class="field-hint">We only ping you about your subscriptions.</div>
+              <label class="field-label" for="g-email">이메일</label>
+              <input class="input is-invalid" id="g-email" type="email" value="dohyun@popcomics" aria-invalid="true" aria-describedby="g-email-err" />
+              <div class="field-error" id="g-email-err"><span aria-hidden="true">✕</span> 이메일 형식이 올바르지 않아요 (예: dohyun@popcomics.kr)</div>
             </div>
             <div class="field">
-              <label class="field-label" for="g-country">Country</label>
+              <label class="field-label" for="g-country">국가</label>
               <select class="select" id="g-country">
-                <option>United States</option>
-                <option>Canada</option>
-                <option>United Kingdom</option>
-                <option>Japan</option>
-                <option selected>South Korea</option>
-                <option>Australia</option>
+                <option selected>대한민국</option>
+                <option>일본</option>
+                <option>미국</option>
+                <option>캐나다</option>
+                <option>영국</option>
+                <option>호주</option>
               </select>
             </div>
             <div class="field span-2">
-              <label class="field-label" for="g-bio">Bio</label>
-              <textarea class="textarea" id="g-bio" rows="3">Lifelong floppy collector. Hunting that 1963 first-appearance variant. Ask me about Silver Age inkers.</textarea>
+              <label class="field-label" for="g-bio">소개</label>
+              <textarea class="textarea" id="g-bio" rows="3">평생 단행본 수집가. 1963년 첫 등장 변형판을 찾아 헤매는 중. 실버에이지 잉커 이야기라면 언제든 환영이에요.</textarea>
             </div>
             <div class="field">
-              <label class="field-label" for="g-lang">Language</label>
+              <label class="field-label" for="g-lang">언어</label>
               <select class="select" id="g-lang">
-                <option selected>English (US)</option>
-                <option>한국어</option>
+                <option selected>한국어</option>
+                <option>English (US)</option>
                 <option>日本語</option>
                 <option>Español</option>
-                <option>Français</option>
               </select>
             </div>
           </div>
         </div>
         <div class="card-footer end">
-          <button class="btn btn-ghost">Reset fields</button>
-          <button class="btn btn-primary" data-toast="success" data-toast-title="Saved!" data-toast-body="Profile updated." data-burst="ZAP!">Update profile</button>
+          <button class="btn btn-ghost">입력값 초기화</button>
+          <button class="btn btn-primary" id="save-profile" data-burst="번쩍!">프로필 저장</button>
         </div>
       </div>
     </div>
@@ -171,44 +200,44 @@
     <div class="tabpanel" id="panel-notif" role="tabpanel" aria-labelledby="tab-notif" hidden>
       <div class="grid grid-2">
         <div class="card">
-          <div class="card-header">Email</div>
+          <div class="card-header">이메일</div>
           <div class="card-body">
-            <div class="list">
+            <div class="list" style="box-shadow:none;border:none;background:transparent">
               <div class="opt-row">
-                <div class="opt-text"><div class="opt-title">New issue drops</div><div class="opt-desc">When a title on your pull list ships.</div></div>
-                <label class="toggle" aria-label="New issue drops"><input type="checkbox" checked /><span class="track"><span class="knob"></span></span></label>
+                <div class="opt-text"><div class="opt-title">새 이슈 발매</div><div class="opt-desc">풀리스트에 담은 작품이 나오면 알려드려요.</div></div>
+                <label class="toggle" aria-label="새 이슈 발매 알림"><input type="checkbox" checked /><span class="track"><span class="knob"></span></span></label>
               </div>
               <div class="opt-row">
-                <div class="opt-text"><div class="opt-title">Weekly digest</div><div class="opt-desc">A Sunday round-up of new arrivals.</div></div>
-                <label class="toggle" aria-label="Weekly digest"><input type="checkbox" checked /><span class="track"><span class="knob"></span></span></label>
+                <div class="opt-text"><div class="opt-title">주간 다이제스트</div><div class="opt-desc">매주 일요일, 신간 소식을 한 번에.</div></div>
+                <label class="toggle" aria-label="주간 다이제스트 알림"><input type="checkbox" checked /><span class="track"><span class="knob"></span></span></label>
               </div>
               <div class="opt-row">
-                <div class="opt-text"><div class="opt-title">Replies to me</div><div class="opt-desc">When a fan responds to your reviews.</div></div>
-                <label class="toggle" aria-label="Replies to me"><input type="checkbox" checked /><span class="track"><span class="knob"></span></span></label>
+                <div class="opt-text"><div class="opt-title">내 리뷰에 달린 답글</div><div class="opt-desc">팬이 내 리뷰에 답하면 알려드려요.</div></div>
+                <label class="toggle" aria-label="답글 알림"><input type="checkbox" checked /><span class="track"><span class="knob"></span></span></label>
               </div>
               <div class="opt-row">
-                <div class="opt-text"><div class="opt-title">Marketing</div><div class="opt-desc">Promos, sales and crossover events.</div></div>
-                <label class="toggle" aria-label="Marketing"><input type="checkbox" /><span class="track"><span class="knob"></span></span></label>
+                <div class="opt-text"><div class="opt-title">마케팅 소식</div><div class="opt-desc">프로모션, 세일, 크로스오버 이벤트.</div></div>
+                <label class="toggle" aria-label="마케팅 소식 알림"><input type="checkbox" /><span class="track"><span class="knob"></span></span></label>
               </div>
             </div>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-header">Push</div>
+          <div class="card-header">푸시</div>
           <div class="card-body">
-            <div class="list">
+            <div class="list" style="box-shadow:none;border:none;background:transparent">
               <div class="opt-row">
-                <div class="opt-text"><div class="opt-title">Restock alerts</div><div class="opt-desc">Sold-out variant back on the shelf.</div></div>
-                <label class="toggle" aria-label="Restock alerts"><input type="checkbox" checked /><span class="track"><span class="knob"></span></span></label>
+                <div class="opt-text"><div class="opt-title">재입고 알림</div><div class="opt-desc">품절된 변형판이 다시 들어오면.</div></div>
+                <label class="toggle" aria-label="재입고 알림"><input type="checkbox" checked /><span class="track"><span class="knob"></span></span></label>
               </div>
               <div class="opt-row">
-                <div class="opt-text"><div class="opt-title">Order shipped</div><div class="opt-desc">Tracking ready for your box.</div></div>
-                <label class="toggle" aria-label="Order shipped"><input type="checkbox" checked /><span class="track"><span class="knob"></span></span></label>
+                <div class="opt-text"><div class="opt-title">배송 시작</div><div class="opt-desc">내 상자의 송장이 준비되면.</div></div>
+                <label class="toggle" aria-label="배송 시작 알림"><input type="checkbox" checked /><span class="track"><span class="knob"></span></span></label>
               </div>
               <div class="opt-row">
-                <div class="opt-text"><div class="opt-title">Signing events</div><div class="opt-desc">Creator meet-ups near you.</div></div>
-                <label class="toggle" aria-label="Signing events"><input type="checkbox" /><span class="track"><span class="knob"></span></span></label>
+                <div class="opt-text"><div class="opt-title">보안 로그인 알림</div><div class="opt-desc">계정 보호를 위해 항상 켜져 있어요.</div></div>
+                <label class="toggle" aria-label="보안 로그인 알림 (항상 켜짐)"><input type="checkbox" checked disabled /><span class="track"><span class="knob"></span></span></label>
               </div>
             </div>
           </div>
@@ -216,54 +245,54 @@
       </div>
 
       <div class="field mt-6">
-        <label class="field-label" for="digest-freq">Digest frequency</label>
-        <div class="segmented" role="group" aria-label="Digest frequency" id="digest-freq">
-          <button class="is-active" aria-pressed="true" data-value="daily">Daily</button>
-          <button aria-pressed="false" data-value="weekly">Weekly</button>
-          <button aria-pressed="false" data-value="off">Off</button>
+        <label class="field-label" for="digest-freq">다이제스트 주기</label>
+        <div class="segmented" role="group" aria-label="다이제스트 주기" id="digest-freq">
+          <button class="is-active" aria-pressed="true" data-value="daily">매일</button>
+          <button aria-pressed="false" data-value="weekly">매주</button>
+          <button aria-pressed="false" data-value="off">끄기</button>
         </div>
-        <div class="field-hint">How often we bundle your alerts into one email.</div>
+        <div class="field-hint">알림을 한 통의 이메일로 묶는 주기예요.</div>
       </div>
     </div>
 
     <!-- ===== APPEARANCE ===== -->
     <div class="tabpanel" id="panel-appear" role="tabpanel" aria-labelledby="tab-appear" hidden>
       <div class="card">
-        <div class="card-header">Look &amp; feel</div>
+        <div class="card-header">화면과 느낌</div>
         <div class="card-body stack stack-6">
           <div class="opt-row">
-            <div class="opt-text"><div class="opt-title">Theme</div><div class="opt-desc">Light paper, dark newsprint, or follow your system.</div></div>
-            <div class="segmented" role="group" aria-label="Theme" id="theme-seg">
-              <button class="is-active" aria-pressed="true" data-value="light">Light</button>
-              <button aria-pressed="false" data-value="dark">Dark</button>
-              <button aria-pressed="false" data-value="auto">Auto</button>
+            <div class="opt-text"><div class="opt-title">테마</div><div class="opt-desc">밝은 종이, 어두운 신문지, 또는 시스템 설정을 따라요.</div></div>
+            <div class="segmented" role="group" aria-label="테마" id="theme-seg">
+              <button class="is-active" aria-pressed="true" data-value="light">라이트</button>
+              <button aria-pressed="false" data-value="dark">다크</button>
+              <button aria-pressed="false" data-value="auto">자동</button>
             </div>
           </div>
 
           <div class="opt-row">
-            <div class="opt-text"><div class="opt-title">Accent ink</div><div class="opt-desc">The primary action color across the app.</div></div>
-            <div class="accent-cards" role="radiogroup" aria-label="Accent color">
-              <label class="accent-card radio"><input type="radio" name="accent" value="red" checked /><span class="dot" aria-hidden="true"></span><span class="accent-swatch" aria-hidden="true" style="background:var(--red-500)"></span> Comic Red</label>
-              <label class="accent-card radio"><input type="radio" name="accent" value="blue" /><span class="dot" aria-hidden="true"></span><span class="accent-swatch" aria-hidden="true" style="background:var(--blue-500)"></span> Hero Blue</label>
-              <label class="accent-card radio"><input type="radio" name="accent" value="yellow" /><span class="dot" aria-hidden="true"></span><span class="accent-swatch" aria-hidden="true" style="background:var(--yellow-400)"></span> Pop Yellow</label>
+            <div class="opt-text"><div class="opt-title">강조 잉크</div><div class="opt-desc">앱 전체의 주요 동작 색상이에요.</div></div>
+            <div class="accent-cards" role="radiogroup" aria-label="강조 색상">
+              <label class="accent-card radio"><input type="radio" name="accent" value="red" checked /><span class="dot" aria-hidden="true"></span><span class="accent-swatch" aria-hidden="true" style="background:var(--red-500)"></span> 코믹 레드</label>
+              <label class="accent-card radio"><input type="radio" name="accent" value="blue" /><span class="dot" aria-hidden="true"></span><span class="accent-swatch" aria-hidden="true" style="background:var(--blue-500)"></span> 히어로 블루</label>
+              <label class="accent-card radio"><input type="radio" name="accent" value="yellow" /><span class="dot" aria-hidden="true"></span><span class="accent-swatch" aria-hidden="true" style="background:var(--yellow-400)"></span> 팝 옐로</label>
             </div>
           </div>
 
           <div class="opt-row">
-            <div class="opt-text"><div class="opt-title">Reduce motion</div><div class="opt-desc">Calm the speed lines and bounce animations.</div></div>
-            <label class="toggle" aria-label="Reduce motion"><input type="checkbox" /><span class="track"><span class="knob"></span></span></label>
+            <div class="opt-text"><div class="opt-title">모션 줄이기</div><div class="opt-desc">스피드 라인과 바운스 애니메이션을 잠재워요.</div></div>
+            <label class="toggle" aria-label="모션 줄이기"><input type="checkbox" /><span class="track"><span class="knob"></span></span></label>
           </div>
 
           <div class="opt-row">
-            <div class="opt-text"><div class="opt-title">Compact density</div><div class="opt-desc">Tighter rows so more panels fit on screen.</div></div>
-            <label class="toggle" aria-label="Compact density"><input type="checkbox" /><span class="track"><span class="knob"></span></span></label>
+            <div class="opt-text"><div class="opt-title">촘촘한 밀도</div><div class="opt-desc">행 간격을 좁혀 한 화면에 더 많은 패널을.</div></div>
+            <label class="toggle" aria-label="촘촘한 밀도"><input type="checkbox" /><span class="track"><span class="knob"></span></span></label>
           </div>
 
           <div class="field">
-            <label class="field-label" for="ui-scale">UI scale</label>
+            <label class="field-label" for="ui-scale">UI 배율</label>
             <div class="slider">
-              <div class="row between mb-2"><span class="weight-extra">Scale</span><span class="slider-value">100</span></div>
-              <input type="range" id="ui-scale" min="80" max="120" value="100" step="5" data-suffix="%" aria-label="UI scale" />
+              <div class="row between mb-2"><span class="weight-bold">배율</span><span class="slider-value">100</span></div>
+              <input type="range" id="ui-scale" min="80" max="120" value="100" step="5" data-suffix="%" aria-label="UI 배율" />
             </div>
           </div>
         </div>
@@ -273,35 +302,35 @@
     <!-- ===== BILLING ===== -->
     <div class="tabpanel" id="panel-billing" role="tabpanel" aria-labelledby="tab-billing" hidden>
       <div class="card mb-6">
-        <div class="card-header">Current plan</div>
+        <div class="card-header">현재 요금제</div>
         <div class="card-body">
           <div class="plan-row">
             <div class="plan-main">
               <div class="row" style="gap:var(--space-3);align-items:center">
-                <span class="comic-title" style="font-size:var(--text-2xl)">HERO — $19/mo</span>
-                <span class="badge-burst yellow" aria-hidden="true">ACTIVE</span>
+                <span class="comic-title" style="font-size:var(--text-2xl)">히어로 · 월 ₩19,000</span>
+                <span class="badge-burst yellow" aria-hidden="true">이용중</span>
               </div>
-              <p class="text-muted weight-bold" style="margin-top:6px">Unlimited pull-list, variant alerts, and free shipping over $30. Renews Jul 1, 2026.</p>
+              <p class="text-muted weight-bold" style="margin-top:8px">무제한 풀리스트, 변형판 입고 알림, 3만원 이상 무료배송. 다음 결제일 2026년 8월 1일.</p>
             </div>
-            <a class="btn btn-outline" href="pricing.html">Change plan</a>
+            <a class="btn btn-outline" href="pricing.html">요금제 변경</a>
           </div>
         </div>
       </div>
 
       <div class="card mb-6">
-        <div class="card-header">Payment method</div>
+        <div class="card-header">결제 수단</div>
         <div class="card-body">
           <div class="list">
             <div class="list-item">
-              <span class="badge blue">VISA</span>
-              <span class="weight-extra">•••• •••• •••• 4242</span>
-              <span class="li-meta">Expires 09/28</span>
+              <span class="badge blue">현대카드</span>
+              <span class="weight-black">···· ···· ···· 4242</span>
+              <span class="li-meta">만료 09/28</span>
               <div class="menu-wrap" style="margin-left:auto">
-                <button class="btn btn-ghost btn-sm" data-menu="pay-menu" aria-expanded="false" aria-haspopup="true">Manage ▾</button>
+                <button class="btn btn-ghost btn-sm" data-menu="pay-menu" aria-expanded="false" aria-haspopup="true">관리 ▾</button>
                 <div class="menu align-right" id="pay-menu">
-                  <button class="menu-item">Update card</button>
+                  <button class="menu-item" data-toast="info" data-toast-title="카드 변경 화면을 열었어요">카드 변경</button>
                   <div class="menu-sep"></div>
-                  <button class="menu-item danger">Remove</button>
+                  <button class="menu-item danger" data-toast="warning" data-toast-title="결제 수단을 삭제했어요" data-toast-body="다음 결제 전에 새 카드를 등록해 주세요.">삭제</button>
                 </div>
               </div>
             </div>
@@ -310,17 +339,17 @@
       </div>
 
       <div class="card">
-        <div class="card-header">Invoices</div>
+        <div class="card-header">결제 내역</div>
         <div class="card-body">
           <div class="table-wrap">
             <table class="table">
               <thead>
-                <tr><th>Date</th><th>Amount</th><th>Status</th><th>Receipt</th></tr>
+                <tr><th scope="col">날짜</th><th scope="col">금액</th><th scope="col">상태</th><th scope="col">영수증</th></tr>
               </thead>
               <tbody>
-                <tr><td>Jun 1, 2026</td><td>$19.00</td><td><span class="badge green">Paid</span></td><td><a href="#" aria-label="Download June invoice PDF">PDF</a></td></tr>
-                <tr><td>May 1, 2026</td><td>$19.00</td><td><span class="badge green">Paid</span></td><td><a href="#" aria-label="Download May invoice PDF">PDF</a></td></tr>
-                <tr><td>Apr 1, 2026</td><td>$19.00</td><td><span class="badge yellow">Refunded</span></td><td><a href="#" aria-label="Download April invoice PDF">PDF</a></td></tr>
+                <tr><td>2026년 7월 1일</td><td>₩19,000</td><td><span class="badge green">결제완료</span></td><td><button class="btn btn-ghost btn-sm" data-toast="success" data-toast-title="영수증을 내려받았어요" data-toast-body="7월 결제 내역 PDF">PDF</button></td></tr>
+                <tr><td>2026년 6월 1일</td><td>₩19,000</td><td><span class="badge green">결제완료</span></td><td><button class="btn btn-ghost btn-sm" data-toast="success" data-toast-title="영수증을 내려받았어요" data-toast-body="6월 결제 내역 PDF">PDF</button></td></tr>
+                <tr><td>2026년 5월 1일</td><td>₩19,000</td><td><span class="badge yellow">환불</span></td><td><button class="btn btn-ghost btn-sm" data-toast="success" data-toast-title="영수증을 내려받았어요" data-toast-body="5월 환불 내역 PDF">PDF</button></td></tr>
               </tbody>
             </table>
           </div>
@@ -331,29 +360,30 @@
     <!-- ===== DANGER ZONE ===== -->
     <div class="tabpanel" id="panel-danger" role="tabpanel" aria-labelledby="tab-danger" hidden>
       <div class="card ink-outline-4 danger-zone">
+        <span class="stamp dz-stamp" aria-hidden="true" style="background:var(--paper)">되돌릴 수 없음</span>
         <div class="card-body stack stack-6">
           <div class="alert warning">
             <span class="alert-icon" aria-hidden="true">!</span>
             <div>
-              <div class="alert-title">Proceed with caution, hero</div>
-              <div class="alert-body">These actions are permanent — not even a retcon brings them back.</div>
+              <div class="alert-title">조심하세요, 히어로</div>
+              <div class="alert-body">여기서 하는 행동은 영구적이에요 — 리트콘으로도 되돌릴 수 없어요.</div>
             </div>
           </div>
 
-          <h2 class="comic-title red" style="font-size:var(--text-4xl);margin:0">DANGER ZONE</h2>
+          <h2 class="comic-title red" style="font-size:var(--text-4xl);margin:0">위험 구역</h2>
 
-          <div class="list">
+          <div class="list" style="box-shadow:none;border:none;background:transparent">
             <div class="opt-row">
-              <div class="opt-text"><div class="opt-title">Reset all settings</div><div class="opt-desc">Restore every preference to its factory default.</div></div>
-              <button class="btn btn-danger" data-toast="warning" data-toast-title="Settings reset" data-toast-body="All preferences back to default.">Reset all settings</button>
+              <div class="opt-text"><div class="opt-title">모든 설정 초기화</div><div class="opt-desc">모든 환경설정을 공장 초기 상태로 되돌려요.</div></div>
+              <button class="btn btn-danger" data-toast="warning" data-toast-title="설정을 초기화했어요" data-toast-body="모든 환경설정이 기본값으로 돌아갔어요.">모두 초기화</button>
             </div>
             <div class="opt-row">
-              <div class="opt-text"><div class="opt-title">Export my data</div><div class="opt-desc">Download your pull-list, reviews and order history.</div></div>
-              <button class="btn btn-outline" data-toast="info" data-toast-title="Export started" data-toast-body="We'll email a download link shortly.">Export my data</button>
+              <div class="opt-text"><div class="opt-title">내 데이터 내보내기</div><div class="opt-desc">풀리스트, 리뷰, 주문 내역을 내려받아요.</div></div>
+              <button class="btn btn-outline" data-toast="info" data-toast-title="내보내기를 시작했어요" data-toast-body="잠시 후 다운로드 링크를 메일로 보내드릴게요.">데이터 내보내기</button>
             </div>
             <div class="opt-row">
-              <div class="opt-text"><div class="opt-title">Delete account</div><div class="opt-desc">Permanently erase your account and all collection data.</div></div>
-              <button class="btn btn-danger" data-modal-open="del-modal">Delete account</button>
+              <div class="opt-text"><div class="opt-title">계정 삭제</div><div class="opt-desc">계정과 모든 컬렉션 데이터를 영구히 지워요.</div></div>
+              <button class="btn btn-danger" data-modal-open="del-modal">계정 삭제</button>
             </div>
           </div>
         </div>
@@ -366,56 +396,110 @@
 <!-- ===== DELETE MODAL ===== -->
 <div class="overlay halftone-scrim" id="del-modal" hidden>
   <div class="modal sm" role="alertdialog" aria-modal="true" aria-labelledby="del-title" aria-describedby="del-desc">
-    <div class="modal-header"><h3 class="modal-title" id="del-title">Delete account?</h3><button class="btn btn-icon btn-sm btn-outline" data-modal-close aria-label="Close">✕</button></div>
+    <div class="modal-header"><h3 class="modal-title" id="del-title">계정을 삭제할까요?</h3><button class="btn btn-icon btn-sm btn-outline" data-modal-close aria-label="닫기">✕</button></div>
     <div class="modal-body stack stack-4">
-      <p id="del-desc" class="weight-bold">This permanently deletes your account, your pull-list of <strong>47 titles</strong>, and all order history. There is no undo.</p>
+      <p id="del-desc" class="weight-bold">계정과 풀리스트 <strong>47개</strong>, 모든 주문 내역이 영구히 삭제돼요. 되돌릴 수 없어요.</p>
       <div class="field">
-        <label class="field-label" for="del-confirm">Type <strong>DELETE</strong> to confirm</label>
-        <input class="input" id="del-confirm" placeholder="DELETE" aria-label="Type DELETE to confirm" autocomplete="off" />
+        <label class="field-label" for="del-confirm">확인하려면 <strong>삭제</strong> 라고 입력하세요</label>
+        <input class="input" id="del-confirm" placeholder="삭제" aria-label="삭제라고 입력해 확인" autocomplete="off" />
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" data-modal-close>Cancel</button>
-      <button class="btn btn-danger" data-modal-close data-toast="danger" data-toast-title="Account scheduled for deletion" data-toast-body="You have 30 days to change your mind.">Delete forever</button>
+      <button class="btn btn-ghost" data-modal-close>취소</button>
+      <button class="btn btn-danger" id="del-forever" data-modal-close data-toast="danger" data-toast-title="계정 삭제가 예약됐어요" data-toast-body="30일 안에 마음이 바뀌면 되돌릴 수 있어요." disabled>영구 삭제</button>
     </div>
   </div>
 </div>
 
 <!-- command palette (keep identical on every page) -->
-<div class="cmdk-overlay" role="dialog" aria-modal="true" aria-label="Command palette">
+<div class="cmdk-overlay" role="dialog" aria-modal="true" aria-label="명령 팔레트">
   <div class="cmdk">
-    <div class="cmdk-input-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input class="cmdk-input" placeholder="Type a command…" aria-label="Command input" /><kbd>ESC</kbd></div>
-    <div class="cmdk-list">
-      <div class="cmdk-group"><div class="cmdk-group-label">Navigate</div>
-        <div class="cmdk-item" data-href="dashboard.html"><span class="cmdk-ico">📊</span> Dashboard</div>
-        <div class="cmdk-item" data-href="kanban.html"><span class="cmdk-ico">🗂️</span> Kanban Board</div>
-        <div class="cmdk-item" data-href="inbox.html"><span class="cmdk-ico">✉️</span> Inbox</div>
-        <div class="cmdk-item" data-href="pricing.html"><span class="cmdk-ico">💰</span> Pricing</div>
-        <div class="cmdk-item" data-href="settings.html"><span class="cmdk-ico">⚙️</span> Settings</div>
-        <div class="cmdk-item" data-href="profile.html"><span class="cmdk-ico">🦸</span> Profile</div>
-        <div class="cmdk-item" data-href="../index.html"><span class="cmdk-ico">🏠</span> Home</div>
+    <div class="cmdk-input-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input class="cmdk-input" placeholder="명령을 입력하거나 검색하세요…" aria-label="명령 팔레트 입력" /><kbd>ESC</kbd></div>
+    <div class="cmdk-list" role="listbox" aria-label="명령 목록">
+      <div class="cmdk-group" role="group" aria-label="이동">
+        <div class="cmdk-group-label" aria-hidden="true">이동</div>
+        <div class="cmdk-item" role="option" data-href="dashboard.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span> 대시보드로 이동</div>
+        <div class="cmdk-item" role="option" data-href="kanban.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"><rect x="3.5" y="5" width="4.3" height="14" rx="1"/><rect x="9.8" y="5" width="4.3" height="9" rx="1"/><rect x="16.2" y="5" width="4.3" height="12" rx="1"/></svg></span> 칸반 보드로 이동</div>
+        <div class="cmdk-item" role="option" data-href="inbox.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span> 받은편지함 열기</div>
+        <div class="cmdk-item" role="option" data-href="pricing.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 12 22l-9-9V4h9z"/><circle cx="7.5" cy="7.5" r="1.4"/></svg></span> 요금제 보기</div>
+        <div class="cmdk-item" role="option" data-href="profile.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span> 프로필 열기</div>
+        <div class="cmdk-item" role="option" data-href="../index.html"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11 12 4l8 7"/><path d="M6 10v9h12v-9"/></svg></span> 홈으로 이동</div>
       </div>
-      <div class="cmdk-group"><div class="cmdk-group-label">Actions</div>
-        <div class="cmdk-item" data-action="toggle-theme"><span class="cmdk-ico">🌗</span> Toggle dark mode</div>
+      <div class="cmdk-group" role="group" aria-label="작업">
+        <div class="cmdk-group-label" aria-hidden="true">작업</div>
+        <div class="cmdk-item" role="option" data-action="toggle-theme"><span class="cmdk-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></span> 다크 모드 전환 <kbd class="cmdk-kbd">T</kbd></div>
       </div>
-      <div class="cmdk-empty" style="display:none">No results.</div>
+      <div class="cmdk-empty" style="display:none">결과가 없어요 — 다른 단어로 검색해 보세요, 히어로.</div>
     </div>
   </div>
 </div>
 
 <script src="../app.js"></script>
 <script>
-/* Appearance theme segmented: Light/Dark set document theme like app.js (Auto = no override). */
+/* Page-local settings behaviors — layered on top of app.js (no re-binding). */
 (function () {
+  /* 1) Appearance theme segmented: Light/Dark set document theme like app.js (Auto = no override). */
   var seg = document.getElementById('theme-seg');
-  if (!seg) return;
-  seg.addEventListener('segment-change', function (e) {
-    var v = e.detail && e.detail.value;
-    if (v === 'light' || v === 'dark') {
-      document.documentElement.dataset.theme = v;
-      try { localStorage.setItem('comic-theme', v); } catch (err) {}
+  if (seg) {
+    seg.addEventListener('segment-change', function (e) {
+      var v = e.detail && e.detail.value;
+      if (v === 'light' || v === 'dark') {
+        document.documentElement.dataset.theme = v;
+        try { localStorage.setItem('comic-theme', v); } catch (err) {}
+      }
+    });
+  }
+
+  /* 2) Save buttons: brief loading state → success toast (demonstrates .is-loading). */
+  function withLoading(btn, title, body) {
+    if (!btn || btn.classList.contains('is-loading')) return;
+    btn.classList.add('is-loading');
+    setTimeout(function () {
+      btn.classList.remove('is-loading');
+      if (window.comicToast) window.comicToast({ type: 'success', title: title, body: body });
+    }, 850);
+  }
+  var saveAll = document.getElementById('save-all');
+  if (saveAll) saveAll.addEventListener('click', function () { withLoading(saveAll, '저장했어요!', '설정이 안전하게 반영됐어요.'); });
+  var saveProfile = document.getElementById('save-profile');
+
+  /* Profile save also validates the email field in-scene. */
+  var email = document.getElementById('g-email');
+  var emailErr = document.getElementById('g-email-err');
+  var saveAlert = document.getElementById('save-alert');
+  function emailValid() { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((email && email.value || '').trim()); }
+  function syncEmail() {
+    if (!email) return;
+    var ok = emailValid();
+    email.classList.toggle('is-invalid', !ok);
+    email.setAttribute('aria-invalid', String(!ok));
+    if (emailErr) emailErr.style.display = ok ? 'none' : '';
+    if (saveAlert) saveAlert.style.display = ok ? 'none' : '';
+  }
+  if (email) email.addEventListener('input', syncEmail);
+  if (saveProfile) saveProfile.addEventListener('click', function () {
+    if (!emailValid()) {
+      syncEmail();
+      if (email) email.focus();
+      if (window.comicToast) window.comicToast({ type: 'danger', title: '저장하지 못했어요', body: '이메일 주소를 확인해 주세요.' });
+      return;
     }
+    withLoading(saveProfile, '프로필을 저장했어요!', '변경 사항이 반영됐어요.');
   });
+
+  /* 3) Delete flow: "영구 삭제" stays disabled until the confirm word is typed. */
+  var confirmInput = document.getElementById('del-confirm');
+  var delBtn = document.getElementById('del-forever');
+  function syncDelete() { if (delBtn) delBtn.disabled = (confirmInput.value.trim() !== '삭제'); }
+  if (confirmInput && delBtn) {
+    confirmInput.addEventListener('input', syncDelete);
+    /* Reset the confirm gate every time the dialog is opened. */
+    document.addEventListener('click', function (e) {
+      if (e.target.closest('[data-modal-open="del-modal"]')) {
+        confirmInput.value = ''; syncDelete();
+      }
+    });
+  }
 })();
 </script>
 </body>

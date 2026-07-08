@@ -4,11 +4,52 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>분석 대시보드 · RISO·PRESS</title>
-<script>document.documentElement.className = "js";</script>
+<script>
+(function () {
+  try {
+    var t = localStorage.getItem("riso-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+  document.documentElement.className = "js";
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../styles.css">
+<style>
+  /* ---- dashboard-only, token-driven ---- */
+  /* sparkline strokes via class (SVG presentation attrs can't read var()) */
+  .spark-pink  { stroke: var(--fluoro-pink-500); }
+  .spark-blue  { stroke: var(--fluoro-blue-500); }
+
+  /* press-run calibration strip under the page header */
+  .dash-cal { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-6); }
+  .dash-cal .calibration-bar { flex: 1; min-width: 13rem; height: 1.1rem; }
+  .dash-cal__spec { font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--color-text-muted); letter-spacing: var(--tracking-wide); white-space: nowrap; }
+
+  /* HERO STAT — the month's total print run set as a riso poster number */
+  .dash-hero { margin-bottom: var(--space-6); overflow: hidden; }
+  .dash-hero__grid { display: grid; grid-template-columns: 1.25fr 1fr; gap: var(--space-6); align-items: center; }
+  .dash-hero__num { font-family: var(--font-poster); font-weight: var(--weight-black); font-size: clamp(3.25rem, 10vw, 5.5rem); line-height: 0.95; letter-spacing: var(--tracking-tighter); font-variant-numeric: tabular-nums lining-nums; margin-top: var(--space-2); }
+  .dash-hero__unit { font-size: 0.32em; margin-left: 0.15em; font-family: var(--font-display); }
+  .dash-hero__meta { margin-top: var(--space-3); }
+  .dash-hero__note { color: var(--color-text-muted); font-size: var(--text-sm); line-height: var(--leading-relaxed); margin-top: var(--space-3); max-width: 44ch; }
+  .dash-hero__spark { width: 100%; height: 7.5rem; }
+  @media (max-width: 720px) { .dash-hero__grid { grid-template-columns: 1fr; } .dash-hero__spark { height: 5.5rem; } }
+  /* dark = glow-in-the-dark edition: overprint blobs lift instead of muddying */
+  [data-theme="dark"] .dash-hero.card--overprint::before,
+  [data-theme="dark"] .dash-hero.card--overprint::after { mix-blend-mode: screen; opacity: 0.9; }
+
+  /* month bar chart — 12 labels aligned 1:1 under 12 bars, June anomaly flagged */
+  .bar-labels { display: flex; margin-top: var(--space-3); }
+  .bar-labels span { flex: 1; text-align: center; font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--color-text-muted); }
+  .bar-labels span.is-peak { color: var(--fluoro-pink-700); font-weight: var(--weight-bold); }
+  [data-theme="dark"] .bar-labels span.is-peak { color: var(--fluoro-pink-400); }
+  .bar-chart__bar.is-peak { outline: var(--border-2) solid var(--ink-black); outline-offset: 2px; }
+  [data-theme="dark"] .bar-chart__bar.is-peak { outline-color: var(--paper-neutral-100); }
+</style>
 </head>
 <body>
 <a class="skip-link" href="#main">본문으로 건너뛰기</a>
@@ -68,7 +109,7 @@
       <div class="page-head">
         <div>
           <h1 class="page-head__title">인쇄 분석</h1>
-          <p class="page-head__sub">2026년 6월 · 형광 2도 에디션 성과</p>
+          <p class="page-head__sub">2026년 6월 · 마감 주간 (D-3) · 형광 2도 에디션 성과</p>
         </div>
         <div class="page-head__actions">
           <div class="segmented" role="group" aria-label="기간">
@@ -80,14 +121,35 @@
         </div>
       </div>
 
-      <!-- STAT CARDS -->
-      <div class="grid grid--4" style="margin-bottom:var(--space-7)">
-        <div class="statcard" data-reveal>
-          <div class="statcard__label">총 인쇄 부수</div>
-          <div class="statcard__value">48,210</div>
-          <div class="statcard__delta up"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="m5 15 7-7 7 7"/></svg>+12.4%</div>
-          <svg class="statcard__spark" viewBox="0 0 80 40" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,32 16,28 32,30 48,18 64,20 80,8" fill="none" stroke="var(--fluoro-pink-500)" stroke-width="3"/></svg>
+      <!-- PRESS CALIBRATION STRIP -->
+      <div class="dash-cal" data-reveal>
+        <div class="calibration-bar" role="img" aria-label="형광 스폿 4색과 하프톤 계조 캘리브레이션 바">
+          <span class="cal-pink"></span><span class="cal-blue"></span><span class="cal-yellow"></span><span class="cal-green"></span><span class="cal-tone"></span>
         </div>
+        <span class="dash-cal__spec">스폿 4색 · 그레인 40% · 정합 ±2mm · 600 DPI</span>
+      </div>
+
+      <!-- HERO STAT — the month's print run as a riso poster -->
+      <div class="card card--overprint dash-hero" data-reveal>
+        <div class="dash-hero__grid">
+          <div>
+            <p class="eyebrow">6월 인쇄 부수 · 마감 주간 집계</p>
+            <div class="dash-hero__num">51,840<span class="dash-hero__unit">부</span></div>
+            <div class="dash-hero__meta cluster">
+              <span class="statcard__delta up"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="m5 15 7-7 7 7"/></svg>전월 대비 +8.3%</span>
+              <span class="edition-stamp">№ 21 · 06</span>
+            </div>
+            <p class="dash-hero__note">6월 셋째 주 <strong>여름 진(zine) 페어</strong> 납품 480부가 몰리며 월 인쇄량이 튀었습니다. 마감까지 3일, 예약분 포함 <strong>53,000부</strong> 안팎으로 마무리될 전망이에요.</p>
+          </div>
+          <svg class="dash-hero__spark" viewBox="0 0 240 80" preserveAspectRatio="none" role="img" aria-label="1월부터 12월까지 월별 인쇄 부수 추이 — 6월에 최고치">
+            <polyline class="spark-pink" fill="none" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"
+              points="0,48 22,36 44,51 65,27 87,41 109,13 131,31 153,45 175,22 196,34 218,54 240,42"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- SECONDARY STATS -->
+      <div class="grid grid--3" style="margin-bottom:var(--space-7)">
         <div class="statcard statcard--accent" data-reveal>
           <div class="statcard__label">활성 에디션</div>
           <div class="statcard__value">36</div>
@@ -97,35 +159,56 @@
           <div class="statcard__label">잉크 소모 (ml)</div>
           <div class="statcard__value">9,840</div>
           <div class="statcard__delta down"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="m5 9 7 7 7-7"/></svg>−3.1%</div>
-          <svg class="statcard__spark" viewBox="0 0 80 40" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,10 16,16 32,12 48,22 64,26 80,30" fill="none" stroke="var(--fluoro-blue-500)" stroke-width="3"/></svg>
+          <svg class="statcard__spark" viewBox="0 0 80 40" preserveAspectRatio="none" aria-hidden="true"><polyline class="spark-blue" points="0,10 16,16 32,12 48,22 64,26 80,30" fill="none" stroke-width="3"/></svg>
         </div>
         <div class="statcard" data-reveal>
           <div class="statcard__label">매출</div>
-          <div class="statcard__value">₩24.8M</div>
+          <div class="statcard__value">₩2,480만</div>
           <div class="statcard__delta up"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="m5 15 7-7 7 7"/></svg>+18.0%</div>
         </div>
       </div>
 
       <div class="split">
-        <!-- HALFTONE BAR CHART -->
-        <div class="card" data-reveal>
-          <div class="card__header"><h2 class="card__title">월별 인쇄량 (하프톤)</h2><span class="badge badge--ink">2026</span></div>
-          <div class="bar-chart" role="img" aria-label="1월부터 12월까지 월별 인쇄량 막대 차트">
-            <div class="bar-chart__bar pink" style="height:42%"></div>
-            <div class="bar-chart__bar blue" style="height:58%"></div>
-            <div class="bar-chart__bar pink" style="height:38%"></div>
-            <div class="bar-chart__bar green" style="height:70%"></div>
-            <div class="bar-chart__bar blue" style="height:52%"></div>
-            <div class="bar-chart__bar yellow" style="height:88%"></div>
-            <div class="bar-chart__bar pink" style="height:64%"></div>
-            <div class="bar-chart__bar blue" style="height:46%"></div>
-            <div class="bar-chart__bar green" style="height:76%"></div>
-            <div class="bar-chart__bar pink" style="height:60%"></div>
-            <div class="bar-chart__bar yellow" style="height:34%"></div>
-            <div class="bar-chart__bar blue" style="height:50%"></div>
+        <!-- HALFTONE BAR CHART — inks up from a skeleton on load (data-loading-demo) -->
+        <div class="card" data-reveal data-loading-demo>
+          <div class="card__header"><h2 class="card__title">월별 인쇄량 (하프톤)</h2><span class="badge badge--pink">6월 최고 88%</span></div>
+          <!-- Initial loading state. JS reveals the chart once the plate inks up;
+               with no JS or reduced-motion the real chart is shown immediately. -->
+          <div class="chart-skeleton" data-load-skeleton hidden aria-hidden="true">
+            <div class="chart-skeleton__bars">
+              <div class="skeleton" style="height:42%"></div>
+              <div class="skeleton" style="height:58%"></div>
+              <div class="skeleton" style="height:38%"></div>
+              <div class="skeleton" style="height:70%"></div>
+              <div class="skeleton" style="height:52%"></div>
+              <div class="skeleton" style="height:88%"></div>
+              <div class="skeleton" style="height:64%"></div>
+              <div class="skeleton" style="height:46%"></div>
+              <div class="skeleton" style="height:76%"></div>
+              <div class="skeleton" style="height:60%"></div>
+              <div class="skeleton" style="height:34%"></div>
+              <div class="skeleton" style="height:50%"></div>
+            </div>
+            <div class="skeleton skeleton--text" style="width:38%;margin-top:var(--space-3)"></div>
           </div>
-          <div class="row" style="justify-content:space-between;margin-top:var(--space-3);font-family:var(--font-mono);font-size:var(--text-2xs);color:var(--color-text-muted)">
-            <span>1월</span><span>3월</span><span>6월</span><span>9월</span><span>12월</span>
+          <div data-load-content>
+            <div class="bar-chart" role="img" aria-label="1월부터 12월까지 월별 인쇄량 막대 차트. 6월이 최고치로 이상치입니다.">
+              <div class="bar-chart__bar pink" style="height:42%"></div>
+              <div class="bar-chart__bar blue" style="height:58%"></div>
+              <div class="bar-chart__bar pink" style="height:38%"></div>
+              <div class="bar-chart__bar green" style="height:70%"></div>
+              <div class="bar-chart__bar blue" style="height:52%"></div>
+              <div class="bar-chart__bar yellow is-peak" style="height:88%"></div>
+              <div class="bar-chart__bar pink" style="height:64%"></div>
+              <div class="bar-chart__bar blue" style="height:46%"></div>
+              <div class="bar-chart__bar green" style="height:76%"></div>
+              <div class="bar-chart__bar pink" style="height:60%"></div>
+              <div class="bar-chart__bar yellow" style="height:34%"></div>
+              <div class="bar-chart__bar blue" style="height:50%"></div>
+            </div>
+            <div class="bar-labels" aria-hidden="true">
+              <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span class="is-peak">6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span>
+            </div>
           </div>
         </div>
 
