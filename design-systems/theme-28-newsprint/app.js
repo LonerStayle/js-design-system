@@ -32,7 +32,7 @@
       $$("[data-theme-toggle]").forEach((btn) => {
         btn.setAttribute("aria-pressed", String(v === "dark"));
         const lbl = btn.querySelector("[data-theme-label]");
-        if (lbl) lbl.textContent = v === "dark" ? "Night Ed." : "Day Ed.";
+        if (lbl) lbl.textContent = v === "dark" ? "야간판" : "주간판";
       });
     },
     init() {
@@ -59,16 +59,21 @@
     const els = $$("[data-dateline]");
     if (!els.length) return;
     const now = new Date();
-    const fmt = now.toLocaleDateString("en-US", {
-      weekday: "long", year: "numeric", month: "long", day: "numeric",
+    // 한국 일간지 데이트라인: "2026년 7월 9일 목요일 · 단기 4359년"
+    const full = now.toLocaleDateString("ko-KR", {
+      year: "numeric", month: "long", day: "numeric", weekday: "long",
     });
+    const dangi = now.getFullYear() + 2333;      // 단기(檀紀) = 서기 + 2333
+    const pad = (n) => String(n).padStart(2, "0");
+    const short = `${now.getFullYear()}.${pad(now.getMonth() + 1)}.${pad(now.getDate())}`;
     els.forEach((el) => {
       const mode = el.getAttribute("data-dateline");
       if (mode === "short") {
-        el.textContent = now.toLocaleDateString("en-US",
-          { month: "short", day: "numeric", year: "numeric" }).toUpperCase();
+        el.textContent = short;
+      } else if (mode === "dangi") {
+        el.textContent = `${full} · 단기 ${dangi}년`;
       } else {
-        el.textContent = fmt.toUpperCase();
+        el.textContent = full;
       }
     });
   }
@@ -132,14 +137,37 @@
   function initSegmented() {
     $$("[data-segmented]").forEach((seg) => {
       const btns = $$("button", seg);
-      btns.forEach((b) =>
-        on(b, "click", () => {
-          btns.forEach((x) => x.setAttribute("aria-selected", "false"));
-          b.setAttribute("aria-selected", "true");
-          seg.dispatchEvent(new CustomEvent("segment:change",
-            { detail: { value: b.dataset.value ?? b.textContent.trim() } }));
-        })
-      );
+      if (!btns.length) return;
+      // Radiogroup pattern uses aria-checked; legacy tab markup uses aria-selected.
+      const isRadio = seg.getAttribute("role") === "radiogroup" ||
+                      btns[0].getAttribute("role") === "radio";
+      const attr = isRadio ? "aria-checked" : "aria-selected";
+      const select = (b, focus) => {
+        btns.forEach((x) => {
+          const on_ = x === b;
+          x.setAttribute(attr, String(on_));
+          if (isRadio) x.tabIndex = on_ ? 0 : -1;   // roving tabindex
+        });
+        if (focus) b.focus();
+        seg.dispatchEvent(new CustomEvent("segment:change",
+          { detail: { value: b.dataset.value ?? b.textContent.trim() } }));
+      };
+      // establish an initial tab stop for keyboard entry
+      if (isRadio && !btns.some((b) => b.tabIndex === 0)) {
+        const cur = btns.find((b) => b.getAttribute("aria-checked") === "true") || btns[0];
+        btns.forEach((b) => (b.tabIndex = b === cur ? 0 : -1));
+      }
+      btns.forEach((b, i) => {
+        on(b, "click", () => select(b));
+        on(b, "keydown", (e) => {
+          let idx = null;
+          if (e.key === "ArrowRight" || e.key === "ArrowDown") idx = (i + 1) % btns.length;
+          else if (e.key === "ArrowLeft" || e.key === "ArrowUp") idx = (i - 1 + btns.length) % btns.length;
+          else if (e.key === "Home") idx = 0;
+          else if (e.key === "End") idx = btns.length - 1;
+          if (idx !== null) { e.preventDefault(); select(btns[idx], true); }
+        });
+      });
     });
   }
 
@@ -260,7 +288,7 @@
     warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3 2 20h20L12 3zM12 10v4M12 17v.5"/></svg>',
     info:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.5"/></svg>',
   };
-  function toast({ title = "Bulletin", text = "", variant = "info", timeout = 4200 } = {}) {
+  function toast({ title = "알림", text = "", variant = "info", timeout = 4200 } = {}) {
     const stack = toastStack();
     const el = document.createElement("div");
     el.className = "toast toast--" + variant;
@@ -268,7 +296,7 @@
     el.innerHTML =
       `<span class="toast__icon">${ICONS[variant] || ICONS.info}</span>
        <div class="toast__body"><div class="toast__title">${title}</div>${text ? `<div class="toast__text">${text}</div>` : ""}</div>
-       <button class="toast__close" aria-label="Dismiss"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></button>`;
+       <button class="toast__close" aria-label="닫기"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></button>`;
     stack.appendChild(el);
     const close = () => {
       el.classList.add("is-leaving");
@@ -282,7 +310,7 @@
   function initToastTriggers() {
     $$("[data-toast]").forEach((t) =>
       on(t, "click", () => toast({
-        title: t.dataset.toastTitle || "Stop Press",
+        title: t.dataset.toastTitle || "속보",
         text: t.dataset.toast || "",
         variant: t.dataset.toastVariant || "info",
       })));
@@ -412,7 +440,7 @@
       close();
       if (act === "toggle-theme") Theme.apply(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark"), Theme.set(document.documentElement.getAttribute("data-theme"));
       else if (i.dataset.href) window.location.href = i.dataset.href;
-      else toast({ title: "Command", text: i.textContent.trim(), variant: "info" });
+      else toast({ title: "명령 실행", text: i.textContent.trim(), variant: "info" });
     }));
   }
 
@@ -467,7 +495,7 @@
         txt = txt.trim(); if (!txt) return;
         const chip = document.createElement("span");
         chip.className = "chip";
-        chip.innerHTML = `${txt}<button aria-label="Remove ${txt}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6 6 18"/></svg></button>`;
+        chip.innerHTML = `${txt}<button aria-label="${txt} 제거"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6 6 18"/></svg></button>`;
         ci.insertBefore(chip, input);
         on(chip.querySelector("button"), "click", () => chip.remove());
       };
@@ -603,8 +631,8 @@
       const src = sel ? document.querySelector(sel) : btn.closest(".codeblock")?.querySelector("pre");
       const text = src ? src.innerText : btn.getAttribute("data-copy-text") || "";
       navigator.clipboard?.writeText(text).then(
-        () => toast({ title: "Copied", text: "Proof set to clipboard.", variant: "success", timeout: 2000 }),
-        () => toast({ title: "Copy failed", variant: "danger", timeout: 2000 })
+        () => toast({ title: "복사했습니다", text: "교정쇄를 클립보드에 담았어요.", variant: "success", timeout: 2000 }),
+        () => toast({ title: "복사하지 못했어요", text: "브라우저 권한을 확인해 주세요.", variant: "danger", timeout: 2000 })
       );
     }));
   }

@@ -1,9 +1,21 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Wire — The Ledger</title>
+<title>통신선 — 원장일보 The Ledger</title>
+<!-- FOUC guard: set the edition before CSS paints (key matches app.js) -->
+<script>
+(function () {
+  try {
+    var t = localStorage.getItem("ledger-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="../theme.css">
 <style>
   /* page-local layout only — the 3-panel wire-desk app shell */
@@ -54,6 +66,7 @@
 
   /* message rows */
   .msglist { overflow-y: auto; flex: 1; min-height: 0; }
+  .msglist > [role="listitem"] { display: block; }
   .msg {
     display: grid;
     grid-template-columns: auto 1fr;
@@ -64,27 +77,29 @@
     background: transparent;
     width: 100%;
     text-align: left;
-    transition: background var(--dur-fast, .15s) var(--ease-out);
+    transition: background var(--duration-fast) var(--ease-out);
   }
-  .msg:hover { background: var(--color-surface-2, var(--color-paper-2, rgba(0,0,0,.03))); }
-  .msg.is-active { background: var(--color-surface-2, rgba(184,30,30,.06)); box-shadow: inset 3px 0 0 0 var(--color-accent); }
+  .msg:hover { background: var(--color-surface-3); }
+  .msg.is-active { background: var(--table-hover); box-shadow: inset 3px 0 0 0 var(--color-accent); }
   .msg:focus-visible { outline: var(--rule-medium) solid var(--color-accent); outline-offset: -3px; }
   .msg__body { min-width: 0; }
   .msg__top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
   .msg__sender { font-size: var(--text-sm); color: var(--color-text); }
   .msg.is-unread .msg__sender { font-weight: 800; }
-  .msg__subject { font-family: var(--font-head); font-size: var(--text-base); line-height: var(--leading-snug, 1.3); margin: var(--space-1) 0; color: var(--color-text); }
+  .msg__subject { font-family: var(--font-head); font-size: var(--text-base); line-height: var(--leading-snug); margin: var(--space-1) 0; color: var(--color-text); }
   .msg.is-unread .msg__subject { font-weight: 700; }
   .msg__snippet {
     font-size: var(--text-sm);
     color: var(--color-text-muted);
     display: -webkit-box;
     -webkit-line-clamp: 1;
+    line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
   .msg__meta { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); }
   .msg__unread-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-accent); flex: 0 0 auto; }
+  .msg__flag { color: var(--color-accent); }
   .msg.is-unread .msg__time { color: var(--color-accent); font-weight: 700; }
 
   /* reading pane */
@@ -104,11 +119,8 @@
   .quick-reply {
     border-top: var(--rule-medium) solid var(--color-border);
     padding: var(--space-6) var(--space-8);
-    background: var(--color-surface-2, transparent);
+    background: var(--color-surface-2);
   }
-
-  [data-reveal]{ opacity:0; transform: translateY(12px); transition: opacity .5s var(--ease-out), transform .5s var(--ease-out); }
-  [data-reveal].is-revealed{ opacity:1; transform:none; }
 
   /* responsive: collapse to single column */
   @media (max-width: 900px){
@@ -131,24 +143,24 @@
 </style>
 </head>
 <body>
-<a class="skip-link" href="#main">Skip to content</a>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
 
-<nav class="navbar no-print" aria-label="Primary">
-  <a class="navbar__brand" href="../index.html">THE&nbsp;<span class="spot">LEDGER</span></a>
+<nav class="navbar no-print" aria-label="주 메뉴">
+  <a class="navbar__brand" href="../index.html">원장<span class="spot">일보</span></a>
   <div class="navbar__sections" id="primary-nav">
-    <a class="navbar__link" href="dashboard.html">Desk</a>
-    <a class="navbar__link" href="kanban.html">Board</a>
-    <a class="navbar__link" href="inbox.html" aria-current="page">Wire</a>
-    <a class="navbar__link" href="pricing.html">Plans</a>
-    <a class="navbar__link" href="front-page.html">Front Page</a>
+    <a class="navbar__link" href="dashboard.html">분석 데스크</a>
+    <a class="navbar__link" href="kanban.html">편집국 보드</a>
+    <a class="navbar__link" href="inbox.html" aria-current="page">통신선</a>
+    <a class="navbar__link" href="pricing.html">구독</a>
+    <a class="navbar__link" href="front-page.html">1면</a>
   </div>
   <div class="navbar__actions">
-    <button class="btn btn--ghost btn--sm" data-command-open aria-label="Search">⌘K</button>
-    <button class="btn btn--icon btn--sm" data-theme-toggle aria-pressed="false" aria-label="Toggle edition">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
+    <button class="btn btn--ghost btn--sm" data-command-open aria-label="검색 팔레트 열기">⌘K</button>
+    <button class="btn btn--icon btn--sm" data-theme-toggle aria-pressed="false" aria-label="에디션 전환">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
     </button>
-    <button class="btn btn--icon btn--sm navbar__toggle" data-nav-toggle="primary-nav" aria-label="Menu" aria-expanded="false">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    <button class="btn btn--icon btn--sm navbar__toggle" data-nav-toggle="primary-nav" aria-label="메뉴" aria-expanded="false">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
     </button>
   </div>
 </nav>
@@ -157,271 +169,298 @@
 <div class="wire">
 
   <!-- PANEL 1 — Folders / Labels -->
-  <aside class="wire__panel wire__panel--folders no-print" aria-label="Mailboxes">
+  <aside class="wire__panel wire__panel--folders no-print" aria-label="편지함">
     <button class="btn btn--primary btn--block" data-modal-open="compose">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-      Compose
+      새 전송
     </button>
 
-    <nav class="sidebar__nav" aria-label="Folders">
-      <div class="sidebar__section-title">Mailboxes</div>
-      <a class="sidebar__item" href="#" aria-current="true" data-folder="Inbox">
+    <nav class="sidebar__nav" aria-label="폴더">
+      <div class="sidebar__section-title">편지함</div>
+      <button type="button" class="sidebar__item is-active" aria-current="true" data-folder="inbox" data-title="받은편지함">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 6.5 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-5.5A2 2 0 0 0 16.8 5H7.2a2 2 0 0 0-1.7 1.5z"/></svg>
-        <span>Inbox</span>
+        <span>받은편지함</span>
         <span class="count count--ink" id="inbox-count">3</span>
-      </a>
-      <a class="sidebar__item" href="#" data-folder="Wire Feed">
+      </button>
+      <button type="button" class="sidebar__item" data-folder="wire" data-title="와이어피드">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 11a9 9 0 0 1 9 9M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
-        <span>Wire Feed</span>
+        <span>와이어피드</span>
         <span class="count">42</span>
-      </a>
-      <a class="sidebar__item" href="#" data-folder="Sent">
+      </button>
+      <button type="button" class="sidebar__item" data-folder="sent" data-title="보낸편지함"
+        data-empty-title="보낸 메일이 없습니다" data-empty="이 데스크에서 아직 전송한 메일이 없습니다.">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-        <span>Sent</span>
-      </a>
-      <a class="sidebar__item" href="#" data-folder="Drafts">
+        <span>보낸편지함</span>
+      </button>
+      <button type="button" class="sidebar__item" data-folder="drafts" data-title="임시보관함"
+        data-empty-title="임시 저장된 글이 없습니다" data-empty="작성 중이던 전송 내용이 여기에 보관됩니다.">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-        <span>Drafts</span>
-        <span class="count">2</span>
-      </a>
-      <a class="sidebar__item" href="#" data-folder="Flagged">
+        <span>임시보관함</span>
+      </button>
+      <button type="button" class="sidebar__item" data-folder="flagged" data-title="중요표시"
+        data-empty-title="중요 표시한 메일이 없습니다" data-empty="야간판 확인이 필요한 메일을 중요 표시하면 여기에 모입니다.">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg>
-        <span>Flagged</span>
-      </a>
-      <a class="sidebar__item" href="#" data-folder="Archive">
+        <span>중요표시</span>
+      </button>
+      <button type="button" class="sidebar__item" data-folder="archive" data-title="보관함"
+        data-empty-title="보관함이 비었습니다" data-empty="마감이 끝난 메일을 보관하면 여기에서 다시 볼 수 있습니다.">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="4"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg>
-        <span>Archive</span>
-      </a>
-      <a class="sidebar__item" href="#" data-folder="Trash">
+        <span>보관함</span>
+      </button>
+      <button type="button" class="sidebar__item" data-folder="trash" data-title="휴지통"
+        data-empty-title="휴지통이 비었습니다" data-empty="삭제한 메일은 30일간 여기에 머무릅니다.">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-        <span>Trash</span>
-      </a>
+        <span>휴지통</span>
+      </button>
     </nav>
 
-    <nav aria-label="Labels">
-      <div class="sidebar__section-title">Labels</div>
-      <div class="label-row"><span class="label-swatch" style="background:var(--color-accent)"></span><span>Breaking</span><span class="label-row__count">9</span></div>
-      <div class="label-row"><span class="label-swatch" style="background:var(--color-text)"></span><span>Politics</span><span class="label-row__count">14</span></div>
-      <div class="label-row"><span class="label-swatch" style="background:var(--color-text-muted)"></span><span>Business</span><span class="label-row__count">6</span></div>
+    <nav aria-label="라벨">
+      <div class="sidebar__section-title">라벨</div>
+      <div class="label-row"><span class="label-swatch" style="background:var(--color-accent)"></span><span>속보</span><span class="label-row__count">9</span></div>
+      <div class="label-row"><span class="label-swatch" style="background:var(--color-text)"></span><span>정치</span><span class="label-row__count">14</span></div>
+      <div class="label-row"><span class="label-swatch" style="background:var(--color-text-muted)"></span><span>경제</span><span class="label-row__count">6</span></div>
     </nav>
   </aside>
 
   <!-- PANEL 2 — Message list -->
-  <section class="wire__panel wire__panel--list" aria-label="Messages">
+  <section class="wire__panel wire__panel--list" aria-label="메시지">
     <div class="wire-head">
       <div class="wire-head__row">
-        <h2 class="wire-head__title">Inbox</h2>
-        <span class="dateline">Late City Final</span>
+        <h2 class="wire-head__title" id="wire-list-title">받은편지함</h2>
+        <span class="dateline">가판 최종판</span>
       </div>
       <div class="wire-head__row">
-        <div class="segmented" data-segmented role="tablist" aria-label="Filter messages">
-          <button class="segmented__btn" role="tab" aria-selected="true" data-value="all">All</button>
-          <button class="segmented__btn" role="tab" aria-selected="false" data-value="unread">Unread</button>
-          <button class="segmented__btn" role="tab" aria-selected="false" data-value="flagged">Flagged</button>
+        <div class="segmented" data-segmented role="radiogroup" aria-label="메시지 필터">
+          <button role="radio" aria-checked="true" data-value="all">전체</button>
+          <button role="radio" aria-checked="false" data-value="unread">안 읽음</button>
+          <button role="radio" aria-checked="false" data-value="flagged">중요</button>
         </div>
-        <button class="btn btn--ghost btn--sm" aria-label="Sort messages">
+        <button class="btn btn--ghost btn--sm" aria-label="정렬 방식: 최신순">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M11 5h10M11 9h7M11 13h4M3 17l3 3 3-3M6 4v16"/></svg>
-          Newest
+          최신순
         </button>
       </div>
     </div>
 
     <div class="msglist" role="list">
       <!-- 1 — default selected, unread -->
-      <button type="button" class="msg is-unread is-active" role="listitem"
-        data-subject="Senate Reform Vote — final count confirmed at 58–41"
-        data-from="Margaret Reyes"
-        data-email="m.reyes@ledger.press"
-        data-initials="MR"
-        data-date="Today · 4:18 a.m."
-        data-label="Breaking">
-        <span class="avatar"><span class="avatar__initials">MR</span></span>
+      <div role="listitem">
+      <button type="button" class="msg is-unread is-active"
+        data-subject="기준금리 동결 리드 — 총재 발언 인용 확인 부탁"
+        data-from="서지원"
+        data-email="seo@wonjang.press"
+        data-initials="서"
+        data-date="오늘 · 오전 4:18"
+        data-label="속보 · 경제">
+        <span class="avatar"><span class="avatar__initials">서</span></span>
         <span class="msg__body">
           <span class="msg__top">
-            <span class="msg__sender">Margaret Reyes</span>
-            <span class="dateline msg__time">4:18a</span>
+            <span class="msg__sender">서지원</span>
+            <span class="dateline msg__time">4:18</span>
           </span>
-          <span class="msg__subject">Senate Reform Vote — final count confirmed at 58–41</span>
-          <span class="msg__snippet">Filed the wrap from the gallery. Need a second read on the timeline graf before A1 closes.</span>
-          <span class="msg__meta"><span class="badge badge--accent">Breaking</span><span class="msg__unread-dot" aria-label="Unread"></span></span>
+          <span class="msg__subject">기준금리 동결 리드 — 총재 발언 인용 확인 부탁</span>
+          <span class="msg__snippet">간담회장에서 리드 넘겼습니다. A1 마감 전에 네 번째 문단만 한 번 봐 주세요.</span>
+          <span class="msg__meta"><span class="badge badge--accent">속보</span><span class="msg__unread-dot" aria-label="안 읽음"></span></span>
         </span>
       </button>
+      </div>
 
       <!-- 2 — unread -->
-      <button type="button" class="msg is-unread" role="listitem"
-        data-subject="Transit overhaul approved 7–2 — quotes attached"
-        data-from="Liang Tanaka"
-        data-email="l.tanaka@ledger.press"
-        data-initials="LT"
-        data-date="Today · 2:51 a.m."
-        data-label="Politics">
-        <span class="avatar"><span class="avatar__initials">LT</span></span>
+      <div role="listitem">
+      <button type="button" class="msg is-unread"
+        data-subject="GTX 2기 노선 확정 — 국토부 브리핑 인용 첨부"
+        data-from="김민재"
+        data-email="kim@wonjang.press"
+        data-initials="김"
+        data-date="오늘 · 오전 2:51"
+        data-label="사회 · 교통">
+        <span class="avatar"><span class="avatar__initials">김</span></span>
         <span class="msg__body">
           <span class="msg__top">
-            <span class="msg__sender">Liang Tanaka</span>
-            <span class="dateline msg__time">2:51a</span>
+            <span class="msg__sender">김민재</span>
+            <span class="dateline msg__time">2:51</span>
           </span>
-          <span class="msg__subject">Transit overhaul approved 7–2 — quotes attached</span>
-          <span class="msg__snippet">Council just adjourned. Holdouts gave us usable color. Pushing 14 inches for City desk.</span>
-          <span class="msg__meta"><span class="badge badge--muted">Politics</span><span class="msg__unread-dot" aria-label="Unread"></span></span>
+          <span class="msg__subject">GTX 2기 노선 확정 — 국토부 브리핑 인용 첨부</span>
+          <span class="msg__snippet">브리핑 방금 끝났습니다. 지자체 분담금 이견은 박스 기사로 뺐습니다.</span>
+          <span class="msg__meta"><span class="badge badge--muted">사회</span><span class="msg__unread-dot" aria-label="안 읽음"></span></span>
         </span>
       </button>
+      </div>
 
       <!-- 3 — read -->
-      <button type="button" class="msg" role="listitem"
-        data-subject="Markets close broadly higher — chart numbers locked"
-        data-from="Rosa Okafor"
-        data-email="r.okafor@ledger.press"
-        data-initials="RO"
-        data-date="Yesterday · 9:42 p.m."
-        data-label="Business">
-        <span class="avatar"><span class="avatar__initials">RO</span></span>
+      <div role="listitem">
+      <button type="button" class="msg"
+        data-subject="코스피 2,760선 회복 — 마감 수치 확정"
+        data-from="박서연"
+        data-email="park@wonjang.press"
+        data-initials="박"
+        data-date="어제 · 오후 9:42"
+        data-label="경제 · 증시">
+        <span class="avatar"><span class="avatar__initials">박</span></span>
         <span class="msg__body">
           <span class="msg__top">
-            <span class="msg__sender">Rosa Okafor</span>
-            <span class="dateline msg__time">9:42p</span>
+            <span class="msg__sender">박서연</span>
+            <span class="dateline msg__time">21:42</span>
           </span>
-          <span class="msg__subject">Markets close broadly higher — chart numbers locked</span>
-          <span class="msg__snippet">Composite +1.8%, Tech +2.4%. Data desk signed off. Bars are ready for the B1 strip.</span>
-          <span class="msg__meta"><span class="badge badge--muted">Business</span></span>
+          <span class="msg__subject">코스피 2,760선 회복 — 마감 수치 확정</span>
+          <span class="msg__snippet">코스피 +0.8%, 코스닥 +1.2%. 데이터 데스크 확인 끝. B6 막대 준비됐습니다.</span>
+          <span class="msg__meta"><span class="badge badge--muted">증시</span></span>
         </span>
       </button>
+      </div>
 
       <!-- 4 — read, flagged -->
-      <button type="button" class="msg" role="listitem"
-        data-subject="Re: Harbor United advance on penalties — keeper saved twice"
-        data-from="Sam Whitfield"
-        data-email="s.whitfield@ledger.press"
-        data-initials="SW"
-        data-date="Yesterday · 8:05 p.m."
-        data-label="Sports">
-        <span class="avatar"><span class="avatar__initials">SW</span></span>
+      <div role="listitem">
+      <button type="button" class="msg"
+        data-subject="Re: 프로야구 후반기 개막 — 매진 사진 세 장"
+        data-from="오세훈"
+        data-email="oh@wonjang.press"
+        data-initials="오"
+        data-date="어제 · 오후 8:05"
+        data-label="스포츠">
+        <span class="avatar"><span class="avatar__initials">오</span></span>
         <span class="msg__body">
           <span class="msg__top">
-            <span class="msg__sender">Sam Whitfield</span>
-            <span class="dateline msg__time">8:05p</span>
+            <span class="msg__sender">오세훈</span>
+            <span class="dateline msg__time">20:05</span>
           </span>
-          <span class="msg__subject">Re: Harbor United advance on penalties — keeper saved twice</span>
-          <span class="msg__snippet">Shootout copy is filed. Flagged for the late edition stamp — confirm before C1 plates.</span>
+          <span class="msg__subject">Re: 프로야구 후반기 개막 — 매진 사진 세 장</span>
+          <span class="msg__snippet">잠실 매진 컷 골라 두었습니다. 야간판 도장 확인 후 C1으로 넘길게요.</span>
           <span class="msg__meta">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="var(--color-accent)" stroke="var(--color-accent)" stroke-width="2" aria-label="Flagged"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/></svg>
+            <svg class="msg__flag" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" stroke="currentColor" stroke-width="2" role="img" aria-label="중요 표시됨"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/></svg>
           </span>
         </span>
       </button>
+      </div>
 
       <!-- 5 — unread -->
-      <button type="button" class="msg is-unread" role="listitem"
-        data-subject="Photo desk: halftone plates ready for A1 and B6"
-        data-from="Dele Okonkwo"
-        data-email="d.okonkwo@ledger.press"
-        data-initials="DO"
-        data-date="Yesterday · 6:30 p.m."
-        data-label="Photo">
-        <span class="avatar"><span class="avatar__initials">DO</span></span>
+      <div role="listitem">
+      <button type="button" class="msg is-unread"
+        data-subject="사진부 — 하프톤 원판 A1·B6 준비 완료"
+        data-from="정도현"
+        data-email="jung@wonjang.press"
+        data-initials="정"
+        data-date="어제 · 오후 6:30"
+        data-label="사진부">
+        <span class="avatar"><span class="avatar__initials">정</span></span>
         <span class="msg__body">
           <span class="msg__top">
-            <span class="msg__sender">Dele Okonkwo</span>
-            <span class="dateline msg__time">6:30p</span>
+            <span class="msg__sender">정도현</span>
+            <span class="dateline msg__time">18:30</span>
           </span>
-          <span class="msg__subject">Photo desk: halftone plates ready for A1 and B6</span>
-          <span class="msg__snippet">Three frames from the chamber floor. Credit reads Press Gallery. Need crops by 10.</span>
-          <span class="msg__meta"><span class="badge">Photo</span><span class="msg__unread-dot" aria-label="Unread"></span></span>
+          <span class="msg__subject">사진부 — 하프톤 원판 A1·B6 준비 완료</span>
+          <span class="msg__snippet">간담회장 프레임 세 장 보냅니다. 크레딧은 공동취재단. 10시까지 크롭 부탁합니다.</span>
+          <span class="msg__meta"><span class="badge">사진</span><span class="msg__unread-dot" aria-label="안 읽음"></span></span>
         </span>
       </button>
+      </div>
 
       <!-- 6 — read -->
-      <button type="button" class="msg" role="listitem"
-        data-subject="Copydesk: hyphenation pass complete through D-section"
-        data-from="Priya Nair"
-        data-email="p.nair@ledger.press"
-        data-initials="PN"
-        data-date="Yesterday · 5:12 p.m."
-        data-label="Copy">
-        <span class="avatar"><span class="avatar__initials">PN</span></span>
+      <div role="listitem">
+      <button type="button" class="msg"
+        data-subject="교열 — 경제·사회면 하이픈·띄어쓰기 교정 완료"
+        data-from="최유진"
+        data-email="choi@wonjang.press"
+        data-initials="최"
+        data-date="어제 · 오후 5:12"
+        data-label="교열">
+        <span class="avatar"><span class="avatar__initials">최</span></span>
         <span class="msg__body">
           <span class="msg__top">
-            <span class="msg__sender">Priya Nair</span>
-            <span class="dateline msg__time">5:12p</span>
+            <span class="msg__sender">최유진</span>
+            <span class="dateline msg__time">17:12</span>
           </span>
-          <span class="msg__subject">Copydesk: hyphenation pass complete through D-section</span>
-          <span class="msg__snippet">All justified columns checked for rivers. Two widows fixed on the Opinion strip.</span>
-          <span class="msg__meta"><span class="badge badge--muted">Copy</span></span>
+          <span class="msg__subject">교열 — 경제·사회면 하이픈·띄어쓰기 교정 완료</span>
+          <span class="msg__snippet">양끝맞춤 단의 ‘강물’ 현상 확인했습니다. 오피니언 과부(widow) 두 줄 처리했습니다.</span>
+          <span class="msg__meta"><span class="badge badge--muted">교열</span></span>
         </span>
       </button>
+      </div>
 
       <!-- 7 — read -->
-      <button type="button" class="msg" role="listitem"
-        data-subject="Weather strip — clearing by morning edition, confirmed"
-        data-from="Tomás Herrera"
-        data-email="t.herrera@ledger.press"
-        data-initials="TH"
-        data-date="Yesterday · 3:40 p.m."
-        data-label="Weather">
-        <span class="avatar"><span class="avatar__initials">TH</span></span>
+      <div role="listitem">
+      <button type="button" class="msg"
+        data-subject="날씨 스트립 — 조간까지 폭염 지속, 확정"
+        data-from="이하늘"
+        data-email="lee@wonjang.press"
+        data-initials="이"
+        data-date="어제 · 오후 3:40"
+        data-label="날씨">
+        <span class="avatar"><span class="avatar__initials">이</span></span>
         <span class="msg__body">
           <span class="msg__top">
-            <span class="msg__sender">Tomás Herrera</span>
-            <span class="dateline msg__time">3:40p</span>
+            <span class="msg__sender">이하늘</span>
+            <span class="dateline msg__time">15:40</span>
           </span>
-          <span class="msg__subject">Weather strip — clearing by morning edition, confirmed</span>
-          <span class="msg__snippet">City 17° clearing, Harbor 15° wind, Hills 12° fog. Updated the C8 cells for you.</span>
-          <span class="msg__meta"><span class="badge">Weather</span></span>
+          <span class="msg__subject">날씨 스트립 — 조간까지 폭염 지속, 확정</span>
+          <span class="msg__snippet">서울 34° 폭염, 부산 29° 흐림, 제주 31° 비. C8 셀 갱신해 두었습니다.</span>
+          <span class="msg__meta"><span class="badge">날씨</span></span>
         </span>
       </button>
+      </div>
 
       <!-- 8 — read -->
-      <button type="button" class="msg" role="listitem"
-        data-subject="From the Editor's Desk: tomorrow's budget meeting moved to 9"
-        data-from="The Managing Editor"
-        data-email="desk@ledger.press"
-        data-initials="ME"
-        data-date="Yesterday · 1:15 p.m."
-        data-label="Desk">
-        <span class="avatar"><span class="avatar__initials">ME</span></span>
+      <div role="listitem">
+      <button type="button" class="msg"
+        data-subject="편집국장 — 내일 아침 편집회의 9시로 당김"
+        data-from="편집국장"
+        data-email="desk@wonjang.press"
+        data-initials="국"
+        data-date="어제 · 오후 1:15"
+        data-label="편집국">
+        <span class="avatar"><span class="avatar__initials">국</span></span>
         <span class="msg__body">
           <span class="msg__top">
-            <span class="msg__sender">The Managing Editor</span>
-            <span class="dateline msg__time">1:15p</span>
+            <span class="msg__sender">편집국장</span>
+            <span class="dateline msg__time">13:15</span>
           </span>
-          <span class="msg__subject">From the Editor's Desk: tomorrow's budget meeting moved to 9</span>
-          <span class="msg__snippet">Front-page budget at 9 sharp, not 10. Bring three line options for the lead head.</span>
-          <span class="msg__meta"><span class="badge badge--muted">Desk</span></span>
+          <span class="msg__subject">편집국장 — 내일 아침 편집회의 9시로 당김</span>
+          <span class="msg__snippet">1면 편집회의는 10시가 아니라 9시 정각입니다. 리드 헤드 후보 세 개 준비해 오세요.</span>
+          <span class="msg__meta"><span class="badge badge--muted">편집국</span></span>
         </span>
       </button>
+      </div>
+    </div>
+
+    <!-- empty state — shown when an empty folder is selected -->
+    <div class="empty-state" id="wire-empty" hidden style="margin:var(--space-8)">
+      <span class="empty-state__mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 6.5 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-5.5A2 2 0 0 0 16.8 5H7.2a2 2 0 0 0-1.7 1.5z"/></svg></span>
+      <div class="empty-state__title" id="wire-empty-title">폴더가 비었습니다</div>
+      <p class="empty-state__text" id="wire-empty-text">선택한 폴더에 메일이 없습니다.</p>
     </div>
   </section>
 
   <!-- PANEL 3 — Reading pane -->
-  <section class="wire__panel wire__panel--read" aria-label="Reading pane">
-    <div class="read-toolbar no-print" role="toolbar" aria-label="Message actions">
-      <span data-tooltip="Reply"><button class="btn btn--icon btn--sm" id="reply-btn" aria-label="Reply">
+  <section class="wire__panel wire__panel--read" aria-label="읽기 화면">
+    <div class="read-toolbar no-print" role="toolbar" aria-label="메시지 작업">
+      <span data-tooltip="회신"><button class="btn btn--icon btn--sm" id="reply-btn" aria-label="회신">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 17 4 12l5-5"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
       </button></span>
-      <span data-tooltip="Forward"><button class="btn btn--icon btn--sm" aria-label="Forward">
+      <span data-tooltip="전달"><button class="btn btn--icon btn--sm" aria-label="전달">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 17 5-5-5-5"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg>
       </button></span>
-      <span data-tooltip="Archive"><button class="btn btn--icon btn--sm" aria-label="Archive" data-toast="Message moved to Archive" data-toast-title="Archived" data-toast-variant="success">
+      <span data-tooltip="보관"><button class="btn btn--icon btn--sm" aria-label="보관" data-toast="메일을 보관함으로 옮겼습니다 · 되돌리기" data-toast-title="보관" data-toast-variant="success">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="4"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg>
       </button></span>
-      <span data-tooltip="Flag"><button class="btn btn--icon btn--sm" aria-label="Flag" data-toast="Message flagged for late edition" data-toast-title="Flagged" data-toast-variant="warning">
+      <span data-tooltip="중요표시"><button class="btn btn--icon btn--sm" aria-label="중요표시" data-toast="야간판용으로 중요 표시했습니다" data-toast-title="중요 표시" data-toast-variant="warning">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></svg>
       </button></span>
       <span class="read-toolbar__spacer"></span>
-      <span data-tooltip="Delete"><button class="btn btn--icon btn--sm btn--danger" aria-label="Delete" data-toast="Message moved to Trash" data-toast-title="Deleted" data-toast-variant="danger">
+      <span data-tooltip="삭제"><button class="btn btn--icon btn--sm btn--danger" aria-label="삭제" data-toast="메일을 휴지통으로 옮겼습니다 · 되돌리기" data-toast-title="삭제" data-toast-variant="danger">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
       </button></span>
     </div>
 
     <div class="read-scroll">
       <article class="article-header" data-reveal>
-        <span class="kicker" id="read-label">Breaking · National Affairs</span>
-        <h1 class="article-header__headline" id="read-subject" style="font-family:var(--font-masthead);font-weight:900;font-size:var(--text-4xl);line-height:var(--leading-tight);margin:var(--space-2) 0 var(--space-4)">Senate Reform Vote — final count confirmed at 58–41</h1>
+        <span class="kicker" id="read-label">속보 · 경제</span>
+        <h1 class="article-header__headline" id="read-subject" style="font-size:var(--text-4xl);margin:var(--space-2) 0 var(--space-4)">기준금리 동결 리드 — 총재 발언 인용 확인 부탁</h1>
 
         <div class="read-from">
-          <span class="avatar avatar--lg"><span class="avatar__initials" id="read-initials">MR</span><span class="avatar__status avatar__status--online"></span></span>
+          <span class="avatar avatar--lg"><span class="avatar__initials" id="read-initials">서</span><span class="avatar__status avatar__status--online"></span></span>
           <span class="read-from__meta">
-            <span class="byline">From <strong id="read-from">Margaret Reyes</strong> <span class="text-muted text-mono" id="read-email">&lt;m.reyes@ledger.press&gt;</span></span><br>
-            <span class="dateline">To: City Desk, Copydesk · <span id="read-date">Today · 4:18 a.m.</span></span>
+            <span class="byline">보낸이 <strong id="read-from">서지원</strong> <span class="text-muted text-mono" id="read-email">&lt;seo@wonjang.press&gt;</span></span><br>
+            <span class="dateline">받는 곳: 정치·경제 데스크, 교열부 · <span id="read-date">오늘 · 오전 4:18</span></span>
           </span>
         </div>
       </article>
@@ -429,24 +468,24 @@
       <hr class="rule-medium">
 
       <div class="read-body" style="margin-top:var(--space-6); max-width: 68ch" data-reveal>
-        <p class="drop-cap">Filed the wrap from the press gallery a few minutes after the clerk read the roll. The count held at 58–41, which is wider than the floor whip suggested last night, so we should lead with the margin rather than the procedural drama. I have the majority leader on the record outside the chamber, and a usable line from the ranking member of the opposition for balance.</p>
-        <p>The one soft spot is the timeline graf. Leadership is promising a signature "within the week," but two staffers told me privately the implementation clock does not start until the next fiscal year. I have hedged the language — please give it a second read before A1 closes so we are not overstating the speed.</p>
-        <p>Photo desk has three frames from the final hour of debate; Dele is sending crops separately. I would run the chamber-floor frame above the fold and hold the leader's portrait for the jump on A6. The pull quote — "this is what the institution looks like when it works" — is clean and verified against my recorder.</p>
-        <p>One housekeeping note: the moderate bloc that revived the bill after it died in committee deserves a sidebar of its own. I can turn 12 inches by the morning budget if the desk wants it. Let me know on the 9 o'clock call.</p>
-        <p>Sending the raw audio to the shared drive now. Holler if you need anything before the late plates lock.</p>
-        <p class="byline">— Margaret</p>
+        <p class="drop-cap">간담회장에서 총재 발언이 끝나자마자 리드부터 넘겼습니다. 동결은 예상대로였지만, 표결 자체보다 향후 인하 시점을 두고 위원들 견해가 갈렸다는 점을 리드로 잡았습니다.</p>
+        <p>한 가지 걸리는 부분은 네 번째 문단의 시점 표현입니다. 총재는 “서두르지 않겠다”고 했지만, 실무진 두 명은 사실상 4분기 이전 인하는 어렵다는 뉘앙스였습니다. 표현을 조금 눌러 두었으니 A1 마감 전에 한 번만 봐 주세요.</p>
+        <p>사진부에서 간담회장 프레임 세 장을 따로 보냅니다. 정도현 기자가 크롭을 이어서 보낼 예정입니다. 총재가 회의장을 나서는 컷을 접힘 위(above the fold)에 쓰고, 인물 사진은 B1 점프용으로 남겨 두는 편이 좋겠습니다.</p>
+        <p>금리를 여섯 번째 묶은 배경으로 가계부채와 환율을 함께 짚은 사이드바가 하나 필요해 보입니다. 원하시면 조간 편집회의까지 12줄 정도 더 채워 넣겠습니다.</p>
+        <p>녹취 원본은 공유 드라이브에 올려 두었습니다. 마감 전에 필요한 게 있으면 언제든 알려 주세요.</p>
+        <p class="byline">— 서지원 드림</p>
       </div>
     </div>
 
     <div class="quick-reply no-print">
-      <label class="field__label" for="quick-reply-text">Quick reply</label>
-      <textarea class="textarea" id="quick-reply-text" rows="3" placeholder="Type a reply to the wire desk…"></textarea>
+      <label class="field__label" for="quick-reply-text">빠른 회신</label>
+      <textarea class="textarea" id="quick-reply-text" rows="3" placeholder="통신 데스크로 회신을 작성하세요…"></textarea>
       <div class="row row-between mt-2">
-        <span class="dateline">Replying to <span id="reply-to">Margaret Reyes</span></span>
+        <span class="dateline">회신 대상: <span id="reply-to">서지원</span></span>
         <button class="btn btn--primary btn--sm" id="quick-send"
-          data-toast="Your reply is on the wire" data-toast-title="Reply sent" data-toast-variant="success">
+          data-toast="회신을 통신선에 보냈습니다" data-toast-title="회신 전송" data-toast-variant="success">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-          Send
+          보내기
         </button>
       </div>
     </div>
@@ -458,53 +497,53 @@
 <!-- Compose modal -->
 <div class="modal" id="compose" role="dialog" aria-modal="true" aria-labelledby="compose-title" hidden>
   <div class="modal__head">
-    <h2 class="modal__title" id="compose-title">New Dispatch</h2>
-    <button class="btn btn--icon btn--sm modal__close" data-modal-close aria-label="Close compose">
+    <h2 class="modal__title" id="compose-title">새 전송</h2>
+    <button class="btn btn--icon btn--sm modal__close" data-modal-close aria-label="닫기">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
     </button>
   </div>
   <div class="modal__body">
     <div class="field">
-      <label class="field__label" for="compose-to">To <span class="req">*</span></label>
-      <input class="input" id="compose-to" type="email" placeholder="copydesk@ledger.press">
+      <label class="field__label" for="compose-to">받는 사람 <span class="req">*</span></label>
+      <input class="input" id="compose-to" type="email" placeholder="copydesk@wonjang.press">
     </div>
     <div class="field mt-4">
-      <label class="field__label" for="compose-subject">Subject <span class="req">*</span></label>
-      <input class="input" id="compose-subject" type="text" placeholder="Re: morning budget — lead head options">
+      <label class="field__label" for="compose-subject">제목 <span class="req">*</span></label>
+      <input class="input" id="compose-subject" type="text" placeholder="Re: 아침 편집회의 — 리드 헤드 후보">
     </div>
     <div class="field mt-4">
-      <label class="field__label" for="compose-body">Message</label>
-      <textarea class="textarea" id="compose-body" rows="6" placeholder="Set your dispatch in plain, declarative copy…"></textarea>
+      <label class="field__label" for="compose-body">본문</label>
+      <textarea class="textarea" id="compose-body" rows="6" placeholder="간결한 평서문으로 전송 내용을 적어 주세요…"></textarea>
     </div>
   </div>
   <div class="modal__foot">
-    <button class="btn btn--ghost" data-modal-close>Discard</button>
+    <button class="btn btn--ghost" data-modal-close>폐기</button>
     <button class="btn btn--primary" data-modal-close
-      data-toast="Your dispatch is on the wire" data-toast-title="Dispatch sent" data-toast-variant="success">
+      data-toast="전송 내용이 통신선에 올라갔습니다" data-toast-title="전송 완료" data-toast-variant="success">
       <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-      Send
+      전송
     </button>
   </div>
 </div>
 
 <!-- Command palette -->
-<div class="command" data-command role="dialog" aria-modal="true" aria-label="Command palette" hidden>
-  <div class="command__search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="Search…" aria-label="Command input"><kbd>ESC</kbd></div>
+<div class="command" data-command role="dialog" aria-modal="true" aria-label="명령 팔레트" hidden>
+  <div class="command__search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="섹션, 페이지, 명령 검색…" aria-label="명령 입력"><kbd>ESC</kbd></div>
   <div class="command__list">
-    <div class="command__group-label">Navigate</div>
-    <button class="command__item" data-href="../index.html">Back to Hub</button>
-    <button class="command__item" data-href="dashboard.html">Analytics Desk</button>
-    <button class="command__item" data-href="front-page.html">Front Page</button>
-    <div class="command__group-label">Commands</div>
-    <button class="command__item" data-action="toggle-theme">Toggle Day / Night Edition</button>
+    <div class="command__group-label">이동</div>
+    <button class="command__item" data-href="../index.html">규격집으로</button>
+    <button class="command__item" data-href="dashboard.html">분석 데스크</button>
+    <button class="command__item" data-href="front-page.html">1면 읽기</button>
+    <div class="command__group-label">명령</div>
+    <button class="command__item" data-action="toggle-theme">데이 / 나이트 에디션 전환</button>
   </div>
-  <div class="command__empty" hidden>No matching entry.</div>
-  <div class="command__foot"><span><kbd>↑</kbd><kbd>↓</kbd> nav</span><span><kbd>↵</kbd> select</span><span><kbd>esc</kbd> close</span></div>
+  <div class="command__empty" hidden>색인에 일치하는 항목이 없습니다.</div>
+  <div class="command__foot"><span><kbd>↑</kbd><kbd>↓</kbd> 이동</span><span><kbd>↵</kbd> 선택</span><span><kbd>esc</kbd> 닫기</span></div>
 </div>
 
 <script src="../app.js" defer></script>
 <script>
-  // The Wire — message-row interaction (null-guarded throughout)
+  // The Wire — message-row interaction + folder switching (null-guarded throughout)
   (function () {
     var list = document.querySelector('.msglist');
     if (!list) return;
@@ -524,7 +563,7 @@
       if (!row) return;
       var d = row.dataset || {};
       setText(subjectEl, d.subject);
-      if (labelEl && d.label) labelEl.textContent = d.label + ' · Wire Desk';
+      setText(labelEl, d.label);
       setText(fromEl, d.from);
       if (emailEl && d.email) emailEl.textContent = '<' + d.email + '>';
       setText(initialsEl, d.initials);
@@ -560,6 +599,16 @@
       }
 
       updatePane(row);
+
+      // Stacked (mobile) layout: the reading pane sits below the list, so bring it
+      // into view after a selection — the list↔read transition path (FOUNDATION §4-6-2).
+      if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) {
+        var readPane = document.querySelector('.wire__panel--read');
+        if (readPane && readPane.scrollIntoView) {
+          var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          readPane.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+        }
+      }
     }
 
     list.addEventListener('click', function (e) {
@@ -579,6 +628,31 @@
     if (sendBtn && replyText) {
       sendBtn.addEventListener('click', function () { replyText.value = ''; });
     }
+
+    // folder switching — Inbox / Wire show the thread list; empty folders show the empty state
+    var folders   = Array.prototype.slice.call(document.querySelectorAll('[data-folder]'));
+    var emptyEl   = document.getElementById('wire-empty');
+    var listTitle = document.getElementById('wire-list-title');
+    var emptyHead = document.getElementById('wire-empty-title');
+    var emptyText = document.getElementById('wire-empty-text');
+    folders.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        folders.forEach(function (b) { b.classList.remove('is-active'); b.removeAttribute('aria-current'); });
+        btn.classList.add('is-active');
+        btn.setAttribute('aria-current', 'true');
+        setText(listTitle, btn.getAttribute('data-title'));
+        var emptyMsg = btn.getAttribute('data-empty');
+        if (emptyMsg) {
+          setText(emptyHead, btn.getAttribute('data-empty-title'));
+          setText(emptyText, emptyMsg);
+          if (list) list.hidden = true;
+          if (emptyEl) emptyEl.hidden = false;
+        } else {
+          if (list) list.hidden = false;
+          if (emptyEl) emptyEl.hidden = true;
+        }
+      });
+    });
   })();
 </script>
 </body>

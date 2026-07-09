@@ -43,6 +43,32 @@
     },
   };
 
+  /* ───────────── 1b. DENSITY (여유/조밀 밀도 전환 + 영속) ─────────────
+     [data-density="compact"] 한 속성으로 카드·컨트롤·테이블이 일제히 조밀해짐.
+     3계층 토큰 아키텍처를 자랑하는 가장 SaaS 다운 데모. */
+  const DensityManager = {
+    KEY: "theme30-density",
+    init() {
+      this.sync();
+      $$("[data-density-toggle]").forEach((btn) => on(btn, "click", () => this.toggle()));
+    },
+    current() {
+      return document.documentElement.getAttribute("data-density") === "compact" ? "compact" : "comfortable";
+    },
+    toggle() {
+      const next = this.current() === "compact" ? "comfortable" : "compact";
+      if (next === "compact") document.documentElement.setAttribute("data-density", "compact");
+      else document.documentElement.removeAttribute("data-density");
+      try { if (next === "compact") localStorage.setItem(this.KEY, "compact"); else localStorage.removeItem(this.KEY); } catch (e) {}
+      this.sync();
+      Toast.show({ type: "info", title: next === "compact" ? "조밀한 밀도로 바꿨어요" : "여유로운 밀도로 바꿨어요", duration: 1800 });
+    },
+    sync() {
+      const compact = this.current() === "compact";
+      $$("[data-density-toggle]").forEach((b) => b.setAttribute("aria-pressed", String(compact)));
+    },
+  };
+
   /* ───────────── 2. focus trap 헬퍼 ───────────── */
   const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
   function trapFocus(container, e) {
@@ -292,39 +318,92 @@
     return '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="m8 9 4-4 4 4M8 15l4 4 4-4"/></svg>';
   }
 
-  /* ───────────── 11. COMMAND PALETTE (⌘K) ───────────── */
+  /* ───────────── 11. COMMAND PALETTE (⌘K) — listbox/activedescendant + 최근방문 + 밀도 ─────────────
+     브랜드 경험의 중심. combobox+listbox 정식 ARIA, 최근 방문 그룹(localStorage),
+     팔레트 안에서 테마·밀도 전환. 항목이 동적 주입되므로 이벤트 위임 사용. */
   const CommandPalette = {
-    el: null, input: null, list: null, items: [], active: 0,
+    el: null, input: null, list: null, visible: [], active: 0, RECENT_KEY: "theme30-recent",
     init() {
       this.el = $("#cmdk"); if (!this.el) return;
       this.input = $(".cmdk-search input", this.el);
       this.list = $(".cmdk-list", this.el);
-      this.allItems = $$(".cmdk-item", this.el).map((n) => ({ node: n, text: (n.getAttribute("data-keywords") || n.textContent).toLowerCase() }));
       on(document, "keydown", (e) => {
         if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); this.toggle(); }
         if (e.key === "Escape" && this.el.classList.contains("is-open")) this.close();
       });
       $$("[data-cmdk-open]").forEach((b) => on(b, "click", () => this.open()));
       on(this.el, "click", (e) => { if (e.target === this.el) this.close(); });
+      on(this.el, "keydown", (e) => { if (e.key === "Tab") trapFocus(this.el, e); });
       on(this.input, "input", () => this.filter());
       on(this.input, "keydown", (e) => this.nav(e));
-      $$(".cmdk-item", this.el).forEach((it, i) => {
-        on(it, "click", () => this.run(it));
-        on(it, "mousemove", () => this.setActive(i));
+      // 위임 (recent 항목 동적 주입 대응)
+      on(this.list, "click", (e) => { const it = e.target.closest(".cmdk-item"); if (it) this.run(it); });
+      on(this.list, "mousemove", (e) => {
+        const it = e.target.closest(".cmdk-item"); if (!it) return;
+        const idx = this.visible.indexOf(it); if (idx >= 0 && idx !== this.active) { this.active = idx; this.paint(); }
       });
+      this.ensureIds();
+    },
+    ensureIds() {
+      $$(".cmdk-item", this.el).forEach((n, i) => { if (!n.id) n.id = "cmdk-opt-" + i; n.setAttribute("role", "option"); if (!n.hasAttribute("aria-selected")) n.setAttribute("aria-selected", "false"); });
+    },
+    labelOf(node) {
+      let t = ""; node.childNodes.forEach((c) => { if (c.nodeType === 3) t += c.textContent; });
+      return (t.trim() || node.textContent.trim());
     },
     toggle() { this.el.classList.contains("is-open") ? this.close() : this.open(); },
-    open() { this.el.classList.add("is-open"); this.el.setAttribute("aria-hidden", "false"); document.body.style.overflow = "hidden"; this.input.value = ""; this.filter(); setTimeout(() => this.input.focus(), 50); },
-    close() { this.el.classList.remove("is-open"); this.el.setAttribute("aria-hidden", "true"); if (!$$(".overlay.is-open").length) document.body.style.overflow = ""; },
+    open() {
+      this.renderRecent(); this.ensureIds();
+      this.el.classList.add("is-open"); this.el.setAttribute("aria-hidden", "false");
+      this.input.setAttribute("aria-expanded", "true");
+      document.body.style.overflow = "hidden";
+      this.input.value = ""; this.filter();
+      setTimeout(() => this.input.focus(), 50);
+    },
+    close() {
+      this.el.classList.remove("is-open"); this.el.setAttribute("aria-hidden", "true");
+      this.input.setAttribute("aria-expanded", "false");
+      this.input.removeAttribute("aria-activedescendant");
+      if (!$$(".overlay.is-open, .drawer-overlay.is-open").length) document.body.style.overflow = "";
+    },
+    recent() { try { return JSON.parse(localStorage.getItem(this.RECENT_KEY) || "[]"); } catch (e) { return []; } },
+    pushRecent(href, label) {
+      if (!href) return;
+      try {
+        let r = this.recent().filter((x) => x.href !== href);
+        r.unshift({ href: href, label: label }); r = r.slice(0, 3);
+        localStorage.setItem(this.RECENT_KEY, JSON.stringify(r));
+      } catch (e) {}
+    },
+    renderRecent() {
+      const label = $("[data-recent-label]", this.el);
+      $$("[data-recent-item]", this.el).forEach((n) => n.remove());
+      if (!label) return;
+      const items = this.recent();
+      if (!items.length) { label.hidden = true; return; }
+      label.hidden = false;
+      let anchor = label;
+      items.forEach((it) => {
+        const node = document.createElement("div");
+        node.className = "cmdk-item"; node.setAttribute("role", "option"); node.setAttribute("aria-selected", "false");
+        node.setAttribute("data-recent-item", ""); node.setAttribute("data-href", it.href);
+        node.innerHTML = '<svg class="cmdk-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 8v4l3 2"/></svg>';
+        node.appendChild(document.createTextNode(it.label));
+        const meta = document.createElement("span"); meta.className = "cmdk-meta"; meta.textContent = "최근"; node.appendChild(meta);
+        anchor.after(node); anchor = node;
+      });
+    },
     filter() {
       const q = this.input.value.trim().toLowerCase();
       this.visible = [];
-      this.allItems.forEach((it) => {
-        const show = !q || it.text.includes(q);
-        it.node.style.display = show ? "" : "none";
-        if (show) this.visible.push(it.node);
+      $$(".cmdk-item", this.el).forEach((n) => {
+        const text = (n.getAttribute("data-keywords") || n.textContent).toLowerCase();
+        const show = !q || text.includes(q);
+        n.style.display = show ? "" : "none";
+        if (show) this.visible.push(n);
       });
       $$(".cmdk-group-label", this.el).forEach((g) => {
+        if (g.hasAttribute("data-recent-label") && g.hidden) { g.style.display = "none"; return; }
         let sib = g.nextElementSibling, any = false;
         while (sib && sib.classList.contains("cmdk-item")) { if (sib.style.display !== "none") any = true; sib = sib.nextElementSibling; }
         g.style.display = any ? "" : "none";
@@ -332,26 +411,51 @@
       const empty = $(".cmdk-empty", this.el); if (empty) empty.style.display = this.visible.length ? "none" : "";
       this.active = 0; this.paint();
     },
-    setActive(i) { const vi = this.visible.indexOf($$(".cmdk-item", this.el)[i]); if (vi >= 0) { this.active = vi; this.paint(); } },
     nav(e) {
       if (e.key === "ArrowDown") { e.preventDefault(); this.active = Math.min(this.active + 1, this.visible.length - 1); this.paint(true); }
       else if (e.key === "ArrowUp") { e.preventDefault(); this.active = Math.max(this.active - 1, 0); this.paint(true); }
       else if (e.key === "Enter") { e.preventDefault(); if (this.visible[this.active]) this.run(this.visible[this.active]); }
     },
     paint(scroll) {
-      this.visible.forEach((n, i) => n.classList.toggle("is-active", i === this.active));
-      if (scroll && this.visible[this.active]) this.visible[this.active].scrollIntoView({ block: "nearest" });
+      this.visible.forEach((n, i) => { const on_ = i === this.active; n.classList.toggle("is-active", on_); n.setAttribute("aria-selected", String(on_)); });
+      const act = this.visible[this.active];
+      if (act) { this.input.setAttribute("aria-activedescendant", act.id); if (scroll) act.scrollIntoView({ block: "nearest" }); }
+      else this.input.removeAttribute("aria-activedescendant");
     },
     run(node) {
       const action = node.getAttribute("data-action");
       const href = node.getAttribute("data-href");
       this.close();
       if (action === "toggle-theme") ThemeManager.toggle();
-      else if (action === "toast") Toast.show({ type: "success", title: "명령 실행됨", text: node.textContent.trim() });
-      else if (href) window.location.href = href;
-      else Toast.show({ type: "info", title: node.textContent.trim().split("\n")[0] });
+      else if (action === "toggle-density") DensityManager.toggle();
+      else if (action === "toast") Toast.show({ type: "success", title: "명령 실행됨", text: this.labelOf(node) });
+      else if (href) { this.pushRecent(href, this.labelOf(node)); window.location.href = href; }
+      else Toast.show({ type: "info", title: this.labelOf(node) });
     },
   };
+
+  /* ───────────── 11b. SEGMENTED (radiogroup — 방향키 + aria-checked 동기화) ─────────────
+     plain button 에 aria-selected 오용 대신 role="radio"+aria-checked 표준 패턴. */
+  function initSegmented() {
+    $$('[data-segmented]').forEach((grp) => {
+      const radios = $$('[role="radio"]', grp);
+      if (!radios.length) return;
+      const select = (btn) => radios.forEach((r) => { const on_ = r === btn; r.setAttribute("aria-checked", String(on_)); r.tabIndex = on_ ? 0 : -1; });
+      const checked = radios.find((r) => r.getAttribute("aria-checked") === "true") || radios[0];
+      radios.forEach((r) => (r.tabIndex = r === checked ? 0 : -1));
+      radios.forEach((btn, i) => {
+        on(btn, "click", () => select(btn));
+        on(btn, "keydown", (e) => {
+          let idx = null;
+          if (e.key === "ArrowRight" || e.key === "ArrowDown") idx = (i + 1) % radios.length;
+          else if (e.key === "ArrowLeft" || e.key === "ArrowUp") idx = (i - 1 + radios.length) % radios.length;
+          else if (e.key === "Home") idx = 0;
+          else if (e.key === "End") idx = radios.length - 1;
+          if (idx !== null) { e.preventDefault(); radios[idx].focus(); select(radios[idx]); }
+        });
+      });
+    });
+  }
 
   /* ───────────── 12. TOGGLE / SWITCH aria + 가격표 toggle ───────────── */
   function initToggles() {
@@ -478,13 +582,16 @@
     map.forEach((_, t) => obs.observe(t));
   }
 
-  /* ───────────── 21. REVEAL on scroll ───────────── */
+  /* ───────────── 21. REVEAL on scroll (시그니처 등장 — .is-in 부여) ─────────────
+     base.css 의 html.js [data-reveal] 가 초기 숨김, 여기서 뷰포트 진입 시 .is-in.
+     JS/IO 없으면 즉시 노출(콘텐츠 숨김 방치 금지). 차트 드로잉(.chart-draw)도 동일. */
   function initReveal() {
-    const els = $$("[data-reveal]");
+    const els = $$("[data-reveal], .chart-draw");
     if (!els.length) return;
-    if (!("IntersectionObserver" in window) || window.matchMedia("(prefers-reduced-motion: reduce)").matches) { els.forEach((e) => e.classList.add("is-visible")); return; }
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!("IntersectionObserver" in window) || reduce) { els.forEach((e) => e.classList.add("is-in")); return; }
     const obs = new IntersectionObserver((entries) => {
-      entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add("animate-in"); obs.unobserve(en.target); } });
+      entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add("is-in"); obs.unobserve(en.target); } });
     }, { threshold: 0.12 });
     els.forEach((e) => obs.observe(e));
   }
@@ -528,6 +635,7 @@
   /* ───────────── BOOT ───────────── */
   function boot() {
     ThemeManager.init();
+    DensityManager.init();
     Modal.init();
     Drawer.init();
     initTabs();
@@ -536,6 +644,7 @@
     initSidebar();
     initTables();
     CommandPalette.init();
+    initSegmented();
     initToggles();
     initSteppers();
     initRatings();
@@ -553,11 +662,18 @@
     }));
     // 데모용 sort 아이콘 초기화
     $$("th.sortable .sort-ico").forEach((i) => { if (!i.innerHTML.trim()) i.innerHTML = sortIcon("none"); });
+    // ⌘K 코치마크 — 첫 방문 1회만 (구현된 기능만 안내)
+    try {
+      if ($("#cmdk") && !localStorage.getItem("theme30-cmdk-seen")) {
+        setTimeout(() => Toast.show({ type: "info", title: "팁 · ⌘K", text: "어디서든 ⌘K 로 페이지와 명령을 빠르게 찾을 수 있어요.", duration: 6000 }), 1800);
+        localStorage.setItem("theme30-cmdk-seen", "1");
+      }
+    } catch (e) {}
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 
   // 전역 노출 (페이지 인라인 스크립트에서 사용 가능)
-  window.Theme30 = { Toast, Modal, Drawer, ThemeManager, CommandPalette };
+  window.Theme30 = { Toast, Modal, Drawer, ThemeManager, DensityManager, CommandPalette };
 })();

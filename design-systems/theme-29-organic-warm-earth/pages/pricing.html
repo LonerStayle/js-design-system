@@ -1,12 +1,22 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Pricing — Organic Warm Earth</title>
+<script>
+  /* Set the theme before first paint — no light flash on a saved-dark reload. */
+  (function () {
+    try {
+      var t = localStorage.getItem("owe-theme");
+      if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
+<title>요금제 — Organic Warm Earth</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Hanken+Grotesk:wght@300;400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Hanken+Grotesk:wght@300;400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="../tokens.css" />
 <link rel="stylesheet" href="../semantic.css" />
 <link rel="stylesheet" href="../base.css" />
@@ -18,14 +28,21 @@
 <link rel="stylesheet" href="../components/patterns.css" />
 <style>
   /* page-local reveal helper */
-  [data-reveal] { opacity: 0; transform: translateY(24px); transition: opacity .6s var(--ease-emphasized), transform .6s var(--ease-emphasized); }
-  [data-reveal].revealed { opacity: 1; transform: none; }
+  html.js [data-reveal] { opacity: 0; transform: translateY(24px); transition: opacity .6s var(--ease-emphasized), transform .6s var(--ease-emphasized); }
+  html.js [data-reveal].revealed { opacity: 1; transform: none; }
   .pricing-section-title { font-family: var(--font-display); font-variation-settings: var(--fraunces-soft); }
+  /* The page's single WONK moment — the hero headline */
+  .hero-display { font-variation-settings: var(--fraunces-hero); position: relative; z-index: 2; }
+
   .billing-toggle { display: inline-flex; align-items: center; gap: var(--space-4); padding: var(--space-3) var(--space-5);
     background: var(--color-surface); border: var(--border-1) solid var(--color-border-soft); border-radius: var(--radius-full); box-shadow: var(--shadow-xs); }
   .billing-toggle .bt-label { font-weight: var(--weight-semibold); font-size: var(--text-sm); color: var(--color-text-muted); }
   .save-pill { background: var(--color-success-soft); color: var(--color-success-fg); font-size: var(--text-2xs); font-weight: var(--weight-bold);
-    letter-spacing: var(--tracking-wide); padding: 0.2rem 0.6rem; border-radius: var(--radius-full); }
+    letter-spacing: var(--tracking-caps-ko); padding: 0.2rem 0.6rem; border-radius: var(--radius-full); }
+
+  /* Recommended plan gets a warm terracotta halo (§6-2 scene: 추천 플랜 뒤 후광) */
+  .pricing-grid .price-card.featured { box-shadow: 0 0 64px -12px color-mix(in srgb, var(--color-primary) 42%, transparent), var(--shadow-lg); }
+
   .cmp-table th, .cmp-table td { text-align: center; }
   .cmp-table th:first-child, .cmp-table td:first-child { text-align: left; }
   .cmp-table .yes { color: var(--color-success); }
@@ -33,10 +50,12 @@
   .cmp-table .col-feat { background: var(--color-primary-soft); font-weight: var(--weight-semibold); color: var(--color-text); }
   .cta-band { position: relative; overflow: hidden; border-radius: var(--radius-2xl); }
   .price-tagline { color: var(--color-text-muted); font-size: var(--text-sm); line-height: var(--leading-relaxed); min-height: 2.6em; }
+  .pay-methods { display: inline-flex; flex-wrap: wrap; gap: var(--space-2); justify-content: center; }
+  .pay-methods .tag { background: var(--color-surface); }
 </style>
 </head>
 <body>
-<a href="#main" class="skip-link">Skip to content</a>
+<a href="#main" class="skip-link">본문으로 건너뛰기</a>
 
 <!-- ============================= NAVBAR ============================= -->
 <header class="navbar">
@@ -47,49 +66,52 @@
       </span>
       Terra<span style="font-weight:var(--weight-regular);font-style:italic">forma</span>
     </a>
-    <nav class="nav-links" aria-label="Primary">
-      <a class="nav-link" href="dashboard.html">Product</a>
-      <a class="nav-link" href="product.html">Catalog</a>
-      <a class="nav-link is-active" href="pricing.html">Pricing</a>
-      <a class="nav-link" href="../index.html#components">Components</a>
+    <nav class="nav-links" id="pricingNav" aria-label="주요 메뉴">
+      <a class="nav-link" href="../index.html">홈</a>
+      <a class="nav-link" href="product.html">카탈로그</a>
+      <a class="nav-link is-active" href="pricing.html" aria-current="page">요금제</a>
+      <a class="nav-link" href="dashboard.html">대시보드</a>
     </nav>
     <span class="nav-spacer"></span>
     <div class="nav-actions">
-      <button class="btn btn-secondary btn-sm" data-cmdk-open aria-label="Open command palette">
+      <button class="btn btn-secondary btn-sm" data-cmdk-open aria-label="명령 팔레트 열기">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
-        Search <kbd>⌘K</kbd>
+        <span class="hide-sm">검색 <kbd>⌘K</kbd></span>
       </button>
-      <button class="btn-icon btn-sm" data-theme-toggle aria-pressed="false" aria-label="Toggle dark mode" title="Toggle theme">
+      <button class="btn-icon btn-sm" data-theme-toggle aria-pressed="false" aria-label="다크 모드 전환" title="테마 전환">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>
       </button>
-      <a href="#plans" class="btn btn-primary btn-sm">Get started</a>
+      <a href="#plans" class="btn btn-primary btn-sm">시작하기</a>
+      <button class="btn-icon btn-sm nav-toggle" data-nav-toggle aria-expanded="false" aria-controls="pricingNav" aria-label="메뉴 열기">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
     </div>
   </div>
 </header>
 
 <main id="main">
 <!-- ============================= HERO ============================= -->
-<section class="hero" style="padding-block:var(--space-14) var(--space-10)">
+<section class="hero wheel-rings" style="--wheel-x:112%;--wheel-y:-14%;padding-block:var(--space-14) var(--space-10)">
   <span class="deco-blob b1 blob-1 float" aria-hidden="true"></span>
   <span class="deco-blob b2 blob-3 float-slow" aria-hidden="true"></span>
   <span class="deco-blob b3 blob-2 float" aria-hidden="true"></span>
   <div class="container stack-lg text-center" style="align-items:center;max-width:52rem">
-    <span class="eyebrow" data-reveal>Pricing</span>
-    <h1 class="fluid-display" data-reveal>Plans that grow<br/>with your <span style="color:var(--color-primary);font-style:italic">studio</span></h1>
+    <span class="eyebrow" data-reveal>요금제</span>
+    <h1 class="fluid-display hero-display" data-reveal>작은 물레에서 큰 공방까지,<br/>함께 <span style="color:var(--color-primary)">자라는</span> 요금제</h1>
     <p data-reveal style="font-size:var(--text-lg);color:var(--color-text-muted);max-width:38rem;line-height:var(--leading-relaxed)">
-      From a kitchen-table kiln to a bustling workshop — Terraforma scales with every piece you throw.
-      Manage your catalog, orders, and firings in one warm place. No setup fees, cancel any time.
+      부엌 한켠의 작은 가마에서 북적이는 공방까지 — Terraforma는 당신이 빚는 모든 작품과 함께 자라요.
+      카탈로그, 주문, 소성을 따뜻한 한 곳에서. 설치 비용 없이, 언제든 해지할 수 있어요.
     </p>
 
     <!-- Billing toggle -->
     <div class="row center" data-reveal style="gap:var(--space-4);flex-wrap:wrap;margin-top:var(--space-2)">
       <div class="billing-toggle">
-        <span class="bt-label">Monthly</span>
-        <label class="switch" aria-label="Toggle yearly billing">
+        <span class="bt-label">월간</span>
+        <label class="switch" aria-label="연간 결제 전환">
           <input type="checkbox" data-price-toggle />
           <span class="track"></span>
         </label>
-        <span class="bt-label" style="color:var(--color-text)">Yearly <span class="save-pill">SAVE 20%</span></span>
+        <span class="bt-label" style="color:var(--color-text)">연간 <span class="save-pill">20% 절약</span></span>
       </div>
     </div>
   </div>
@@ -103,77 +125,85 @@
       <!-- Hobbyist -->
       <div class="price-card" data-reveal>
         <div class="stack-sm">
-          <div class="plan-name">Hobbyist</div>
-          <p class="price-tagline">For makers selling their first hand-thrown pieces on weekends.</p>
+          <div class="plan-name">취미</div>
+          <p class="price-tagline">주말에 첫 손물레 작품을 파는 메이커를 위한 플랜.</p>
         </div>
         <div>
-          <span class="price"><span data-price-month>$0</span><span data-price-year>$0</span><small>/mo</small></span>
-          <div class="text-muted" style="font-size:var(--text-xs);margin-top:var(--space-2)">Free forever — no card needed</div>
+          <span class="price"><span data-price-month>₩0</span><span data-price-year>₩0</span><small>/월</small></span>
+          <div class="text-muted" style="font-size:var(--text-xs);margin-top:var(--space-2)">카드 없이 평생 무료</div>
         </div>
-        <a href="dashboard.html" class="btn btn-secondary btn-block">Start free</a>
+        <a href="onboarding.html" class="btn btn-secondary btn-block">무료로 시작</a>
         <ul class="price-features">
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Up to 25 products</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 50 orders / month</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 1 team seat</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Basic kiln scheduling</li>
-          <li class="off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg> Sales analytics</li>
-          <li class="off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg> Custom domain</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 상품 25개까지</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 월 주문 50건</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 팀 좌석 1개</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 기본 가마 예약</li>
+          <li class="off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg> 판매 분석</li>
+          <li class="off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg> 커스텀 도메인</li>
         </ul>
       </div>
 
       <!-- Studio (featured) -->
-      <div class="price-card featured" data-reveal data-reveal="80">
+      <div class="price-card featured" data-reveal="80">
         <div class="stack-sm">
-          <div class="plan-name">Studio</div>
-          <p class="price-tagline">For working potters running a real shop with regular firings.</p>
+          <div class="plan-name">스튜디오</div>
+          <p class="price-tagline">정기 소성을 돌리며 진짜 상점을 운영하는 도예가를 위한 플랜.</p>
         </div>
         <div>
-          <span class="price"><span data-price-month>$29</span><span data-price-year>$23</span><small>/mo</small></span>
+          <span class="price"><span data-price-month>₩29,000</span><span data-price-year>₩23,200</span><small>/월</small></span>
           <div class="text-muted" style="font-size:var(--text-xs);margin-top:var(--space-2)">
-            <span data-price-month>Billed monthly</span><span data-price-year>$276 billed yearly · save $72</span>
+            <span data-price-month>매월 청구</span><span data-price-year>연 ₩278,400 청구 · ₩69,600 절약</span>
           </div>
         </div>
-        <a href="dashboard.html" class="btn btn-primary btn-block">Choose Studio</a>
+        <a href="onboarding.html" class="btn btn-primary btn-block">스튜디오 선택</a>
         <ul class="price-features">
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Unlimited products</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 1,000 orders / month</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 5 team seats</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Advanced kiln scheduling</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Full sales analytics</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Custom domain</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Email support</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 무제한 상품</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 월 주문 1,000건</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 팀 좌석 5개</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 고급 가마 예약</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 전체 판매 분석</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 커스텀 도메인</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 이메일 지원</li>
         </ul>
       </div>
 
       <!-- Workshop (top tier) -->
-      <div class="price-card" data-reveal data-reveal="160">
+      <div class="price-card" data-reveal="160">
         <div class="stack-sm">
-          <div class="plan-name">Workshop</div>
-          <p class="price-tagline">For studios with shared kilns, classes, and a growing team.</p>
+          <div class="plan-name">워크숍</div>
+          <p class="price-tagline">가마를 공유하고 수업까지 여는, 성장하는 공방을 위한 플랜.</p>
         </div>
         <div>
-          <span class="price"><span data-price-month>$79</span><span data-price-year>$63</span><small>/mo</small></span>
+          <span class="price"><span data-price-month>₩79,000</span><span data-price-year>₩63,200</span><small>/월</small></span>
           <div class="text-muted" style="font-size:var(--text-xs);margin-top:var(--space-2)">
-            <span data-price-month>Billed monthly</span><span data-price-year>$756 billed yearly · save $192</span>
+            <span data-price-month>매월 청구</span><span data-price-year>연 ₩758,400 청구 · ₩189,600 절약</span>
           </div>
         </div>
-        <a href="dashboard.html" class="btn btn-secondary btn-block">Choose Workshop</a>
+        <a href="onboarding.html" class="btn btn-secondary btn-block">워크숍 선택</a>
         <ul class="price-features">
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Unlimited products</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Unlimited orders</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 25 team seats</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Multi-kiln scheduling</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Analytics + cohort reports</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Custom domain + API</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Priority support &amp; onboarding</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 무제한 상품</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 무제한 주문</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 팀 좌석 25개</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 멀티 가마 예약</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 분석 + 코호트 리포트</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 커스텀 도메인 + API</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> 우선 지원 &amp; 온보딩</li>
         </ul>
       </div>
 
     </div>
 
-    <p class="text-center text-muted" data-reveal style="font-size:var(--text-sm);margin-top:var(--space-7)">
-      All plans include SSL, secure checkout, and a 14-day money-back guarantee. Prices in USD.
-    </p>
+    <div class="text-center" data-reveal style="margin-top:var(--space-7)">
+      <p class="text-muted" style="font-size:var(--text-sm);margin-bottom:var(--space-3)">
+        모든 플랜은 SSL 보안 결제와 14일 환불 보장을 제공해요. 부가세 별도.
+      </p>
+      <div class="pay-methods" aria-label="지원 결제 수단">
+        <span class="tag">신용·체크카드</span>
+        <span class="tag">카카오페이</span>
+        <span class="tag">네이버페이</span>
+        <span class="tag">토스</span>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -183,30 +213,31 @@
 <section class="section has-grain" style="background:var(--color-surface)">
   <div class="container stack-lg">
     <div class="stack text-center" data-reveal style="align-items:center">
-      <span class="eyebrow">Compare</span>
-      <h2 class="pricing-section-title">Every feature, side by side</h2>
-      <p class="text-muted" style="max-width:40rem">A closer look at what each plan unlocks. Switch any time as your studio grows.</p>
+      <span class="eyebrow">비교</span>
+      <h2 class="pricing-section-title">기능을 한눈에 비교</h2>
+      <p class="text-muted" style="max-width:40rem">각 플랜이 열어 주는 기능을 자세히 살펴보세요. 스튜디오가 자라면 언제든 바꿀 수 있어요.</p>
     </div>
 
     <div class="card" data-reveal style="padding:0;overflow:hidden">
       <div class="table-wrap" style="border:none;border-radius:0">
         <table class="table cmp-table">
+          <caption class="sr-only">플랜별 기능 비교</caption>
           <thead><tr>
-            <th>Feature</th>
-            <th>Hobbyist</th>
-            <th class="col-feat">Studio</th>
-            <th>Workshop</th>
+            <th scope="col">기능</th>
+            <th scope="col">취미</th>
+            <th scope="col" class="col-feat">스튜디오</th>
+            <th scope="col">워크숍</th>
           </tr></thead>
           <tbody>
-            <tr><td class="cell-strong">Products</td><td>25</td><td class="col-feat">Unlimited</td><td>Unlimited</td></tr>
-            <tr><td class="cell-strong">Orders / month</td><td>50</td><td class="col-feat">1,000</td><td>Unlimited</td></tr>
-            <tr><td class="cell-strong">Team seats</td><td>1</td><td class="col-feat">5</td><td>25</td></tr>
-            <tr><td class="cell-strong">Kiln scheduling</td><td>Basic</td><td class="col-feat">Advanced</td><td>Multi-kiln</td></tr>
-            <tr><td class="cell-strong">Sales analytics</td><td><span class="no" aria-label="No">—</span></td><td class="col-feat"><svg class="yes" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Yes"><path d="M20 6L9 17l-5-5"/></svg></td><td><svg class="yes" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Yes"><path d="M20 6L9 17l-5-5"/></svg></td></tr>
-            <tr><td class="cell-strong">Custom domain</td><td><span class="no" aria-label="No">—</span></td><td class="col-feat"><svg class="yes" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Yes"><path d="M20 6L9 17l-5-5"/></svg></td><td><svg class="yes" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Yes"><path d="M20 6L9 17l-5-5"/></svg></td></tr>
-            <tr><td class="cell-strong">Public API access</td><td><span class="no" aria-label="No">—</span></td><td class="col-feat"><span class="no" aria-label="No">—</span></td><td><svg class="yes" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Yes"><path d="M20 6L9 17l-5-5"/></svg></td></tr>
-            <tr><td class="cell-strong">Class &amp; workshop booking</td><td><span class="no" aria-label="No">—</span></td><td class="col-feat"><span class="no" aria-label="No">—</span></td><td><svg class="yes" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Yes"><path d="M20 6L9 17l-5-5"/></svg></td></tr>
-            <tr><td class="cell-strong">Support</td><td>Community</td><td class="col-feat">Email</td><td>Priority + onboarding</td></tr>
+            <tr><td class="cell-strong">상품</td><td>25개</td><td class="col-feat">무제한</td><td>무제한</td></tr>
+            <tr><td class="cell-strong">월 주문</td><td>50건</td><td class="col-feat">1,000건</td><td>무제한</td></tr>
+            <tr><td class="cell-strong">팀 좌석</td><td>1개</td><td class="col-feat">5개</td><td>25개</td></tr>
+            <tr><td class="cell-strong">가마 예약</td><td>기본</td><td class="col-feat">고급</td><td>멀티 가마</td></tr>
+            <tr><td class="cell-strong">판매 분석</td><td><span class="no" aria-label="미포함">—</span></td><td class="col-feat"><svg class="yes" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="포함"><path d="M20 6L9 17l-5-5"/></svg></td><td><svg class="yes" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="포함"><path d="M20 6L9 17l-5-5"/></svg></td></tr>
+            <tr><td class="cell-strong">커스텀 도메인</td><td><span class="no" aria-label="미포함">—</span></td><td class="col-feat"><svg class="yes" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="포함"><path d="M20 6L9 17l-5-5"/></svg></td><td><svg class="yes" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="포함"><path d="M20 6L9 17l-5-5"/></svg></td></tr>
+            <tr><td class="cell-strong">공개 API</td><td><span class="no" aria-label="미포함">—</span></td><td class="col-feat"><span class="no" aria-label="미포함">—</span></td><td><svg class="yes" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="포함"><path d="M20 6L9 17l-5-5"/></svg></td></tr>
+            <tr><td class="cell-strong">클래스·워크숍 예약</td><td><span class="no" aria-label="미포함">—</span></td><td class="col-feat"><span class="no" aria-label="미포함">—</span></td><td><svg class="yes" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="포함"><path d="M20 6L9 17l-5-5"/></svg></td></tr>
+            <tr><td class="cell-strong">고객 지원</td><td>커뮤니티</td><td class="col-feat">이메일</td><td>우선 + 온보딩</td></tr>
           </tbody>
         </table>
       </div>
@@ -220,31 +251,35 @@
 <section class="section">
   <div class="container" style="max-width:46rem">
     <div class="stack text-center" data-reveal style="align-items:center;margin-bottom:var(--space-9)">
-      <span class="eyebrow">FAQ</span>
-      <h2 class="pricing-section-title">Questions, answered</h2>
-      <p class="text-muted" style="max-width:36rem">Everything about billing, plan changes, and getting your studio set up.</p>
+      <span class="eyebrow">자주 묻는 질문</span>
+      <h2 class="pricing-section-title">궁금한 점을 모았어요</h2>
+      <p class="text-muted" style="max-width:36rem">결제, 플랜 변경, 스튜디오 설정에 관한 모든 것.</p>
     </div>
 
     <div class="accordion" data-accordion data-single data-reveal>
       <div class="accordion-item is-open">
-        <button class="accordion-trigger" aria-expanded="true">Can I switch plans later? <span class="chev"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
-        <div class="accordion-content"><div><div class="accordion-body">Absolutely. Upgrade or downgrade any time from your studio settings. When you upgrade, the change takes effect immediately and we prorate the difference for the rest of your billing period. Downgrades apply at the start of your next cycle so you keep everything you've paid for.</div></div></div>
+        <button class="accordion-trigger" aria-expanded="true">나중에 플랜을 바꿀 수 있나요? <span class="chev"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
+        <div class="accordion-content"><div><div class="accordion-body">물론이에요. 스튜디오 설정에서 언제든 업그레이드하거나 다운그레이드할 수 있어요. 업그레이드는 즉시 적용되고, 남은 결제 기간만큼 차액을 일할로 계산해 드려요. 다운그레이드는 다음 결제 주기 시작에 적용돼서, 이미 결제한 기능은 그대로 쓸 수 있어요.</div></div></div>
       </div>
       <div class="accordion-item">
-        <button class="accordion-trigger" aria-expanded="false">How does yearly billing save 20%? <span class="chev"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
-        <div class="accordion-content"><div><div class="accordion-body">When you pay for a full year up front, you get two months free — that's the 20% saving shown on the toggle above. Studio drops to $23/mo ($276/yr) and Workshop to $63/mo ($756/yr). You can switch from monthly to yearly at any time and we'll credit your remaining balance.</div></div></div>
+        <button class="accordion-trigger" aria-expanded="false">연간 결제는 어떻게 20%를 아껴 주나요? <span class="chev"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
+        <div class="accordion-content"><div><div class="accordion-body">1년치를 한 번에 결제하면 20%를 아낄 수 있어요 — 위 토글의 절약 폭이 바로 그거예요. 스튜디오는 월 ₩23,200(연 ₩278,400), 워크숍은 월 ₩63,200(연 ₩758,400)이 돼요. 월간에서 연간으로 언제든 전환할 수 있고, 남은 잔액은 크레딧으로 돌려드려요.</div></div></div>
       </div>
       <div class="accordion-item">
-        <button class="accordion-trigger" aria-expanded="false">What happens if I go over my order limit? <span class="chev"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
-        <div class="accordion-content"><div><div class="accordion-body">We'll never freeze your shop mid-sale. If you reach your monthly order cap, orders keep flowing and we'll send a friendly nudge to upgrade. Hobbyist studios that consistently exceed the free tier are invited to move to Studio — no surprise overage fees, ever.</div></div></div>
+        <button class="accordion-trigger" aria-expanded="false">주문 한도를 넘으면 어떻게 되나요? <span class="chev"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
+        <div class="accordion-content"><div><div class="accordion-body">판매 도중 상점을 멈추는 일은 절대 없어요. 월 주문 한도에 도달해도 주문은 계속 들어오고, 업그레이드를 권하는 알림만 살짝 보내 드려요. 무료 한도를 꾸준히 넘는 취미 스튜디오에는 스튜디오 플랜을 안내해 드리고, 갑작스러운 초과 요금은 물리지 않아요.</div></div></div>
       </div>
       <div class="accordion-item">
-        <button class="accordion-trigger" aria-expanded="false">Can I cancel any time? <span class="chev"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
-        <div class="accordion-content"><div><div class="accordion-body">Yes — there are no contracts and no cancellation fees. Cancel from your billing page and you'll keep full access until the end of the period you've already paid for. Your products, orders, and firing history stay exported-ready, so you can take your data with you.</div></div></div>
+        <button class="accordion-trigger" aria-expanded="false">어떤 결제 수단을 지원하나요? <span class="chev"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
+        <div class="accordion-content"><div><div class="accordion-body">국내 신용·체크카드는 물론 카카오페이, 네이버페이, 토스로 결제할 수 있어요. 연간 결제는 세금계산서 발행도 지원해요. 결제 정보는 PCI-DSS 기준으로 안전하게 보관되고, 영수증은 받은 편지함으로 바로 보내 드려요.</div></div></div>
       </div>
       <div class="accordion-item">
-        <button class="accordion-trigger" aria-expanded="false">Do you offer a discount for teaching studios? <span class="chev"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
-        <div class="accordion-content"><div><div class="accordion-body">We love community kilns and ceramics schools. Registered educational and non-profit studios get 30% off Workshop. Reach out to our team with a few details about your space and we'll get you set up with a custom plan.</div></div></div>
+        <button class="accordion-trigger" aria-expanded="false">언제든 해지할 수 있나요? <span class="chev"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
+        <div class="accordion-content"><div><div class="accordion-body">네 — 약정도, 해지 수수료도 없어요. 결제 페이지에서 바로 해지할 수 있고, 이미 결제한 기간이 끝날 때까지는 모든 기능을 그대로 쓸 수 있어요. 상품·주문·소성 기록은 언제든 내보낼 수 있게 준비돼 있어서, 데이터를 그대로 가져가실 수 있어요.</div></div></div>
+      </div>
+      <div class="accordion-item">
+        <button class="accordion-trigger" aria-expanded="false">교육·비영리 스튜디오 할인이 있나요? <span class="chev"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
+        <div class="accordion-content"><div><div class="accordion-body">공동체 가마와 도예 학교를 응원해요. 등록된 교육기관과 비영리 스튜디오는 워크숍 플랜을 30% 할인받을 수 있어요. 공간에 대한 간단한 정보와 함께 문의해 주시면 맞춤 플랜으로 준비해 드릴게요.</div></div></div>
       </div>
     </div>
   </div>
@@ -257,16 +292,16 @@
       <span class="deco-blob blob-2 float" aria-hidden="true" style="top:-30px;right:-20px;width:160px;height:160px;background:var(--color-primary);opacity:.16"></span>
       <span class="deco-blob blob-3 float-slow" aria-hidden="true" style="bottom:-40px;left:-30px;width:200px;height:200px;background:var(--color-accent);opacity:.14"></span>
       <div class="stack" style="align-items:center;position:relative;z-index:1;max-width:36rem">
-        <span class="eyebrow">Start today</span>
-        <h2 class="pricing-section-title" style="font-size:var(--text-4xl)">Throw your first piece into the cloud</h2>
+        <span class="eyebrow">지금 시작</span>
+        <h2 class="pricing-section-title" style="font-size:var(--text-4xl)">첫 작품을 Terraforma에 올려볼까요?</h2>
         <p class="text-muted" style="font-size:var(--text-lg);line-height:var(--leading-relaxed)">
-          Join 3,400+ potters running calmer studios with Terraforma. Free to start, no card required.
+          이미 1,200여 곳의 공방이 Terraforma로 더 차분하게 스튜디오를 운영하고 있어요. 무료로 시작하고, 카드도 필요 없어요.
         </p>
         <div class="row-wrap center" style="margin-top:var(--space-3)">
-          <a href="dashboard.html" class="btn btn-primary btn-lg">Get started free
+          <a href="onboarding.html" class="btn btn-primary btn-lg">무료로 시작하기
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
-          <button class="btn btn-secondary btn-lg" data-toast="We'll be in touch" data-toast-msg="A studio specialist will reach out within a day." data-toast-type="info">Talk to sales</button>
+          <button type="button" class="btn btn-secondary btn-lg" data-toast="곧 연락드릴게요" data-toast-msg="스튜디오 전문가가 하루 안에 연락드려요." data-toast-type="info">상담 요청하기</button>
         </div>
       </div>
     </div>
@@ -278,31 +313,31 @@
 <!-- ============================= FOOTER ============================= -->
 <footer class="section-sm" style="background:var(--color-bg-tint)">
   <div class="container between wrap" style="gap:var(--space-5)">
-    <div class="row"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C7 6 5 9 5 13a7 7 0 0014 0c0-4-2-7-7-11z"/></svg></span><div><strong>Terraforma</strong><div class="text-muted" style="font-size:var(--text-sm)">Studio management for potters</div></div></div>
-    <div class="text-muted" style="font-size:var(--text-sm)">© <span data-year>2026</span> Terraforma · <a class="link" href="../index.html">Back to overview</a></div>
+    <div class="row"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C7 6 5 9 5 13a7 7 0 0014 0c0-4-2-7-7-11z"/></svg></span><div><strong>Terraforma</strong><div class="text-muted" style="font-size:var(--text-sm)">도예가를 위한 스튜디오 관리</div></div></div>
+    <div class="text-muted" style="font-size:var(--text-sm)">© <span data-year>2026</span> Terraforma · <a class="link" href="../index.html">개요로 돌아가기</a></div>
   </div>
 </footer>
 </main>
 
 <!-- ============================= COMMAND PALETTE (shared) ============================= -->
 <div class="cmdk-overlay" aria-hidden="true">
-  <div class="cmdk" role="dialog" aria-modal="true" aria-label="Command palette">
+  <div class="cmdk" role="dialog" aria-modal="true" aria-label="명령 팔레트">
     <div class="cmdk-input-row">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
-      <input class="cmdk-input" placeholder="Type a command or search…" aria-label="Command input"/>
+      <input class="cmdk-input" placeholder="명령어를 입력하거나 검색하세요…" aria-label="명령어 입력"/>
       <kbd>ESC</kbd>
     </div>
     <div class="cmdk-list">
-      <div class="cmdk-group-label">Navigate</div>
-      <div class="cmdk-item" data-href="dashboard.html"><span class="ci-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span> Open Dashboard <kbd>D</kbd></div>
-      <div class="cmdk-item" data-href="product.html"><span class="ci-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 01-8 0"/></svg></span> Open Catalog</div>
-      <div class="cmdk-item" data-href="pricing.html"><span class="ci-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12V8H6a2 2 0 010-4h12v4"/><path d="M4 6v12a2 2 0 002 2h14v-4"/><path d="M18 12a2 2 0 000 4h4v-4z"/></svg></span> Open Pricing</div>
-      <div class="cmdk-group-label">Actions</div>
-      <div class="cmdk-item" data-action="toggle-theme"><span class="ci-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg></span> Toggle theme <kbd>T</kbd></div>
-      <div class="cmdk-item"><span class="ci-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span> New project</div>
+      <div class="cmdk-group-label">이동</div>
+      <div class="cmdk-item" data-href="dashboard.html"><span class="ci-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span> 대시보드 열기 <kbd>D</kbd></div>
+      <div class="cmdk-item" data-href="product.html"><span class="ci-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 01-8 0"/></svg></span> 카탈로그 열기</div>
+      <div class="cmdk-item" data-href="pricing.html"><span class="ci-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12V8H6a2 2 0 010-4h12v4"/><path d="M4 6v12a2 2 0 002 2h14v-4"/><path d="M18 12a2 2 0 000 4h4v-4z"/></svg></span> 요금제 열기</div>
+      <div class="cmdk-group-label">작업</div>
+      <div class="cmdk-item" data-action="toggle-theme"><span class="ci-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg></span> 테마 전환 <kbd>T</kbd></div>
+      <div class="cmdk-item" data-href="onboarding.html"><span class="ci-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span> 새 스튜디오 만들기</div>
     </div>
-    <div class="cmdk-empty" style="display:none">No results found.</div>
-    <div class="cmdk-footer"><span class="hint"><kbd>↑</kbd><kbd>↓</kbd> navigate</span><span class="hint"><kbd>↵</kbd> select</span><span class="hint"><kbd>esc</kbd> close</span></div>
+    <div class="cmdk-empty" style="display:none">검색 결과가 없습니다.</div>
+    <div class="cmdk-footer"><span class="hint"><kbd>↑</kbd><kbd>↓</kbd> 이동</span><span class="hint"><kbd>↵</kbd> 선택</span><span class="hint"><kbd>esc</kbd> 닫기</span></div>
   </div>
 </div>
 

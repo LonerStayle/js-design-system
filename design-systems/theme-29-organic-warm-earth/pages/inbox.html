@@ -1,12 +1,22 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Inbox — Organic Warm Earth</title>
+<script>
+  /* 첫 페인트 전에 테마 확정 — 저장된 다크로 새로고침해도 라이트 플래시 없음. */
+  (function () {
+    try {
+      var t = localStorage.getItem("owe-theme");
+      if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
+<title>받은 편지함 — Organic Warm Earth</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Hanken+Grotesk:wght@300;400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Hanken+Grotesk:wght@300;400;500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="../tokens.css" />
 <link rel="stylesheet" href="../semantic.css" />
 <link rel="stylesheet" href="../base.css" />
@@ -17,23 +27,36 @@
 <link rel="stylesheet" href="../components/navigation.css" />
 <link rel="stylesheet" href="../components/patterns.css" />
 <style>
+  .inbox-content { padding: var(--space-7); }
+  @media (max-width: 560px){ .inbox-content { padding: var(--space-4); } }
   /* Inbox sits inside the app-shell content area instead of full viewport */
-  .inbox.inbox-shell { height: calc(100vh - var(--space-7) * 2 - 72px); min-height: 540px; border: var(--border-1) solid var(--color-border-soft); border-radius: var(--radius-xl); overflow: hidden; background: var(--color-surface); }
-  .folder-link { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); color: var(--color-text-soft); font-weight: 500; transition: background-color var(--duration-fast), color var(--duration-fast); cursor: pointer; }
+  .inbox.inbox-shell { height: calc(100dvh - var(--space-7) * 2 - var(--navbar-height)); min-height: 540px; border: var(--border-1) solid var(--color-border-soft); border-radius: var(--radius-xl); overflow: hidden; background: var(--color-surface); }
+  /* folders are <button> (state toggles, not navigation) — reset native chrome so they read as links */
+  .folder-link { display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); color: var(--color-text-soft); font-family: inherit; font-size: inherit; font-weight: 500; text-align: left; background: transparent; border: 0; transition: background-color var(--duration-fast), color var(--duration-fast); cursor: pointer; }
   .folder-link:hover { background: var(--color-bg-tint); color: var(--color-text); }
   .folder-link.is-active { background: var(--color-primary-soft); color: var(--color-primary-strong); font-weight: 600; }
   .folder-link svg { width: 18px; height: 18px; flex: none; }
   .folder-link .fl-count { margin-left: auto; font-size: var(--text-xs); font-weight: 700; color: var(--color-text-muted); }
   .folder-link.is-active .fl-count { color: var(--color-primary-strong); }
+  .inbox-list-item { outline-offset: -2px; }
   .ili-preview { font-size: var(--text-sm); color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ili-top { display: flex; align-items: baseline; gap: var(--space-2); }
   .ili-time { margin-left: auto; font-size: var(--text-xs); color: var(--color-text-subtle); white-space: nowrap; }
   .reply-tools { display: flex; align-items: center; gap: var(--space-2); }
-  [data-reveal]{opacity:0;transform:translateY(24px);transition:opacity .6s var(--ease-emphasized),transform .6s var(--ease-emphasized)} [data-reveal].revealed{opacity:1;transform:none}
+
+  /* Mobile: patterns.css hides folders + reading below 960px. Provide a list↔reading path. */
+  .reading-back { display: none; align-items: center; gap: var(--space-2); margin-bottom: var(--space-4); }
+  @media (max-width: 960px){
+    .reading-back { display: inline-flex; }
+    .inbox.show-reading .inbox-list { display: none; }
+    .inbox.show-reading .inbox-reading { display: block; }
+  }
+
+  html.js [data-reveal]{opacity:0;transform:translateY(24px);transition:opacity .6s var(--ease-emphasized),transform .6s var(--ease-emphasized)} html.js [data-reveal].revealed{opacity:1;transform:none}
 </style>
 </head>
 <body>
-<a href="#main" class="skip-link">Skip to content</a>
+<a href="#main" class="skip-link">본문으로 건너뛰기</a>
 <div class="app-shell">
 
   <!-- ============ SIDEBAR ============ -->
@@ -42,20 +65,20 @@
       <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C7 6 5 9 5 13a7 7 0 0014 0c0-4-2-7-7-11z"/></svg></span>
       <strong class="si-label ink-serif" style="font-size:var(--text-lg)">Terraforma</strong>
     </div>
-    <nav class="stack-sm" aria-label="Main">
-      <span class="side-section">Studio</span>
-      <a class="side-link" href="dashboard.html"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span><span class="si-label">Overview</span></a>
-      <a class="side-link" href="kanban.html"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="10" rx="1.5"/><rect x="17" y="4" width="4" height="13" rx="1.5"/></svg></span><span class="si-label">Board</span></a>
-      <a class="side-link is-active" href="inbox.html"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M4 8l8 5 8-5"/></svg></span><span class="si-label">Inbox</span><span class="badge badge-primary si-badge">9</span></a>
-      <a class="side-link" href="product.html"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 01-8 0"/></svg></span><span class="si-label">Catalog</span></a>
-      <span class="side-section">Insights</span>
-      <a class="side-link" href="#"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span><span class="si-label">Analytics</span></a>
-      <a class="side-link" href="profile.html"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></span><span class="si-label">Profile</span></a>
-      <a class="side-link" href="settings.html"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1L14.5 2h-5l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L3 11a7 7 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1L9.5 22h5l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5a7 7 0 00.1-1z"/></svg></span><span class="si-label">Settings</span></a>
+    <nav class="stack-sm" aria-label="주요 메뉴">
+      <span class="side-section">스튜디오</span>
+      <a class="side-link" href="dashboard.html"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span><span class="si-label">대시보드</span></a>
+      <a class="side-link" href="kanban.html"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="10" rx="1.5"/><rect x="17" y="4" width="4" height="13" rx="1.5"/></svg></span><span class="si-label">제작 보드</span></a>
+      <a class="side-link is-active" href="inbox.html" aria-current="page"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M4 8l8 5 8-5"/></svg></span><span class="si-label">받은 편지함</span><span class="badge badge-primary si-badge">9</span></a>
+      <a class="side-link" href="product.html"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 01-8 0"/></svg></span><span class="si-label">카탈로그</span></a>
+      <span class="side-section">인사이트</span>
+      <a class="side-link" href="dashboard.html"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span><span class="si-label">분석</span></a>
+      <a class="side-link" href="profile.html"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></span><span class="si-label">프로필</span></a>
+      <a class="side-link" href="settings.html"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1L14.5 2h-5l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L3 11a7 7 0 000 2l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1L9.5 22h5l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5a7 7 0 00.1-1z"/></svg></span><span class="si-label">설정</span></a>
     </nav>
     <div class="side-foot">
       <div class="card" style="padding:var(--space-4);background:var(--color-primary-soft);border:none">
-        <div class="si-label"><strong style="font-size:var(--text-sm)">Kiln credits</strong><div class="progress progress-sm mt-2" style="background:color-mix(in srgb,var(--color-primary) 22%,transparent)"><div class="progress-bar" style="width:64%"></div></div><div class="text-muted mt-2" style="font-size:var(--text-xs)">64% of 2,000 used</div></div>
+        <div class="si-label"><strong style="font-size:var(--text-sm)">가마 크레딧</strong><div class="progress progress-sm mt-2" style="background:color-mix(in srgb,var(--color-primary) 22%,transparent)"><div class="progress-bar" style="width:64%"></div></div><div class="text-muted mt-2" style="font-size:var(--text-xs)">2,000회 중 1,280회 사용</div></div>
       </div>
     </div>
   </aside>
@@ -63,177 +86,181 @@
   <!-- ============ MAIN ============ -->
   <div class="app-main">
     <header class="app-topbar">
-      <button class="btn-icon btn-sm" data-sidebar-toggle="#sidebar" aria-label="Toggle sidebar"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+      <button class="btn-icon btn-sm" data-sidebar-toggle="#sidebar" aria-label="사이드바 열기"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
       <div>
-        <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../index.html">Home</a><span class="sep">/</span><a href="inbox.html" aria-current="page">Inbox</a></nav>
-        <h1 class="page-title" style="font-size:var(--text-xl)">Inbox</h1>
+        <nav class="breadcrumb" aria-label="위치"><a href="../index.html">홈</a><span class="sep">/</span><a href="inbox.html" aria-current="page">받은 편지함</a></nav>
+        <h1 class="page-title" style="font-size:var(--text-xl)">받은 편지함</h1>
       </div>
       <span class="nav-spacer"></span>
-      <div class="searchbar" style="max-width:260px" id="topsearch"><span class="s-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg></span><input class="input input-sm" placeholder="Search mail…"/><button class="s-clear" aria-label="Clear"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
-      <button class="btn-icon btn-sm" data-cmdk-open aria-label="Command palette"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 00-2 2v4M21 9V5a2 2 0 00-2-2h-4M15 21h4a2 2 0 002-2v-4M3 15v4a2 2 0 002 2h4"/></svg></button>
-      <button class="btn-icon btn-sm" data-theme-toggle aria-label="Toggle theme"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg></button>
-      <span class="avatar avatar-sm" style="background:var(--terracotta-200);color:var(--terracotta-800)">So</span>
+      <div class="searchbar hide-sm" style="max-width:260px" id="topsearch"><span class="s-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg></span><input class="input input-sm" placeholder="메일 검색…" aria-label="메일 검색"/><button class="s-clear" aria-label="검색어 지우기"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+      <button class="btn-icon btn-sm" data-cmdk-open aria-label="명령 팔레트 열기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 00-2 2v4M21 9V5a2 2 0 00-2-2h-4M15 21h4a2 2 0 002-2v-4M3 15v4a2 2 0 002 2h4"/></svg></button>
+      <button class="btn-icon btn-sm" data-theme-toggle aria-pressed="false" aria-label="다크 모드 전환" title="테마 전환"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg></button>
+      <span class="avatar avatar-sm" style="background:var(--terracotta-200);color:var(--terracotta-800)" title="박소연" aria-label="박소연">소</span>
     </header>
 
-    <main id="main" class="app-content" style="padding:var(--space-7)">
+    <main id="main" class="app-content inbox-content">
       <div class="inbox inbox-shell" data-reveal>
 
         <!-- ===== LEFT: FOLDERS ===== -->
         <div class="inbox-folders">
           <button class="btn btn-primary btn-block" data-open="#compose" style="margin-bottom:var(--space-4)">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
-            Compose
+            새 메일 쓰기
           </button>
-          <span class="side-section" style="padding-left:var(--space-2)">Mailboxes</span>
-          <a class="folder-link is-active" href="#" aria-current="page">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M4 8l8 5 8-5"/></svg>
-            Inbox <span class="fl-count">9</span>
-          </a>
-          <a class="folder-link" href="#">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.5 2.3 7.1-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg>
-            Starred <span class="fl-count">4</span>
-          </a>
-          <a class="folder-link" href="#">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-            Sent <span class="fl-count">128</span>
-          </a>
-          <a class="folder-link" href="#">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
-            Drafts <span class="fl-count">2</span>
-          </a>
-          <a class="folder-link" href="#">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 01-8 0"/></svg>
-            Orders <span class="fl-count">31</span>
-          </a>
-          <a class="folder-link" href="#">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
-            Archive <span class="fl-count">540</span>
-          </a>
+          <span class="side-section" style="padding-left:var(--space-2)">메일함</span>
+          <button type="button" class="folder-link is-active" aria-current="page">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M4 8l8 5 8-5"/></svg>
+            받은 편지함 <span class="fl-count">9</span>
+          </button>
+          <button type="button" class="folder-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l2.4 7.4H22l-6 4.5 2.3 7.1-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg>
+            중요 <span class="fl-count">4</span>
+          </button>
+          <button type="button" class="folder-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            보낸 편지함 <span class="fl-count">128</span>
+          </button>
+          <button type="button" class="folder-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+            임시보관 <span class="fl-count">2</span>
+          </button>
+          <button type="button" class="folder-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 01-8 0"/></svg>
+            주문 <span class="fl-count">31</span>
+          </button>
+          <button type="button" class="folder-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
+            보관함 <span class="fl-count">540</span>
+          </button>
 
-          <span class="side-section" style="padding-left:var(--space-2);margin-top:var(--space-4)">Labels</span>
-          <a class="folder-link" href="#"><span class="badge badge-dot badge-success" style="margin-right:6px"></span> Wholesale</a>
-          <a class="folder-link" href="#"><span class="badge badge-dot badge-warning" style="margin-right:6px"></span> Suppliers</a>
-          <a class="folder-link" href="#"><span class="badge badge-dot badge-info" style="margin-right:6px"></span> Reviews</a>
+          <span class="side-section" style="padding-left:var(--space-2);margin-top:var(--space-4)">라벨</span>
+          <button type="button" class="folder-link"><span class="badge badge-dot badge-success" style="margin-right:6px"></span> 도매</button>
+          <button type="button" class="folder-link"><span class="badge badge-dot badge-warning" style="margin-right:6px"></span> 공급처</button>
+          <button type="button" class="folder-link"><span class="badge badge-dot badge-info" style="margin-right:6px"></span> 후기</button>
 
           <div class="grow"></div>
           <div class="card has-grain" style="padding:var(--space-3);background:var(--color-surface-2);border:none;margin-top:var(--space-4)">
-            <div class="text-muted" style="font-size:var(--text-xs);line-height:1.5">Storage <strong style="color:var(--color-text)">4.1 GB</strong> of 15 GB</div>
+            <div class="text-muted" style="font-size:var(--text-xs);line-height:1.5">저장용량 <strong style="color:var(--color-text)">4.1GB</strong> / 15GB</div>
             <div class="progress progress-sm mt-2"><div class="progress-bar" style="width:27%"></div></div>
           </div>
         </div>
 
         <!-- ===== MIDDLE: LIST ===== -->
-        <div class="inbox-list" aria-label="Message list">
+        <div class="inbox-list" aria-label="메일 목록">
           <div class="table-toolbar" style="position:sticky;top:0;z-index:1;background:var(--color-surface)">
-            <strong style="font-size:var(--text-sm)">Inbox</strong>
+            <strong style="font-size:var(--text-sm)">받은 편지함</strong>
             <div class="reply-tools">
-              <button class="btn-icon btn-sm" aria-label="Refresh"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-2.6-6.4"/><path d="M21 3v5h-5"/></svg></button>
-              <button class="btn-icon btn-sm" aria-label="Filter"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 8v6l-4 2v-8z"/></svg></button>
+              <button class="btn-icon btn-sm" aria-label="새로고침"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-2.6-6.4"/><path d="M21 3v5h-5"/></svg></button>
+              <button class="btn-icon btn-sm" aria-label="필터"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 8v6l-4 2v-8z"/></svg></button>
             </div>
           </div>
 
-          <div class="inbox-list-item is-active unread">
-            <div class="ili-top"><span class="ili-from">Hana Choi · Slow Clay Café</span><span class="ili-time">9:14 AM</span></div>
-            <div class="ili-subj">Re: Order #4821 — can we add 6 more mugs?</div>
-            <div class="ili-preview">Hi! The speckled set arrived and we adore them. Before you ship the next batch, would it be possible to add six…</div>
-            <div class="row" style="gap:6px;margin-top:4px"><span class="tag">Wholesale</span><span class="badge badge-warning">Awaiting reply</span></div>
+          <div class="inbox-list-item is-active unread" role="button" tabindex="0" aria-label="최하나 · 느린점토 카페 — Re: 주문 #4821, 머그 6개 더 추가할 수 있을까요? · 읽지 않음">
+            <div class="ili-top"><span class="ili-from">최하나 · 느린점토 카페</span><span class="ili-time">오전 9:14</span></div>
+            <div class="ili-subj">Re: 주문 #4821 — 머그 6개 더 추가할 수 있을까요?</div>
+            <div class="ili-preview">안녕하세요! 점박이 세트 잘 받았고 카페 식구들 모두 반했어요. 다음 가마를 굽기 전에 여섯 개만 더…</div>
+            <div class="row" style="gap:6px;margin-top:4px"><span class="tag">도매</span><span class="badge badge-warning">답장 대기</span></div>
           </div>
 
-          <div class="inbox-list-item unread">
-            <div class="ili-top"><span class="ili-from">Marco Devlin · Stoneware Supply Co.</span><span class="ili-time">8:02 AM</span></div>
-            <div class="ili-subj">Terracotta clay restock — lead time update</div>
-            <div class="ili-preview">Quick note on your standing order: the 200kg terracotta pallet ships Thursday, but the matte glaze base is back-…</div>
-            <div class="row" style="gap:6px;margin-top:4px"><span class="tag">Suppliers</span></div>
+          <div class="inbox-list-item unread" role="button" tabindex="0" aria-label="배도훈 · 석기소재 상사 — 테라코타 점토 재입고 배송 일정 안내 · 읽지 않음">
+            <div class="ili-top"><span class="ili-from">배도훈 · 석기소재 상사</span><span class="ili-time">오전 8:02</span></div>
+            <div class="ili-subj">테라코타 점토 재입고 — 배송 일정 안내</div>
+            <div class="ili-preview">정기 주문 관련 안내드려요. 200kg 테라코타 팔레트는 목요일 발송되지만, 무광 유약 베이스는 재고가…</div>
+            <div class="row" style="gap:6px;margin-top:4px"><span class="tag">공급처</span></div>
           </div>
 
-          <div class="inbox-list-item unread">
-            <div class="ili-top"><span class="ili-from">Terraforma Reviews</span><span class="ili-time">7:48 AM</span></div>
-            <div class="ili-subj">★★★★★ New 5-star review on the Olive bud vase</div>
-            <div class="ili-preview">Mina K. left a 5-star review: "Each piece feels alive — the glaze pools like a tide pool." Reply to thank…</div>
-            <div class="row" style="gap:6px;margin-top:4px"><span class="badge badge-success">Review</span></div>
+          <div class="inbox-list-item unread" role="button" tabindex="0" aria-label="Terraforma 후기 알림 — 올리브 꽃병에 새 5점 후기 · 읽지 않음">
+            <div class="ili-top"><span class="ili-from">Terraforma 후기 알림</span><span class="ili-time">오전 7:48</span></div>
+            <div class="ili-subj">★★★★★ 올리브 꽃병에 새 5점 후기가 달렸어요</div>
+            <div class="ili-preview">김민아 님이 5점 후기를 남겼어요: “손에 쥐면 살아있는 것 같아요 — 유약이 물웅덩이처럼 고여요.” 감사…</div>
+            <div class="row" style="gap:6px;margin-top:4px"><span class="badge badge-success">후기</span></div>
           </div>
 
-          <div class="inbox-list-item">
-            <div class="ili-top"><span class="ili-from">Priya Anand</span><span class="ili-time">Yesterday</span></div>
-            <div class="ili-subj">Wholesale inquiry — 40 ramen bowls for new restaurant</div>
-            <div class="ili-preview">We're opening a ramen bar in Busan this autumn and your terracotta bowls are exactly the feel we want. What's…</div>
-            <div class="row" style="gap:6px;margin-top:4px"><span class="tag">Wholesale</span></div>
+          <div class="inbox-list-item" role="button" tabindex="0" aria-label="안예린 — 도매 문의, 새 식당에 라멘 볼 40개">
+            <div class="ili-top"><span class="ili-from">안예린</span><span class="ili-time">어제</span></div>
+            <div class="ili-subj">도매 문의 — 새 식당에 라멘 볼 40개</div>
+            <div class="ili-preview">이번 가을 부산에 라멘 바를 여는데, 테라코타 볼의 결이 저희가 찾던 딱 그 느낌이에요. 도매 단가가…</div>
+            <div class="row" style="gap:6px;margin-top:4px"><span class="tag">도매</span></div>
           </div>
 
-          <div class="inbox-list-item">
-            <div class="ili-top"><span class="ili-from">Jonas Lind</span><span class="ili-time">Yesterday</span></div>
-            <div class="ili-subj">A chip on my dinner plate — what now?</div>
-            <div class="ili-preview">Hi there, I received order #4790 last week and one of the sand dinner plates has a small chip on the rim. I've…</div>
+          <div class="inbox-list-item" role="button" tabindex="0" aria-label="임도현 — 받은 접시에 이가 나갔어요, 어떻게 하죠?">
+            <div class="ili-top"><span class="ili-from">임도현</span><span class="ili-time">어제</span></div>
+            <div class="ili-subj">받은 접시에 이가 나갔어요 — 어떻게 하죠?</div>
+            <div class="ili-preview">안녕하세요, 지난주 주문 #4790을 받았는데 모래빛 접시 하나의 테두리에 작은 이가 나가 있어요. 사진을…</div>
           </div>
 
-          <div class="inbox-list-item">
-            <div class="ili-top"><span class="ili-from">Kiln Collective (newsletter)</span><span class="ili-time">Tue</span></div>
-            <div class="ili-subj">Workshop swap: glaze chemistry night this Friday</div>
-            <div class="ili-preview">Three studios, one kiln, endless tests. Join the next firing circle and bring your matte-to-gloss experiments…</div>
+          <div class="inbox-list-item" role="button" tabindex="0" aria-label="가마 컬렉티브 뉴스레터 — 이번 금요일 유약 실험 모임">
+            <div class="ili-top"><span class="ili-from">가마 컬렉티브 (뉴스레터)</span><span class="ili-time">화</span></div>
+            <div class="ili-subj">워크숍 교류 — 이번 금요일 유약 실험 모임</div>
+            <div class="ili-preview">세 스튜디오, 하나의 가마, 끝없는 테스트. 다음 소성 모임에 무광-유광 실험작을 들고 오세요…</div>
           </div>
 
-          <div class="inbox-list-item">
-            <div class="ili-top"><span class="ili-from">Lena Park · Accounting</span><span class="ili-time">Mon</span></div>
-            <div class="ili-subj">Q3 invoice for the autumn glaze collection</div>
-            <div class="ili-preview">Attached is the consolidated invoice for September wholesale orders. Net-30 terms apply; let me know if any…</div>
-            <div class="row" style="gap:6px;margin-top:4px"><span class="badge badge-info">Finance</span></div>
+          <div class="inbox-list-item" role="button" tabindex="0" aria-label="문서린 · 회계 — 여름 유약 컬렉션 3분기 정산서">
+            <div class="ili-top"><span class="ili-from">문서린 · 회계</span><span class="ili-time">월</span></div>
+            <div class="ili-subj">여름 유약 컬렉션 3분기 정산서</div>
+            <div class="ili-preview">9월 도매 주문을 모은 통합 정산서를 첨부했어요. 결제 조건은 30일이며, 확인이 필요한 항목이 있으면…</div>
+            <div class="row" style="gap:6px;margin-top:4px"><span class="badge badge-info">회계</span></div>
           </div>
 
-          <div class="inbox-list-item">
-            <div class="ili-top"><span class="ili-from">Theo Marsh</span><span class="ili-time">Sun</span></div>
-            <div class="ili-subj">Custom commission: matching set for a wedding</div>
-            <div class="ili-preview">My partner and I loved your clay teapot at the Seoul craft fair. We'd love a matching set of eight cups for our…</div>
-            <div class="row" style="gap:6px;margin-top:4px"><span class="tag">Commission</span></div>
+          <div class="inbox-list-item" role="button" tabindex="0" aria-label="남태오 — 맞춤 제작 문의, 결혼 선물 세트">
+            <div class="ili-top"><span class="ili-from">남태오</span><span class="ili-time">일</span></div>
+            <div class="ili-subj">맞춤 제작 문의 — 결혼 선물용 세트</div>
+            <div class="ili-preview">서울 공예 페어에서 본 청자 티팟을 정말 좋아했어요. 결혼식에 쓸 여덟 잔 세트를 맞춰 제작할 수 있을지…</div>
+            <div class="row" style="gap:6px;margin-top:4px"><span class="tag">맞춤 제작</span></div>
           </div>
         </div>
 
         <!-- ===== RIGHT: READING ===== -->
-        <div class="inbox-reading" aria-label="Message">
+        <div class="inbox-reading" aria-label="메일 내용">
+          <button class="btn btn-ghost btn-sm reading-back" data-reading-back>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+            목록으로
+          </button>
           <div class="between" style="align-items:flex-start;gap:var(--space-4)">
             <div class="row" style="gap:var(--space-4);align-items:center">
-              <span class="avatar avatar-lg blob-1" style="background:var(--olive-200);color:var(--olive-800)">HC</span>
+              <span class="avatar avatar-lg blob-1 blob-hover" style="background:var(--olive-200);color:var(--olive-800)">하</span>
               <div>
-                <div style="font-weight:700">Hana Choi</div>
-                <div class="text-muted" style="font-size:var(--text-sm)">hana@slowclaycafe.kr · Slow Clay Café</div>
-                <div class="text-subtle" style="font-size:var(--text-xs);margin-top:2px">to me · Today at 9:14 AM</div>
+                <div style="font-weight:700">최하나</div>
+                <div class="text-muted" style="font-size:var(--text-sm)">hana@slowclay.kr · 느린점토 카페</div>
+                <div class="text-subtle" style="font-size:var(--text-xs);margin-top:2px">나에게 · 오늘 오전 9:14</div>
               </div>
             </div>
             <div class="reply-tools">
-              <button class="btn-icon btn-sm" aria-label="Star message"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.5 2.3 7.1-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg></button>
-              <button class="btn-icon btn-sm" aria-label="Archive message"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg></button>
+              <button class="btn-icon btn-sm" aria-label="중요 표시"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.5 2.3 7.1-6.3-4.6L5.7 21 8 14 2 9.4h7.6z"/></svg></button>
+              <button class="btn-icon btn-sm" aria-label="보관"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg></button>
               <div class="dropdown">
-                <button class="btn-icon btn-sm" data-dropdown aria-label="More actions"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+                <button class="btn-icon btn-sm" data-dropdown aria-label="더보기" aria-expanded="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
                 <div class="menu left">
-                  <button class="menu-item"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v7a2 2 0 01-2 2h-4"/><path d="M9 21v-6h6v6"/></svg> Mark as unread</button>
-                  <button class="menu-item"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6v14a2 2 0 002 2h8a2 2 0 002-2V6"/></svg> Move to Orders</button>
+                  <button class="menu-item"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v7a2 2 0 01-2 2h-4"/><path d="M9 21v-6h6v6"/></svg> 읽지 않음으로 표시</button>
+                  <button class="menu-item"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6v14a2 2 0 002 2h8a2 2 0 002-2V6"/></svg> 주문 함으로 이동</button>
                   <div class="menu-sep"></div>
-                  <button class="menu-item danger"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6v14a2 2 0 002 2h8a2 2 0 002-2V6"/></svg> Delete</button>
+                  <button class="menu-item danger"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6v14a2 2 0 002 2h8a2 2 0 002-2V6"/></svg> 삭제</button>
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="row-wrap" style="gap:6px;margin-top:var(--space-4)"><span class="tag">Wholesale</span><span class="badge badge-warning">Awaiting reply</span><span class="badge badge-outline">Order #4821</span></div>
+          <div class="row-wrap" style="gap:6px;margin-top:var(--space-4)"><span class="tag">도매</span><span class="badge badge-warning">답장 대기</span><span class="badge badge-outline">주문 #4821</span></div>
 
-          <h2 class="ink-serif" style="font-size:var(--text-3xl);margin-top:var(--space-5);line-height:1.2">Re: Order #4821 — can we add 6 more mugs?</h2>
+          <h2 class="ink-serif" style="font-size:var(--text-3xl);margin-top:var(--space-5);line-height:var(--leading-heading-ko,1.32);font-variation-settings:var(--fraunces-hero)">Re: 주문 #4821 — 머그 6개 더 추가할 수 있을까요?</h2>
 
           <div class="wave-divider mt-4 mb-4" style="--wave-fill:var(--color-border-soft)" aria-hidden="true"></div>
 
-          <div class="stack" style="font-size:var(--text-base);line-height:1.75;color:var(--color-text-soft)">
-            <p>Hi Sora,</p>
-            <p>The speckled stoneware set arrived this morning and the whole café is smitten — the matte ash glaze catches the afternoon light beautifully, and the weight in the hand feels exactly right for our pour-over service. Thank you for the care in packing; not a single piece moved.</p>
-            <p>Before you start firing the rest of order <strong>#4821</strong>, I have a small ask: would it be possible to add <strong>six more of the 280ml mugs</strong> to the batch? We're expanding the back patio for autumn and I'd rather we all come from the same firing so the glaze tones stay consistent across the set.</p>
-            <p>If that pushes the ship date past the 12th, no problem at all — consistency matters more to us than speed. And if there's a small wholesale adjustment for the larger quantity, just fold it into the invoice. I've attached our updated floor plan so you can see where they'll live.</p>
-            <p>Warmly,<br/>Hana</p>
-            <p class="text-subtle" style="font-size:var(--text-sm)">Hana Choi — Owner, Slow Clay Café · Seongsu-dong, Seoul</p>
+          <div class="stack" style="font-size:var(--text-base);line-height:var(--leading-body-ko,1.72);color:var(--color-text-soft)">
+            <p>소연 님께,</p>
+            <p>오늘 아침에 점박이 머그컵 세트가 도착했어요. 카페 식구들 모두 한눈에 반했답니다 — 무광 재유약이 오후 햇살을 머금는 결이 특히 좋고, 손에 쥐었을 때의 무게감이 저희 핸드드립에 딱 맞아요. 꼼꼼하게 포장해 주신 덕분에 깨진 조각 하나 없이 잘 받았습니다.</p>
+            <p>다름이 아니라, 주문 <strong>#4821</strong>을 굽기 시작하시기 전에 작은 부탁이 있어요. <strong>280ml 머그를 여섯 개만 더</strong> 추가할 수 있을까요? 가을을 앞두고 뒷마당 자리를 넓히는 중인데, 같은 가마에서 나온 것으로 맞춰야 유약 톤이 세트 안에서 어긋나지 않을 것 같아서요.</p>
+            <p>혹시 그 때문에 발송이 12일을 넘기더라도 전혀 괜찮아요 — 저희에겐 속도보다 톤이 한결같은 게 훨씬 중요하거든요. 수량이 늘어난 만큼 도매 조정이 필요하면 정산서에 그대로 반영해 주세요. 머그가 놓일 자리를 보실 수 있게 새 배치도도 함께 첨부했어요.</p>
+            <p>따뜻한 마음을 담아,<br/>하나 드림</p>
+            <p class="text-subtle" style="font-size:var(--text-sm)">최하나 — 느린점토 카페 대표 · 서울 성수동</p>
           </div>
 
           <div class="mt-5" style="max-width:360px">
-            <div class="field-label" style="margin-bottom:var(--space-2)">1 attachment</div>
+            <div class="field-label" style="margin-bottom:var(--space-2)">첨부파일 1개</div>
             <div class="file-item">
               <span class="f-icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg></span>
-              <div class="grow"><div style="font-weight:600;font-size:var(--text-sm)">patio-floorplan-autumn.pdf</div><div class="text-muted" style="font-size:var(--text-xs)">PDF · 1.2 MB</div></div>
-              <button class="btn-icon btn-sm" aria-label="Download attachment"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg></button>
+              <div class="grow"><div style="font-weight:600;font-size:var(--text-sm)">성수-뒷마당-배치도.pdf</div><div class="text-muted" style="font-size:var(--text-xs)">PDF · 1.2MB</div></div>
+              <button class="btn-icon btn-sm" aria-label="첨부파일 다운로드"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg></button>
             </div>
           </div>
 
@@ -242,22 +269,22 @@
           <!-- Reply box -->
           <div class="card clay-card" style="padding:var(--space-4)">
             <div class="row" style="gap:var(--space-3);align-items:center;margin-bottom:var(--space-3)">
-              <span class="avatar avatar-sm" style="background:var(--terracotta-200);color:var(--terracotta-800)">So</span>
-              <span class="text-muted" style="font-size:var(--text-sm)">Reply to <strong style="color:var(--color-text)">Hana Choi</strong></span>
+              <span class="avatar avatar-sm" style="background:var(--terracotta-200);color:var(--terracotta-800)">소</span>
+              <span class="text-muted" style="font-size:var(--text-sm)"><strong style="color:var(--color-text)">최하나</strong> 님에게 답장</span>
             </div>
-            <label class="field-label" for="reply-body" style="position:absolute;left:-9999px">Reply message</label>
-            <textarea class="textarea" id="reply-body" rows="4" placeholder="Hi Hana — absolutely, six more 280ml mugs is no trouble at all…"></textarea>
+            <label class="field-label" for="reply-body" style="position:absolute;left:-9999px">답장 내용</label>
+            <textarea class="textarea" id="reply-body" rows="4" placeholder="하나 님, 물론이죠 — 280ml 머그 여섯 개 더 추가해 드릴게요…"></textarea>
             <div class="between mt-3" style="flex-wrap:wrap;gap:var(--space-3)">
               <div class="reply-tools">
-                <button class="btn-icon btn-sm" aria-label="Attach file"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.4 11.05l-9.2 9.2a5 5 0 01-7.07-7.07l9.2-9.2a3.33 3.33 0 014.71 4.71l-9.2 9.2a1.67 1.67 0 01-2.36-2.36l8.49-8.49"/></svg></button>
-                <button class="btn-icon btn-sm" aria-label="Insert emoji"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg></button>
-                <button class="btn-icon btn-sm" aria-label="Insert template"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg></button>
+                <button class="btn-icon btn-sm" aria-label="파일 첨부"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.4 11.05l-9.2 9.2a5 5 0 01-7.07-7.07l9.2-9.2a3.33 3.33 0 014.71 4.71l-9.2 9.2a1.67 1.67 0 01-2.36-2.36l8.49-8.49"/></svg></button>
+                <button class="btn-icon btn-sm" aria-label="이모지 넣기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg></button>
+                <button class="btn-icon btn-sm" aria-label="템플릿 넣기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg></button>
               </div>
               <div class="row" style="gap:var(--space-2)">
-                <button class="btn btn-ghost btn-sm">Save draft</button>
-                <button class="btn btn-primary" data-toast="Reply sent" data-toast-msg="Your reply to Hana Choi is on its way." data-toast-type="success">
+                <button class="btn btn-ghost btn-sm">임시저장</button>
+                <button class="btn btn-primary" data-toast="답장을 보냈어요" data-toast-msg="최하나 님에게 답장이 전송됐어요." data-toast-type="success">
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-                  Send
+                  보내기
                 </button>
               </div>
             </div>
@@ -275,33 +302,33 @@
     <span class="modal-deco blob-2" aria-hidden="true"></span>
     <div class="modal-header">
       <div>
-        <div class="eyebrow">New message</div>
-        <h2 class="modal-title ink-serif" id="compose-title">Compose</h2>
+        <div class="eyebrow">새 메일</div>
+        <h2 class="modal-title ink-serif" id="compose-title">메일 쓰기</h2>
       </div>
-      <button class="modal-close" data-close aria-label="Close compose"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      <button class="modal-close" data-close aria-label="닫기"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
     <div class="modal-body stack">
       <div class="field">
-        <label class="field-label" for="compose-to">To</label>
-        <input class="input" id="compose-to" type="email" placeholder="customer@email.com" />
+        <label class="field-label" for="compose-to">받는 사람</label>
+        <input class="input" id="compose-to" type="email" placeholder="고객 이메일 (예: hana@slowclay.kr)" />
       </div>
       <div class="field">
-        <label class="field-label" for="compose-subject">Subject</label>
-        <input class="input" id="compose-subject" type="text" placeholder="Your order from Terraforma" />
+        <label class="field-label" for="compose-subject">제목</label>
+        <input class="input" id="compose-subject" type="text" placeholder="Terraforma에서 보내는 주문 안내" />
       </div>
       <div class="field">
-        <label class="field-label" for="compose-body">Message</label>
-        <textarea class="textarea" id="compose-body" rows="7" placeholder="Write your message…"></textarea>
-        <div class="field-hint">Sent from Terraforma Studio · Seongsu-dong, Seoul</div>
+        <label class="field-label" for="compose-body">내용</label>
+        <textarea class="textarea" id="compose-body" rows="7" placeholder="메시지를 입력하세요…"></textarea>
+        <div class="field-hint">Terraforma 스튜디오에서 발송 · 서울 성수동</div>
       </div>
     </div>
     <div class="modal-footer between">
-      <button class="btn-icon" aria-label="Attach file"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.4 11.05l-9.2 9.2a5 5 0 01-7.07-7.07l9.2-9.2a3.33 3.33 0 014.71 4.71l-9.2 9.2a1.67 1.67 0 01-2.36-2.36l8.49-8.49"/></svg></button>
+      <button class="btn-icon" aria-label="파일 첨부"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.4 11.05l-9.2 9.2a5 5 0 01-7.07-7.07l9.2-9.2a3.33 3.33 0 014.71 4.71l-9.2 9.2a1.67 1.67 0 01-2.36-2.36l8.49-8.49"/></svg></button>
       <div class="row" style="gap:var(--space-2)">
-        <button class="btn btn-ghost" data-close>Discard</button>
-        <button class="btn btn-primary" data-close data-toast="Message sent" data-toast-msg="Your message has been delivered." data-toast-type="success">
+        <button class="btn btn-ghost" data-close>버리기</button>
+        <button class="btn btn-primary" data-close data-toast="메일을 보냈어요" data-toast-msg="메일이 전송됐어요." data-toast-type="success">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-          Send
+          보내기
         </button>
       </div>
     </div>
@@ -309,8 +336,43 @@
 </div>
 
 <!-- Command palette (shared) -->
-<div class="cmdk-overlay" aria-hidden="true"><div class="cmdk" role="dialog" aria-modal="true" aria-label="Command palette"><div class="cmdk-input-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input class="cmdk-input" placeholder="Type a command…"/><kbd>ESC</kbd></div><div class="cmdk-list"><div class="cmdk-group-label">Navigate</div><div class="cmdk-item" data-href="dashboard.html"><span class="ci-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span> Overview</div><div class="cmdk-item" data-href="kanban.html"><span class="ci-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="10" rx="1.5"/><rect x="17" y="4" width="4" height="13" rx="1.5"/></svg></span> Board</div><div class="cmdk-item" data-href="inbox.html"><span class="ci-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M4 8l8 5 8-5"/></svg></span> Inbox</div><div class="cmdk-item" data-action="toggle-theme"><span class="ci-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg></span> Toggle theme</div></div><div class="cmdk-empty" style="display:none">No results.</div><div class="cmdk-footer"><span class="hint"><kbd>↑</kbd><kbd>↓</kbd> move</span><span class="hint"><kbd>↵</kbd> select</span></div></div></div>
+<div class="cmdk-overlay" aria-hidden="true"><div class="cmdk" role="dialog" aria-modal="true" aria-label="명령 팔레트"><div class="cmdk-input-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg><input class="cmdk-input" placeholder="명령어를 입력하거나 검색하세요…" aria-label="명령어 입력"/><kbd>ESC</kbd></div><div class="cmdk-list"><div class="cmdk-group-label">이동</div><div class="cmdk-item" data-href="dashboard.html"><span class="ci-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></span> 대시보드</div><div class="cmdk-item" data-href="kanban.html"><span class="ci-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="10" rx="1.5"/><rect x="17" y="4" width="4" height="13" rx="1.5"/></svg></span> 제작 보드</div><div class="cmdk-item" data-href="inbox.html"><span class="ci-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M4 8l8 5 8-5"/></svg></span> 받은 편지함</div><div class="cmdk-item" data-action="toggle-theme"><span class="ci-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg></span> 테마 전환</div></div><div class="cmdk-empty" style="display:none">검색 결과가 없습니다.</div><div class="cmdk-footer"><span class="hint"><kbd>↑</kbd><kbd>↓</kbd> 이동</span><span class="hint"><kbd>↵</kbd> 선택</span></div></div></div>
 
+<script>
+  /* 받은 편지함 목록 ↔ 읽기 전환 (모바일: 3-pane 이 1열로 접힐 때 읽기 경로 확보) + 목록 항목 활성/키보드 */
+  (function () {
+    var inbox = document.querySelector(".inbox");
+    if (!inbox) return;
+    var items = Array.prototype.slice.call(inbox.querySelectorAll(".inbox-list-item"));
+    var reading = inbox.querySelector(".inbox-reading");
+    var isMobile = function () { return window.matchMedia("(max-width: 960px)").matches; };
+
+    function activate(item) {
+      items.forEach(function (x) { x.classList.remove("is-active"); });
+      item.classList.add("is-active");
+      if (isMobile()) {
+        inbox.classList.add("show-reading");
+        if (reading) {
+          reading.scrollTop = 0;
+          var h = reading.querySelector("h2");
+          if (h) { h.setAttribute("tabindex", "-1"); h.focus(); }
+        }
+      }
+    }
+    items.forEach(function (item) {
+      item.addEventListener("click", function () { activate(item); });
+      item.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); activate(item); }
+      });
+    });
+    var back = inbox.querySelector("[data-reading-back]");
+    if (back) back.addEventListener("click", function () {
+      inbox.classList.remove("show-reading");
+      var cur = inbox.querySelector(".inbox-list-item.is-active");
+      if (cur) cur.focus();
+    });
+  })();
+</script>
 <script src="../app.js"></script>
 </body>
 </html>

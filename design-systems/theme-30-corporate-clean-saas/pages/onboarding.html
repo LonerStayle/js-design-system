@@ -1,25 +1,58 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>온보딩 위저드 — Aperture</title>
+<script>
+  /* FOUC 방지 — CSS 로드 전 테마·밀도 확정 + html.js 등장 연출 게이트. app.js 와 동일 키. */
+  (function () {
+    try {
+      var t = localStorage.getItem("theme30-color-mode");
+      if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", t);
+      var d = localStorage.getItem("theme30-density");
+      if (d) document.documentElement.setAttribute("data-density", d);
+    } catch (e) {}
+    document.documentElement.classList.add("js");
+  })();
+</script>
+<title>온보딩 · Aperture</title>
 <meta name="description" content="Aperture 워크스페이스 온보딩 위저드 · 다단계 설정 폼" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="../theme.css" />
 <style>
   /* onboarding 전용 보조 스타일 (레이아웃용) */
-  .ob-page { min-height: 100vh; display: flex; flex-direction: column; position: relative; overflow: hidden; }
-  .ob-grid { position: absolute; inset: 0; opacity: 0.45; pointer-events: none; -webkit-mask-image: radial-gradient(900px 500px at 50% -5%, #000, transparent 80%); mask-image: radial-gradient(900px 500px at 50% -5%, #000, transparent 80%); }
+  .ob-page { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+  /* 씬 배경: 인디고 틴트 후광 + 필름 그레인 + 대형 조리개 라인아트(브랜드 모티프). bg-grid 도트 대체 */
+  .ob-aperture-bg { top: -200px; left: calc(50% - 340px); width: 680px; height: 680px; }
+  @media (max-width: 640px) { .ob-aperture-bg { top: -140px; left: calc(50% - 240px); width: 480px; height: 480px; } }
   .ob-top { position: relative; z-index: 1; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-5) var(--space-6); }
   .ob-main { position: relative; z-index: 1; flex: 1; display: grid; place-items: center; padding: var(--space-4) var(--space-5) var(--space-12); }
   .ob-card { width: 100%; max-width: 640px; box-shadow: var(--shadow-2xl); }
   .ob-foot-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
   .radio-card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-3); }
-  .ob-success-ico { width: 84px; height: 84px; margin: 0 auto var(--space-2); border-radius: var(--radius-full); display: grid; place-items: center; background: var(--color-success-subtle, var(--green-100)); color: var(--green-600); }
   .ob-invite-row { display: grid; grid-template-columns: 1fr 150px auto; gap: var(--space-2); align-items: center; }
+  /* .field-error 는 기본 inline-flex 이므로 hidden 속성이 안 먹는다 → 명시 오버라이드 */
+  .field-error[hidden] { display: none; }
+
+  /* ───── 완료 시그니처 모먼트: 조리개가 '열리며' 워크스페이스 준비 완료 ───── */
+  .ob-done { text-align: center; padding-block: var(--space-4); }
+  .ob-done-mark { width: 112px; height: 112px; margin: 0 auto var(--space-4); color: var(--color-primary); }
+  .ob-done-mark svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  .odm-ring { fill: none; stroke: currentColor; stroke-width: 2; opacity: 0.28; }
+  .odm-blade path { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; opacity: 0.5; }
+  .odm-core { fill: var(--color-primary-subtle); stroke: currentColor; stroke-width: 2; }
+  .odm-check { fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  @media (prefers-reduced-motion: no-preference) {
+    .wizard-step[data-step="4"].is-shown .ob-done-mark { animation: odm-open 720ms var(--ease-emphasized) both; }
+    .wizard-step[data-step="4"].is-shown .odm-blade { transform-box: fill-box; transform-origin: center; animation: odm-blades 820ms var(--ease-emphasized) both; }
+    .wizard-step[data-step="4"].is-shown .odm-check { stroke-dasharray: 46; stroke-dashoffset: 46; animation: odm-draw 520ms var(--ease-emphasized) 360ms forwards; }
+  }
+  @keyframes odm-open { from { opacity: 0; transform: scale(0.6) rotate(-28deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
+  @keyframes odm-blades { from { opacity: 0; transform: rotate(-38deg); } to { opacity: 0.5; transform: rotate(0); } }
+  @keyframes odm-draw { to { stroke-dashoffset: 0; } }
+
   @media (max-width: 560px) {
     .ob-top { padding: var(--space-4); }
     .radio-card-grid { grid-template-columns: 1fr; }
@@ -31,8 +64,22 @@
 <body>
 <a href="#main" class="skip-link">본문으로 건너뛰기</a>
 
-<div class="ob-page bg-gradient-hero">
-  <div class="ob-grid bg-grid" aria-hidden="true"></div>
+<div class="ob-page bg-gradient-hero fx-noise">
+  <!-- 시그니처 배경 오브제: 대형 조리개 라인아트 (Aperture 브랜드 모티프) -->
+  <div class="fx-aperture is-spin ob-aperture-bg" aria-hidden="true">
+    <svg viewBox="0 0 200 200" role="presentation">
+      <circle class="ap-ring" cx="100" cy="100" r="88" stroke-width="1"/>
+      <circle class="ap-ring" cx="100" cy="100" r="30" stroke-width="1"/>
+      <g class="ap-blade" stroke-width="1.2" stroke-linecap="round">
+        <path d="M188 100 L115 126"/>
+        <path d="M144 176 L85 126"/>
+        <path d="M56 176 L70 100"/>
+        <path d="M12 100 L85 74"/>
+        <path d="M56 24 L115 74"/>
+        <path d="M144 24 L130 100"/>
+      </g>
+    </svg>
+  </div>
 
   <!-- ─────────── TOP BAR ─────────── -->
   <header class="ob-top">
@@ -54,6 +101,7 @@
 
   <!-- ─────────── MAIN ─────────── -->
   <main id="main" class="ob-main">
+    <span class="sr-only" role="status" aria-live="polite" id="obAnnounce"></span>
     <div class="card card-pad ob-card" data-reveal>
 
       <!-- STEPS -->
@@ -101,25 +149,28 @@
         <div class="stack">
           <div class="field">
             <label class="field-label" for="acc-name">이름 <span class="req">*</span></label>
-            <input class="input" id="acc-name" type="text" placeholder="홍길동" value="김진섭" autocomplete="name" />
+            <input class="input" id="acc-name" type="text" placeholder="예: 김서연" value="김진섭" autocomplete="name" aria-describedby="acc-name-err" data-required-msg="이름을 입력해 주세요." />
+            <p class="field-error" id="acc-name-err" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span class="fe-msg"></span></p>
           </div>
           <div class="field">
             <label class="field-label" for="acc-email">업무 이메일 <span class="req">*</span></label>
             <div class="input-group has-trailing">
               <span class="adorn adorn-leading"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg></span>
-              <input class="input" id="acc-email" type="email" placeholder="name@company.com" value="jinsup@aperture.io" autocomplete="email" />
+              <input class="input" id="acc-email" type="email" placeholder="예: name@aperture.kr" value="jinsup@aperture.kr" autocomplete="email" aria-describedby="acc-email-help acc-email-err" data-required-msg="업무 이메일을 입력해 주세요." data-format-msg="올바른 이메일 형식이 아니에요." />
             </div>
-            <p class="field-help">초대 및 알림은 이 주소로 전송됩니다.</p>
+            <p class="field-help" id="acc-email-help">초대 및 알림은 이 주소로 전송됩니다.</p>
+            <p class="field-error" id="acc-email-err" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span class="fe-msg"></span></p>
           </div>
           <div class="field">
             <label class="field-label" for="acc-pw">비밀번호 <span class="req">*</span></label>
             <div class="input-group has-trailing">
-              <input class="input" id="acc-pw" type="password" placeholder="8자 이상" value="supersecret" autocomplete="new-password" />
+              <input class="input" id="acc-pw" type="password" placeholder="8자 이상" value="supersecret" autocomplete="new-password" aria-describedby="acc-pw-help acc-pw-err" data-required-msg="비밀번호를 입력해 주세요." />
               <button type="button" class="adorn adorn-trailing" data-toggle-password="acc-pw" aria-label="비밀번호 표시 전환">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
               </button>
             </div>
-            <p class="field-help">대문자, 숫자, 특수문자를 포함하면 더 안전합니다.</p>
+            <p class="field-help" id="acc-pw-help">대문자, 숫자, 특수문자를 포함하면 더 안전합니다.</p>
+            <p class="field-error" id="acc-pw-err" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span class="fe-msg"></span></p>
           </div>
         </div>
       </div>
@@ -132,16 +183,18 @@
         <div class="stack">
           <div class="field">
             <label class="field-label" for="ws-name">워크스페이스 이름 <span class="req">*</span></label>
-            <input class="input" id="ws-name" type="text" placeholder="우리 회사" value="Aperture HQ" />
+            <input class="input" id="ws-name" type="text" placeholder="예: 우리 회사" value="Aperture HQ" aria-describedby="ws-name-err" data-required-msg="워크스페이스 이름을 입력해 주세요." />
+            <p class="field-error" id="ws-name-err" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span class="fe-msg"></span></p>
           </div>
 
           <div class="field">
             <label class="field-label" for="ws-url">워크스페이스 URL <span class="req">*</span></label>
             <div class="input-affix">
-              <span class="affix">aperture.io/</span>
-              <input class="input" id="ws-url" type="text" placeholder="our-team" value="aperture-hq" />
+              <span class="affix">aperture.kr/</span>
+              <input class="input" id="ws-url" type="text" placeholder="our-team" value="aperture-hq" aria-describedby="ws-url-help ws-url-err" data-required-msg="워크스페이스 주소를 입력해 주세요." />
             </div>
-            <p class="field-help">팀원들이 접속하는 고유 주소입니다. 나중에 변경할 수 없습니다.</p>
+            <p class="field-help" id="ws-url-help">팀원들이 접속하는 고유 주소입니다. 나중에 변경할 수 없습니다.</p>
+            <p class="field-error" id="ws-url-err" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span class="fe-msg"></span></p>
           </div>
 
           <div class="field">
@@ -188,7 +241,7 @@
             <span class="field-label">주요 용도 <span class="optional">(선택)</span></span>
             <div class="grid grid-2 gap-2">
               <label class="checkbox"><input type="checkbox" checked /><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span><span class="label-text">프로젝트 관리</span></label>
-              <label class="checkbox"><input type="checkbox" checked /><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span><span class="label-text">분석 & 리포트</span></label>
+              <label class="checkbox"><input type="checkbox" checked /><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span><span class="label-text">분석 &amp; 리포트</span></label>
               <label class="checkbox"><input type="checkbox" /><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span><span class="label-text">고객 관리(CRM)</span></label>
               <label class="checkbox"><input type="checkbox" /><span class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg></span><span class="label-text">팀 협업 / 문서</span></label>
             </div>
@@ -205,8 +258,8 @@
           <div class="field">
             <span class="field-label">이메일로 초대</span>
             <div class="chip-input">
-              <span class="chip">sara@aperture.io <button type="button" aria-label="제거"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg></button></span>
-              <span class="chip">minho@aperture.io <button type="button" aria-label="제거"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg></button></span>
+              <span class="chip">seoyeon@aperture.kr <button type="button" aria-label="박서연 초대 제거"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg></button></span>
+              <span class="chip">minho@aperture.kr <button type="button" aria-label="정민호 초대 제거"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg></button></span>
               <input type="text" placeholder="이메일 입력 후 Enter…" aria-label="초대할 이메일" />
             </div>
             <p class="field-help">쉼표 또는 Enter로 여러 명을 한 번에 추가할 수 있습니다.</p>
@@ -225,8 +278,8 @@
           <div class="field">
             <span class="field-label">또는 링크로 초대</span>
             <div class="input-group has-trailing">
-              <input class="input" type="text" value="https://aperture.io/join/ap-hq-7Q2x" readonly aria-label="초대 링크" />
-              <button type="button" class="adorn adorn-trailing" aria-label="링크 복사" data-toast="링크를 복사했습니다" data-toast-type="success" data-toast-text="팀원에게 공유하세요">
+              <input class="input" type="text" value="https://aperture.kr/join/ap-hq-7Q2x" readonly aria-label="초대 링크" />
+              <button type="button" class="adorn adorn-trailing" aria-label="링크 복사" data-toast="링크를 복사했어요" data-toast-type="success" data-toast-text="팀원에게 공유하세요">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
               </button>
             </div>
@@ -234,15 +287,28 @@
         </div>
       </div>
 
-      <!-- ───── STEP 4 · 완료 ───── -->
+      <!-- ───── STEP 4 · 완료 (시그니처 모먼트) ───── -->
       <div class="wizard-step" data-step="4" style="display:none">
-        <div class="text-center" style="padding-block:var(--space-4)">
-          <div class="ob-success-ico" aria-hidden="true">
-            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+        <div class="ob-done">
+          <!-- 조리개가 열리며 완료를 알리는 브랜드 모먼트 -->
+          <div class="ob-done-mark" aria-hidden="true">
+            <svg viewBox="0 0 200 200" role="presentation">
+              <circle class="odm-ring" cx="100" cy="100" r="90"/>
+              <g class="odm-blade">
+                <path d="M186 100 L120 126"/>
+                <path d="M143 174 L84 126"/>
+                <path d="M57 174 L74 100"/>
+                <path d="M14 100 L80 74"/>
+                <path d="M57 26 L116 74"/>
+                <path d="M143 26 L126 100"/>
+              </g>
+              <circle class="odm-core" cx="100" cy="100" r="30"/>
+              <path class="odm-check" d="M88 100 l9 10 l18 -21"/>
+            </svg>
           </div>
-          <h2 class="h3" style="margin-bottom:var(--space-2)">환영합니다, 김진섭님! 🎉</h2>
-          <p class="lead" style="max-width:420px;margin-inline:auto">
-            <strong>Aperture HQ</strong> 워크스페이스가 준비되었습니다.<br />이제 팀과 함께 시작할 수 있어요.
+          <h2 class="h3" style="margin-bottom:var(--space-2)">준비됐어요, 김진섭님</h2>
+          <p class="lead" style="max-width:440px;margin-inline:auto">
+            <strong>Aperture HQ</strong> 워크스페이스가 열렸습니다.<br />이제 팀과 같은 숫자를 보며 시작할 수 있어요.
           </p>
 
           <div class="grid grid-3 gap-3" style="margin-top:var(--space-6);text-align:left">
@@ -275,7 +341,7 @@
             다음
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
           </button>
-          <a class="btn btn-primary" id="obFinish" href="./dashboard.html" style="display:none" data-toast="온보딩 완료!" data-toast-type="success" data-toast-text="대시보드로 이동합니다">
+          <a class="btn btn-primary" id="obFinish" href="./dashboard.html" style="display:none" data-toast="온보딩을 마쳤어요" data-toast-type="success" data-toast-text="대시보드로 이동합니다">
             대시보드로 이동
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
@@ -288,17 +354,14 @@
 
 <script src="../app.js"></script>
 <script>
-/* ───── 온보딩 위저드 단계 전환 (app.js 와 별개의 인라인 스크립트) ───── */
+/* ───── 온보딩 위저드 단계 전환 + 필수값 검증 (app.js 와 별개의 인라인 스크립트) ───── */
 (function () {
   var TOTAL = 4;
-  var current = 2; // 기본 진입 = 2단계
+  var current = 2; // 기본 진입 = 2단계 (재방문 온보딩 장면)
 
-  var stepHints = {
-    1: '계정 만들기',
-    2: '워크스페이스 설정',
-    3: '팀원 초대',
-    4: '완료'
-  };
+  var stepHints = { 1: '계정 만들기', 2: '워크스페이스 설정', 3: '팀원 초대', 4: '완료' };
+  // 단계별 필수 입력 필드
+  var requiredByStep = { 1: ['acc-name', 'acc-email', 'acc-pw'], 2: ['ws-name', 'ws-url'] };
 
   var stepsList   = document.querySelectorAll('#obSteps .step');
   var panels      = document.querySelectorAll('.wizard-step');
@@ -309,11 +372,58 @@
   var progressBar = document.getElementById('obProgress');
   var stepText    = document.getElementById('obStepText');
   var stepHint    = document.getElementById('obStepHint');
+  var announce    = document.getElementById('obAnnounce');
+
+  /* ── 검증 헬퍼 ── */
+  function errEl(id) { return document.getElementById(id + '-err'); }
+  function clearError(input) {
+    input.classList.remove('is-invalid');
+    input.removeAttribute('aria-invalid');
+    var e = errEl(input.id);
+    if (e) e.hidden = true;
+  }
+  function setError(input, msg) {
+    input.classList.add('is-invalid');
+    input.setAttribute('aria-invalid', 'true');
+    var e = errEl(input.id);
+    if (e) { e.querySelector('.fe-msg').textContent = msg; e.hidden = false; }
+  }
+  function validateStep(n) {
+    var ids = requiredByStep[n] || [];
+    var firstBad = null, bad = 0;
+    ids.forEach(function (id) {
+      var input = document.getElementById(id);
+      if (!input) return;
+      var v = (input.value || '').trim();
+      var msg = '';
+      if (!v) {
+        msg = input.getAttribute('data-required-msg') || '필수 입력 항목이에요.';
+      } else if (input.type === 'email' && !/.+@.+\..+/.test(v)) {
+        msg = input.getAttribute('data-format-msg') || '형식을 확인해 주세요.';
+      }
+      if (msg) { setError(input, msg); bad++; if (!firstBad) firstBad = input; }
+      else { clearError(input); }
+    });
+    if (firstBad) {
+      firstBad.focus();
+      if (announce) announce.textContent = '입력을 확인해 주세요. 수정이 필요한 항목이 ' + bad + '개 있어요.';
+    }
+    return bad === 0;
+  }
+  // 입력 시 해당 필드 에러 즉시 해제
+  Object.keys(requiredByStep).forEach(function (k) {
+    requiredByStep[k].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('input', function () { if (el.classList.contains('is-invalid')) clearError(el); });
+    });
+  });
 
   function render() {
-    // 패널 표시
+    // 패널 표시 + 완료 단계 시그니처 애니메이션 트리거(is-shown)
     panels.forEach(function (p) {
-      p.style.display = (+p.dataset.step === current) ? '' : 'none';
+      var on = (+p.dataset.step === current);
+      p.style.display = on ? '' : 'none';
+      if (+p.dataset.step === 4) p.classList.toggle('is-shown', on);
     });
 
     // steps 마커 상태 (.is-active / .is-complete) + aria-current
@@ -345,7 +455,7 @@
     nextBtn.style.display   = (current === TOTAL) ? 'none' : '';
     finishBtn.style.display = (current === TOTAL) ? '' : 'none';
 
-    // 마지막 직전 단계에서 "다음" → "검토 완료"
+    // 마지막 직전 단계에서 "다음" → "완료하기"
     nextBtn.firstChild && (nextBtn.childNodes[0].nodeValue = (current === TOTAL - 1) ? '완료하기 ' : '다음 ');
 
     // 카드 상단으로 포커스 이동 (접근성)
@@ -357,7 +467,10 @@
     render();
   }
 
-  nextBtn.addEventListener('click', function () { go(current + 1); });
+  nextBtn.addEventListener('click', function () {
+    if (!validateStep(current)) return;   // 필수값 미입력 시 진행 차단 + 에러 노출
+    go(current + 1);
+  });
   prevBtn.addEventListener('click', function () { go(current - 1); });
   skipBtn.addEventListener('click', function () { go(current + 1); });
 

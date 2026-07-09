@@ -60,9 +60,10 @@ hr { border: none; border-top: var(--border-1) solid var(--color-divider); }
 :focus-visible {
   outline: var(--ring-width) solid var(--color-focus-ring);
   outline-offset: var(--ring-offset);
-  border-radius: var(--radius-xs);
 }
-/* 마우스 클릭 시 링 미표시, 키보드 시 표시 (focus-visible 표준) */
+/* 마우스 클릭 시 링 미표시, 키보드 시 표시 (focus-visible 표준).
+   outline 은 대상의 자체 radius 를 따르므로 pill 버튼도 링이 각지지 않음
+   — :focus-visible 에서 border-radius 를 강제하지 않는다(FOUNDATION §4-3). */
 
 /* ───────────────────────── TYPOGRAPHY ───────────────────────── */
 .h1, h1 { font-size: var(--text-4xl); line-height: var(--leading-tight); font-weight: var(--weight-bold);   letter-spacing: var(--tracking-tight);   color: var(--color-text-strong); }
@@ -159,6 +160,37 @@ hr { border: none; border-top: var(--border-1) solid var(--color-divider); }
 .grid-4 { grid-template-columns: repeat(4, minmax(0,1fr)); }
 .grid-auto { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 
+/* 비대칭 2분할 — 인라인 grid-template-columns 금지(§4-6). 차트+사이드, 본문+패널 등.
+   모바일에서 1열로 자동 낙하 → 압착 방지. */
+.grid-main-side { display: grid; grid-template-columns: 1.6fr 1fr; gap: var(--space-6); }
+.grid-side-main { display: grid; grid-template-columns: 1fr 1.6fr; gap: var(--space-6); }
+.grid-wide-narrow { display: grid; grid-template-columns: 1.2fr 1fr; gap: var(--space-6); }
+
+/* 비대칭 벤토 — 핵심 지표 1개를 2×2 히어로 셀로. 균등 4칸 stat 금지(§3-A). */
+.bento { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: var(--space-4); grid-auto-rows: 1fr; }
+.bento > .bento-hero { grid-column: span 2; grid-row: span 2; }
+.bento > .bento-wide { grid-column: span 2; }
+
+@media (max-width: 900px) {
+  .grid-main-side, .grid-side-main, .grid-wide-narrow { grid-template-columns: 1fr; }
+  .bento { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .bento > .bento-hero { grid-column: span 2; grid-row: auto; }
+}
+@media (max-width: 560px) {
+  .bento { grid-template-columns: 1fr; }
+  .bento > .bento-hero, .bento > .bento-wide { grid-column: auto; }
+}
+
+/* 절제된 브랜드 그라데이션 텍스트 — 단일 인디고 계열(무지개 클리셰 대체). 강조 1곳만. */
+.grad-brand {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent;
+}
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .grad-brand { color: var(--color-primary-text); }
+}
+
 /* Gap */
 .gap-1 { gap: var(--space-1); }
 .gap-2 { gap: var(--space-2); }
@@ -216,16 +248,47 @@ hr { border: none; border-top: var(--border-1) solid var(--color-divider); }
 }
 .skip-link:focus { top: var(--space-2); color: var(--color-primary-fg); }
 
-/* 배경 텍스처 — 은은한 그리드 도트 (대시보드 캔버스 깊이감) */
+/* ───────────────────────── ATMOSPHERE (분위기 배경) ─────────────────────────
+   밋밋한 단색/도트 배경 탈피. 전부 pointer-events:none + aria-hidden 레이어로 얹는다.
+   씬 변주는 data-scene 이 semantic 노브(--fx-*)를 덮어써서. */
+
+/* 은은한 그리드 도트 (데이터 캔버스 깊이감) — 여전히 지원 */
 .bg-grid {
   background-image:
     radial-gradient(circle at 1px 1px, var(--color-border) 1px, transparent 0);
   background-size: 24px 24px;
 }
+
+/* 인디고 틴트 다층 후광 — 히어로/온보딩/프라이싱 씬의 기반 */
 .bg-gradient-hero {
   background:
-    radial-gradient(1200px 500px at 50% -10%, var(--color-primary-subtle), transparent 60%),
+    radial-gradient(1200px 520px at 72% -12%, var(--fx-tint-glow), transparent 60%),
+    radial-gradient(900px 480px at 8% 8%, var(--fx-tint-2), transparent 55%),
     linear-gradient(180deg, var(--color-surface), var(--color-bg));
+}
+
+/* 초저알파 필름 그레인 — 콘텐츠 위가 아니라 배경 레이어로만. 대비 무해. */
+.fx-noise::after {
+  content: ""; position: absolute; inset: 0; z-index: 0;
+  background-image: var(--noise-svg); background-size: 140px 140px;
+  opacity: var(--fx-grain); pointer-events: none; mix-blend-mode: multiply;
+}
+[data-theme="dark"] .fx-noise::after { mix-blend-mode: screen; }
+
+/* 대형 조리개(Aperture) 라인아트 — 히어로 시그니처 배경 오브제.
+   SVG 는 index 에서 삽입, 이 클래스가 배치·회전·마스크를 담당. */
+.fx-aperture {
+  position: absolute; pointer-events: none; z-index: 0;
+  color: var(--aperture-color);
+  /* intentional: mask color — 알파만 사용(가장자리 페이드), 테마 무관 */
+  -webkit-mask-image: radial-gradient(closest-side, #000 60%, transparent 100%);
+          mask-image: radial-gradient(closest-side, #000 60%, transparent 100%);
+}
+.fx-aperture svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.fx-aperture .ap-ring { stroke: currentColor; fill: none; }
+.fx-aperture .ap-blade { stroke: var(--aperture-color-2); fill: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .fx-aperture.is-spin { animation: aperture-spin var(--aperture-spin) linear infinite; }
 }
 
 /* ───────────────────────── MOTION (reduced) ───────────────────────── */
@@ -261,18 +324,64 @@ hr { border: none; border-top: var(--border-1) solid var(--color-divider); }
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
+/* 조리개 시그니처 — 초저속 회전(장식) + 개폐(로드/스켈레톤 진입) */
+@keyframes aperture-spin { to { transform: rotate(360deg); } }
+@keyframes aperture-open {
+  from { opacity: 0; transform: scale(0.72) rotate(-24deg); }
+  to   { opacity: 1; transform: scale(1) rotate(0); }
+}
+/* 차트 라인 드로잉 — stroke-dashoffset 보간 */
+@keyframes draw-line { to { stroke-dashoffset: 0; } }
+/* 숫자/스탯 카운트 진입 */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
 .animate-in { animation: fade-in-up var(--duration-slow) var(--ease-emphasized) both; }
 .animate-fade { animation: fade-in var(--duration-base) var(--ease-standard) both; }
-[data-stagger] > * { animation: fade-in-up var(--duration-slow) var(--ease-emphasized) both; }
-[data-stagger] > *:nth-child(1) { animation-delay: 40ms; }
-[data-stagger] > *:nth-child(2) { animation-delay: 90ms; }
-[data-stagger] > *:nth-child(3) { animation-delay: 140ms; }
-[data-stagger] > *:nth-child(4) { animation-delay: 190ms; }
-[data-stagger] > *:nth-child(5) { animation-delay: 240ms; }
-[data-stagger] > *:nth-child(6) { animation-delay: 290ms; }
-[data-stagger] > *:nth-child(7) { animation-delay: 340ms; }
-[data-stagger] > *:nth-child(8) { animation-delay: 390ms; }
+
+/* ───────────── SIGNATURE REVEAL — 조리개가 '열리듯' 콘텐츠 등장 ─────────────
+   JS(html.js)가 있을 때만 숨김 → JS 실패해도 콘텐츠는 그대로 보임(안전).
+   app.js 가 뷰포트 진입 시 .is-in 부여. --reveal-i 로 스태거 지연 제어. */
+html.js [data-reveal] {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity var(--duration-reveal) var(--ease-emphasized),
+              transform var(--duration-reveal) var(--ease-emphasized);
+  transition-delay: calc(var(--reveal-i, 0) * 70ms);
+  will-change: opacity, transform;
+}
+html.js [data-reveal].is-in { opacity: 1; transform: none; }
+
+/* 로드 스태거 — 순차 등장(자식 순서 기반, JS 불필요) */
+html.js [data-stagger] > * {
+  opacity: 0; animation: rise-in var(--duration-slow) var(--ease-emphasized) forwards;
+}
+html.js [data-stagger] > *:nth-child(1) { animation-delay: 60ms; }
+html.js [data-stagger] > *:nth-child(2) { animation-delay: 120ms; }
+html.js [data-stagger] > *:nth-child(3) { animation-delay: 180ms; }
+html.js [data-stagger] > *:nth-child(4) { animation-delay: 240ms; }
+html.js [data-stagger] > *:nth-child(5) { animation-delay: 300ms; }
+html.js [data-stagger] > *:nth-child(6) { animation-delay: 360ms; }
+html.js [data-stagger] > *:nth-child(7) { animation-delay: 420ms; }
+html.js [data-stagger] > *:nth-child(8) { animation-delay: 480ms; }
+html.js [data-stagger] > *:nth-child(9) { animation-delay: 540ms; }
+
+/* 조리개 개폐 진입(히어로 프리뷰/스켈레톤 전환에 부여) */
+html.js .reveal-aperture { animation: aperture-open var(--duration-slower) var(--ease-emphasized) both; }
+
+/* 차트 라인 드로잉 — .draw-in 이 붙으면 dashoffset 0 으로 그려짐 */
+.chart-draw { stroke-dasharray: var(--draw-len, 1000); stroke-dashoffset: var(--draw-len, 1000); }
+html.js .chart-draw.is-in { animation: draw-line var(--duration-slower) var(--ease-emphasized) forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  /* 등장 연출은 즉시 완성 상태로 — 숨김 방치 금지 */
+  html.js [data-reveal] { opacity: 1; transform: none; transition: none; }
+  html.js [data-stagger] > * { opacity: 1; animation: none; }
+  html.js .reveal-aperture { animation: none; }
+  .chart-draw { stroke-dashoffset: 0; }
+}
 
 /* ───────────────────────── RESPONSIVE ───────────────────────── */
 @media (max-width: 1024px) {
@@ -289,4 +398,39 @@ hr { border: none; border-top: var(--border-1) solid var(--color-divider); }
 @media (max-width: 640px) {
   .grid-4 { grid-template-columns: 1fr; }
   .sm\:hidden { display: none; }
+}
+
+/* 밀도 가변 스택 — [data-density] 에 따라 자식 간격이 함께 조밀해짐 */
+.stack-density > * + * { margin-top: var(--density-stack); }
+
+/* ============================================================================
+   HANGUL REFINEMENT LAYER — 전제: <html lang="ko"> + 스택 순서 교정(tokens.css)
+   라틴 수치를 한글에 이월하지 않는다. 기저값이며, 필요 시 컴포넌트가 오버라이드.
+   ============================================================================ */
+:lang(ko) {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-break: strict;
+}
+:lang(ko) :is(h1, h2, h3, .h1, .h2, .h3, .card-title, .page-title) {
+  line-height: var(--leading-heading-ko);
+}
+:lang(ko) .display { line-height: var(--leading-display-ko); }
+:lang(ko) :is(p, .lead, .prose p) { line-height: var(--leading-body-ko); }
+/* 헤딩·디스플레이 밸런스 줄바꿈 */
+:is(h1, h2, h3, .display, .hero-title, .card-title) { text-wrap: balance; }
+p, .lead { text-wrap: pretty; }
+/* 와이드 라벨: 한글은 uppercase/자간 과대 무효 → 자간 상한 + 변형 해제 */
+:lang(ko) :is(.eyebrow, .section-label, .sidebar-section-label, .stat-label,
+              .menu-label, .cmdk-group-label, .table thead th, .badge) {
+  letter-spacing: var(--tracking-caps-ko);
+  text-transform: none;
+  font-variant: normal;
+}
+/* 한글엔 이탤릭 없음(faux-oblique 왜곡 방지) */
+:lang(ko) :is(em, i, cite) { font-style: normal; font-weight: var(--weight-semibold); }
+/* 데이터는 tabular + lining */
+:lang(ko) :is(.tabular, .table td, .stat-value, .price, .td-num,
+              .m-val, .stat-delta) {
+  font-variant-numeric: tabular-nums lining-nums;
 }

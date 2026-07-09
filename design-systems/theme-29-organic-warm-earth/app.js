@@ -19,6 +19,12 @@
   const $$ = (s, c = document) => Array.from(c.querySelectorAll(s));
   const on = (el, ev, fn, o) => el && el.addEventListener(ev, fn, o);
 
+  /* Motion contract (FOUNDATION §3-C): [data-reveal] is hidden ONLY under
+     html.js. Mark the document as JS-capable here — if this file never runs
+     (JS disabled or failed to load) the class is absent and all reveal
+     content stays fully visible. */
+  document.documentElement.classList.add("js");
+
   /* Safety net: if any later init throws, never leave reveal content hidden.
      (data-reveal elements start at opacity:0 and rely on JS to un-hide them.) */
   window.addEventListener("error", function () {
@@ -37,7 +43,7 @@
     $$("[data-theme-toggle]").forEach((b) => {
       b.setAttribute("aria-pressed", String(t === "dark"));
       const lab = b.querySelector("[data-theme-label]");
-      if (lab) lab.textContent = t === "dark" ? "Light" : "Dark";
+      if (lab) lab.textContent = t === "dark" ? "라이트" : "다크";
     });
   }
   function initTheme() {
@@ -239,7 +245,7 @@
       const act = it.getAttribute("data-action");
       if (act === "toggle-theme") $("[data-theme-toggle]") && $("[data-theme-toggle]").click();
       else if (it.dataset.href) window.location.href = it.dataset.href;
-      else toast({ title: it.textContent.trim(), msg: "Command executed", type: "success" });
+      else toast({ title: it.textContent.trim(), msg: "실행했습니다", type: "success" });
     }));
   }
   $$("[data-cmdk-open]").forEach((b) => on(b, "click", openCmdk));
@@ -276,9 +282,9 @@
     el.innerHTML =
       '<span class="t-icon">' + (ICONS[type] || ICONS.info) + "</span>" +
       '<div class="t-body"><div class="t-title"></div>' + (opts.msg ? '<div class="t-msg"></div>' : "") + "</div>" +
-      '<button class="t-close" aria-label="Dismiss"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' +
+      '<button class="t-close" aria-label="닫기"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' +
       '<span class="t-progress"></span>';
-    el.querySelector(".t-title").textContent = opts.title || "Notification";
+    el.querySelector(".t-title").textContent = opts.title || "알림";
     if (opts.msg) el.querySelector(".t-msg").textContent = opts.msg;
     const region = toastRegion();
     region.appendChild(el);
@@ -293,18 +299,37 @@
   on(document, "click", (e) => {
     const b = e.target.closest("[data-toast]");
     if (!b) return;
-    toast({ title: b.getAttribute("data-toast") || "Saved", msg: b.getAttribute("data-toast-msg") || "", type: b.getAttribute("data-toast-type") || "success" });
+    toast({ title: b.getAttribute("data-toast") || "저장했습니다", msg: b.getAttribute("data-toast-msg") || "", type: b.getAttribute("data-toast-type") || "success" });
   });
 
   /* =========================================================================
      SEGMENTED CONTROL  &  generic [data-toggle-group] (button group)
      ========================================================================= */
   $$(".segmented").forEach((seg) => {
-    $$("button", seg).forEach((b) => on(b, "click", () => {
-      $$("button", seg).forEach((x) => x.setAttribute("aria-selected", "false"));
-      b.setAttribute("aria-selected", "true");
+    const btns = $$("button", seg);
+    if (!btns.length) return;
+    // radiogroup markup uses aria-checked; legacy markup uses aria-selected
+    const isRadio = seg.getAttribute("role") === "radiogroup" || btns.some((b) => b.getAttribute("role") === "radio");
+    const attr = isRadio ? "aria-checked" : "aria-selected";
+    const select = (b) => {
+      btns.forEach((x) => { x.setAttribute(attr, "false"); x.classList.remove("is-active"); x.tabIndex = -1; });
+      b.setAttribute(attr, "true"); b.classList.add("is-active"); b.tabIndex = 0;
       seg.dispatchEvent(new CustomEvent("segchange", { detail: { value: b.dataset.value || b.textContent } }));
-    }));
+    };
+    btns.forEach((b, i) => {
+      on(b, "click", () => select(b));
+      on(b, "keydown", (e) => {
+        let idx = null;
+        if (e.key === "ArrowRight" || e.key === "ArrowDown") idx = (i + 1) % btns.length;
+        else if (e.key === "ArrowLeft" || e.key === "ArrowUp") idx = (i - 1 + btns.length) % btns.length;
+        else if (e.key === "Home") idx = 0;
+        else if (e.key === "End") idx = btns.length - 1;
+        if (idx !== null) { e.preventDefault(); btns[idx].focus(); select(btns[idx]); }
+      });
+    });
+    // seed roving tabindex + .is-active from the current selection
+    const cur = btns.find((b) => b.getAttribute(attr) === "true") || btns[0];
+    btns.forEach((b) => { b.tabIndex = b === cur ? 0 : -1; b.classList.toggle("is-active", b === cur); });
   });
   $$(".btn-group[data-toggle-group]").forEach((grp) => {
     $$(".btn", grp).forEach((b) => on(b, "click", () => {
@@ -358,7 +383,7 @@
       text = text.trim(); if (!text) return;
       const chip = document.createElement("span");
       chip.className = "chip";
-      chip.innerHTML = '<span></span><button aria-label="Remove"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
+      chip.innerHTML = '<span></span><button aria-label="삭제"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
       chip.querySelector("span").textContent = text;
       ci.insertBefore(chip, inp);
     };
@@ -405,12 +430,12 @@
       options.filter((o) => o.getAttribute("aria-selected") === "true").forEach((o) => {
         const chip = document.createElement("span");
         chip.className = "chip";
-        chip.innerHTML = '<span></span><button aria-label="Remove"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
+        chip.innerHTML = '<span></span><button aria-label="삭제"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
         chip.querySelector("span").textContent = o.textContent.trim();
         on(chip.querySelector("button"), "click", (ev) => { ev.stopPropagation(); o.setAttribute("aria-selected", "false"); renderChips(); });
         control.insertBefore(chip, input);
       });
-      input.placeholder = $(".chip", control) ? "" : (input.dataset.ph || "Select…");
+      input.placeholder = $(".chip", control) ? "" : (input.dataset.ph || "선택하세요…");
     }
   });
 
@@ -495,6 +520,24 @@
   }));
 
   /* =========================================================================
+     NAVBAR mobile toggle — collapses the hub nav into a sheet (no dead zone)
+     ========================================================================= */
+  $$("[data-nav-toggle]").forEach((b) => on(b, "click", () => {
+    const nav = b.closest(".navbar");
+    if (!nav) return;
+    const open = nav.classList.toggle("nav-open");
+    b.setAttribute("aria-expanded", String(open));
+  }));
+  on(document, "click", (e) => {
+    const link = e.target.closest(".navbar.nav-open .nav-link");
+    if (!link) return;
+    const nav = link.closest(".navbar");
+    nav.classList.remove("nav-open");
+    const t = nav.querySelector("[data-nav-toggle]");
+    if (t) t.setAttribute("aria-expanded", "false");
+  });
+
+  /* =========================================================================
      STEPS / WIZARD
      ========================================================================= */
   $$("[data-wizard]").forEach((wiz) => {
@@ -511,7 +554,7 @@
     };
     on($("[data-wizard-next]", wiz), "click", () => { if (cur < steps.length - 1) { cur++; render(); } });
     on($("[data-wizard-back]", wiz), "click", () => { if (cur > 0) { cur--; render(); } });
-    const done = $("[data-wizard-done]", wiz); if (done) on(done, "click", () => toast({ title: "All set!", msg: "Your workspace is ready.", type: "success" }));
+    const done = $("[data-wizard-done]", wiz); if (done) on(done, "click", () => toast({ title: "설정을 마쳤어요", msg: "작업 공간이 준비됐어요.", type: "success" }));
     render();
   });
 
@@ -525,7 +568,7 @@
     if (text === "" || text === "self") { const pre = b.closest(".codeblock"); text = pre ? pre.querySelector("code, pre, .code-body") ? (pre.querySelector(".code-body") || pre).innerText : pre.innerText : ""; }
     const copy = (t) => { try { navigator.clipboard.writeText(t); } catch (e) {} };
     copy(text);
-    const orig = b.innerHTML; b.innerHTML = "Copied ✓";
+    const orig = b.innerHTML; b.innerHTML = "복사됨 ✓";
     setTimeout(() => (b.innerHTML = orig), 1400);
   });
 
@@ -541,11 +584,11 @@
     on(dz, "drop", (e) => { e.preventDefault(); dz.classList.remove("is-dragover"); render(e.dataTransfer.files); });
     on(input, "change", () => render(input.files));
     function render(files) {
-      if (!list) { toast({ title: files.length + " file(s) added", type: "success" }); return; }
+      if (!list) { toast({ title: "파일 " + files.length + "개를 추가했어요", type: "success" }); return; }
       Array.from(files).forEach((f) => {
         const item = document.createElement("div");
         item.className = "file-item";
-        item.innerHTML = '<span class="f-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg></span><div class="grow"><div style="font-weight:600">' + f.name + '</div><div style="font-size:var(--text-xs);color:var(--color-text-muted)">' + (f.size/1024).toFixed(1) + ' KB</div></div><button class="btn-icon btn-sm" aria-label="Remove"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
+        item.innerHTML = '<span class="f-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg></span><div class="grow"><div style="font-weight:600">' + f.name + '</div><div style="font-size:var(--text-xs);color:var(--color-text-muted)">' + (f.size/1024).toFixed(1) + ' KB</div></div><button class="btn-icon btn-sm" aria-label="삭제"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
         on(item.querySelector("button"), "click", () => item.remove());
         list.appendChild(item);
       });

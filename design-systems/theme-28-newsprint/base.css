@@ -5,8 +5,9 @@
    Load order:  fonts → tokens.css → semantic.css → base.css → components/*
    ============================================================================ */
 
-/* Webfonts — degrade to Georgia / Times if offline so file:// always renders */
-@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,800;0,900;1,400;1,700&family=Zilla+Slab:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+/* Webfonts: all families (Latin press faces + Korean 명조/고딕) load from a
+   single consolidated @import in tokens.css — one render-blocking fetch, no
+   chained requests. Offline they degrade to Georgia / Times so file:// renders. */
 
 /* ----------------------------------------------------------------------------
    RESET
@@ -36,6 +37,22 @@ body {
   font-size: var(--text-md);
   line-height: var(--leading-normal);
   font-feature-settings: "kern" 1, "liga" 1, "onum" 1;   /* oldstyle figures */
+}
+
+/* Night-desk ambience — a soft work-lamp over the press bed + a faint red glow
+   off the accent. Purely atmospheric: fixed, non-interactive, behind content.
+   --fx-worklight is 0 in the Day Edition (invisible) and 1 in the Night. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: var(--fx-worklight, 0);
+  background:
+    radial-gradient(130% 62% at 50% -14%, color-mix(in srgb, var(--paper-white) 7%, transparent), transparent 62%),
+    radial-gradient(88% 40% at 84% 2%, color-mix(in srgb, var(--red-spot-400) 6%, transparent), transparent 70%);
+  transition: opacity var(--duration-slow) var(--ease-standard);
 }
 
 img, picture, svg, video, canvas {
@@ -201,6 +218,40 @@ mark {
 .text-muted  { color: var(--color-text-muted); }
 .text-mono   { font-family: var(--font-mono); }
 .text-ui     { font-family: var(--font-ui); }
+
+/* The single editorial red spot — reusable inline mark. The masthead scopes an
+   extra misregistration ghost onto it; everywhere else it's just the red. */
+.spot { color: var(--color-accent); }
+
+/* ----------------------------------------------------------------------------
+   HEADLINE SCALE — named composing sizes (the newsroom's "hed" system).
+   Use these instead of re-writing font-family/weight/size inline on every
+   headline. Each is a full spec: masthead face, black weight, tight leading,
+   keep-all so Korean never breaks mid-word.
+     .hed-1  lead / banner       .hed-2  main story
+     .hed-3  section top         .hed-4  standard head
+     .hed-5  brief / kicker head
+   ---------------------------------------------------------------------------- */
+:where(.hed-1, .hed-2, .hed-3, .hed-4, .hed-5) {
+  font-family: var(--font-masthead);
+  font-weight: var(--weight-black);
+  color: var(--color-text-strong);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tighter);
+  text-wrap: balance;
+  word-break: keep-all;
+}
+.hed-1 { font-size: clamp(var(--text-4xl), 6vw, var(--text-6xl)); line-height: 0.98; }
+.hed-2 { font-size: clamp(var(--text-3xl), 4.4vw, var(--text-5xl)); }
+.hed-3 { font-size: var(--text-3xl); }
+.hed-4 { font-size: var(--text-2xl); letter-spacing: var(--tracking-tight); }
+.hed-5 { font-size: var(--text-xl);  letter-spacing: var(--tracking-tight); }
+.hed-1 em, .hed-2 em, .hed-3 em, .hed-4 em, .hed-5 em { color: var(--color-accent); font-style: italic; }
+
+/* Ink-bleed hover — the headline soaks the paper: it darkens and the letters
+   tighten a touch, as if the ink just spread. Opt-in on links/headlines. */
+.ink-bleed { transition: letter-spacing var(--duration-base) var(--ease-standard), color var(--duration-fast) var(--ease-standard); }
+.ink-bleed:hover { color: var(--color-accent-text); letter-spacing: calc(var(--tracking-tighter) - var(--ink-bleed)); }
 
 /* Font-size utilities */
 .fs-2xs { font-size: var(--text-2xs); }
@@ -443,7 +494,14 @@ figure.figure figcaption .credit {
   letter-spacing: var(--masthead-tracking);
   color: var(--color-text-strong);
 }
-.masthead__nameplate .spot { color: var(--color-accent); }
+/* The red spot carries the press misregistration — the C-plate a hair off.
+   Large display only, so it reads as ink-on-newsprint, not a screen glitch. */
+.masthead__nameplate .spot {
+  color: var(--color-accent);
+  text-shadow:
+    calc(var(--misreg-x) * -1) 0 0 color-mix(in srgb, var(--ink-cyan) 50%, transparent),
+    var(--misreg-x) 0 0 color-mix(in srgb, var(--color-accent) 20%, transparent);
+}
 .masthead__slug {
   font-family: var(--font-body);
   font-style: italic;
@@ -531,14 +589,45 @@ figure.figure figcaption .credit {
 }
 
 /* ----------------------------------------------------------------------------
-   SCROLL-REVEAL SAFETY NET
-   Pages set [data-reveal]{opacity:0} + JS adds .is-revealed on scroll.
-   If JS never runs (html lacks .js), force everything visible — content must
-   never be permanently hidden. Also reveal all when motion is reduced.
+   SIGNATURE REVEAL SYSTEM — one engine (IntersectionObserver in app.js adds
+   .is-revealed), effects branch by data-reveal VALUE. This lives in base so
+   every page shares the same physics; pages only choose a variant.
+
+     [data-reveal]         default — the sheet settles onto the bed (fade + rise)
+     [data-reveal="ink"]   ink drying — blur → sharp
+     [data-reveal="stamp"] the plate stamps down (scale + rotate snap)
+     [data-reveal="wipe"]  prints off the roller, left → right
+     [data-reveal="rule"]  a rule draws itself across the page
+
+   Stagger: set --reveal-i on siblings for a cascade (× --reveal-stagger).
+   Hidden ONLY under html.js, so a JS failure never leaves content invisible.
    ---------------------------------------------------------------------------- */
-html:not(.js) [data-reveal] { opacity: 1 !important; transform: none !important; }
+html.js [data-reveal] {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity var(--duration-press) var(--ease-out),
+              transform var(--duration-press) var(--ease-out),
+              filter var(--duration-press) var(--ease-out),
+              clip-path var(--duration-press) var(--ease-mech);
+  transition-delay: calc(var(--reveal-i, 0) * var(--reveal-stagger));
+}
+html.js [data-reveal].is-revealed { opacity: 1; transform: none; filter: none; }
+
+html.js [data-reveal="ink"] { filter: blur(3px); }
+html.js [data-reveal="stamp"] {
+  transform: scale(1.05) rotate(-1deg);
+  transition: opacity var(--duration-slow) var(--ease-mech),
+              transform var(--duration-slow) var(--ease-mech);
+}
+html.js [data-reveal="wipe"] { opacity: 1; transform: none; clip-path: inset(0 100% 0 0); }
+html.js [data-reveal="wipe"].is-revealed { clip-path: inset(0 0 0 0); }
+html.js [data-reveal="rule"] { opacity: 1; transform: scaleX(0); transform-origin: left; }
+html.js [data-reveal="rule"].is-revealed { transform: none; }
+
+/* Safety nets — never leave content hidden */
+html:not(.js) [data-reveal] { opacity: 1 !important; transform: none !important; filter: none !important; clip-path: none !important; }
 @media (prefers-reduced-motion: reduce) {
-  [data-reveal] { opacity: 1 !important; transform: none !important; }
+  [data-reveal] { opacity: 1 !important; transform: none !important; filter: none !important; clip-path: none !important; }
 }
 
 /* ----------------------------------------------------------------------------
@@ -602,4 +691,48 @@ html:not(.js) [data-reveal] { opacity: 1 !important; transform: none !important;
   body { background: #fff; color: #000; }
   .no-print { display: none !important; }
   a { color: #000; text-decoration: underline; }
+}
+
+/* ----------------------------------------------------------------------------
+   HANGUL REFINEMENT LAYER  — 전제: <html lang="ko"> + 스택 순서 교정.
+   Newsprint IS an 인쇄 DNA theme, so its own conventions (justified dense
+   columns, oldstyle figures in body) stand; this layer only fixes what breaks
+   in Korean: mid-word line breaks, faux-bold on single-weight 명조, faux-italic,
+   and over-wide Latin small-cap tracking on 한글 labels.
+   ---------------------------------------------------------------------------- */
+:lang(ko) { word-break: keep-all; overflow-wrap: break-word; line-break: strict; }
+
+/* Heads/display: keep-all + let the browser pick a REAL weight (no faux 900) */
+:lang(ko) :is(h1, h2, h3, h4, h5, h6,
+               .masthead__nameplate, .lead-story__headline,
+               .article-header__headline, .hed-1, .hed-2, .hed-3, .hed-4, .hed-5,
+               .headline, .kicker, .label, .section-head__title,
+               .card__title, .deck, .badge, .section-label) {
+  word-break: keep-all;
+}
+:lang(ko) :is(h1, h2, h3, .masthead__nameplate, .lead-story__headline,
+               .article-header__headline, .hed-1, .hed-2, .hed-3,
+               .price__amount, .statcard__value) {
+  font-synthesis-weight: none;
+}
+:lang(ko) :is(h1, h2, h3) { line-height: var(--leading-heading-ko); }
+:lang(ko) :is(.masthead__nameplate, .lead-story__headline, .hed-1, .hed-2) { line-height: var(--leading-display-ko); }
+/* Prose blocks outside the dense newspaper columns get more air for 한글 */
+:lang(ko) :is(.card__body, .modal__body, .deck, .alert__text, .empty-state__text, .command__empty) { line-height: var(--leading-body-ko); }
+
+/* Korean can't small-cap; the ×0.18em Latin tracking smears 한글. Open modestly. */
+:lang(ko) :is(.kicker, .label, .dateline, .section-head__title,
+               .badge, .section-label, .field__label) {
+  letter-spacing: var(--tracking-caps-ko);
+}
+
+/* No Korean italic — the deck/quote/emphasis carry voice via weight, not slant */
+:lang(ko) :is(em, i, cite, .deck, .pull-quote, .masthead__slug, .command__empty) {
+  font-style: normal;
+}
+:lang(ko) :is(em, i, cite) { font-weight: var(--weight-semibold); }
+
+/* Data stays tabular + lining even in Korean UI */
+:lang(ko) :is(.table td, .statcard__value, .price__amount, .dl dd) {
+  font-variant-numeric: tabular-nums lining-nums;
 }

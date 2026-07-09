@@ -1,9 +1,21 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Subscription Plans — The Ledger</title>
+<title>구독 요금제 — 원장일보 THE LEDGER</title>
+<!-- FOUC guard: set the edition before CSS paints (key matches app.js) -->
+<script>
+(function () {
+  try {
+    var t = localStorage.getItem("ledger-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="../theme.css">
 <style>
   /* page-local layout only — tokens only, no hardcoded colors */
@@ -12,21 +24,40 @@
   .pr-billing { display:flex; justify-content:center; align-items:center; gap: var(--space-4); flex-wrap: wrap; padding-block: var(--space-7); }
 
   /* pricing tiers as ruled cards */
-  .pr-cards { padding-block: var(--space-8); }
+  .pr-cards { padding-block: var(--space-8) var(--space-6); }
   .pr-card { display:flex; flex-direction:column; height:100%; }
   .pr-card .price { margin-block: var(--space-4); }
   .pr-feat { list-style:none; margin:0; padding:0; }
   .pr-feat li { display:flex; align-items:flex-start; gap: var(--space-3); }
-  .pr-feat svg { flex:0 0 auto; margin-top:2px; }
+  .pr-feat svg { flex:0 0 auto; margin-top:3px; }
   .pr-feat .ico-yes { color: var(--color-accent); }
   .pr-feat .ico-no { color: var(--color-text-muted); }
   .pr-card__cta { margin-top: auto; padding-top: var(--space-5); }
 
+  /* the featured plan is a real newspaper subscription coupon — dashed cut
+     border + red double frame stands in for a "halo" without soft shadow (DNA). */
+  .pr-card--coupon {
+    position: relative;
+    background: var(--color-surface-2);
+    border: var(--rule-medium) dashed var(--color-accent);
+    padding: var(--space-7);
+    box-shadow: 0 0 0 var(--rule-medium) var(--color-overlay-paper),
+                0 0 0 calc(var(--rule-medium) * 2.2) var(--color-accent);
+  }
+  .coupon-cut { display:flex; align-items:center; gap: var(--space-3); margin: calc(var(--space-3) * -1) 0 var(--space-4); color: var(--color-accent-text); }
+  .coupon-cut__line { flex:1; border-top: var(--rule-thin) dashed var(--color-accent); }
+  .coupon-cut__label { font-family: var(--font-mono); font-size: var(--text-2xs); text-transform: uppercase; letter-spacing: var(--tracking-wider); white-space: nowrap; }
+  .coupon-cut svg { width: 1rem; height: 1rem; flex:0 0 auto; }
+
   /* price visibility toggling */
   .price--annual { display:none; }
   [data-billing="a"] .price--monthly { display:none; }
-  [data-billing="a"] .price--annual { display:flex; }
-  .price__save { font-size: var(--text-xs); color: var(--color-accent); font-weight:700; text-transform:uppercase; letter-spacing:.06em; }
+  [data-billing="a"] .price--annual { display:flex; flex-wrap:wrap; }
+  .price__save { flex-basis:100%; font-size: var(--text-xs); color: var(--color-accent-text); font-weight:700; letter-spacing:.02em; margin-top: var(--space-1); }
+
+  /* payment desk strip */
+  .pr-pay { display:flex; flex-wrap:wrap; align-items:center; gap: var(--space-3) var(--space-4); padding-block: var(--space-6); border-top: var(--rule-thin) solid var(--color-border); }
+  .pr-pay__label { font-family: var(--font-mono); font-size: var(--text-2xs); text-transform: uppercase; letter-spacing: var(--tracking-wider); color: var(--color-text-muted); }
 
   .pr-compare { padding-block: var(--space-9); border-top: var(--rule-heavy) solid var(--color-rule-heavy); }
   .pr-compare td.is-center, .pr-compare th.is-center { text-align:center; }
@@ -35,219 +66,232 @@
 
   .pr-faq { padding-block: var(--space-9); border-top: var(--rule-heavy) solid var(--color-rule-heavy); }
   .pr-cta-band { text-align:center; padding-block: var(--space-9); border-block: var(--rule-heavy) solid var(--color-rule-heavy); margin-top: var(--space-8); }
-
-  [data-reveal]{ opacity:0; transform: translateY(12px); transition: opacity .5s var(--ease-out), transform .5s var(--ease-out); }
-  [data-reveal].is-revealed{ opacity:1; transform:none; }
+  .pr-cta-band__head { font-family: var(--font-masthead); font-weight:900; font-size: var(--text-4xl); line-height: var(--leading-tight); margin: var(--space-3) 0 var(--space-2); }
+  .pr-cta-band .deck { max-width: 52ch; margin-inline:auto; }
+  .pr-cta-cluster { display:flex; gap: var(--space-4); justify-content:center; flex-wrap:wrap; margin-top: var(--space-6); }
 </style>
 </head>
 <body>
-<a class="skip-link" href="#main">Skip to content</a>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
 
-<nav class="navbar no-print" aria-label="Primary">
-  <a class="navbar__brand" href="../index.html">THE&nbsp;<span class="spot">LEDGER</span></a>
+<nav class="navbar no-print" aria-label="주 메뉴">
+  <a class="navbar__brand" href="../index.html">원장<span class="spot">일보</span></a>
   <div class="navbar__sections" id="primary-nav">
-    <a class="navbar__link" href="dashboard.html">Desk</a>
-    <a class="navbar__link" href="kanban.html">Board</a>
-    <a class="navbar__link" href="inbox.html">Wire</a>
-    <a class="navbar__link" href="pricing.html" aria-current="page">Plans</a>
-    <a class="navbar__link" href="front-page.html">Front Page</a>
+    <a class="navbar__link" href="dashboard.html">분석 데스크</a>
+    <a class="navbar__link" href="kanban.html">편집 보드</a>
+    <a class="navbar__link" href="inbox.html">통신선</a>
+    <a class="navbar__link" href="pricing.html" aria-current="page">요금제</a>
+    <a class="navbar__link" href="front-page.html">1면</a>
   </div>
   <div class="navbar__actions">
-    <button class="btn btn--ghost btn--sm" data-command-open aria-label="Search">⌘K</button>
-    <button class="btn btn--icon btn--sm" data-theme-toggle aria-pressed="false" aria-label="Toggle edition">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
+    <button class="btn btn--ghost btn--sm" data-command-open aria-label="검색">⌘K</button>
+    <button class="btn btn--icon btn--sm" data-theme-toggle aria-pressed="false" aria-label="에디션 전환">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
     </button>
-    <button class="btn btn--icon btn--sm navbar__toggle" data-nav-toggle="primary-nav" aria-label="Menu" aria-expanded="false">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    <button class="btn btn--icon btn--sm navbar__toggle" data-nav-toggle="primary-nav" aria-label="메뉴" aria-expanded="false">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
     </button>
   </div>
 </nav>
 
 <!-- Breaking band -->
-<div class="breaking-band no-print" role="region" aria-label="Subscription notice">
-  <span class="breaking-band__label">Notice</span>
-  <div class="breaking-band__ticker"><span>Charter rate held for a third year ◆ Annual subscribers save 20% on every edition ◆ Newsroom seats now include a shared archive vault ◆ Student &amp; press-pass discounts available at the desk ◆ Cancel any time before the next print run — no questions asked.</span></div>
+<div class="breaking-band no-print" role="region" aria-label="구독 안내">
+  <span class="breaking-band__label">구독</span>
+  <div class="breaking-band__ticker"><span>2026년 정가 동결 — 세 해째 요금을 올리지 않았습니다 ◆ 연간 결제 시 두 달 치가 무료입니다 ◆ 편집국 요금제에는 공유 아카이브 금고가 포함됩니다 ◆ 학생·언론인은 보급부에서 반값 구독을 신청할 수 있습니다 ◆ 다음 판이 돌기 전이라면 언제든 위약 없이 해지됩니다.</span></div>
 </div>
 
 <main id="main" data-billing="m">
 <div class="pr">
 
   <!-- INTRO / ARTICLE HEADER -->
-  <section class="pr-intro" data-reveal>
+  <section class="pr-intro" data-reveal="ink">
     <article class="article-header">
-      <span class="kicker">Subscriptions</span>
-      <h1 class="article-header__headline">Choose Your <span class="spot">Edition</span></h1>
-      <p class="article-header__deck deck">Every plan is set in the same ink. Start free with the Reader, step up to the full Press desk, or run a Newsroom for the whole masthead — billed the way that suits your cycle.</p>
+      <span class="kicker">구독 안내 · 보급부(普及部)</span>
+      <h1 class="article-header__headline">어느 <span class="spot">판</span>으로 읽으시겠습니까</h1>
+      <p class="article-header__deck deck">세 요금제 모두 같은 잉크로 찍습니다. 무료 독자판으로 가볍게 시작하시고, 신문 전체가 필요하시면 프레스로, 편집국 전체가 함께 읽으신다면 편집국 요금제로 올리시면 됩니다 — 결제 주기는 편하신 대로 고르실 수 있습니다.</p>
       <div class="article-header__meta">
-        <span class="byline">Published by <strong>The Ledger Circulation Desk</strong></span>
+        <span class="byline">발행 <strong>원장일보 보급부</strong></span>
         <span class="dateline" data-dateline>—</span>
-        <span class="badge badge--accent">Rates held for 2026</span>
+        <span class="badge badge--accent">2026년 정가 동결</span>
       </div>
     </article>
 
     <!-- BILLING TOGGLE -->
     <div class="pr-billing">
-      <span class="text-ui text-muted">Bill me</span>
-      <div class="segmented" data-segmented role="tablist" aria-label="Billing period">
-        <button type="button" role="tab" aria-selected="true" data-value="m">Monthly</button>
-        <button type="button" role="tab" aria-selected="false" data-value="a">Annual — save 20%</button>
+      <span class="text-ui text-muted">결제 주기</span>
+      <div class="segmented" data-segmented role="radiogroup" aria-label="결제 주기 선택">
+        <button type="button" role="radio" aria-checked="true" data-value="m">월간</button>
+        <button type="button" role="radio" aria-checked="false" data-value="a">연간 · 두 달 무료</button>
       </div>
     </div>
   </section>
 
   <!-- PRICING TIERS -->
-  <section class="pr-cards" data-reveal>
+  <section class="pr-cards">
     <div class="grid grid-3">
 
-      <!-- READER -->
-      <article class="card card--ruled pr-card">
-        <span class="card__kicker">For Readers</span>
-        <h2 class="card__title">Reader</h2>
-        <p class="card__body text-muted">A daily habit. The front page, the wire, and ten archived pieces a month — on the house.</p>
+      <!-- 독자 (READER) -->
+      <article class="card card--ruled pr-card" data-reveal style="--reveal-i:0">
+        <span class="card__kicker">가벼운 독자</span>
+        <h2 class="card__title">독자</h2>
+        <p class="card__body text-muted">매일의 습관. 1면과 통신선, 그리고 한 달 열 건의 아카이브를 값 없이 드립니다.</p>
 
-        <div class="price price--monthly">
-          <span class="price__currency">$</span><span class="price__amount">0</span><span class="price__period">/ forever</span>
-        </div>
-        <div class="price price--annual">
-          <span class="price__currency">$</span><span class="price__amount">0</span><span class="price__period">/ forever</span>
+        <div class="price">
+          <span class="price__currency">₩</span><span class="price__amount">0</span><span class="price__period">· 평생 무료</span>
         </div>
 
         <ul class="pr-feat stack-sm">
-          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span>Full daily front page &amp; wire</span></li>
-          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span>10 archive articles / month</span></li>
-          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span>Morning briefing newsletter</span></li>
-          <li><svg class="ico-no" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg><span class="text-muted">Unlimited archive access</span></li>
-          <li><svg class="ico-no" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg><span class="text-muted">Data &amp; API access</span></li>
+          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>매일 1면 &amp; 통신선(속보) 열람</span></li>
+          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>월 10건 아카이브 기사</span></li>
+          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>아침 브리핑 뉴스레터</span></li>
+          <li><svg class="ico-no" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg><span class="text-muted">무제한 아카이브 열람</span></li>
+          <li><svg class="ico-no" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg><span class="text-muted">데이터 &amp; API 접근</span></li>
         </ul>
 
         <div class="pr-card__cta">
-          <a class="btn btn--secondary btn--block" href="#">Start Reading</a>
+          <a class="btn btn--secondary btn--block" href="onboarding.html">무료로 읽기 시작</a>
         </div>
       </article>
 
-      <!-- PRESS — FEATURED -->
-      <article class="card card--accent pr-card ribbon">
-        <span class="ribbon__flag">Most Read</span>
-        <span class="card__kicker">For the Daily Reader</span>
-        <h2 class="card__title">Press</h2>
-        <p class="card__body text-muted">The whole paper, every section, the complete archive, and the columnists you actually read.</p>
+      <!-- 프레스 (PRESS) — 절취선 구독 신청권 -->
+      <article class="pr-card pr-card--coupon ribbon" data-reveal="stamp" style="--reveal-i:1">
+        <span class="ribbon__flag">가장 많이 읽는 판</span>
+        <div class="coupon-cut">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 12.5 20 20M8.1 8.1 12 12"/></svg>
+          <span class="coupon-cut__label">구독 신청권</span>
+          <span class="coupon-cut__line"></span>
+        </div>
+        <span class="card__kicker">매일 읽는 분께</span>
+        <h2 class="card__title">프레스</h2>
+        <p class="card__body text-muted">신문 전체, 모든 섹션, 전체 아카이브, 그리고 실제로 챙겨 읽으시는 칼럼까지.</p>
 
         <div class="price price--monthly">
-          <span class="price__currency">$</span><span class="price__amount">9</span><span class="price__period">/ month</span>
+          <span class="price__currency">₩</span><span class="price__amount">9,900</span><span class="price__period">/ 월</span>
         </div>
         <div class="price price--annual">
-          <span class="price__currency">$</span><span class="price__amount">86</span><span class="price__period">/ year</span>
-          <span class="price__save">$7.16 / mo · save $22</span>
+          <span class="price__currency">₩</span><span class="price__amount">99,000</span><span class="price__period">/ 년</span>
+          <span class="price__save">월 8,250원 꼴 · 두 달 치 무료 (연 19,800원 절약)</span>
         </div>
 
         <ul class="pr-feat stack-sm">
-          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span>Everything in Reader</span></li>
-          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span>Unlimited articles &amp; archive</span></li>
-          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span>Every column &amp; weekend edition</span></li>
-          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span>Crossword &amp; puzzles vault</span></li>
-          <li><svg class="ico-no" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg><span class="text-muted">Shared team seats</span></li>
+          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>독자판의 모든 기능</span></li>
+          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>무제한 기사 &amp; 전체 아카이브</span></li>
+          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>모든 칼럼 &amp; 주말판</span></li>
+          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>크로스워드 &amp; 낱말퍼즐 금고</span></li>
+          <li><svg class="ico-no" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg><span class="text-muted">편집국 공유 좌석</span></li>
         </ul>
 
         <div class="pr-card__cta">
-          <a class="btn btn--primary btn--block" href="#">Subscribe to Press</a>
+          <a class="btn btn--primary btn--block" href="onboarding.html">프레스 구독하기</a>
         </div>
       </article>
 
-      <!-- NEWSROOM -->
-      <article class="card card--ruled pr-card">
-        <span class="card__kicker">For Teams</span>
-        <h2 class="card__title">Newsroom</h2>
-        <p class="card__body text-muted">A shared masthead for the whole desk — five seats, an archive vault, and the data API.</p>
+      <!-- 편집국 (NEWSROOM) -->
+      <article class="card card--ruled pr-card" data-reveal style="--reveal-i:2">
+        <span class="card__kicker">편집국 · 팀</span>
+        <h2 class="card__title">편집국</h2>
+        <p class="card__body text-muted">데스크 전체가 함께 쓰는 제호 — 다섯 좌석, 공유 아카이브 금고, 그리고 데이터 API.</p>
 
         <div class="price price--monthly">
-          <span class="price__currency">$</span><span class="price__amount">29</span><span class="price__period">/ mo · 5 seats</span>
+          <span class="price__currency">₩</span><span class="price__amount">39,000</span><span class="price__period">/ 월 · 5석</span>
         </div>
         <div class="price price--annual">
-          <span class="price__currency">$</span><span class="price__amount">278</span><span class="price__period">/ yr · 5 seats</span>
-          <span class="price__save">save $70 a year</span>
+          <span class="price__currency">₩</span><span class="price__amount">390,000</span><span class="price__period">/ 년 · 5석</span>
+          <span class="price__save">두 달 치 무료 (연 78,000원 절약)</span>
         </div>
 
         <ul class="pr-feat stack-sm">
-          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span>Everything in Press</span></li>
-          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span>5 seats, $5 / extra seat</span></li>
-          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span>Shared archive vault &amp; clippings</span></li>
-          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span>Data &amp; reporting API access</span></li>
-          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg><span>Priority desk support</span></li>
+          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>프레스의 모든 기능</span></li>
+          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>기본 5석 · 추가석 월 ₩7,000</span></li>
+          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>공유 아카이브 금고 &amp; 스크랩</span></li>
+          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>데이터 &amp; 리포팅 API</span></li>
+          <li><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span>우선 데스크 지원</span></li>
         </ul>
 
         <div class="pr-card__cta">
-          <a class="btn btn--secondary btn--block" href="#">Outfit a Newsroom</a>
+          <a class="btn btn--secondary btn--block" href="onboarding.html">편집국 꾸리기</a>
         </div>
       </article>
 
+    </div>
+
+    <!-- payment desk -->
+    <div class="pr-pay">
+      <span class="pr-pay__label">결제 수단</span>
+      <span class="badge badge--muted">신용·체크카드</span>
+      <span class="badge badge--muted">카카오페이</span>
+      <span class="badge badge--muted">네이버페이</span>
+      <span class="badge badge--muted">토스</span>
+      <span class="badge badge--muted">계좌 자동이체</span>
+      <span class="text-muted text-ui">— 사업자는 세금계산서 발행이 가능합니다.</span>
     </div>
   </section>
 
   <!-- FEATURE COMPARISON TABLE -->
   <section class="pr-compare" data-reveal>
     <div class="section-head">
-      <h2 class="section-head__title">The Full Ledger</h2>
-      <span class="section-head__meta">Every line, by plan</span>
+      <h2 class="section-head__title">원장(元帳) 전체 비교</h2>
+      <span class="section-head__meta">한 줄씩, 요금제별로</span>
     </div>
 
     <div class="table-wrap">
       <table class="table table--zebra">
         <thead>
           <tr>
-            <th scope="col">Feature</th>
-            <th scope="col" class="is-center">Reader</th>
-            <th scope="col" class="is-center">Press</th>
-            <th scope="col" class="is-center">Newsroom</th>
+            <th scope="col">항목</th>
+            <th scope="col" class="is-center">독자</th>
+            <th scope="col" class="is-center">프레스</th>
+            <th scope="col" class="is-center">편집국</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <th scope="row">Daily front page &amp; wire</th>
-            <td class="is-center"><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></td>
-            <td class="is-center"><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></td>
-            <td class="is-center"><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></td>
+            <th scope="row">매일 1면 &amp; 통신선</th>
+            <td class="is-center"><span class="visually-hidden">포함</span><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></td>
+            <td class="is-center"><span class="visually-hidden">포함</span><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></td>
+            <td class="is-center"><span class="visually-hidden">포함</span><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></td>
           </tr>
           <tr>
-            <th scope="row">Archive articles per month</th>
-            <td class="is-center">10</td>
-            <td class="is-center">Unlimited</td>
-            <td class="is-center">Unlimited</td>
+            <th scope="row">월 아카이브 열람</th>
+            <td class="is-center">10건</td>
+            <td class="is-center">무제한</td>
+            <td class="is-center">무제한</td>
           </tr>
           <tr>
-            <th scope="row">Columns &amp; weekend edition</th>
-            <td class="is-center"><svg class="ico-no" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg></td>
-            <td class="is-center"><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></td>
-            <td class="is-center"><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></td>
+            <th scope="row">칼럼 &amp; 주말판</th>
+            <td class="is-center"><span class="visually-hidden">미포함</span><svg class="ico-no" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/></svg></td>
+            <td class="is-center"><span class="visually-hidden">포함</span><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></td>
+            <td class="is-center"><span class="visually-hidden">포함</span><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></td>
           </tr>
           <tr>
-            <th scope="row">Crossword &amp; puzzles vault</th>
-            <td class="is-center"><svg class="ico-no" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg></td>
-            <td class="is-center"><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></td>
-            <td class="is-center"><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></td>
+            <th scope="row">크로스워드 &amp; 퍼즐 금고</th>
+            <td class="is-center"><span class="visually-hidden">미포함</span><svg class="ico-no" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/></svg></td>
+            <td class="is-center"><span class="visually-hidden">포함</span><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></td>
+            <td class="is-center"><span class="visually-hidden">포함</span><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></td>
           </tr>
           <tr>
-            <th scope="row">Included seats</th>
-            <td class="is-center">1</td>
-            <td class="is-center">1</td>
-            <td class="is-center">5 (+ $5 each)</td>
+            <th scope="row">포함 좌석</th>
+            <td class="is-center">1석</td>
+            <td class="is-center">1석</td>
+            <td class="is-center">5석 (추가 석당 ₩7,000)</td>
           </tr>
           <tr>
-            <th scope="row">Shared archive vault &amp; clippings</th>
-            <td class="is-center"><svg class="ico-no" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg></td>
-            <td class="is-center"><svg class="ico-no" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg></td>
-            <td class="is-center"><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></td>
+            <th scope="row">공유 아카이브 금고 &amp; 스크랩</th>
+            <td class="is-center"><span class="visually-hidden">미포함</span><svg class="ico-no" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/></svg></td>
+            <td class="is-center"><span class="visually-hidden">미포함</span><svg class="ico-no" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/></svg></td>
+            <td class="is-center"><span class="visually-hidden">포함</span><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></td>
           </tr>
           <tr>
-            <th scope="row">Data &amp; reporting API</th>
-            <td class="is-center"><svg class="ico-no" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg></td>
-            <td class="is-center"><svg class="ico-no" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg></td>
-            <td class="is-center"><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></td>
+            <th scope="row">데이터 &amp; 리포팅 API</th>
+            <td class="is-center"><span class="visually-hidden">미포함</span><svg class="ico-no" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/></svg></td>
+            <td class="is-center"><span class="visually-hidden">미포함</span><svg class="ico-no" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14"/></svg></td>
+            <td class="is-center"><span class="visually-hidden">포함</span><svg class="ico-yes" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></td>
           </tr>
           <tr>
-            <th scope="row">Support</th>
-            <td class="is-center">Help desk</td>
-            <td class="is-center">Email, 24h</td>
-            <td class="is-center">Priority desk</td>
+            <th scope="row">고객 지원</th>
+            <td class="is-center">도움 데스크</td>
+            <td class="is-center">이메일 · 24시간</td>
+            <td class="is-center">우선 데스크</td>
           </tr>
         </tbody>
       </table>
@@ -257,98 +301,98 @@
   <!-- FAQ -->
   <section class="pr-faq" data-reveal>
     <div class="section-head">
-      <h2 class="section-head__title">Questions at the Desk</h2>
-      <span class="section-head__meta">Subscriptions &amp; billing</span>
+      <h2 class="section-head__title">보급부에 자주 묻는 질문</h2>
+      <span class="section-head__meta">구독 &amp; 결제</span>
     </div>
 
     <div class="accordion" data-accordion data-accordion-single>
       <div class="accordion__item">
         <button class="accordion__trigger" aria-expanded="false">
-          <span>How does monthly versus annual billing work?</span>
+          <span>월간 결제와 연간 결제는 어떻게 다른가요?</span>
           <span class="accordion__icon" aria-hidden="true"></span>
         </button>
         <div class="accordion__panel"><div><div class="accordion__content">
-          <p>Monthly plans bill on the same date each month and you can stop any time. Annual plans bill once for the year and carry a standing 20% discount — Press works out to $7.16 a month, and a Newsroom of five seats lands at $278 for the year. Switching between the two takes effect on your next renewal.</p>
+          <p>월간 요금제는 매달 같은 날 결제되며 언제든 멈추실 수 있습니다. 연간 요금제는 한 해치를 한 번에 결제하는 대신 두 달 치가 무료입니다 — 프레스는 연 99,000원(월 8,250원 꼴), 편집국 다섯 좌석은 연 390,000원입니다. 두 주기 사이의 변경은 다음 갱신일부터 반영됩니다.</p>
         </div></div></div>
       </div>
 
       <div class="accordion__item">
         <button class="accordion__trigger" aria-expanded="false">
-          <span>Can I cancel, and what happens to my access?</span>
+          <span>구독을 해지하면 읽던 기사와 스크랩은 어떻게 되나요?</span>
           <span class="accordion__icon" aria-hidden="true"></span>
         </button>
         <div class="accordion__panel"><div><div class="accordion__content">
-          <p>Yes — cancel from your account at any time, no call required. Your subscription stays active until the end of the period you have already paid for, then quietly drops back to the free Reader plan. Nothing is deleted; your saved clippings stay put.</p>
+          <p>계정에서 언제든, 전화 없이 해지하실 수 있습니다. 이미 결제하신 기간이 끝날 때까지는 구독이 유지되고, 이후에는 무료 독자판으로 조용히 내려갑니다. 저장해 두신 스크랩은 그대로 남으니 아무것도 사라지지 않습니다.</p>
         </div></div></div>
       </div>
 
       <div class="accordion__item">
         <button class="accordion__trigger" aria-expanded="false">
-          <span>How do team seats work on Newsroom?</span>
+          <span>편집국 요금제의 좌석은 어떻게 운영되나요?</span>
           <span class="accordion__icon" aria-hidden="true"></span>
         </button>
         <div class="accordion__panel"><div><div class="accordion__content">
-          <p>Newsroom includes five seats out of the box. Add more for $5 per seat per month (or the annual equivalent), and remove them whenever the desk shrinks. Each member gets their own login while sharing the archive vault, clippings, and a single invoice.</p>
+          <p>편집국 요금제에는 다섯 좌석이 기본으로 포함됩니다. 좌석당 월 7,000원(또는 연간 환산액)에 추가하실 수 있고, 데스크 규모가 줄면 언제든 빼실 수 있습니다. 구성원은 각자의 로그인을 쓰면서 아카이브 금고와 스크랩, 그리고 한 장의 청구서를 함께 씁니다.</p>
         </div></div></div>
       </div>
 
       <div class="accordion__item">
         <button class="accordion__trigger" aria-expanded="false">
-          <span>Do you offer refunds?</span>
+          <span>환불이 되나요?</span>
           <span class="accordion__icon" aria-hidden="true"></span>
         </button>
         <div class="accordion__panel"><div><div class="accordion__content">
-          <p>If an annual plan is not for you, write to the circulation desk within 14 days of payment and we will refund it in full. Monthly plans are not pro-rated, but cancelling stops the next charge immediately — so you are never billed for a month you did not intend to read.</p>
+          <p>연간 요금제가 맞지 않으셨다면, 결제일로부터 14일 안에 보급부로 알려 주시면 전액 환불해 드립니다. 월간 요금제는 일할 계산이 없지만, 해지하시면 다음 결제가 즉시 멈추므로 읽지 않을 달의 요금이 청구되지는 않습니다.</p>
         </div></div></div>
       </div>
 
       <div class="accordion__item">
         <button class="accordion__trigger" aria-expanded="false">
-          <span>Are there student or press discounts?</span>
+          <span>학생·언론인 할인이 있나요?</span>
           <span class="accordion__icon" aria-hidden="true"></span>
         </button>
         <div class="accordion__panel"><div><div class="accordion__content">
-          <p>Students with a valid .edu address and credentialed journalists both qualify for 50% off the Press plan. Send proof to the desk and we will apply the rate to your account within one business day. Newsroom volume pricing is available above 25 seats.</p>
+          <p>재학증명이 가능한 학생과 언론인은 프레스 요금제를 반값에 구독하실 수 있습니다. 증빙을 보급부로 보내 주시면 영업일 하루 안에 계정에 적용해 드립니다. 편집국은 25석을 넘으면 별도의 단체 요율을 안내해 드립니다.</p>
         </div></div></div>
       </div>
     </div>
   </section>
 
   <!-- CLOSING CTA BAND -->
-  <section class="pr-cta-band" data-reveal>
-    <span class="kicker">Press Start</span>
-    <h2 style="font-family:var(--font-masthead);font-weight:900;font-size:var(--text-4xl);line-height:var(--leading-tight);margin:var(--space-3) 0 var(--space-2)">Read the paper the way it was meant to be read.</h2>
-    <p class="deck" style="max-width:60ch;margin-inline:auto">Start free today and upgrade whenever you are ready. No setup, no commitment — just the news, set in good type.</p>
-    <div class="cluster" style="justify-content:center;margin-top:var(--space-6)">
-      <a class="btn btn--primary btn--lg" href="#">Subscribe to Press</a>
-      <a class="btn btn--ghost btn--lg" href="#">Talk to the Desk</a>
+  <section class="pr-cta-band" data-reveal="rule">
+    <span class="kicker">구독 시작</span>
+    <h2 class="pr-cta-band__head">좋은 활자로 짜인 신문을, 매일 아침.</h2>
+    <p class="deck">오늘 무료로 시작하시고 준비되실 때 올리시면 됩니다. 설정도, 약정도 없습니다 — 잘 조판된 뉴스, 그것 하나입니다.</p>
+    <div class="pr-cta-cluster">
+      <a class="btn btn--primary btn--lg" href="onboarding.html">프레스 구독하기</a>
+      <a class="btn btn--ghost btn--lg" href="inbox.html">보급부에 문의</a>
     </div>
   </section>
 
   <div class="folio">
-    <span>The Ledger · Subscription Plans</span>
-    <span>Rates effective the 2026 print year</span>
+    <span>원장일보 · 구독 요금제</span>
+    <span>2026년 인쇄 연도 정가 적용</span>
     <span>— 30 —</span>
   </div>
 
 </div>
 </main>
 
-<footer class="container-broadsheet"><div class="folio"><span>The Ledger · Theme 28 “Newsprint”</span><span>Subscription Plans</span><span>— 30 —</span></div></footer>
+<footer class="container-broadsheet"><div class="folio"><span>원장일보 THE LEDGER · Newsprint · Theme 28</span><span>구독 요금제</span><span>— 30 —</span></div></footer>
 
 <!-- Command palette -->
-<div class="command" data-command role="dialog" aria-modal="true" aria-label="Command palette" hidden>
-  <div class="command__search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="Search…" aria-label="Command input"><kbd>ESC</kbd></div>
+<div class="command" data-command role="dialog" aria-modal="true" aria-label="명령 팔레트" hidden>
+  <div class="command__search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="섹션, 페이지, 명령 검색…" aria-label="명령 입력"><kbd>ESC</kbd></div>
   <div class="command__list">
-    <div class="command__group-label">Navigate</div>
-    <button class="command__item" data-href="../index.html">Back to Hub</button>
-    <button class="command__item" data-href="dashboard.html">Analytics Desk</button>
-    <button class="command__item" data-href="front-page.html">Front Page</button>
-    <div class="command__group-label">Commands</div>
-    <button class="command__item" data-action="toggle-theme">Toggle Day / Night Edition</button>
+    <div class="command__group-label">이동</div>
+    <button class="command__item" data-href="../index.html">규격집으로 돌아가기</button>
+    <button class="command__item" data-href="dashboard.html">분석 데스크 열기</button>
+    <button class="command__item" data-href="front-page.html">1면 읽기</button>
+    <div class="command__group-label">명령</div>
+    <button class="command__item" data-action="toggle-theme">데이 / 나이트 에디션 전환</button>
   </div>
-  <div class="command__empty" hidden>No matching entry.</div>
-  <div class="command__foot"><span><kbd>↑</kbd><kbd>↓</kbd> nav</span><span><kbd>↵</kbd> select</span><span><kbd>esc</kbd> close</span></div>
+  <div class="command__empty" hidden>색인에 일치하는 항목이 없습니다.</div>
+  <div class="command__foot"><span><kbd>↑</kbd><kbd>↓</kbd> 이동</span><span><kbd>↵</kbd> 선택</span><span><kbd>esc</kbd> 닫기</span></div>
 </div>
 
 <script src="../app.js" defer></script>

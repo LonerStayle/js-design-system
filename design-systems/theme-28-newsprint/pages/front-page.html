@@ -1,76 +1,104 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Front Page — The Ledger</title>
+<title>1면 — 원장일보 The Ledger</title>
+<!-- FOUC guard: set the edition before CSS paints (key matches app.js) -->
+<script>
+(function () {
+  try {
+    var t = localStorage.getItem("ledger-theme");
+    if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="../theme.css">
 <style>
   .fp { max-width: var(--measure-broadsheet); margin-inline: auto; padding-inline: var(--container-pad); }
-  /* the main front-page grid: lead + rail */
-  .fp-lead { display: grid; grid-template-columns: 2.6fr 1fr; gap: 0; border-bottom: var(--rule-heavy) solid var(--color-rule-heavy); }
+
+  /* the main front-page grid: lead + rail — a real unequal broadsheet split */
+  .fp-lead { display: grid; grid-template-columns: 2.6fr 1fr; gap: 0; border-bottom: var(--rule-heavy) solid var(--color-rule-heavy); position: relative; }
   .fp-lead__main { padding: var(--space-9) var(--space-9) var(--space-9) 0; }
   .fp-lead__rail { padding: var(--space-9) 0 var(--space-9) var(--space-9); border-left: var(--rule-medium) solid var(--color-border); }
-  @media (max-width: 900px){ .fp-lead { grid-template-columns: 1fr; } .fp-lead__main{ padding: var(--space-8) 0; } .fp-lead__rail{ padding: var(--space-8) 0; border-left:0; border-top: var(--rule-heavy) solid var(--color-rule-heavy); } }
+  /* the centre crease runs down the gutter — above/below the fold */
+  .fp-lead::after { content: ""; position: absolute; top: 0; bottom: 0; left: 72.2%; width: 3px; background: var(--fold-line); pointer-events: none; }
+  @media (max-width: 900px){
+    .fp-lead { grid-template-columns: 1fr; }
+    .fp-lead__main{ padding: var(--space-8) 0; }
+    .fp-lead__rail{ padding: var(--space-8) 0; border-left:0; border-top: var(--rule-heavy) solid var(--color-rule-heavy); }
+    .fp-lead::after { display: none; }
+  }
 
-  .fp-tier { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; border-bottom: var(--rule-heavy) solid var(--color-rule-heavy); }
-  .fp-tier > article { padding: var(--space-8); border-right: var(--column-rule); }
-  .fp-tier > article:last-child { border-right: 0; }
-  @media (max-width: 768px){ .fp-tier { grid-template-columns: 1fr; } .fp-tier > article{ border-right:0; border-bottom: var(--rule-thin) solid var(--color-border); padding: var(--space-7) 0;} }
+  /* Secondary spread — a genuine 5:4:3 size hierarchy, not a tidy 1:1:1 */
+  .fp-tier { display: grid; grid-template-columns: 5fr 4fr 3fr; gap: 0; border-bottom: var(--rule-heavy) solid var(--color-rule-heavy); }
+  .fp-tier > * { padding: var(--space-8); border-right: var(--column-rule); }
+  .fp-tier > *:last-child { border-right: 0; }
+  @media (max-width: 900px){ .fp-tier { grid-template-columns: 1fr 1fr; } .fp-tier > *:nth-child(2){ border-right:0; } .fp-tier > *:last-child{ grid-column: 1 / -1; border-top: var(--rule-thin) solid var(--color-border); } }
+  @media (max-width: 640px){ .fp-tier { grid-template-columns: 1fr; } .fp-tier > *{ border-right:0; border-bottom: var(--rule-thin) solid var(--color-border); padding: var(--space-7) 0;} .fp-tier > *:last-child{ grid-column:auto; border-bottom:0; } }
 
   .fp-strip { display:grid; grid-template-columns: 1.4fr 1fr 1fr; gap:0; border-bottom: var(--rule-heavy) solid var(--color-rule-heavy); }
   .fp-strip > * { padding: var(--space-8); border-right: var(--column-rule); }
   .fp-strip > *:last-child { border-right:0; }
   @media (max-width: 768px){ .fp-strip{ grid-template-columns:1fr;} .fp-strip>*{ border-right:0; border-bottom: var(--rule-thin) solid var(--color-border);} }
 
-  .headline-link:hover { text-decoration: underline; text-decoration-color: var(--color-accent); text-decoration-thickness: var(--rule-medium); text-underline-offset: 4px; }
-  [data-reveal]{ opacity:0; transform: translateY(12px); transition: opacity .5s var(--ease-out), transform .5s var(--ease-out); }
-  [data-reveal].is-revealed{ opacity:1; transform:none; }
+  /* 단신 — the single-column news-brief stack, a Korean front-page signature */
+  .fp-briefs p { padding: var(--space-4) 0; border-bottom: var(--rule-thin) dotted var(--color-border-muted); font-family: var(--font-body); font-size: var(--text-sm); line-height: var(--leading-body-ko); text-wrap: pretty; }
+  .fp-briefs p:last-child { border-bottom: 0; padding-bottom: 0; }
+  .fp-briefs p::before { content: "◆"; color: var(--color-accent); font-size: 0.62em; margin-right: var(--space-4); vertical-align: 0.18em; }
+
+  /* 號外 splash sits on the paper ground, not a boxed modal card */
+  #extra-modal { background: transparent; border: 0; box-shadow: none; }
+  #extra-modal .modal__body { padding: 0; }
 </style>
 </head>
 <body>
-<a class="skip-link" href="#main">Skip to content</a>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
 
-<nav class="navbar no-print" aria-label="Primary">
-  <a class="navbar__brand" href="../index.html">THE&nbsp;<span class="spot">LEDGER</span></a>
+<nav class="navbar no-print" aria-label="주 메뉴">
+  <a class="navbar__brand" href="../index.html">원장<span class="spot">일보</span></a>
   <div class="navbar__sections" id="primary-nav">
-    <a class="navbar__link" href="dashboard.html">Desk</a>
-    <a class="navbar__link" href="kanban.html">Board</a>
-    <a class="navbar__link" href="inbox.html">Wire</a>
-    <a class="navbar__link" href="pricing.html">Plans</a>
-    <a class="navbar__link" href="front-page.html" aria-current="page">Front Page</a>
+    <a class="navbar__link" href="dashboard.html">분석 데스크</a>
+    <a class="navbar__link" href="kanban.html">편집국 보드</a>
+    <a class="navbar__link" href="inbox.html">통신선</a>
+    <a class="navbar__link" href="pricing.html">구독</a>
+    <a class="navbar__link" href="front-page.html" aria-current="page">1면</a>
   </div>
   <div class="navbar__actions">
-    <button class="btn btn--ghost btn--sm" data-command-open aria-label="Search">⌘K</button>
-    <button class="btn btn--icon btn--sm" data-theme-toggle aria-pressed="false" aria-label="Toggle edition">
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
+    <button class="btn btn--ghost btn--sm" data-command-open aria-label="검색 팔레트 열기">⌘K</button>
+    <button class="btn btn--icon btn--sm" data-theme-toggle aria-pressed="false" aria-label="에디션 전환">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
     </button>
-    <button class="btn btn--icon btn--sm navbar__toggle" data-nav-toggle="primary-nav" aria-label="Menu" aria-expanded="false">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    <button class="btn btn--icon btn--sm navbar__toggle" data-nav-toggle="primary-nav" aria-label="메뉴" aria-expanded="false">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
     </button>
   </div>
 </nav>
 
 <!-- Breaking band -->
-<div class="breaking-band no-print" role="region" aria-label="Breaking news">
-  <span class="breaking-band__label">Breaking</span>
-  <div class="breaking-band__ticker"><span>Markets rally as central bank holds rates ◆ City council approves transit overhaul 7–2 ◆ Late: rain expected to clear by morning edition ◆ Sports: Harbor United advance to the final on penalties ◆ Tech desk reports record quarter for independent press tooling.</span></div>
+<div class="breaking-band no-print" role="region" aria-label="속보">
+  <span class="breaking-band__label">속보</span>
+  <div class="breaking-band__ticker"><span>한국은행, 기준금리 연 3.25% 동결 — 6개월째 관망세 ◆ 수도권 광역급행 GTX 2기 노선 확정 ◆ 코스피 2,760선 회복, 나흘째 상승 ◆ 폭염 속 전력 수요 사상 최대 ◆ 프로야구 후반기 개막, 잠실·사직 매진</span></div>
+  <button class="breaking-band__pull" data-modal-open="extra-modal" aria-label="호외 전문 보기">호외 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
 </div>
 
 <!-- Masthead -->
 <header class="masthead" role="banner">
   <div class="fp">
     <div class="masthead__eyebrow">
-      <span>Vol. XXVIII · No. 172</span>
-      <span>City &amp; National Edition</span>
-      <span>★★★★</span>
+      <span>제28권 제172호</span>
+      <span>서울 · 조간(朝刊)</span>
+      <span>종합 1면</span>
     </div>
-    <h1 class="masthead__nameplate">The&nbsp;<span class="spot">Ledger</span></h1>
-    <p class="masthead__slug">“All the Tokens Fit to Print”</p>
+    <h1 class="masthead__nameplate">원장<span class="spot">일보</span></h1>
+    <p class="masthead__slug">기록되지 않은 하루는, 일어나지 않은 하루입니다.</p>
     <div class="masthead__dateline">
-      <span data-dateline>—</span>
-      <span>Late City Final</span>
-      <span>Price $2.50 · Free Online</span>
+      <span data-dateline="dangi">2026년 7월 9일</span>
+      <span>가판 최종판</span>
+      <span>정가 무료 · 전자판</span>
     </div>
   </div>
 </header>
@@ -80,142 +108,164 @@
 
   <!-- LEAD TIER -->
   <section class="fp-lead">
-    <div class="fp-lead__main" data-reveal>
+    <div class="fp-lead__main" data-reveal="ink">
       <article class="article-header">
-        <span class="kicker">The Lead · National Affairs</span>
-        <h2 class="lead-story__headline"><a class="headline-link" href="#" style="color:inherit">Senate Passes Sweeping <em>Reform</em> After All-Night Session</a></h2>
-        <p class="article-header__deck deck">In a 58–41 vote just before dawn, lawmakers approved the most significant overhaul in a generation, sending the measure to the desk of a president who has promised to sign it within the week.</p>
+        <span class="kicker">머리기사 · 경제 · 통화정책</span>
+        <h2 class="lead-story__headline">한국은행, 기준금리 <em>동결</em> — 6개월째 관망세</h2>
+        <p class="article-header__deck deck">금융통화위원회가 여섯 차례 연속 금리를 묶으면서, 시장이 기대하던 인하 시점은 하반기 이후로 미뤄졌다. 물가와 가계부채, 환율을 함께 살핀 신중론이 우세했다.</p>
         <div class="article-header__meta">
-          <span class="byline">By <strong>Margaret Reyes</strong> &amp; <strong>D. Okonkwo</strong></span>
-          <span class="dateline">Washington — 4:12 a.m.</span>
-          <span class="badge badge--accent">Developing</span>
+          <span class="byline">취재 <strong>서지원</strong> · <strong>박서연</strong> 기자</span>
+          <span class="dateline">서울 — 오전 4:12</span>
+          <span class="badge badge--accent">속보</span>
         </div>
       </article>
 
-      <figure class="figure-news" style="margin-top:var(--space-6)">
+      <figure class="figure-news cut-in" style="margin-top:var(--space-6)" data-reveal="wipe">
         <div class="plate halftone-plate" style="aspect-ratio:16/9"></div>
-        <figcaption>The chamber floor in the final hour of debate, as the count was read aloud.<span class="credit">Ledger Photo / Press Gallery</span></figcaption>
+        <figcaption>9일 새벽, 금융통화위원회 정례회의를 마친 이창용 한국은행 총재가 기자간담회장으로 향하고 있다.<span class="credit">원장일보 사진부 · 공동취재단</span></figcaption>
       </figure>
 
       <div class="article-body is-columned" style="--columns:2; margin-top:var(--space-7)">
-        <p class="drop-cap">The vote capped a week of furious negotiation that spilled past midnight and into the small hours, with leaders from both benches trading concessions on the floor while staff shuttled redlined pages between offices. By the time the clerk called the roll, the outcome was no longer in doubt, but the margin surprised even seasoned observers.</p>
-        <p>“This is what the institution looks like when it works,” said the majority leader, flanked by colleagues outside the chamber. Critics were less generous, warning that the bill’s costs had been understated and its timelines left deliberately vague.</p>
-        <p class="subhead">A Long Road</p>
-        <p>The measure had been declared dead twice this season, once in committee and again on a procedural motion that failed by a single vote. Its revival owed much to a quiet bloc of moderates who extracted late amendments on funding and oversight.</p>
-        <p>Analysts expect the changes to ripple through budgets at every level of government, though the full effect will not be felt until the next fiscal year. <span class="jump-line">Continued on A6 →</span></p>
+        <p class="drop-cap">한국은행 금융통화위원회는 9일 정례회의를 열고 기준금리를 현 수준인 연 3.25%로 동결했다. 지난 1월 이후 여섯 차례 연속 같은 결정으로, 물가 둔화 속도와 가계부채, 부동산 시장을 함께 저울질한 결과다. 시장의 예상에 부합하는 결정이었지만, 향후 인하 시점을 두고는 위원들 사이에서도 견해가 갈렸던 것으로 전해졌다.</p>
+        <p>이창용 총재는 회의 직후 기자간담회에서 “물가는 목표 수준에 근접했지만 환율과 가계부채의 불확실성이 여전히 크다”며 “인하를 서두르기보다 지표를 조금 더 지켜보겠다”고 말했다.</p>
+        <p class="subhead">시선은 4분기로</p>
+        <p>채권 시장은 이미 움직였다. 국고채 3년물 금리는 나흘째 하락하며 연내 인하 기대를 일부 반영했고, 원·달러 환율도 1,340원 선에서 비교적 안정된 흐름을 보였다.</p>
+        <p>전문가들은 이번 결정이 부동산 대출과 소비 심리에 미칠 영향을 두고 엇갈린 전망을 내놓았다. 다음 회의가 열리는 4분기가 사실상의 분수령이 될 것이라는 관측이 많다. <span class="jump-line">관련 기사 B1면 ▶</span></p>
       </div>
     </div>
 
     <aside class="fp-lead__rail stack" data-reveal>
       <div class="index-box">
-        <div class="index-box__title">Inside Today</div>
-        <div class="index-box__row"><span>City Council</span><span class="dots"></span><span class="pg">A3</span></div>
-        <div class="index-box__row"><span>Business</span><span class="dots"></span><span class="pg">B1</span></div>
-        <div class="index-box__row"><span>Markets</span><span class="dots"></span><span class="pg">B6</span></div>
-        <div class="index-box__row"><span>Sports</span><span class="dots"></span><span class="pg">C1</span></div>
-        <div class="index-box__row"><span>Weather</span><span class="dots"></span><span class="pg">C8</span></div>
-        <div class="index-box__row"><span>Opinion</span><span class="dots"></span><span class="pg">D2</span></div>
+        <div class="index-box__title">오늘 이 지면에서</div>
+        <div class="index-box__row"><span>정치</span><span class="dots"></span><span class="pg">A3</span></div>
+        <div class="index-box__row"><span>경제</span><span class="dots"></span><span class="pg">B1</span></div>
+        <div class="index-box__row"><span>증시</span><span class="dots"></span><span class="pg">B6</span></div>
+        <div class="index-box__row"><span>스포츠</span><span class="dots"></span><span class="pg">C1</span></div>
+        <div class="index-box__row"><span>날씨</span><span class="dots"></span><span class="pg">C8</span></div>
+        <div class="index-box__row"><span>오피니언</span><span class="dots"></span><span class="pg">D2</span></div>
       </div>
 
       <hr class="rule-heavy">
       <article>
-        <span class="kicker">Markets</span>
-        <h3 style="font-family:var(--font-head);font-weight:700;font-size:var(--text-lg);margin:var(--space-2) 0">Indices Close Broadly Higher</h3>
-        <div class="hbar"><span class="hbar__label">Composite</span><div class="hbar__track"><div class="hbar__fill hbar__fill--accent" style="width:78%"></div></div><span class="hbar__val">+1.8%</span></div>
-        <div class="hbar"><span class="hbar__label">Industrials</span><div class="hbar__track"><div class="hbar__fill" style="width:62%"></div></div><span class="hbar__val">+1.1%</span></div>
-        <div class="hbar"><span class="hbar__label">Tech</span><div class="hbar__track"><div class="hbar__fill" style="width:90%"></div></div><span class="hbar__val">+2.4%</span></div>
+        <span class="kicker">증시</span>
+        <h3 class="hed-5" style="margin:var(--space-2) 0 var(--space-4)">지수 나흘째 상승 마감</h3>
+        <div class="hbar"><span class="hbar__label">코스피</span><div class="hbar__track"><div class="hbar__fill hbar__fill--accent" style="width:78%"></div></div><span class="hbar__val">+0.8%</span></div>
+        <div class="hbar"><span class="hbar__label">코스닥</span><div class="hbar__track"><div class="hbar__fill" style="width:90%"></div></div><span class="hbar__val">+1.2%</span></div>
+        <div class="hbar"><span class="hbar__label">원·달러</span><div class="hbar__track"><div class="hbar__fill" style="width:44%"></div></div><span class="hbar__val">-4원</span></div>
       </article>
 
       <hr class="rule">
-      <div class="weather-strip">
-        <div class="weather-strip__cell"><div class="weather-strip__city">City</div><div class="weather-strip__temp">17°</div><div class="weather-strip__cond">Clearing</div></div>
-        <div class="weather-strip__cell"><div class="weather-strip__city">Harbor</div><div class="weather-strip__temp">15°</div><div class="weather-strip__cond">Wind</div></div>
-        <div class="weather-strip__cell"><div class="weather-strip__city">Hills</div><div class="weather-strip__temp">12°</div><div class="weather-strip__cond">Fog</div></div>
+      <div class="weather-strip" aria-label="오늘의 날씨">
+        <div class="weather-strip__cell"><div class="weather-strip__city">서울</div><div class="weather-strip__temp">34°</div><div class="weather-strip__cond">폭염</div></div>
+        <div class="weather-strip__cell"><div class="weather-strip__city">부산</div><div class="weather-strip__temp">29°</div><div class="weather-strip__cond">흐림</div></div>
+        <div class="weather-strip__cell"><div class="weather-strip__city">제주</div><div class="weather-strip__temp">31°</div><div class="weather-strip__cond">비</div></div>
       </div>
     </aside>
   </section>
 
-  <!-- THREE-UP TIER -->
+  <!-- SECONDARY SPREAD — 5:4:3 hierarchy -->
   <section class="fp-tier">
-    <article data-reveal>
-      <span class="kicker">City Hall</span>
-      <h3 style="font-family:var(--font-masthead);font-weight:900;font-size:var(--text-2xl);line-height:var(--leading-tight);margin:var(--space-3) 0"><a class="headline-link" href="#" style="color:inherit">Council Backs Transit Plan in Late Vote</a></h3>
-      <p class="byline mb-2">By <strong>L. Tanaka</strong></p>
-      <div class="article-body" style="--columns:1"><p>After three hours of public comment, the council approved a decade-long plan to extend rail service to the eastern wards, brushing aside objections over financing.</p><p>The lone holdouts said the projections were optimistic. Supporters called it overdue.</p></div>
+    <article data-reveal style="--reveal-i:0">
+      <span class="kicker">사회 · 교통</span>
+      <h3 class="hed-4" style="margin:var(--space-3) 0">수도권 광역급행 GTX 2기 노선 확정</h3>
+      <p class="byline mb-2">김민재 기자</p>
+      <figure class="figure-news"><div class="plate halftone-plate" style="aspect-ratio:3/2"></div><figcaption>동북권·서남권을 잇는 세 개 노선이 새로 추가된다.<span class="credit">원장일보 · 사회부</span></figcaption></figure>
+      <div class="article-body" style="--columns:1"><p>국토교통부는 9일 수도권 광역급행철도(GTX) 2기 노선을 최종 확정했다고 밝혔다. 2031년 개통을 목표로 동북권과 서남권을 잇는 세 개 노선이 새로 추가된다.</p><p>지자체 분담금과 역사(驛舍) 위치를 둘러싼 이견은 연말까지 조정하기로 했다.</p></div>
     </article>
-    <article data-reveal>
-      <span class="kicker">Technology</span>
-      <h3 style="font-family:var(--font-masthead);font-weight:900;font-size:var(--text-2xl);line-height:var(--leading-tight);margin:var(--space-3) 0"><a class="headline-link" href="#" style="color:inherit">Independent Tooling Posts Record Quarter</a></h3>
-      <p class="byline mb-2">By <strong>R. Okafor</strong></p>
-      <figure class="figure-news"><div class="plate halftone-plate" style="aspect-ratio:3/2"></div><figcaption>A small studio ships its flagship release.<span class="credit">Ledger / Tech Desk</span></figcaption></figure>
+    <article data-reveal style="--reveal-i:1">
+      <span class="kicker">경제 · 증시</span>
+      <h3 class="hed-4" style="margin:var(--space-3) 0">코스피 2,760선 회복 … 나흘째 상승</h3>
+      <p class="byline mb-2">박서연 기자</p>
+      <div class="article-body" style="--columns:1"><p>코스피가 나흘 연속 오르며 2,760선을 회복했다. 외국인이 사흘째 순매수에 나선 가운데, 반도체와 2차전지 업종이 지수 상승을 이끌었다.</p><p>금리 동결이 위험자산 선호로 이어졌다는 분석이 나온다.</p></div>
+      <span class="stamp stamp--ink mt-2">마감 시황</span>
     </article>
-    <article data-reveal>
-      <span class="kicker">Sports</span>
-      <h3 style="font-family:var(--font-masthead);font-weight:900;font-size:var(--text-2xl);line-height:var(--leading-tight);margin:var(--space-3) 0"><a class="headline-link" href="#" style="color:inherit">Harbor United Reach Final on Penalties</a></h3>
-      <p class="byline mb-2">By <strong>S. Whitfield</strong></p>
-      <div class="article-body" style="--columns:1"><p>A goalkeeping masterclass sent the underdogs through after a goalless 120 minutes, the keeper saving twice in the shootout.</p></div>
-      <span class="stamp stamp--ink mt-2">Late Result</span>
-    </article>
+    <div data-reveal style="--reveal-i:2">
+      <span class="kicker">단신</span>
+      <h3 class="hed-5" style="margin:var(--space-3) 0 var(--space-4)">짧은 소식</h3>
+      <div class="fp-briefs">
+        <p>폭염 속 전력 수요가 사상 최대를 기록하며 예비율이 8%대로 내려앉았다.</p>
+        <p>프로야구 후반기가 개막해 잠실·사직 경기가 잇달아 매진됐다.</p>
+        <p>정부, 추석 연휴 고속도로 통행료 면제 방안을 검토 중이다.</p>
+        <p>서울시, 노후 상수도관 교체에 내년 예산 1,240억 원을 편성했다.</p>
+      </div>
+    </div>
   </section>
 
-  <!-- PULL QUOTE -->
+  <!-- PULL QUOTE — a real quote from the lead story -->
   <div data-reveal>
-    <blockquote class="pull-quote">“A newspaper is the only institution that prints its mistakes the next morning — and a design system that owns its constraints does the same.”<cite>— From the Editor’s Desk</cite></blockquote>
+    <blockquote class="pull-quote">“물가는 목표에 근접했지만, 지금은 인하를 서두를 때가 아닙니다.”<cite>— 이창용 한국은행 총재</cite></blockquote>
   </div>
 
   <!-- OPINION / FEATURE STRIP -->
   <section class="fp-strip">
     <article data-reveal>
-      <span class="kicker">Opinion</span>
-      <h3 style="font-family:var(--font-masthead);font-weight:900;font-size:var(--text-xl);margin:var(--space-3) 0"><a class="headline-link" href="#" style="color:inherit">In Defense of Density</a></h3>
-      <div class="article-body" style="--columns:1"><p class="justified">Whitespace is not the only virtue. A page that respects its reader’s time packs meaning into every column inch, trusting the grid to keep order. The newspaper knew this a century before the dashboard did.</p></div>
-      <p class="byline mt-2">By <strong>The Editorial Board</strong></p>
+      <span class="kicker">사설</span>
+      <h3 class="hed-5" style="margin:var(--space-3) 0">금리 동결, 다음 카드를 준비할 때</h3>
+      <div class="article-body" style="--columns:1"><p class="justified">여섯 번째 동결이다. 한국은행의 신중함은 이해할 만하다. 그러나 관망이 길어질수록 가계와 기업이 감당해야 할 불확실성도 함께 쌓인다. 지표를 지켜보겠다는 말이 결정을 미루는 명분이 되어서는 안 된다. 다음 회의에서는 더 분명한 신호가 필요하다.</p></div>
+      <p class="byline mt-2">원장일보 논설위원실</p>
     </article>
     <article data-reveal>
-      <span class="kicker">Culture</span>
-      <h3 style="font-family:var(--font-head);font-weight:700;font-size:var(--text-lg);margin:var(--space-3) 0">A Revival of the Slab</h3>
+      <span class="kicker">문화</span>
+      <h3 class="hed-5" style="margin:var(--space-3) 0">활자의 부활</h3>
       <ul class="list" style="border-top:var(--rule-medium) solid var(--color-border)">
-        <li class="list__item list__item--link"><span class="list__marker">01</span><div class="list__main"><div class="list__title">Type at the newsstand</div><div class="list__sub">Why condensed faces returned</div></div><span class="list__trail">D4</span></li>
-        <li class="list__item list__item--link"><span class="list__marker">02</span><div class="list__main"><div class="list__title">The lost art of the kicker</div><div class="list__sub">Small caps, big signal</div></div><span class="list__trail">D5</span></li>
-        <li class="list__item list__item--link"><span class="list__marker">03</span><div class="list__main"><div class="list__title">Halftone, by hand</div><div class="list__sub">Dots that made photos print</div></div><span class="list__trail">D6</span></li>
+        <li class="list__item list__item--link"><span class="list__marker">01</span><div class="list__main"><div class="list__title">가판대로 돌아온 세리프</div><div class="list__sub">좁은 활자가 다시 인기다</div></div><span class="list__trail">D4</span></li>
+        <li class="list__item list__item--link"><span class="list__marker">02</span><div class="list__main"><div class="list__title">키커의 재발견</div><div class="list__sub">작은 활자, 큰 신호</div></div><span class="list__trail">D5</span></li>
+        <li class="list__item list__item--link"><span class="list__marker">03</span><div class="list__main"><div class="list__title">손으로 찍는 하프톤</div><div class="list__sub">점으로 인쇄된 사진들</div></div><span class="list__trail">D6</span></li>
       </ul>
     </article>
     <article data-reveal>
-      <span class="kicker">Today’s Numbers</span>
-      <h3 style="font-family:var(--font-head);font-weight:700;font-size:var(--text-lg);margin:var(--space-3) 0">The Data Desk</h3>
+      <span class="kicker">오늘의 숫자</span>
+      <h3 class="hed-5" style="margin:var(--space-3) 0">데이터 데스크</h3>
       <div class="chart-bars" style="margin-top:var(--space-6)">
-        <div class="chart-bars__bar" data-label="Mon" style="height:48%"></div>
-        <div class="chart-bars__bar" data-label="Tue" style="height:66%"></div>
-        <div class="chart-bars__bar" data-label="Wed" style="height:54%"></div>
-        <div class="chart-bars__bar chart-bars__bar--accent" data-label="Thu" style="height:92%"><span class="val">PK</span></div>
-        <div class="chart-bars__bar" data-label="Fri" style="height:70%"></div>
+        <div class="chart-bars__bar" data-label="월" style="height:54%"></div>
+        <div class="chart-bars__bar" data-label="화" style="height:62%"></div>
+        <div class="chart-bars__bar" data-label="수" style="height:58%"></div>
+        <div class="chart-bars__bar" data-label="목" style="height:74%"></div>
+        <div class="chart-bars__bar chart-bars__bar--accent" data-label="금" style="height:96%"><span class="val">331</span></div>
       </div>
-      <p class="dateline mt-6">Readers online, this week (thousands)</p>
+      <p class="dateline mt-6">이번 주 온라인 독자 수(천 명) · 금요일 최고</p>
     </article>
   </section>
 
   <div class="folio">
-    <span>The Ledger · Front Page</span>
-    <span>Set in Playfair Display, Zilla Slab &amp; Source Serif 4</span>
+    <span>원장일보 · 종합 1면</span>
+    <span>제호 Song Myung · 본문 Source Serif 4</span>
     <span>— 30 —</span>
   </div>
 
 </div>
 </main>
 
-<!-- Command palette -->
-<div class="command" data-command role="dialog" aria-modal="true" aria-label="Command palette" hidden>
-  <div class="command__search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="Search…" aria-label="Command input"><kbd>ESC</kbd></div>
-  <div class="command__list">
-    <div class="command__group-label">Navigate</div>
-    <button class="command__item" data-href="../index.html">Back to Hub</button>
-    <button class="command__item" data-href="dashboard.html">Analytics Desk</button>
-    <button class="command__item" data-href="inbox.html">The Wire (Inbox)</button>
-    <div class="command__group-label">Commands</div>
-    <button class="command__item" data-action="toggle-theme">Toggle Day / Night Edition</button>
+<!-- ===== 號外 / Extra edition (opened from the breaking band) ===== -->
+<div class="modal modal--lg" id="extra-modal" role="dialog" aria-modal="true" aria-labelledby="fp-extra-title" hidden>
+  <div class="modal__body">
+    <div class="extra">
+      <span class="extra__stamp" aria-hidden="true">號外</span>
+      <hr class="extra__rule">
+      <span class="extra__label">속보 · 호외(號外)</span>
+      <h2 class="extra__head" id="fp-extra-title">한국은행, 기준금리 연 3.25% 동결 — 6개월째 관망세</h2>
+      <p class="deck">금융통화위원회는 오늘 정례회의에서 기준금리를 현 수준인 연 3.25%로 묶었습니다. 물가 둔화 속도와 가계부채, 부동산 시장을 함께 저울질한 결정으로, 시장이 기대하던 인하 시점은 하반기로 미뤄졌습니다.</p>
+      <div class="cluster mt-6" style="justify-content:center">
+        <button class="btn btn--primary" data-modal-close>지면으로 돌아가기</button>
+        <button class="btn btn--ghost" data-modal-close data-toast="기준금리 속보를 구독함에 담았습니다. 후속 보도가 나오면 알려드릴게요." data-toast-title="구독 완료" data-toast-variant="success">이 속보 구독</button>
+      </div>
+    </div>
   </div>
-  <div class="command__empty" hidden>No matching entry.</div>
-  <div class="command__foot"><span><kbd>↑</kbd><kbd>↓</kbd> nav</span><span><kbd>↵</kbd> select</span><span><kbd>esc</kbd> close</span></div>
+</div>
+
+<!-- Command palette -->
+<div class="command" data-command role="dialog" aria-modal="true" aria-label="명령 팔레트" hidden>
+  <div class="command__search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="섹션, 페이지, 명령 검색…" aria-label="명령 입력"><kbd>ESC</kbd></div>
+  <div class="command__list">
+    <div class="command__group-label">이동</div>
+    <button class="command__item" data-href="../index.html">규격집으로</button>
+    <button class="command__item" data-href="dashboard.html">분석 데스크</button>
+    <button class="command__item" data-href="inbox.html">통신선(받은편지함)</button>
+    <div class="command__group-label">명령</div>
+    <button class="command__item" data-action="toggle-theme">데이 / 나이트 에디션 전환</button>
+  </div>
+  <div class="command__empty" hidden>색인에 일치하는 항목이 없습니다.</div>
+  <div class="command__foot"><span><kbd>↑</kbd><kbd>↓</kbd> 이동</span><span><kbd>↵</kbd> 선택</span><span><kbd>esc</kbd> 닫기</span></div>
 </div>
 
 <script src="../app.js" defer></script>
