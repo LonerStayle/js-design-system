@@ -67,7 +67,10 @@ theme-26-gradient-mesh-modern/
 | `--gradient-vivid` | Decorative display gradient — **large headings only** |
 | `--gradient-accent` | Teal→blue (charts, secondary) |
 | `--gradient-warm` | Pink→purple (badges, energy) |
-| `--glow-gradient`, `--glow-soft`, `--glow-teal` | Coloured bloom shadows |
+| `--gradient-beam` | Rotating 5-stop conic border-beam (featured card, FAB — via `--beam-color`) |
+| `--gradient-spinner` | Two-tone conic sweep for `.spinner--gradient` |
+| `--gradient-scene-cool/grape/dusk/spring/bloom` | Decorative duo blends for page/thumbnail art only |
+| `--glow-gradient`, `--glow-soft` | Coloured bloom shadows |
 
 ### Scales
 - **Spacing:** `--space-0 … --space-16` (4px base)

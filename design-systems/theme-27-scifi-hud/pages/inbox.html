@@ -1,135 +1,338 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Comms Console · AETHER-HUD</title>
+<script>
+  /* Pre-paint theme + js flag — prevents light/dark flash and gates reveal-hiding. */
+  (function(){try{var t=localStorage.getItem('scifi-hud-theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();
+</script>
+<title>교신 콘솔 · AETHER-HUD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Gothic+A1:wght@400;500;700&family=Nanum+Gothic+Coding:wght@400;700&family=Noto+Sans+KR:wght@400;500;700&family=Orbitron:wght@400;500;600;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../semantic.css">
 <link rel="stylesheet" href="../base.css">
 <link rel="stylesheet" href="../components/index.css">
 <style>
-  .inbox-shell { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  .inbox-shell { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
   .inbox-grid { flex: 1; display: grid; grid-template-columns: 220px 360px 1fr; min-height: 0; }
   .pane { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--color-border-faint); }
   .pane-head { padding: var(--space-4); border-bottom: 1px solid var(--color-border-faint); display: flex; align-items: center; gap: var(--space-2); }
   .pane-head .ph-title { font-family: var(--font-display); font-size: var(--text-sm); text-transform: uppercase; letter-spacing: var(--tracking-wide); color: var(--color-text-strong); }
   .pane-scroll { overflow-y: auto; flex: 1; }
+
   /* folders */
-  .folder { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); color: var(--color-text-muted); font-size: var(--text-sm); font-weight: 600; cursor: pointer; clip-path: var(--clip-bevel); --bevel:5px; margin: 2px var(--space-2); transition: all var(--duration-fast); }
-  .folder svg { width: 16px; height: 16px; }
+  .folder { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); color: var(--color-text-muted); font-size: var(--text-sm); font-weight: 600; cursor: pointer; clip-path: var(--clip-bevel); --bevel: 5px; margin: 2px var(--space-2); transition: background var(--duration-fast), color var(--duration-fast); background: none; border: none; width: calc(100% - var(--space-4)); text-align: left; font-family: inherit; }
+  .folder svg { width: 16px; height: 16px; flex: none; }
   .folder:hover { background: var(--color-primary-muted); color: var(--color-primary); }
   .folder.is-active { background: var(--color-primary-muted); color: var(--color-primary); }
   .folder .f-count { margin-left: auto; font-family: var(--font-mono); font-size: var(--text-2xs); }
-  /* message list */
-  .msg { padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border-faint); cursor: pointer; display: grid; gap: 4px; transition: background var(--duration-fast); position: relative; }
+
+  /* message list — each row is a real button (native keyboard + focus). */
+  .msg { position: relative; width: 100%; text-align: left; font: inherit; color: inherit; background: none; border: none; border-bottom: 1px solid var(--color-border-faint); cursor: pointer; display: grid; gap: 4px; padding: var(--space-3) var(--space-4); transition: background var(--duration-fast); }
   .msg:hover { background: var(--table-row-hover); }
   .msg.is-active { background: var(--table-row-selected); }
   .msg.is-active::before { content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background: var(--color-primary); box-shadow: 0 0 8px var(--glow-cyan); }
   .msg.unread .msg-from { color: var(--color-text-strong); }
   .msg.unread .msg-subj { font-weight: 700; }
   .msg-top { display: flex; align-items: center; gap: var(--space-2); }
+  .msg-pin { color: var(--color-warning); display: inline-flex; }
+  .msg-pin svg { width: 12px; height: 12px; }
   .msg-from { font-size: var(--text-sm); font-weight: 600; color: var(--color-text); }
   .msg-time { margin-left: auto; font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--color-text-faint); }
   .msg-subj { font-size: var(--text-sm); color: var(--color-text-muted); }
   .msg-prev { font-size: var(--text-xs); color: var(--color-text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
   /* reading pane */
-  .read { padding: var(--space-6); overflow-y: auto; flex: 1; }
+  .read { padding: var(--space-6); overflow-y: auto; flex: 1; display: flex; flex-direction: column; }
+  .inbox-back { display: none; align-self: flex-start; margin-bottom: var(--space-4); }
   .read-head { display: flex; align-items: flex-start; gap: var(--space-4); padding-bottom: var(--space-5); border-bottom: 1px solid var(--color-border-faint); margin-bottom: var(--space-5); }
-  .read-body { color: var(--color-text); line-height: var(--leading-relaxed); }
-  .read-body p { margin-bottom: var(--space-4); max-width: 65ch; }
-  @media (max-width: 1000px){ .inbox-grid { grid-template-columns: 1fr; } .pane:nth-child(1), .pane:nth-child(2){ display:none; } }
+  .read-toolbar { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-6); }
+  .read-body { color: var(--color-text); }
+  .read-body p { margin-bottom: var(--space-4); max-width: 65ch; line-height: var(--leading-body-ko); }
+  .read-sign { color: var(--color-text-faint); font-family: var(--font-mono); font-size: var(--text-xs); letter-spacing: var(--tracking-wide); }
+  .read-empty { flex: 1; }
+
+  @media (max-width: 900px) {
+    .inbox-grid { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+    .pane--folders { border-right: none; border-bottom: 1px solid var(--color-border-faint); }
+    .pane--folders .pane-head, .pane--folders .sidebar-foot { display: none; }
+    .pane--folders .pane-scroll { display: flex; flex-direction: row; gap: var(--space-1); overflow-x: auto; overflow-y: hidden; padding: var(--space-2); }
+    .folder { margin: 0; width: auto; flex: none; white-space: nowrap; }
+    .folder .f-count { margin-left: var(--space-2); }
+    .pane--list, .read { grid-row: 2; grid-column: 1; }
+    .pane--list { border-right: none; }
+    .read { display: none; }
+    .inbox-grid.is-reading .pane--list { display: none; }
+    .inbox-grid.is-reading .read { display: flex; }
+    .inbox-back { display: inline-flex; }
+  }
+  /* Navbar search folds gracefully rather than overflowing narrow screens. */
+  @media (max-width: 640px) { .inbox-shell .navbar .searchbar { width: 150px; } }
+  @media (max-width: 430px) { .inbox-shell .navbar .searchbar { display: none; } }
 </style>
 </head>
 <body>
-<a class="skip-link" href="#read">Skip to content</a>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
 <div class="inbox-shell">
-  <nav class="navbar" aria-label="Primary">
-    <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M16 2l12 7v14l-12 7L4 23V9z"/><circle cx="16" cy="16" r="5"/></svg></span><span class="brand-name">AETHER<b>·HUD</b></span></a>
-    <div class="navbar-links"><a class="nav-link" href="dashboard.html">Dashboard</a><a class="nav-link" href="kanban.html">Board</a><a class="nav-link is-active" href="inbox.html">Comms</a></div>
-    <div class="navbar-actions"><div class="searchbar" style="width:240px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21l-4.35-4.35M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"/></svg><input placeholder="Search transmissions…" aria-label="Search"></div>
-      <button class="btn btn-icon btn-secondary btn-sm" data-theme-toggle aria-label="Toggle theme"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4 12H2M22 12h-2"/></svg><span class="sr-only" data-theme-label>DARK</span></button></div>
+  <nav class="navbar" aria-label="주요 메뉴">
+    <a class="brand" href="../index.html" aria-label="AETHER-HUD 홈"><span class="brand-mark" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M16 2l12 7v14l-12 7L4 23V9z"/><circle cx="16" cy="16" r="5"/></svg></span><span class="brand-name">AETHER<b>·HUD</b></span></a>
+    <div class="navbar-links"><a class="nav-link" href="dashboard.html">대시보드</a><a class="nav-link" href="kanban.html">임무 보드</a><a class="nav-link is-active" href="inbox.html" aria-current="page">교신함</a></div>
+    <div class="navbar-actions"><div class="searchbar" style="width:240px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21l-4.35-4.35M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"/></svg><input placeholder="전문 검색…" aria-label="전문 검색"></div>
+      <button class="btn btn-icon btn-secondary btn-sm" data-theme-toggle aria-label="테마 전환" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4 12H2M22 12h-2"/></svg><span class="sr-only" data-theme-label>다크</span></button></div>
   </nav>
 
-  <div class="inbox-grid">
+  <main class="inbox-grid" id="main">
     <!-- Folders -->
-    <div class="pane">
-      <div class="pane-head"><button class="btn btn-primary btn-block btn-sm" data-toast="info" data-toast-title="COMPOSE" data-toast-msg="New transmission window opened."><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Compose</button></div>
-      <div class="pane-scroll" role="navigation" aria-label="Folders">
-        <div class="folder is-active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/></svg>Inbox<span class="f-count">3</span></div>
-        <div class="folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>Sent</div>
-        <div class="folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg>Archive</div>
-        <div class="folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2 7h7l-6 4 2 7-7-4-7 4 2-7-6-4h7z"/></svg>Priority<span class="f-count">1</span></div>
-        <div class="folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>Trash</div>
+    <div class="pane pane--folders">
+      <div class="pane-head"><span class="ph-title">폴더</span></div>
+      <div class="pane-scroll" role="group" aria-label="폴더 선택">
+        <button class="folder is-active" type="button" data-folder="inbox" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/></svg>받은함<span class="f-count">3</span></button>
+        <button class="folder" type="button" data-folder="sent" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>보낸함</button>
+        <button class="folder" type="button" data-folder="archive" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg>보관함</button>
+        <button class="folder" type="button" data-folder="priority" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2 7h7l-6 4 2 7-7-4-7 4 2-7-6-4h7z"/></svg>우선<span class="f-count">1</span></button>
+        <button class="folder" type="button" data-folder="trash" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>휴지통</button>
       </div>
-      <div class="sidebar-foot"><div class="meter" data-value="62"><div class="meter-top"><span>STORAGE</span><span class="mt-val">62%</span></div><div class="meter-track"><div class="meter-fill" style="width:0"></div></div></div></div>
+      <div class="sidebar-foot"><div class="meter" data-value="62"><div class="meter-top"><span>저장공간</span><span class="mt-val">62%</span></div><div class="meter-track"><div class="meter-fill" style="width:0"></div></div></div></div>
     </div>
 
     <!-- Message list -->
-    <div class="pane">
-      <div class="pane-head"><span class="ph-title">Inbox</span><span class="badge is-danger" style="margin-left:auto">3 NEW</span></div>
-      <div class="pane-scroll" id="msg-list" role="list">
-        <div class="msg unread is-active" role="listitem" tabindex="0" data-msg="0"><div class="msg-top"><span class="live-dot is-danger" aria-hidden="true"></span><span class="msg-from">FLEET COMMAND</span><span class="msg-time">12:04</span></div><div class="msg-subj">⚠ Priority: Hostile contact sector 7</div><div class="msg-prev">All units, be advised — unidentified signature closing at…</div></div>
-        <div class="msg unread" role="listitem" tabindex="0" data-msg="1"><div class="msg-top"><span class="live-dot is-warning" aria-hidden="true"></span><span class="msg-from">ENGINEERING</span><span class="msg-time">11:48</span></div><div class="msg-subj">Coolant reserves critical</div><div class="msg-prev">Reserve levels have dropped below the 20% threshold…</div></div>
-        <div class="msg unread" role="listitem" tabindex="0" data-msg="2"><div class="msg-top"><span class="live-dot" aria-hidden="true"></span><span class="msg-from">CMDR R.XI</span><span class="msg-time">10:22</span></div><div class="msg-subj">Recon report · sector 12</div><div class="msg-prev">Drone sweep complete. Mapping data attached…</div></div>
-        <div class="msg" role="listitem" tabindex="0" data-msg="3"><div class="msg-top"><span class="msg-from">M.AYA</span><span class="msg-time">09:15</span></div><div class="msg-subj">Re: Targeting calibration</div><div class="msg-prev">Optics recalibrated to 0.02°. Ready for verification.</div></div>
-        <div class="msg" role="listitem" tabindex="0" data-msg="4"><div class="msg-top"><span class="msg-from">LOGISTICS</span><span class="msg-time">08:40</span></div><div class="msg-subj">Supply manifest updated</div><div class="msg-prev">New armory inventory synced to fleet registry.</div></div>
-        <div class="msg" role="listitem" tabindex="0" data-msg="5"><div class="msg-top"><span class="msg-from">SYSTEM</span><span class="msg-time">07:00</span></div><div class="msg-subj">Daily diagnostic complete</div><div class="msg-prev">All 128 units reporting. 2 flagged for maintenance.</div></div>
-      </div>
+    <div class="pane pane--list">
+      <div class="pane-head"><span class="ph-title" id="list-title">받은함</span><span class="badge is-danger" id="list-badge" style="margin-left:auto">3 신규</span><button class="btn btn-primary btn-sm" style="margin-left:var(--space-2)" data-toast="info" data-toast-title="전문 작성" data-toast-msg="새 전송 창을 열었습니다."><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>작성</button></div>
+      <div class="pane-scroll" id="msg-list" aria-label="전문 목록"></div>
     </div>
 
     <!-- Reading pane -->
-    <div class="read" id="read">
-      <div class="read-head">
-        <span class="avatar avatar-lg is-ring" aria-hidden="true">FC</span>
-        <div style="flex:1">
-          <h2 style="font-size:var(--text-xl)" id="read-subj">⚠ Priority: Hostile contact sector 7</h2>
-          <div class="row mt-2"><span class="msg-from" id="read-from">FLEET COMMAND</span><span class="coord">&lt;command@aether.fleet&gt;</span><span class="badge is-danger" style="margin-left:auto">PRIORITY</span></div>
+    <section class="read" id="read" aria-label="전문 내용">
+      <button class="btn btn-ghost btn-sm inbox-back" id="inbox-back"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>교신 목록</button>
+
+      <div class="read-content" id="read-content">
+        <div class="read-head">
+          <span class="avatar avatar-lg is-ring" id="read-avatar" aria-hidden="true">함</span>
+          <div style="flex:1">
+            <h2 style="font-size:var(--text-xl)" id="read-subj">우선전문 · 섹터 7 미확인 접촉</h2>
+            <div class="row mt-2"><span class="msg-from" id="read-from">함대사령부</span><span class="coord" id="read-addr">&lt;command@aether.fleet&gt;</span><span class="badge is-danger" id="read-badge" style="margin-left:auto">우선</span></div>
+          </div>
+        </div>
+        <div class="read-toolbar">
+          <button class="btn btn-secondary btn-sm" data-toast="info" data-toast-title="답신" data-toast-msg="답신 작성 창을 열었습니다."><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 17l-5-5 5-5M4 12h12a4 4 0 0 1 0 8h-1"/></svg>답신</button>
+          <button class="btn btn-ghost btn-sm">전달</button>
+          <button class="btn btn-danger btn-sm" id="escalate" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3z"/><path d="M12 9v4M12 17h.01"/></svg>태세 격상</button>
+          <button class="btn btn-icon btn-ghost btn-sm" data-toast="success" data-toast-title="보관 완료" data-toast-msg="전문을 보관함으로 옮겼습니다 · 되돌리기" aria-label="보관"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v5H1z"/></svg></button>
+          <button class="btn btn-icon btn-ghost btn-sm" data-toast="danger" data-toast-title="삭제 완료" data-toast-msg="전문을 휴지통으로 옮겼습니다 · 되돌리기" aria-label="삭제"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4h8v2"/></svg></button>
+        </div>
+        <div class="read-body">
+          <div class="banner mb-6" id="read-banner"><span class="banner-tag">ALERT</span><span>이 전문은 우선-1 등급입니다. 즉시 확인이 필요합니다.</span></div>
+          <div id="read-paras"></div>
+          <div class="card hex-surface" id="read-attach" style="margin-top:var(--space-6)">
+            <div class="panel-bar">첨부 텔레메트리<span class="pb-id">SCAN//7</span></div>
+            <div class="readout"><div class="ro-cell"><span class="ro-key">방위</span><span class="ro-val">287°</span></div><div class="ro-cell"><span class="ro-key">거리</span><span class="ro-val amber">2.4km</span></div><div class="ro-cell"><span class="ro-key">속도</span><span class="ro-val danger">340</span></div><div class="ro-cell"><span class="ro-key">ETA</span><span class="ro-val">04:12</span></div></div>
+          </div>
         </div>
       </div>
-      <div class="row mb-6" style="gap:var(--space-2)">
-        <button class="btn btn-secondary btn-sm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 17l-5-5 5-5M4 12h12a4 4 0 0 1 0 8h-1"/></svg>Reply</button>
-        <button class="btn btn-ghost btn-sm">Forward</button>
-        <button class="btn btn-icon btn-ghost btn-sm" data-toast="success" data-toast-title="ARCHIVED" data-toast-msg="Transmission moved to archive." aria-label="Archive"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v5H1z"/></svg></button>
-        <button class="btn btn-icon btn-ghost btn-sm" data-toast="danger" data-toast-title="DELETED" data-toast-msg="Transmission purged." aria-label="Delete"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4h8v2"/></svg></button>
+
+      <div class="empty-state read-empty" id="read-empty" hidden>
+        <span class="es-art" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/></svg></span>
+        <span class="es-code">NO TRANSMISSION</span>
+        <h3 style="font-size:var(--text-md)">표시할 전문이 없습니다</h3>
+        <p class="text-muted" style="font-size:var(--text-sm)">왼쪽 목록에서 전문을 선택하세요.</p>
       </div>
-      <div class="read-body" id="read-body">
-        <div class="banner mb-6"><span class="banner-tag">ALERT</span><span>This transmission is flagged PRIORITY-1. Immediate acknowledgement required.</span></div>
-        <p>All units, be advised. Long-range sensors have detected an unidentified contact bearing 287° in sector 7, closing at 340 m/s. Signature does not match any registered fleet transponder.</p>
-        <p>Commander Kim is directed to assume intercept posture. Weapons systems are cleared to standby-hot. Shields to 100%. Maintain comms discipline on encrypted channel ALPHA.</p>
-        <p>Engineering: divert auxiliary power to forward deflector array. Estimated time to contact: <span class="u-data">04:12</span>.</p>
-        <div class="card hex-surface" style="margin-top:var(--space-6)">
-          <div class="panel-bar">Attached Telemetry<span class="pb-id">SCAN//7</span></div>
-          <div class="readout"><div class="ro-cell"><span class="ro-key">Bearing</span><span class="ro-val">287°</span></div><div class="ro-cell"><span class="ro-key">Range</span><span class="ro-val amber">2.4km</span></div><div class="ro-cell"><span class="ro-key">Velocity</span><span class="ro-val danger">340</span></div><div class="ro-cell"><span class="ro-key">ETA</span><span class="ro-val">04:12</span></div></div>
-        </div>
-        <p class="mt-6">— FLEET COMMAND · AUTHENTICATED · OMEGA CLEARANCE</p>
-      </div>
-    </div>
-  </div>
+    </section>
+  </main>
 </div>
 
 <script src="../app.js"></script>
 <script>
   (function(){
-    var data=[
-      {from:'FLEET COMMAND',subj:'⚠ Priority: Hostile contact sector 7'},
-      {from:'ENGINEERING',subj:'Coolant reserves critical'},
-      {from:'CMDR R.XI',subj:'Recon report · sector 12'},
-      {from:'M.AYA',subj:'Re: Targeting calibration'},
-      {from:'LOGISTICS',subj:'Supply manifest updated'},
-      {from:'SYSTEM',subj:'Daily diagnostic complete'}
+    var PIN='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 4v6l3 3v2H7v-2l3-3V4z"/><path d="M12 15v5" stroke="currentColor" stroke-width="1.5"/></svg>';
+    var msgs=[
+      {from:'함대사령부', addr:'command@aether.fleet', avatar:'함', time:'12:04', unread:true, pinned:true, priority:true,
+       dot:'is-danger', badge:'우선', badgeCls:'is-danger',
+       subj:'우선전문 · 섹터 7 미확인 접촉',
+       paras:[
+         '전 유닛 주목. 장거리 센서가 섹터 7 방위 287°에서 미확인 접촉을 포착했습니다. 접근 속도 340m/s, 등록된 함대 트랜스폰더와 일치하지 않습니다.',
+         'NX-Valkyrie는 요격 태세로 전환하십시오. 무기 계통 대기-핫, 실드 100%. 암호화 채널 ALPHA에서 교신 규율을 유지하십시오.',
+         '기관부: 전방 편향막 어레이로 보조 동력을 전환하십시오. 접촉 예상 시각 04:12.'
+       ],
+       attach:true, sign:'— 함대사령부 · 인증됨 · OMEGA 인가'},
+      {from:'기관부', addr:'eng@aether.fleet', avatar:'기', time:'11:48', unread:true, pinned:false, priority:false,
+       dot:'is-warning', badge:'경고', badgeCls:'is-warning',
+       subj:'냉각재 잔량 위급',
+       paras:[
+         '냉각재 예비 탱크가 20% 임계선 아래로 떨어졌습니다. 현재 잔량 18%, 시간당 1.2%씩 감소 중입니다.',
+         '무기 발열이 42%까지 올랐습니다. 추가 발사 시 냉각 여유가 부족할 수 있어 사격 통제를 권고합니다.'
+       ],
+       attach:false, sign:'— 기관부 · 3번 갑판'},
+      {from:'오세훈 관제사', addr:'ohsh@aether.fleet', avatar:'오', time:'10:22', unread:true, pinned:false, priority:false,
+       dot:'', badge:'', badgeCls:'',
+       subj:'정찰 보고 · 섹터 12',
+       paras:[
+         '드론 정찰이 완료되었습니다. 섹터 12 매핑 데이터를 첨부합니다. 특이 신호 없음, 항로는 안전합니다.',
+         '다음 정찰은 06:00에 예정되어 있습니다.'
+       ],
+       attach:false, sign:'— 오세훈 · 관제부'},
+      {from:'한예리 병장', addr:'hanyr@aether.fleet', avatar:'한', time:'09:15', unread:false, pinned:false, priority:false,
+       dot:'', badge:'', badgeCls:'',
+       subj:'Re: 조준 광학 보정',
+       paras:[
+         '조준 광학계를 0.02°로 재보정했습니다. 검증 준비가 끝났으니 사격 통제반에서 확인 부탁드립니다.'
+       ],
+       attach:false, sign:'— 한예리 · 사격통제'},
+      {from:'보급부', addr:'logi@aether.fleet', avatar:'보', time:'08:40', unread:false, pinned:false, priority:false,
+       dot:'', badge:'', badgeCls:'',
+       subj:'보급 명세 갱신',
+       paras:[
+         '신규 병기고 재고가 함대 레지스트리에 동기화되었습니다. 순양함 3척의 탄약 보급이 완료 대기 중입니다.'
+       ],
+       attach:false, sign:'— 보급부'},
+      {from:'시스템', addr:'core@aether.fleet', avatar:'시', time:'07:00', unread:false, pinned:false, priority:false,
+       dot:'', badge:'', badgeCls:'',
+       subj:'일일 진단 완료',
+       paras:[
+         '전 유닛 128척이 응답했습니다. 정비가 필요한 2척을 표시했습니다. 상세 내역은 관제 대시보드에서 확인하십시오.'
+       ],
+       attach:false, sign:'— SYS//AETHER-HUD'}
     ];
+    var folders=[
+      {id:'inbox', name:'받은함', ids:[0,1,2,3,4,5]},
+      {id:'sent', name:'보낸함', ids:[], code:'SENT EMPTY', empty:'보낸 전문이 없습니다.'},
+      {id:'archive', name:'보관함', ids:[], code:'ARCHIVE EMPTY', empty:'보관한 전문이 없습니다.'},
+      {id:'priority', name:'우선', ids:[0]},
+      {id:'trash', name:'휴지통', ids:[], code:'TRASH EMPTY', empty:'휴지통이 비어 있습니다.'}
+    ];
+
+    var shell=document.getElementById('main');
     var list=document.getElementById('msg-list');
-    var rf=document.getElementById('read-from'), rs=document.getElementById('read-subj');
-    function select(el){
-      Array.prototype.forEach.call(list.children,function(m){m.classList.remove('is-active');});
-      el.classList.add('is-active'); el.classList.remove('unread');
-      var i=+el.dataset.msg; rf.textContent=data[i].from; rs.textContent=data[i].subj;
+    var listTitle=document.getElementById('list-title');
+    var listBadge=document.getElementById('list-badge');
+    var content=document.getElementById('read-content');
+    var readEmpty=document.getElementById('read-empty');
+    var avatarEl=document.getElementById('read-avatar');
+    var subjEl=document.getElementById('read-subj');
+    var fromEl=document.getElementById('read-from');
+    var addrEl=document.getElementById('read-addr');
+    var badgeEl=document.getElementById('read-badge');
+    var banner=document.getElementById('read-banner');
+    var attach=document.getElementById('read-attach');
+    var parasEl=document.getElementById('read-paras');
+    var escalate=document.getElementById('escalate');
+    var back=document.getElementById('inbox-back');
+
+    function isMobile(){ return window.matchMedia('(max-width: 900px)').matches; }
+
+    function buildRow(id){
+      var m=msgs[id];
+      var b=document.createElement('button');
+      b.className='msg'+(m.unread?' unread':'');
+      b.type='button';
+      b.dataset.msg=id;
+      b.setAttribute('aria-label', m.from+' — '+m.subj);
+      var top=document.createElement('div'); top.className='msg-top';
+      if(m.pinned){ var pin=document.createElement('span'); pin.className='msg-pin'; pin.setAttribute('aria-hidden','true'); pin.innerHTML=PIN; top.appendChild(pin); }
+      if(m.dot){ var d=document.createElement('span'); d.className='live-dot '+m.dot; d.setAttribute('aria-hidden','true'); top.appendChild(d); }
+      var from=document.createElement('span'); from.className='msg-from'; from.textContent=m.from; top.appendChild(from);
+      var time=document.createElement('span'); time.className='msg-time'; time.textContent=m.time; top.appendChild(time);
+      b.appendChild(top);
+      var subj=document.createElement('div'); subj.className='msg-subj'; subj.textContent=m.subj; b.appendChild(subj);
+      var prev=document.createElement('div'); prev.className='msg-prev'; prev.textContent=m.paras[0]; b.appendChild(prev);
+      b.addEventListener('click', function(){ select(id); if(isMobile()) shell.classList.add('is-reading'); });
+      return b;
     }
-    Array.prototype.forEach.call(list.children,function(m){
-      m.addEventListener('click',function(){select(m);});
-      m.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){e.preventDefault();select(m);} });
+
+    function buildEmpty(f){
+      var w=document.createElement('div'); w.className='empty-state';
+      w.innerHTML='<span class="es-art" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/></svg></span><span class="es-code"></span><h3 style="font-size:var(--text-md)"></h3><p class="text-muted" style="font-size:var(--text-sm)"></p>';
+      w.querySelector('.es-code').textContent=f.code;
+      w.querySelector('h3').textContent=f.name;
+      w.querySelector('p').textContent=f.empty;
+      return w;
+    }
+
+    function updateCounts(){
+      folders.forEach(function(f){
+        var c=document.querySelector('.folder[data-folder="'+f.id+'"] .f-count');
+        if(!c) return;
+        var n=f.ids.filter(function(id){return msgs[id].unread;}).length;
+        c.textContent=n; c.hidden=(n===0);
+      });
+    }
+
+    var currentFolder=null;
+
+    function refreshBadge(){
+      if(!currentFolder) return;
+      var unread=currentFolder.ids.filter(function(id){return msgs[id].unread;}).length;
+      if(unread>0){ listBadge.hidden=false; listBadge.textContent=unread+' 신규'; } else { listBadge.hidden=true; }
+    }
+
+    function setActive(id){
+      Array.prototype.forEach.call(list.querySelectorAll('.msg'), function(x){ x.classList.remove('is-active'); x.removeAttribute('aria-current'); });
+      var row=list.querySelector('.msg[data-msg="'+id+'"]');
+      if(row){ row.classList.add('is-active'); row.setAttribute('aria-current','true'); }
+    }
+
+    function fill(id){
+      var m=msgs[id];
+      content.hidden=false; readEmpty.hidden=true;
+      avatarEl.textContent=m.avatar;
+      subjEl.textContent=m.subj;
+      fromEl.textContent=m.from;
+      addrEl.textContent='<'+m.addr+'>';
+      if(m.badge){ badgeEl.hidden=false; badgeEl.className='badge '+m.badgeCls; badgeEl.style.marginLeft='auto'; badgeEl.textContent=m.badge; }
+      else { badgeEl.hidden=true; }
+      banner.hidden=!m.attach;
+      attach.hidden=!m.attach;
+      escalate.hidden=!m.priority;
+      parasEl.innerHTML='';
+      m.paras.forEach(function(t){ var p=document.createElement('p'); p.textContent=t; parasEl.appendChild(p); });
+      var sign=document.createElement('p'); sign.className='read-sign'; sign.textContent=m.sign; parasEl.appendChild(sign);
+    }
+
+    function select(id){   // user opens a transmission → mark read
+      if(msgs[id].unread){
+        msgs[id].unread=false;
+        var row=list.querySelector('.msg[data-msg="'+id+'"]');
+        if(row) row.classList.remove('unread');
+        updateCounts(); refreshBadge();
+      }
+      setActive(id); fill(id);
+    }
+
+    function openFolder(f){
+      currentFolder=f;
+      Array.prototype.forEach.call(document.querySelectorAll('.folder'), function(x){ x.classList.remove('is-active'); x.setAttribute('aria-pressed','false'); });
+      var btn=document.querySelector('.folder[data-folder="'+f.id+'"]');
+      if(btn){ btn.classList.add('is-active'); btn.setAttribute('aria-pressed','true'); }
+      listTitle.textContent=f.name;
+      list.innerHTML='';
+      if(f.ids.length){
+        f.ids.forEach(function(id){ list.appendChild(buildRow(id)); });
+        setActive(f.ids[0]); fill(f.ids[0]);   // preview first; do NOT mark read
+      } else {
+        list.appendChild(buildEmpty(f));
+        content.hidden=true; readEmpty.hidden=false;
+      }
+      refreshBadge();
+    }
+
+    document.querySelectorAll('.folder').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var f=folders.filter(function(x){return x.id===btn.dataset.folder;})[0];
+        if(f){ openFolder(f); if(isMobile()) shell.classList.remove('is-reading'); }
+      });
     });
+
+    back.addEventListener('click', function(){ shell.classList.remove('is-reading'); });
+
+    escalate.addEventListener('click', function(){
+      if(window.HUD&&window.HUD.alert) window.HUD.alert('red');
+      if(window.HUD&&window.HUD.toast) window.HUD.toast({type:'danger', title:'경계 태세', message:'전 구역을 경계 태세로 전환했습니다. 섹터 7 요격 준비.'});
+    });
+
+    openFolder(folders[0]);
+    updateCounts();
   })();
 </script>
 </body>

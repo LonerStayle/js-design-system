@@ -30,7 +30,7 @@
       $$("[data-theme-toggle]").forEach((b) => {
         b.setAttribute("aria-pressed", String(theme === "dark"));
         const lbl = b.querySelector("[data-theme-label]");
-        if (lbl) lbl.textContent = theme === "dark" ? "Dark" : "Light";
+        if (lbl) lbl.textContent = theme === "dark" ? "다크" : "라이트";
       });
     },
     toggle() {
@@ -57,7 +57,7 @@
         this.region = document.createElement("div");
         this.region.className = "toast-region";
         this.region.setAttribute("role", "region");
-        this.region.setAttribute("aria-label", "Notifications");
+        this.region.setAttribute("aria-label", "알림");
         this.region.setAttribute("aria-live", "polite");
         document.body.appendChild(this.region);
       }
@@ -71,9 +71,9 @@
       el.setAttribute("role", type === "danger" ? "alert" : "status");
       el.innerHTML =
         '<span class="toast-icon t-' + type + '">' + (ICONS[type] || ICONS.info) + "</span>" +
-        '<div class="grow"><div class="toast-title">' + (opts.title || "Notification") + "</div>" +
+        '<div class="grow"><div class="toast-title">' + (opts.title || "알림") + "</div>" +
         (opts.message ? '<div class="toast-msg">' + opts.message + "</div>" : "") + "</div>" +
-        '<button class="toast-close btn--icon" aria-label="Dismiss" style="background:none;border:none;width:1.4rem;height:1.4rem">' + ICONS.close + "</button>";
+        '<button class="toast-close btn--icon" aria-label="닫기" style="background:none;border:none;width:1.4rem;height:1.4rem">' + ICONS.close + "</button>";
       this.ensure().appendChild(el);
       const close = () => {
         el.classList.add("is-leaving");
@@ -199,7 +199,7 @@
         g.hidden = !has;
       });
       let empty = $(".cmdk-empty", this.list);
-      if (!empty) { empty = document.createElement("div"); empty.className = "cmdk-empty"; empty.textContent = "No results."; this.list.appendChild(empty); }
+      if (!empty) { empty = document.createElement("div"); empty.className = "cmdk-empty"; empty.setAttribute("role", "status"); empty.setAttribute("aria-live", "polite"); empty.textContent = "결과 없음"; this.list.appendChild(empty); }
       empty.hidden = anyVisible;
       this.active = 0; this.paint();
     },
@@ -384,7 +384,7 @@
   function updateSelCount(table) {
     const n = $$("tbody input[type=checkbox]:checked", table).length;
     const out = table.closest(".table-wrap") && table.closest(".table-wrap").querySelector("[data-sel-count]");
-    if (out) out.textContent = n ? n + " selected" : "";
+    if (out) out.textContent = n ? n + "개 선택됨" : "";
   }
   function sortTable(table, th) {
     const allTh = $$("th", th.parentElement);
@@ -442,11 +442,35 @@
   function initSegmented() {
     $$(".segmented").forEach((seg) => {
       const btns = $$("button", seg);
-      btns.forEach((b) => on(b, "click", () => {
-        btns.forEach((x) => x.setAttribute("aria-selected", "false"));
-        b.setAttribute("aria-selected", "true");
-        if (seg.dataset.onchange === "billing") syncBilling(b.dataset.value);
-      }));
+      if (!btns.length) return;
+      // Use aria-checked for radiogroup markup, else legacy aria-selected.
+      const attr = seg.getAttribute("role") === "radiogroup"
+        || btns.some((b) => b.getAttribute("role") === "radio")
+        ? "aria-checked" : "aria-selected";
+      function select(btn, focus) {
+        btns.forEach((x) => {
+          const active = x === btn;
+          x.setAttribute(attr, String(active));
+          x.classList.toggle("is-active", active);
+          x.tabIndex = active ? 0 : -1;
+        });
+        if (focus) btn.focus();
+        if (seg.dataset.onchange === "billing") syncBilling(btn.dataset.value);
+      }
+      btns.forEach((b, i) => {
+        on(b, "click", () => select(b));
+        on(b, "keydown", (e) => {
+          let idx = null;
+          if (e.key === "ArrowRight" || e.key === "ArrowDown") idx = (i + 1) % btns.length;
+          else if (e.key === "ArrowLeft" || e.key === "ArrowUp") idx = (i - 1 + btns.length) % btns.length;
+          else if (e.key === "Home") idx = 0;
+          else if (e.key === "End") idx = btns.length - 1;
+          if (idx !== null) { e.preventDefault(); select(btns[idx], true); }
+        });
+      });
+      // Roving tabindex from current selection
+      const cur = btns.find((b) => b.getAttribute(attr) === "true") || btns[0];
+      btns.forEach((b) => (b.tabIndex = b === cur ? 0 : -1));
     });
   }
   function syncBilling(period) {
@@ -499,7 +523,7 @@
           const chip = document.createElement("span");
           chip.className = "chip";
           chip.innerHTML = (o.dataset.label || o.textContent.trim()) +
-            '<button type="button" aria-label="remove">' + ICONS.close + "</button>";
+            '<button type="button" aria-label="제거">' + ICONS.close + "</button>";
           on(chip.querySelector("button"), "click", (e) => { e.stopPropagation(); o.setAttribute("aria-selected", "false"); chip.remove(); });
           combo.querySelector(".combo-control").insertBefore(chip, input);
         });
@@ -552,7 +576,7 @@
         text = text.trim(); if (!text) return;
         const chip = document.createElement("span");
         chip.className = "chip";
-        chip.innerHTML = text + '<button type="button" aria-label="remove">' + ICONS.close + "</button>";
+        chip.innerHTML = text + '<button type="button" aria-label="제거">' + ICONS.close + "</button>";
         on(chip.querySelector("button"), "click", () => chip.remove());
         ci.insertBefore(chip, input);
       }
@@ -585,7 +609,7 @@
             '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>' +
             '<div class="grow"><div class="text-sm weight-bold">' + f.name + "</div>" +
             '<div class="file-bar"><span style="width:0%"></span></div></div>' +
-            '<button class="btn--icon" aria-label="remove" style="width:1.4rem;height:1.4rem;background:none;border:none">' + ICONS.close + "</button>";
+            '<button class="btn--icon" aria-label="삭제" style="width:1.4rem;height:1.4rem;background:none;border:none">' + ICONS.close + "</button>";
           list.appendChild(item);
           on(item.querySelector("button"), "click", () => item.remove());
           // simulate progress
@@ -607,7 +631,7 @@
       let idx = 0;
       slides.forEach((_, i) => {
         const dot = document.createElement("button");
-        dot.setAttribute("aria-label", "Go to slide " + (i + 1));
+        dot.setAttribute("aria-label", (i + 1) + "번 슬라이드로 이동");
         on(dot, "click", () => go(i));
         if (dotsWrap) dotsWrap.appendChild(dot);
       });
@@ -692,6 +716,25 @@
   }
 
   /* ===================================================================== */
+  /* SCROLL REVEAL — one IntersectionObserver, effect via .is-in            */
+  /* ===================================================================== */
+  function initReveal() {
+    const els = $$("[data-reveal]");
+    if (!els.length) return;
+    const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced || !("IntersectionObserver" in window)) {
+      els.forEach((el) => el.classList.add("is-in"));
+      return;
+    }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) { e.target.classList.add("is-in"); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.15, rootMargin: "0px 0px -8% 0px" });
+    els.forEach((el) => io.observe(el));
+  }
+
+  /* ===================================================================== */
   /* GLOBAL EVENT WIRING                                                    */
   /* ===================================================================== */
   function initGlobal() {
@@ -743,6 +786,7 @@
   /* BOOT                                                                   */
   /* ===================================================================== */
   function boot() {
+    document.documentElement.classList.add("js");
     Theme.init();
     Cmdk.init();
     initTabs();
@@ -763,6 +807,7 @@
     initWizard();
     initCopy();
     initProgressCircles();
+    initReveal();
     initGlobal();
   }
 

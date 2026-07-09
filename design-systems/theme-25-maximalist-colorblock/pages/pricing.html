@@ -1,131 +1,249 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>가격 — COLOR/CLASH</title>
+<title>요금제 — COLOR/CLASH</title>
+<script>
+  /* Set theme before paint (FOUC guard) + mark JS for reveal gating. */
+  (function () {
+    try {
+      var t = localStorage.getItem("t25-theme");
+      if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+    document.documentElement.classList.add("js");
+  })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../theme.css">
 <style>
-  .pricing-hero { background: linear-gradient(115deg, var(--pink-500) 0 38%, var(--blue-500) 38% 70%, var(--yellow-400) 70% 100%); border-bottom: var(--border-4) solid var(--color-border-strong); padding: var(--space-12) 0 var(--space-13); }
-  .plan { display: flex; flex-direction: column; }
-  .plan.featured { transform: scale(1.03); z-index: 2; }
-  .price-num { font-family: var(--font-display); font-size: clamp(2.5rem, 1.4rem + 3.4vw, 4rem); line-height: 0.9; letter-spacing: var(--tracking-tightest); white-space: nowrap; }
-  .plan.featured { margin-bottom: var(--space-6); }
-  .feat-row { display: flex; align-items: flex-start; gap: var(--space-2); padding: var(--space-2) 0; }
-  .feat-row svg { flex-shrink: 0; margin-top: 2px; }
-  @media (max-width: 900px){ .plan.featured { transform: none; } }
+  /* ---- Page-local kicker (mirrors index .section-tag) ---- */
+  .section-tag { display:inline-flex; align-items:center; gap:var(--space-2); background:var(--neutral-900); color:var(--lime-400); font-family:var(--font-mono); font-weight:700; font-size:var(--text-xs); padding:var(--space-1) var(--space-3); border-radius:var(--radius-pill); text-transform:uppercase; letter-spacing:var(--tracking-wider); }
+
+  /* ---- Hero: crashing color shards behind two solid text-blocks ---- */
+  .pricing-hero { position:relative; overflow:clip; background:var(--color-bg); border-bottom:var(--border-4) solid var(--color-border-strong); }
+  .ph-shards { position:absolute; inset:0; z-index:0; display:grid; grid-template-columns:1.15fr .85fr; grid-template-rows:1.1fr .9fr; }
+  .ph-shards > div { min-width:0; }
+  .ph-streak { position:absolute; inset:0; z-index:1; background:var(--plane-6); clip-path:polygon(52% 0, 64% 0, 34% 100%, 22% 100%); pointer-events:none; }
+  .ph-inner { position:relative; z-index:2; padding:var(--space-12) 0 var(--space-13); }
+  .ph-title { display:flex; flex-direction:column; align-items:flex-start; gap:0; font-family:var(--font-display); font-size:var(--text-6xl); line-height:var(--leading-display-ko); letter-spacing:var(--tracking-display-ko); }
+  .ph-line { display:inline-block; padding:.03em var(--space-4) .11em; border:var(--border-4) solid var(--color-border-strong); }
+  .ph-a { background:var(--neutral-900); color:var(--white); position:relative; z-index:1; }
+  .ph-b { background:var(--yellow-400); color:var(--neutral-900); margin-left:var(--space-8); margin-top:calc(var(--space-2) * -1); position:relative; z-index:2; }
+  .ph-lead { display:inline-block; max-width:38rem; margin-top:var(--space-6); background:var(--neutral-900); color:var(--white); font-weight:var(--weight-bold); padding:var(--space-4) var(--space-6); border-radius:var(--radius-md); box-shadow:var(--shadow-offset) var(--cyan-400); }
+
+  /* ---- Billing toggle row ---- */
+  .billing-row { display:flex; flex-direction:column; align-items:center; gap:var(--space-2); }
+  .billing-hint { font-size:var(--text-sm); font-weight:var(--weight-bold); color:var(--color-text-muted); }
+
+  /* ---- Plan grid ---- */
+  .plan-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:var(--space-6); align-items:stretch; }
+  .plan { display:flex; flex-direction:column; }
+  .plan-head { display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); margin-bottom:var(--space-1); }
+  .plan-name { font-family:var(--font-display); font-size:var(--text-2xl); letter-spacing:var(--tracking-tight); }
+  .plan-tag { font-weight:var(--weight-bold); }
+  .plan-price { display:flex; align-items:flex-end; gap:var(--space-2); margin:var(--space-4) 0 var(--space-1); }
+  .price-num { font-family:var(--font-display); font-size:clamp(2.5rem, 1.4rem + 3.4vw, 3.75rem); line-height:.9; letter-spacing:var(--tracking-tightest); white-space:nowrap; }
+  .price-unit { padding-bottom:.4rem; font-weight:var(--weight-bold); }
+  .plan-note { font-size:var(--text-sm); margin-bottom:var(--space-6); }
+  .plan .btn { margin-bottom:var(--space-5); }
+
+  /* Feature list */
+  .feat-list { display:flex; flex-direction:column; margin-top:auto; }
+  .feat-row { display:flex; align-items:flex-start; gap:var(--space-2); padding:var(--space-2) 0; font-weight:var(--weight-medium); }
+  .feat-row + .feat-row { border-top:var(--border-2) solid var(--color-divider); }
+  .feat-ico { width:20px; height:20px; flex-shrink:0; margin-top:2px; }
+  .feat-yes { color:var(--lime-700); }
+  .feat-off { color:var(--color-text-muted); }
+  .feat-off .feat-ico { color:var(--color-text-muted); }
+  [data-theme="dark"] .feat-yes { color:var(--lime-400); }
+
+  /* Featured "Pro" — the clash center: sidesteps the .card.combo inherit rule
+     by owning its fill/fg, and physically overlaps the neighbours. */
+  .plan--pro { background:var(--pink-600); color:var(--white); border-color:var(--color-border-strong); }
+  .plan--pro .plan-tag, .plan--pro .plan-note { color:var(--white); }
+  .plan--pro .feat-row + .feat-row { border-top-color:var(--pink-400); } /* on-pink divider, stays within the ramp */
+  .plan--pro .feat-yes { color:var(--white); }
+  @media (min-width: 901px) {
+    .plan--pro {
+      z-index:3;
+      margin-block:calc(var(--space-6) * -1) 0;
+      margin-inline:calc(var(--space-4) * -1);
+      padding-block:var(--space-8);
+      box-shadow:8px 8px 0 0 var(--blue-500), 16px 16px 0 0 var(--yellow-400);
+    }
+    .plan:not(.plan--pro) { z-index:1; }
+  }
+
+  /* Comparison + FAQ ambiance */
+  .cmp-yes { display:inline-flex; color:var(--lime-700); }
+  .cmp-yes svg { width:20px; height:20px; }
+  [data-theme="dark"] .cmp-yes { color:var(--lime-400); }
+  .pw-wm { bottom:var(--space-6); right:calc(var(--space-8) * -1); }
+
+  /* Closing break band */
+  .cta-band { position:relative; overflow:clip; border-block:var(--border-4) solid var(--color-border-strong); padding-block:var(--space-12); }
+  .cta-card { background:var(--neutral-900); color:var(--white); border:var(--border-4) solid var(--color-border-strong); border-radius:var(--radius-lg); padding:var(--space-9); max-width:46rem; box-shadow:var(--shadow-offset-lg) var(--yellow-400); }
+
+  @media (max-width: 900px) {
+    .plan-grid { grid-template-columns:1fr; max-width:26rem; margin-inline:auto; }
+    .ph-title { font-size:var(--text-5xl); }
+    .ph-b { margin-left:var(--space-5); }
+  }
+  @media (max-width: 768px) { .watermark { display:none; } }
 </style>
 </head>
 <body>
 <a class="skip-link" href="#main">본문으로 건너뛰기</a>
 
+<div class="hue-bar" aria-hidden="true"></div>
+
 <nav class="navbar" aria-label="주요 내비게이션">
   <a href="../index.html" class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"><rect x="3" y="3" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/></svg></span>COLOR/CLASH</a>
-  <div class="nav-links hide-mobile"><a class="nav-link" href="dashboard.html">제품</a><a class="nav-link" href="pricing.html" aria-current="page">가격</a><a class="nav-link" href="#faq">FAQ</a></div>
+  <div class="nav-links hide-mobile"><a class="nav-link" href="dashboard.html">제품</a><a class="nav-link" href="pricing.html" aria-current="page">요금제</a><a class="nav-link" href="#faq">FAQ</a></div>
   <div class="nav-end">
     <button class="btn btn--icon btn--sm btn--ghost" data-theme-toggle aria-label="테마 전환" aria-pressed="false"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></svg></button>
-    <a class="btn btn--primary btn--sm" href="#main">시작하기</a>
+    <a class="btn btn--primary btn--sm" href="#plans">시작하기</a>
   </div>
 </nav>
 
 <header class="pricing-hero">
-  <div class="container text-center" style="color:var(--neutral-900)">
-    <span class="section-tag" style="background:var(--neutral-900);color:var(--lime-400);font-family:var(--font-mono);font-weight:700;padding:var(--space-1) var(--space-3);border-radius:var(--radius-pill);text-transform:uppercase;letter-spacing:var(--tracking-wider)">PRICING</span>
-    <h1 class="display display-6xl mt-4">과하게,<br>제대로</h1>
-    <p class="text-xl weight-bold mt-4" style="max-width:34rem;margin-inline:auto">팀 규모에 맞는 플랜을 고르세요. 언제든 변경·취소할 수 있습니다.</p>
+  <div class="ph-shards" aria-hidden="true">
+    <div class="plane-1 clip-slash"></div><div class="plane-2 clip-diagonal-rev"></div><div class="plane-3 clip-diagonal"></div><div class="plane-5 clip-corner"></div>
+  </div>
+  <div class="ph-streak" aria-hidden="true"></div>
+  <span class="corner-wedge corner-wedge--tr clip-wedge plane-4" aria-hidden="true"></span>
+  <div class="container ph-inner reveal-group">
+    <p class="reveal"><span class="section-tag">요금제</span></p>
+    <h1 class="ph-title reveal mt-4">
+      <span class="ph-line ph-a">숨김 없는</span>
+      <span class="ph-line ph-b">가격.</span>
+    </h1>
+    <p class="ph-lead reveal">팀 규모에 맞춰 고르고, 언제든 바꾸세요. 신용카드 없이 14일 무료로 시작합니다.</p>
   </div>
 </header>
 
-<main id="main" class="container section">
-  <div class="row center mb-8">
-    <div class="segmented" data-onchange="billing" role="tablist" aria-label="결제 주기" style="font-size:var(--text-md)">
-      <button data-value="month" aria-selected="true">월간</button>
-      <button data-value="year" aria-selected="false">연간 · 2개월 무료</button>
-    </div>
-  </div>
+<main id="main">
+  <!-- ============ PLANS ============ -->
+  <section id="plans" class="section section--clash">
+    <span class="watermark headline-mega headline-stroke pw-wm" aria-hidden="true">요금제</span>
+    <div class="container">
+      <div class="billing-row mb-8">
+        <div class="segmented" data-onchange="billing" role="radiogroup" aria-label="결제 주기">
+          <button type="button" role="radio" aria-checked="true" data-value="month">월간</button>
+          <button type="button" role="radio" aria-checked="false" data-value="year">연간 · 2개월 무료</button>
+        </div>
+        <p class="billing-hint">연간 결제 시 사용자당 매월 약 ₩5,000을 아낍니다.</p>
+      </div>
 
-  <div class="grid grid-3" style="align-items:stretch">
-    <!-- Starter -->
-    <div class="card plan">
-      <span class="badge mb-3" style="align-self:flex-start">스타터</span>
-      <p class="text-muted">개인과 사이드 프로젝트</p>
-      <div class="row items-end row-gap-2 mt-4 mb-2"><span class="price-num">₩<span data-price data-price-month="0" data-price-year="0">0</span></span><span class="text-muted mb-2" data-price-note>/월</span></div>
-      <p class="text-sm text-muted mb-6">무료, 영원히</p>
-      <button class="btn btn--ghost btn--block mb-6">무료로 시작</button>
-      <div class="feat-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span>위젯 3개</span></div>
-      <div class="feat-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span>1명 사용자</span></div>
-      <div class="feat-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span>커뮤니티 지원</span></div>
-      <div class="feat-row text-faint"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18M6 6l12 12"/></svg><span>다크모드 테마</span></div>
-      <div class="feat-row text-faint"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18M6 6l12 12"/></svg><span>API 액세스</span></div>
-    </div>
+      <div class="plan-grid" data-reveal>
+        <!-- Starter -->
+        <div class="card plan">
+          <div class="plan-head"><span class="plan-name">스타터</span></div>
+          <p class="plan-tag text-muted">개인과 사이드 프로젝트</p>
+          <div class="plan-price"><span class="price-num">₩<span data-price data-price-month="0" data-price-year="0">0</span></span><span class="price-unit text-muted" data-price-note>/월</span></div>
+          <p class="plan-note text-muted">무료로 계속 사용하세요</p>
+          <button class="btn btn--ghost btn--block">무료로 시작</button>
+          <ul class="feat-list">
+            <li class="feat-row"><svg class="feat-ico feat-yes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span>위젯 3개</span></li>
+            <li class="feat-row"><svg class="feat-ico feat-yes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span>사용자 1명</span></li>
+            <li class="feat-row"><svg class="feat-ico feat-yes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span>커뮤니티 지원</span></li>
+            <li class="feat-row feat-off"><svg class="feat-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18M6 6l12 12"/></svg><span>다크 모드 테마</span></li>
+            <li class="feat-row feat-off"><svg class="feat-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18M6 6l12 12"/></svg><span>API 액세스</span></li>
+          </ul>
+        </div>
 
-    <!-- Pro (featured) -->
-    <div class="card plan featured combo-1" style="border-color:var(--color-border-strong);box-shadow:var(--shadow-offset-lg) var(--blue-500)">
-      <div class="row between"><span class="badge badge--warning">가장 인기</span><span class="badge" style="background:rgba(255,255,255,.25);color:#fff;border-color:#fff">프로</span></div>
-      <p style="color:#fff;opacity:.9" class="mt-3">성장하는 팀을 위한</p>
-      <div class="row items-end row-gap-2 mt-4 mb-2"><span class="price-num">₩<span data-price data-price-month="29,000" data-price-year="24,000">29,000</span></span><span style="color:#fff;opacity:.9" class="mb-2" data-price-note>/월</span></div>
-      <p class="text-sm mb-6" style="color:#fff;opacity:.85">사용자당, 청구 시</p>
-      <button class="btn btn--invert btn--block mb-6" data-toast="success" data-toast-title="프로 선택됨" data-toast-msg="14일 무료 체험을 시작합니다.">프로 시작</button>
-      <div class="feat-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span style="color:#fff">위젯 무제한</span></div>
-      <div class="feat-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span style="color:#fff">사용자 10명</span></div>
-      <div class="feat-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span style="color:#fff">우선 지원</span></div>
-      <div class="feat-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span style="color:#fff">다크모드 테마</span></div>
-      <div class="feat-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span style="color:#fff">API 액세스</span></div>
-    </div>
+        <!-- Pro (featured) -->
+        <div class="card plan plan--pro">
+          <div class="plan-head"><span class="plan-name">프로</span><span class="badge badge--warning">가장 인기</span></div>
+          <p class="plan-tag">성장하는 팀을 위한</p>
+          <div class="plan-price"><span class="price-num">₩<span data-price data-price-month="29,000" data-price-year="24,000">29,000</span></span><span class="price-unit" data-price-note>/월</span></div>
+          <p class="plan-note">사용자당 · 월 청구</p>
+          <button class="btn btn--invert btn--block" data-toast="success" data-toast-title="프로 체험 시작" data-toast-msg="14일 무료 체험을 시작했어요. 카드 등록은 필요 없습니다.">프로 시작</button>
+          <ul class="feat-list">
+            <li class="feat-row"><svg class="feat-ico feat-yes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span>위젯 무제한</span></li>
+            <li class="feat-row"><svg class="feat-ico feat-yes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span>사용자 10명</span></li>
+            <li class="feat-row"><svg class="feat-ico feat-yes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span>우선 지원</span></li>
+            <li class="feat-row"><svg class="feat-ico feat-yes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span>다크 모드 테마</span></li>
+            <li class="feat-row"><svg class="feat-ico feat-yes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span>API 액세스</span></li>
+          </ul>
+        </div>
 
-    <!-- Enterprise -->
-    <div class="card plan">
-      <span class="badge badge--accent mb-3" style="align-self:flex-start">엔터프라이즈</span>
-      <p class="text-muted">대규모 조직을 위한</p>
-      <div class="row items-end row-gap-2 mt-4 mb-2"><span class="price-num">₩<span data-price data-price-month="99,000" data-price-year="82,000">99,000</span></span><span class="text-muted mb-2" data-price-note>/월</span></div>
-      <p class="text-sm text-muted mb-6">사용자당, 청구 시</p>
-      <button class="btn btn--secondary btn--block mb-6" data-modal-open="contact-modal">영업팀 문의</button>
-      <div class="feat-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span>프로의 모든 기능</span></div>
-      <div class="feat-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span>사용자 무제한</span></div>
-      <div class="feat-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span>SSO · SAML</span></div>
-      <div class="feat-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span>전담 매니저</span></div>
-      <div class="feat-row"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span>99.9% SLA</span></div>
-    </div>
-  </div>
-
-  <!-- Comparison table -->
-  <h2 class="display display-3xl text-center mt-12 mb-6">기능 비교</h2>
-  <div class="table-wrap" style="max-width:60rem;margin-inline:auto">
-    <div class="table-scroll">
-    <table class="table">
-      <thead><tr><th>기능</th><th class="text-center">스타터</th><th class="text-center">프로</th><th class="text-center">엔터프라이즈</th></tr></thead>
-      <tbody>
-        <tr><td class="weight-bold">위젯</td><td class="text-center">3개</td><td class="text-center">무제한</td><td class="text-center">무제한</td></tr>
-        <tr><td class="weight-bold">사용자</td><td class="text-center">1</td><td class="text-center">10</td><td class="text-center">무제한</td></tr>
-        <tr><td class="weight-bold">데이터 보존</td><td class="text-center">7일</td><td class="text-center">1년</td><td class="text-center">무제한</td></tr>
-        <tr><td class="weight-bold">API 액세스</td><td class="text-center">—</td><td class="text-center"><span class="status-dot status-dot--success" style="color:var(--color-success);margin:0 auto;display:inline-block"></span></td><td class="text-center"><span class="status-dot status-dot--success" style="color:var(--color-success);margin:0 auto;display:inline-block"></span></td></tr>
-        <tr><td class="weight-bold">SSO</td><td class="text-center">—</td><td class="text-center">—</td><td class="text-center"><span class="status-dot status-dot--success" style="color:var(--color-success);margin:0 auto;display:inline-block"></span></td></tr>
-        <tr><td class="weight-bold">지원</td><td class="text-center">커뮤니티</td><td class="text-center">우선</td><td class="text-center">전담</td></tr>
-      </tbody>
-    </table>
-    </div>
-  </div>
-
-  <!-- FAQ -->
-  <section id="faq" class="mt-12" style="max-width:48rem;margin-inline:auto">
-    <h2 class="display display-3xl text-center mb-6">자주 묻는 질문</h2>
-    <div class="accordion" data-single="true">
-      <div class="acc-item"><button class="acc-trigger" aria-expanded="true" aria-controls="f1">언제든 플랜을 변경할 수 있나요? <span class="acc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="acc-panel is-open" id="f1"><div><div class="acc-body">네. 업그레이드는 즉시 적용되고, 다운그레이드는 다음 결제 주기에 반영됩니다. 차액은 자동 정산됩니다.</div></div></div></div>
-      <div class="acc-item"><button class="acc-trigger" aria-expanded="false" aria-controls="f2">연간 결제 할인은 얼마인가요? <span class="acc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="acc-panel" id="f2"><div><div class="acc-body">연간 결제 시 두 달치가 무료입니다 (약 17% 절약). 위 토글로 차이를 확인하세요.</div></div></div></div>
-      <div class="acc-item"><button class="acc-trigger" aria-expanded="false" aria-controls="f3">무료 체험이 있나요? <span class="acc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="acc-panel" id="f3"><div><div class="acc-body">프로 플랜은 14일 무료 체험을 제공하며, 카드 등록 없이 시작할 수 있습니다.</div></div></div></div>
-      <div class="acc-item"><button class="acc-trigger" aria-expanded="false" aria-controls="f4">환불 정책은 어떻게 되나요? <span class="acc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="acc-panel" id="f4"><div><div class="acc-body">첫 30일 이내에는 사유 불문 전액 환불해 드립니다.</div></div></div></div>
+        <!-- Enterprise -->
+        <div class="card plan">
+          <div class="plan-head"><span class="plan-name">엔터프라이즈</span></div>
+          <p class="plan-tag text-muted">대규모 조직을 위한</p>
+          <div class="plan-price"><span class="price-num">₩<span data-price data-price-month="99,000" data-price-year="82,000">99,000</span></span><span class="price-unit text-muted" data-price-note>/월</span></div>
+          <p class="plan-note text-muted">사용자당 · 월 청구</p>
+          <button class="btn btn--secondary btn--block" data-modal-open="contact-modal">영업팀 문의</button>
+          <ul class="feat-list">
+            <li class="feat-row"><svg class="feat-ico feat-yes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span>프로의 모든 기능</span></li>
+            <li class="feat-row"><svg class="feat-ico feat-yes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span>사용자 무제한</span></li>
+            <li class="feat-row"><svg class="feat-ico feat-yes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span>SSO · SAML</span></li>
+            <li class="feat-row"><svg class="feat-ico feat-yes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span>전담 매니저</span></li>
+            <li class="feat-row"><svg class="feat-ico feat-yes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg><span>99.9% SLA 보장</span></li>
+          </ul>
+        </div>
+      </div>
     </div>
   </section>
 
-  <!-- CTA -->
-  <div class="card combo-5 text-center mt-12" style="border-color:var(--color-border-strong);padding:var(--space-10)">
-    <h2 class="display display-4xl" style="color:inherit">준비됐나요?</h2>
-    <p class="text-lg mt-3 mb-6" style="opacity:.9">14일 무료로 모든 기능을 경험하세요. 카드 필요 없음.</p>
-    <button class="btn btn--invert btn--lg" data-toast="success" data-toast-title="시작!" data-toast-msg="무료 체험을 시작합니다.">지금 무료로 시작</button>
-  </div>
+  <!-- ============ COMPARISON ============ -->
+  <section class="section section--clash" style="background:var(--color-surface-2);border-block:var(--border-4) solid var(--color-border-strong)">
+    <span class="watermark headline-mega headline-stroke pw-wm" aria-hidden="true">비교</span>
+    <div class="container">
+      <span class="section-tag">전체 비교</span>
+      <h2 class="display display-3xl mt-4 mb-6" data-reveal>플랜별 기능</h2>
+      <div class="table-wrap" style="max-width:60rem">
+        <div class="table-scroll">
+        <table class="table">
+          <thead><tr><th scope="col">기능</th><th scope="col" class="text-center">스타터</th><th scope="col" class="text-center">프로</th><th scope="col" class="text-center">엔터프라이즈</th></tr></thead>
+          <tbody>
+            <tr><td class="weight-bold">위젯</td><td class="text-center">3개</td><td class="text-center">무제한</td><td class="text-center">무제한</td></tr>
+            <tr><td class="weight-bold">사용자</td><td class="text-center">1명</td><td class="text-center">10명</td><td class="text-center">무제한</td></tr>
+            <tr><td class="weight-bold">데이터 보존</td><td class="text-center">7일</td><td class="text-center">1년</td><td class="text-center">무제한</td></tr>
+            <tr><td class="weight-bold">API 액세스</td><td class="text-center">—</td><td class="text-center"><span class="cmp-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span class="sr-only">포함</span></span></td><td class="text-center"><span class="cmp-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span class="sr-only">포함</span></span></td></tr>
+            <tr><td class="weight-bold">SSO · SAML</td><td class="text-center">—</td><td class="text-center">—</td><td class="text-center"><span class="cmp-yes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span class="sr-only">포함</span></span></td></tr>
+            <tr><td class="weight-bold">지원</td><td class="text-center">커뮤니티</td><td class="text-center">우선</td><td class="text-center">전담</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FAQ ============ -->
+  <section id="faq" class="section section--clash">
+    <span class="watermark headline-mega headline-stroke pw-wm" aria-hidden="true">질문</span>
+    <div class="container" style="max-width:48rem">
+      <span class="section-tag">자주 묻는 질문</span>
+      <h2 class="display display-3xl mt-4 mb-6" data-reveal>궁금한 점을 먼저</h2>
+      <div class="accordion" data-single="true">
+        <div class="acc-item"><button class="acc-trigger" aria-expanded="true" aria-controls="f1">언제든 플랜을 바꿀 수 있나요? <span class="acc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="acc-panel is-open" id="f1"><div><div class="acc-body">네. 업그레이드는 즉시 적용되고, 다운그레이드는 다음 결제 주기에 반영됩니다. 남은 기간의 차액은 자동으로 정산됩니다.</div></div></div></div>
+        <div class="acc-item"><button class="acc-trigger" aria-expanded="false" aria-controls="f2">연간 결제는 얼마나 저렴한가요? <span class="acc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="acc-panel" id="f2"><div><div class="acc-body">연간 결제 시 두 달치가 무료입니다(약 17% 절약). 프로 기준 월 ₩29,000이 연간 결제 시 사용자당 월 ₩24,000이 됩니다. 위 토글로 바로 비교해 보세요.</div></div></div></div>
+        <div class="acc-item"><button class="acc-trigger" aria-expanded="false" aria-controls="f3">무료 체험이 있나요? <span class="acc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="acc-panel" id="f3"><div><div class="acc-body">프로 플랜은 14일 무료 체험을 제공하며, 카드 등록 없이 바로 시작할 수 있습니다. 체험이 끝나도 자동 결제되지 않습니다.</div></div></div></div>
+        <div class="acc-item"><button class="acc-trigger" aria-expanded="false" aria-controls="f4">결제 수단은 무엇을 지원하나요? <span class="acc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="acc-panel" id="f4"><div><div class="acc-body">신용·체크카드, 카카오페이, 토스, 네이버페이를 지원합니다. 엔터프라이즈는 세금계산서 발행과 법인카드 결제가 가능합니다.</div></div></div></div>
+        <div class="acc-item"><button class="acc-trigger" aria-expanded="false" aria-controls="f5">환불 정책은 어떻게 되나요? <span class="acc-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg></span></button><div class="acc-panel" id="f5"><div><div class="acc-body">첫 결제 후 30일 이내에는 사유를 묻지 않고 전액 환불해 드립니다. 설정 &gt; 결제에서 직접 신청할 수 있어요.</div></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CTA ============ -->
+  <section class="split-diagonal cta-band section--clash" aria-labelledby="cta-title">
+    <span class="corner-wedge corner-wedge--bl clip-wedge plane-4" aria-hidden="true"></span>
+    <div class="container">
+      <div class="cta-card">
+        <h2 class="display display-4xl" id="cta-title">색은 무료입니다</h2>
+        <p class="text-lg weight-bold mt-4">스타터는 영원히 무료, 프로는 14일 무료 체험. 지금 워크스페이스를 만들고 색면이 충돌하는 대시보드를 열어보세요.</p>
+        <div class="row row-gap-3 wrap mt-6">
+          <a class="btn btn--primary btn--lg" href="onboarding.html">무료로 시작하기</a>
+          <a class="btn btn--secondary btn--lg" href="dashboard.html">대시보드 둘러보기</a>
+        </div>
+      </div>
+    </div>
+  </section>
 </main>
 
 <!-- Contact modal -->
@@ -133,11 +251,11 @@
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ct-title">
     <div class="modal-head"><h2 class="modal-title" id="ct-title">영업팀 문의</h2><button class="btn btn--icon btn--sm btn--ghost" data-close aria-label="닫기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
     <div class="modal-body stack-4">
-      <div class="field"><label class="label" for="ct-name">이름</label><input class="input" id="ct-name" autofocus></div>
-      <div class="field"><label class="label" for="ct-email">회사 이메일</label><input class="input" id="ct-email" type="email"></div>
-      <div class="field"><label class="label" for="ct-size">팀 규모</label><select class="select" id="ct-size"><option>1-10명</option><option>11-50명</option><option>51-200명</option><option>200명 이상</option></select></div>
+      <div class="field"><label class="label" for="ct-name">이름</label><input class="input" id="ct-name" placeholder="예: 김진섭" autofocus></div>
+      <div class="field"><label class="label" for="ct-email">회사 이메일</label><input class="input" id="ct-email" type="email" placeholder="이름@회사.kr"></div>
+      <div class="field"><label class="label" for="ct-size">팀 규모</label><select class="select" id="ct-size"><option>1–10명</option><option>11–50명</option><option>51–200명</option><option>200명 이상</option></select></div>
     </div>
-    <div class="modal-foot"><button class="btn btn--ghost" data-close>취소</button><button class="btn btn--primary" data-close data-toast="success" data-toast-title="문의 접수됨" data-toast-msg="영업팀이 곧 연락드리겠습니다.">문의 보내기</button></div>
+    <div class="modal-foot"><button class="btn btn--ghost" data-close>취소</button><button class="btn btn--primary" data-close data-toast="success" data-toast-title="문의 접수됨" data-toast-msg="영업팀이 1영업일 안에 연락드리겠습니다.">문의 보내기</button></div>
   </div>
 </div>
 

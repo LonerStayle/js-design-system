@@ -1,37 +1,62 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>인박스 — COLOR/CLASH</title>
+<script>
+  /* Set theme before paint (FOUC guard) + mark JS for reveal gating. */
+  (function () {
+    try {
+      var t = localStorage.getItem("t25-theme");
+      if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+    document.documentElement.classList.add("js");
+  })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../theme.css">
 <style>
-  .mail { display: grid; grid-template-columns: 15rem 23rem 1fr; height: calc(100vh - var(--nav-h)); }
+  .mail { display: grid; grid-template-columns: 15rem 23rem 1fr; height: calc(100dvh - var(--nav-h) - 0.625rem); }
   .mail-folders { border-right: var(--border-3) solid var(--color-border-strong); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-1); overflow-y: auto; }
   .mail-list { border-right: var(--border-3) solid var(--color-border-strong); display: flex; flex-direction: column; overflow: hidden; }
-  .mail-list-scroll { overflow-y: auto; }
+  .mail-list-scroll { overflow-y: auto; flex: 1; }
+  .mail-group { padding: var(--space-3) var(--space-4) var(--space-1); font-size: var(--text-2xs); font-weight: var(--weight-black); text-transform: uppercase; letter-spacing: var(--tracking-wider); color: var(--color-text-faint); background: var(--color-surface-2); border-bottom: var(--border-2) solid var(--color-divider); }
   .mail-row { display: grid; grid-template-columns: auto 1fr auto; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: var(--border-2) solid var(--color-divider); cursor: pointer; position: relative; align-items: start; }
   .mail-row:hover { background: var(--color-surface-2); }
+  .mail-row:focus-visible { outline: none; box-shadow: inset 0 0 0 var(--ring-width) var(--color-ring); }
   .mail-row.is-active { background: var(--color-primary-soft); box-shadow: inset 5px 0 0 0 var(--color-primary); }
   .mail-row.unread::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; }
   .mail-row.unread.u-pink::before { background: var(--pink-500); } .mail-row.unread.u-blue::before { background: var(--blue-500); } .mail-row.unread.u-lime::before { background: var(--lime-400); } .mail-row.unread.u-orange::before { background: var(--orange-500); } .mail-row.unread.u-purple::before { background: var(--purple-500); }
   .mail-row .mr-name { font-weight: var(--weight-bold); }
+  .mail-row .mr-pin { color: var(--color-text-muted); }
+  .mail-row .mr-pin svg { width: 0.8rem; height: 0.8rem; }
   .mail-row.unread .mr-subj { font-weight: var(--weight-black); }
   .mail-row .mr-snip { color: var(--color-text-muted); font-size: var(--text-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 14rem; }
   .mail-row .mr-time { font-size: var(--text-xs); color: var(--color-text-faint); white-space: nowrap; }
+  .mail-row .mr-dot { color: var(--color-info); }
   .mail-read { display: flex; flex-direction: column; overflow: hidden; }
   .mail-read-body { padding: var(--space-7); overflow-y: auto; flex: 1; }
   .label-dot { width: 0.85rem; height: 0.85rem; border-radius: 50%; border: var(--border-2) solid var(--color-border-strong); flex-shrink: 0; }
-  @media (max-width: 1000px){ .mail { grid-template-columns: 1fr; } .mail-folders { display: none; } .mail.show-read .mail-list { display: none; } .mail:not(.show-read) .mail-read { display: none; } }
+  .mail-nav-btn { display: none; }
+  @media (max-width: 1000px){
+    .mail { grid-template-columns: 1fr; }
+    .mail-folders { display: none; }
+    .mail-nav-btn { display: inline-flex; }
+    .mail.show-read .mail-list { display: none; }
+    .mail:not(.show-read) .mail-read { display: none; }
+  }
 </style>
 </head>
 <body>
 <a class="skip-link" href="#mail-root">본문으로 건너뛰기</a>
 
+<div class="hue-bar" aria-hidden="true"></div>
+
 <nav class="navbar" aria-label="주요 내비게이션">
+  <button class="btn btn--icon btn--sm btn--ghost mail-nav-btn" data-drawer-open="mobile-nav" aria-label="메뉴 열기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
   <a href="../index.html" class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"><rect x="3" y="3" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/></svg></span>COLOR/CLASH</a>
   <div class="nav-links hide-mobile"><a class="nav-link" href="dashboard.html">대시보드</a><a class="nav-link" href="kanban.html">보드</a><a class="nav-link" href="inbox.html" aria-current="page">인박스</a></div>
   <div class="nav-end">
@@ -45,17 +70,17 @@
   <!-- Folders -->
   <aside class="mail-folders" aria-label="메일함">
     <button class="btn btn--primary btn--block mb-4" data-modal-open="compose"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg>새 메일</button>
-    <a class="sb-link" href="#" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg><span>받은편지함</span><span class="sb-badge badge badge--danger">5</span></a>
-    <a class="sb-link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m12 2 3 6.5 7 .6-5.3 4.6L18.2 21 12 17.3 5.8 21l1.5-7.3L2 9.1l7-.6z"/></svg><span>별표</span></a>
-    <a class="sb-link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m22 2-7 20-4-9-9-4z"/></svg><span>보낸편지함</span></a>
-    <a class="sb-link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg><span>임시보관</span><span class="sb-badge badge">2</span></a>
-    <a class="sb-link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span>스팸</span></a>
-    <a class="sb-link" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg><span>휴지통</span></a>
+    <button class="sb-link folder-btn" data-folder="inbox" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg><span>받은편지함</span><span class="sb-badge badge badge--danger" data-unread-badge>3</span></button>
+    <button class="sb-link folder-btn" data-folder="starred"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m12 2 3 6.5 7 .6-5.3 4.6L18.2 21 12 17.3 5.8 21l1.5-7.3L2 9.1l7-.6z"/></svg><span>별표</span></button>
+    <button class="sb-link folder-btn" data-folder="sent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m22 2-7 20-4-9-9-4z"/></svg><span>보낸편지함</span></button>
+    <button class="sb-link folder-btn" data-folder="drafts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg><span>임시보관</span></button>
+    <button class="sb-link folder-btn" data-folder="spam"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span>스팸</span></button>
+    <button class="sb-link folder-btn" data-folder="trash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg><span>휴지통</span></button>
     <span class="sb-section">라벨</span>
-    <a class="sb-link" href="#"><span class="label-dot" style="background:var(--pink-500)"></span><span>업무</span></a>
-    <a class="sb-link" href="#"><span class="label-dot" style="background:var(--blue-500)"></span><span>청구</span></a>
-    <a class="sb-link" href="#"><span class="label-dot" style="background:var(--lime-400)"></span><span>뉴스레터</span></a>
-    <a class="sb-link" href="#"><span class="label-dot" style="background:var(--purple-500)"></span><span>개인</span></a>
+    <button class="sb-link folder-btn" data-folder="label:업무"><span class="label-dot" style="background:var(--pink-600)"></span><span>업무</span></button>
+    <button class="sb-link folder-btn" data-folder="label:청구"><span class="label-dot" style="background:var(--blue-500)"></span><span>청구</span></button>
+    <button class="sb-link folder-btn" data-folder="label:뉴스레터"><span class="label-dot" style="background:var(--purple-600)"></span><span>뉴스레터</span></button>
+    <button class="sb-link folder-btn" data-folder="label:개발"><span class="label-dot" style="background:var(--lime-600)"></span><span>개발</span></button>
   </aside>
 
   <!-- List -->
@@ -63,7 +88,7 @@
     <div style="padding:var(--space-3) var(--space-4);border-bottom:var(--border-3) solid var(--color-border-strong)">
       <div class="searchbar"><svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input class="input" placeholder="메일 검색" aria-label="메일 검색"></div>
     </div>
-    <div class="mail-list-scroll" id="mail-list" role="list"></div>
+    <div class="mail-list-scroll" id="mail-list"></div>
   </section>
 
   <!-- Reading pane -->
@@ -72,23 +97,45 @@
   </section>
 </main>
 
+<!-- Mobile navigation drawer (pages + mailboxes below 1000px) -->
+<div class="overlay" id="mobile-nav" hidden style="place-items:stretch;justify-items:start;padding:0">
+  <aside class="drawer left" role="dialog" aria-modal="true" aria-labelledby="mn-title">
+    <div class="drawer-head"><h2 class="drawer-title" id="mn-title">메뉴</h2><button class="btn btn--icon btn--sm btn--ghost" data-close aria-label="닫기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <nav class="drawer-body sb-nav" aria-label="모바일 내비게이션">
+      <span class="sb-section">페이지</span>
+      <a class="sb-link" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/></svg><span>대시보드</span></a>
+      <a class="sb-link" href="kanban.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="6" height="18"/><rect x="10.5" y="3" width="6" height="12"/></svg><span>보드</span></a>
+      <a class="sb-link" href="inbox.html" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg><span>인박스</span></a>
+      <span class="sb-section">메일함</span>
+      <button class="sb-link folder-btn" data-folder="inbox" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg><span>받은편지함</span><span class="sb-badge badge badge--danger" data-unread-badge>3</span></button>
+      <button class="sb-link folder-btn" data-folder="starred"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m12 2 3 6.5 7 .6-5.3 4.6L18.2 21 12 17.3 5.8 21l1.5-7.3L2 9.1l7-.6z"/></svg><span>별표</span></button>
+      <button class="sb-link folder-btn" data-folder="spam"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span>스팸</span></button>
+      <span class="sb-section">라벨</span>
+      <button class="sb-link folder-btn" data-folder="label:업무"><span class="label-dot" style="background:var(--pink-600)"></span><span>업무</span></button>
+      <button class="sb-link folder-btn" data-folder="label:청구"><span class="label-dot" style="background:var(--blue-500)"></span><span>청구</span></button>
+      <button class="sb-link folder-btn" data-folder="label:뉴스레터"><span class="label-dot" style="background:var(--purple-600)"></span><span>뉴스레터</span></button>
+      <button class="sb-link folder-btn" data-folder="label:개발"><span class="label-dot" style="background:var(--lime-600)"></span><span>개발</span></button>
+    </nav>
+  </aside>
+</div>
+
 <!-- Compose modal -->
 <div class="overlay" id="compose" hidden>
   <div class="modal modal--lg" role="dialog" aria-modal="true" aria-labelledby="co-title">
     <div class="modal-head"><h2 class="modal-title" id="co-title">새 메일</h2><button class="btn btn--icon btn--sm btn--ghost" data-close aria-label="닫기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
     <div class="modal-body stack-3">
-      <div class="field"><label class="label" for="co-to">받는 사람</label><input class="input" id="co-to" placeholder="email@example.com" autofocus></div>
-      <div class="field"><label class="label" for="co-subj">제목</label><input class="input" id="co-subj" placeholder="제목"></div>
+      <div class="field"><label class="label" for="co-to">받는 사람</label><input class="input" id="co-to" type="email" placeholder="이름@회사.kr" autofocus></div>
+      <div class="field"><label class="label" for="co-subj">제목</label><input class="input" id="co-subj" placeholder="제목을 입력하세요"></div>
       <div class="field"><label class="label" for="co-body">내용</label><textarea class="textarea" id="co-body" style="min-height:11rem" placeholder="메시지를 입력하세요..."></textarea></div>
     </div>
-    <div class="modal-foot"><button class="btn btn--ghost" data-close>임시저장</button><button class="btn btn--primary" data-close data-toast="success" data-toast-title="전송 완료" data-toast-msg="메일을 보냈습니다.">보내기</button></div>
+    <div class="modal-foot"><button class="btn btn--ghost" data-close>임시저장</button><button class="btn btn--primary" data-close data-toast="success" data-toast-title="전송 완료" data-toast-msg="메일을 보냈어요.">보내기</button></div>
   </div>
 </div>
 
 <!-- Command palette -->
 <div class="cmdk-overlay" id="cmdk" hidden>
   <div class="cmdk" role="dialog" aria-modal="true" aria-label="명령 팔레트">
-    <div class="cmdk-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="검색..." aria-label="명령 검색"><kbd>ESC</kbd></div>
+    <div class="cmdk-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="명령 또는 페이지 검색..." aria-label="명령 검색"><kbd>ESC</kbd></div>
     <div class="cmdk-list" role="listbox">
       <div class="cmdk-group-label">페이지로 이동</div>
       <div class="cmdk-item" role="option" data-label="대시보드" data-href="dashboard.html"><span class="cmdk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/></svg></span>대시보드</div>
@@ -101,21 +148,23 @@
 <script src="../app.js"></script>
 <script>
   (function () {
+    // Canonical world: user = COLOR/CLASH team member. Colleagues 최하은·이서연;
+    // customers 코어테크(엔터프라이즈 ₩6,100,000)·노바랩스 etc — matches dashboard.
     var emails = [
-      { id:1, name:"노바랩스 팀", av:"NV", p:"p2", subj:"6월 스프린트 회고 안내", snip:"이번 스프린트 회고를 금요일 오후 3시에 진행합니다.", time:"오전 9:42", unread:true, color:"u-pink", label:"업무", labelColor:"ev-pink",
-        body:"<p>안녕하세요, 팀 여러분.</p><p>이번 6월 스프린트 회고를 <strong>이번 주 금요일 오후 3시</strong>에 진행하려고 합니다. 각자 잘된 점, 아쉬운 점, 다음 스프린트 개선안을 미리 보드에 정리해 주세요.</p><p>특히 컬러 블록 컴포넌트 작업이 예상보다 빨리 끝나서, 남는 시간에 접근성 감사를 앞당길지 논의하면 좋겠습니다.</p><p>감사합니다.<br>노바랩스 드림</p>" },
-      { id:2, name:"청구 시스템", av:"$", p:"p4", subj:"[영수증] 6월 구독료 결제 완료", snip:"엔터프라이즈 플랜 ₩6,100,000 결제가 완료되었습니다.", time:"오전 8:15", unread:true, color:"u-blue", label:"청구", labelColor:"ev-blue",
-        body:"<p>결제가 정상적으로 완료되었습니다.</p><div class='card' style='margin:1rem 0'><div class='row between'><span class='weight-bold'>엔터프라이즈 플랜</span><span class='text-mono weight-black'>₩6,100,000</span></div><div class='row between text-sm text-muted mt-2'><span>결제 수단</span><span>법인카드 ****4291</span></div><div class='row between text-sm text-muted mt-2'><span>다음 결제일</span><span>2026년 7월 21일</span></div></div><p>영수증은 첨부파일을 확인하세요.</p>" },
+      { id:1, name:"프로덕트팀", av:"프", p:"p1", subj:"6월 스프린트 회고 안내", snip:"금요일 오후 3시 회고 전에 보드 정리 부탁드려요.", time:"오전 9:42", unread:true, pinned:true, color:"u-pink", label:"업무", labelColor:"ev-pink",
+        body:"<p>안녕하세요, 팀 여러분.</p><p>6월 스프린트 회고를 <strong>이번 주 금요일 오후 3시</strong>에 진행합니다. 회고 전에 각자 잘된 점·아쉬운 점·다음 개선안을 보드에 정리해 주세요.</p><p>컬러 블록 컴포넌트 작업이 예정보다 빨리 끝나서, 남는 일정에 접근성 감사를 앞당길지도 함께 논의하려고 합니다.</p><p>감사합니다.<br>프로덕트팀 드림</p>" },
+      { id:2, name:"청구 시스템", av:"₩", p:"p2", subj:"[결제] 코어테크 엔터프라이즈 갱신 완료", snip:"₩6,100,000 결제가 정상 처리되었습니다.", time:"오전 8:15", unread:true, color:"u-blue", label:"청구", labelColor:"ev-blue",
+        body:"<p>코어테크의 엔터프라이즈 플랜 갱신 결제가 정상 처리되었습니다.</p><div class='card' style='margin:1rem 0'><div class='row between'><span class='weight-bold'>코어테크 · 엔터프라이즈</span><span class='text-mono weight-black'>₩6,100,000</span></div><div class='row between text-sm text-muted mt-2'><span>결제 수단</span><span>법인카드 ****4291</span></div><div class='row between text-sm text-muted mt-2'><span>다음 청구일</span><span>2026년 8월 9일</span></div></div><p>세금계산서는 등록된 이메일로 자동 발송됩니다.</p>" },
       { id:3, name:"디자인 위클리", av:"DW", p:"p5", subj:"맥시멀리즘이 돌아왔다 — 색면의 시대", snip:"올해 가장 주목받는 디자인 트렌드, 컬러 블록.", time:"어제", unread:true, color:"u-purple", label:"뉴스레터", labelColor:"ev-purple",
         body:"<p>이번 주 디자인 위클리에서는 <strong>맥시멀리즘 컬러 블록</strong> 트렌드를 다룹니다.</p><p>충돌하는 풀채도 색면, 거대한 디스플레이 타이포그래피, 대각 분할 — 미니멀리즘의 반작용으로 등장한 이 스타일이 SaaS 제품에까지 번지고 있습니다.</p><p>핵심은 '과잉 속의 질서'입니다. 색은 부딪히되, 대비는 반드시 4.5:1을 지킬 것.</p>" },
-      { id:4, name:"최하은", av:"HE", p:"p1", subj:"디자인 토큰 리뷰 부탁드려요", snip:"PR 올렸습니다. 시간 되실 때 확인 부탁드립니다.", time:"어제", unread:false, color:"", label:"업무", labelColor:"ev-pink",
+      { id:4, name:"최하은", av:"하", p:"p4", subj:"디자인 토큰 리뷰 부탁드려요", snip:"PR 올렸습니다. 시간 되실 때 확인 부탁드립니다.", time:"어제", unread:false, color:"", label:"업무", labelColor:"ev-pink",
         body:"<p>안녕하세요!</p><p>다크모드 토큰 정리 PR을 올렸습니다. 네온 색을 블랙 캔버스 위에 올렸을 때 대비가 모두 통과하는지 한 번 봐주시면 감사하겠습니다.</p><p>특히 info(블루) 계열이 4.94:1로 아슬아슬해서 의견이 필요해요.</p>" },
       { id:5, name:"GitHub", av:"GH", p:"p6", subj:"[color-clash] PR #142 머지됨", snip:"토스트 스택 애니메이션이 main에 머지되었습니다.", time:"2일 전", unread:false, color:"", label:"개발", labelColor:"ev-lime",
-        body:"<p><code>feat: toast stack animation</code> PR이 <strong>main</strong> 브랜치에 머지되었습니다.</p><p>+184 −12 · 3 commits · 리뷰어 2명 승인</p>" },
-      { id:6, name:"이서연", av:"SY", p:"p2", subj:"API 레이트 리밋 관련 질문", snip:"분당 요청 한도를 어떻게 설정할지 논의가 필요합니다.", time:"2일 전", unread:false, color:"", label:"업무", labelColor:"ev-pink",
-        body:"<p>레이트 리밋 작업 중인데, 분당 60회로 할지 100회로 할지 정해야 할 것 같아요. 엔터프라이즈는 별도 한도가 필요할까요?</p>" },
-      { id:7, name:"코어테크", av:"KT", p:"p4", subj:"갱신 감사합니다 + 추가 시트 문의", snip:"엔터프라이즈 갱신 완료했습니다. 시트 10개 추가 가능한가요?", time:"3일 전", unread:false, color:"", label:"청구", labelColor:"ev-blue",
-        body:"<p>이번에도 갱신 진행했습니다. 팀이 커져서 시트 10개를 추가하고 싶은데 중간 추가도 가능한가요? 비용 안내 부탁드립니다.</p>" },
+        body:"<p><code>feat: toast stack animation</code> PR이 <strong>main</strong> 브랜치에 머지되었습니다.</p><p>+184 −12 · 커밋 3개 · 리뷰어 2명 승인</p>" },
+      { id:6, name:"이서연", av:"서", p:"p3", subj:"API 레이트 리밋 관련 질문", snip:"분당 요청 한도를 어떻게 설정할지 논의가 필요합니다.", time:"2일 전", unread:false, color:"", label:"업무", labelColor:"ev-pink",
+        body:"<p>레이트 리밋 작업 중인데, 분당 60회로 할지 100회로 할지 정해야 할 것 같아요. 엔터프라이즈 고객은 별도 한도가 필요할까요?</p>" },
+      { id:7, name:"코어테크", av:"KT", p:"p1", subj:"엔터프라이즈 갱신 감사합니다 + 시트 추가 문의", snip:"갱신 완료했습니다. 시트 10개 추가 가능한가요?", time:"3일 전", unread:false, color:"", label:"청구", labelColor:"ev-blue",
+        body:"<p>이번에도 엔터프라이즈 갱신 진행했습니다. 팀이 커져서 시트 10개를 추가하고 싶은데 중간 추가도 가능한가요? 비용 안내 부탁드립니다.</p>" },
       { id:8, name:"프로덕트 헌트", av:"PH", p:"p5", subj:"오늘의 인기 제품 5선", snip:"개발자 도구 카테고리에서 주목받는 제품들.", time:"4일 전", unread:false, color:"", label:"뉴스레터", labelColor:"ev-purple",
         body:"<p>오늘 가장 주목받은 제품들을 소개합니다. 디자인 시스템 툴 두 개가 상위권에 올랐네요.</p>" }
     ];
@@ -123,31 +172,103 @@
     var listEl = document.getElementById("mail-list");
     var pane = document.getElementById("read-pane");
     var root = document.getElementById("mail-root");
+    var currentFolder = "inbox";
 
-    function badgeCount(){ return emails.filter(function(e){return e.unread;}).length; }
+    var FOLDER_EMPTY = {
+      starred: { title: "별표함이 비어 있어요", msg: "중요한 메일에 별을 달면 여기에 모입니다." },
+      sent:    { title: "보낸 메일이 없어요", msg: "작성해 보낸 메일이 여기에 표시됩니다." },
+      drafts:  { title: "임시 저장한 메일이 없어요", msg: "작성 중 저장한 메일이 여기 보관됩니다." },
+      spam:    { title: "스팸이 없어요", msg: "깨끗하네요. 의심스러운 메일은 자동으로 이곳에 분류됩니다." },
+      trash:   { title: "휴지통이 비어 있어요", msg: "삭제한 메일은 30일간 여기 보관됩니다." }
+    };
 
-    function renderList() {
-      listEl.innerHTML = "";
-      emails.forEach(function (e) {
-        var row = document.createElement("div");
-        row.className = "mail-row" + (e.unread ? " unread " + e.color : "");
-        row.setAttribute("role", "listitem");
-        row.tabIndex = 0;
-        row.innerHTML =
-          '<span class="avatar avatar--sm avatar--' + e.p + '">' + e.av + '</span>' +
-          '<div style="min-width:0"><div class="row between"><span class="mr-name">' + e.name + '</span></div>' +
-          '<div class="mr-subj">' + e.subj + '</div><div class="mr-snip">' + e.snip + '</div></div>' +
-          '<div class="stack items-end" style="gap:4px"><span class="mr-time">' + e.time + '</span>' + (e.unread ? '<span class="status-dot status-dot--info" style="color:var(--color-info)"></span>' : '') + '</div>';
-        row.addEventListener("click", function () { openEmail(e, row); });
-        row.addEventListener("keydown", function (ev) { if (ev.key === "Enter") openEmail(e, row); });
-        listEl.appendChild(row);
+    function updateBadge() {
+      var n = emails.filter(function (e) { return e.unread; }).length;
+      Array.prototype.forEach.call(document.querySelectorAll("[data-unread-badge]"), function (b) {
+        b.textContent = String(n);
+        b.hidden = n === 0;
       });
     }
 
+    function groupLabel(text) {
+      var g = document.createElement("div");
+      g.className = "mail-group";
+      g.textContent = text;
+      return g;
+    }
+
+    function addRow(e) {
+      var row = document.createElement("div");
+      row.className = "mail-row" + (e.unread ? " unread " + e.color : "");
+      row.setAttribute("role", "button");
+      row.setAttribute("aria-label", e.name + ", " + e.subj + (e.unread ? ", 읽지 않음" : ""));
+      row.tabIndex = 0;
+      var pin = e.pinned
+        ? '<span class="mr-pin" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 3v2l-1 1v5l3 3v2h-5v5l-1 1-1-1v-5H5v-2l3-3V6L7 5V3z"/></svg></span>'
+        : "";
+      row.innerHTML =
+        '<span class="avatar avatar--sm avatar--' + e.p + '">' + e.av + '</span>' +
+        '<div style="min-width:0"><div class="row row-gap-2"><span class="mr-name">' + e.name + '</span>' + pin + '</div>' +
+        '<div class="mr-subj">' + e.subj + '</div><div class="mr-snip">' + e.snip + '</div></div>' +
+        '<div class="stack items-end" style="gap:4px"><span class="mr-time">' + e.time + '</span>' + (e.unread ? '<span class="status-dot status-dot--info mr-dot"></span>' : '') + '</div>';
+      row.addEventListener("click", function () { openEmail(e, row); });
+      row.addEventListener("keydown", function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); openEmail(e, row); } });
+      listEl.appendChild(row);
+    }
+
+    function emptyFolder(meta) {
+      var wrap = document.createElement("div");
+      wrap.className = "empty-state";
+      wrap.style.margin = "auto";
+      wrap.innerHTML = '<div class="es-art"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg></div>';
+      var h = document.createElement("h3"); h.textContent = meta.title; wrap.appendChild(h);
+      var p = document.createElement("p"); p.textContent = meta.msg; wrap.appendChild(p);
+      return wrap;
+    }
+
+    function showFolder(key) {
+      currentFolder = key;
+      listEl.innerHTML = "";
+      var items, grouped = false;
+      if (key === "inbox") { items = emails; grouped = true; }
+      else if (key === "starred") { items = emails.filter(function (e) { return e.starred; }); }
+      else if (key.indexOf("label:") === 0) { var L = key.slice(6); items = emails.filter(function (e) { return e.label === L; }); }
+      else { items = []; }
+
+      if (!items.length) {
+        var meta = FOLDER_EMPTY[key] || { title: "메일이 없어요", msg: "이 폴더에 표시할 메일이 없습니다." };
+        if (key.indexOf("label:") === 0) meta = { title: "'" + key.slice(6) + "' 라벨이 비어 있어요", msg: "이 라벨이 붙은 메일이 여기에 표시됩니다." };
+        listEl.appendChild(emptyFolder(meta));
+        pane.innerHTML = emptyPane();
+        root.classList.remove("show-read");
+        return;
+      }
+
+      if (grouped) {
+        var pinned = items.filter(function (e) { return e.pinned; });
+        var rest = items.filter(function (e) { return !e.pinned; });
+        if (pinned.length) { listEl.appendChild(groupLabel("고정됨")); pinned.forEach(addRow); }
+        listEl.appendChild(groupLabel("받은편지함")); rest.forEach(addRow);
+      } else {
+        items.forEach(addRow);
+      }
+      pane.innerHTML = emptyPane();
+      root.classList.remove("show-read");
+      if (key === "inbox" && window.innerWidth > 1000) {
+        var first = listEl.querySelector(".mail-row");
+        if (first) openEmail(emails[0], first);
+      }
+    }
+
     function openEmail(e, row) {
-      document.querySelectorAll(".mail-row").forEach(function (r) { r.classList.remove("is-active"); });
+      Array.prototype.forEach.call(document.querySelectorAll(".mail-row"), function (r) { r.classList.remove("is-active"); });
       row.classList.add("is-active");
-      if (e.unread) { e.unread = false; row.classList.remove("unread"); }
+      if (e.unread) {
+        e.unread = false;
+        row.classList.remove("unread");
+        var dot = row.querySelector(".mr-dot"); if (dot) dot.remove();
+        updateBadge();
+      }
       root.classList.add("show-read");
       pane.innerHTML =
         '<div class="row between wrap mb-4" style="gap:var(--space-3)">' +
@@ -160,7 +281,7 @@
               '<div class="menu align-right" id="mail-menu" hidden role="menu"><button class="menu-item" role="menuitem">읽지 않음 표시</button><button class="menu-item" role="menuitem">스팸 신고</button><div class="menu-sep"></div><button class="menu-item is-danger" role="menuitem" id="del-btn">삭제</button></div></div>' +
           '</div>' +
         '</div>' +
-        '<span class="badge cal-event ' + e.labelColor + '" style="color:#fff">' + e.label + '</span>' +
+        '<span class="badge cal-event ' + e.labelColor + '">' + e.label + '</span>' +
         '<h1 class="display display-3xl mt-3 mb-4">' + e.subj + '</h1>' +
         '<div class="row between wrap mb-6" style="gap:var(--space-3);padding-bottom:var(--space-4);border-bottom:var(--border-3) solid var(--color-border-strong)">' +
           '<div class="row row-gap-3"><span class="avatar avatar--' + e.p + '">' + e.av + '</span><div><div class="weight-bold">' + e.name + '</div><div class="text-sm text-muted">' + e.time + ' · 나에게</div></div></div>' +
@@ -169,42 +290,57 @@
         '<div class="stack-4" style="line-height:var(--leading-relaxed)">' + e.body + '</div>' +
         '<div class="card mt-8"><div class="field"><label class="label" for="reply-box">빠른 답장</label><textarea class="textarea" id="reply-box" placeholder="' + e.name + '님에게 답장..."></textarea></div><div class="row end mt-3"><button class="btn btn--primary" id="send-reply">답장 보내기</button></div></div>';
 
-      // wire reading-pane buttons
       var back = document.getElementById("back-btn");
-      if (back) back.addEventListener("click", function(){ root.classList.remove("show-read"); });
+      if (back) back.addEventListener("click", function () { root.classList.remove("show-read"); });
       var send = document.getElementById("send-reply");
-      if (send) send.addEventListener("click", function(){ if(window.t25toast) window.t25toast({type:"success",title:"답장 전송됨",message:e.name+"님에게 답장을 보냈습니다."}); document.getElementById("reply-box").value=""; });
-      ["reply-top"].forEach(function(id){ var b=document.getElementById(id); if(b) b.addEventListener("click",function(){ document.getElementById("reply-box").focus(); }); });
-      var arch=document.getElementById("archive-btn"); if(arch) arch.addEventListener("click",function(){ removeEmail(e); });
-      var del=document.getElementById("del-btn"); if(del) del.addEventListener("click",function(){ removeEmail(e); });
-      // re-init menus inside new content
-      if (window.T25) {} // menus use delegation via data-menu; re-bind:
+      if (send) send.addEventListener("click", function () {
+        var box = document.getElementById("reply-box");
+        if (!box.value.trim()) { if (window.t25toast) window.t25toast({ type: "warning", title: "내용을 입력하세요", message: "답장 내용이 비어 있어요." }); box.focus(); return; }
+        if (window.t25toast) window.t25toast({ type: "success", title: "답장 전송됨", message: e.name + "님에게 답장을 보냈어요." });
+        box.value = "";
+      });
+      var replyTop = document.getElementById("reply-top");
+      if (replyTop) replyTop.addEventListener("click", function () { document.getElementById("reply-box").focus(); });
+      var arch = document.getElementById("archive-btn"); if (arch) arch.addEventListener("click", function () { removeEmail(e, "보관함으로 옮겼어요."); });
+      var del = document.getElementById("del-btn"); if (del) del.addEventListener("click", function () { removeEmail(e, "휴지통으로 옮겼어요."); });
       rebindMenu();
     }
 
-    function removeEmail(e){
-      var i = emails.indexOf(e); if(i>-1) emails.splice(i,1);
-      renderList(); pane.innerHTML = emptyPane(); root.classList.remove("show-read");
-      if(window.t25toast) window.t25toast({type:"info",title:"처리됨",message:"메일을 정리했습니다."});
+    function removeEmail(e, msg) {
+      var i = emails.indexOf(e); if (i > -1) emails.splice(i, 1);
+      updateBadge();
+      showFolder(currentFolder);
+      if (window.t25toast) window.t25toast({ type: "info", title: "메일 정리됨", message: msg + " · 되돌리기" });
     }
 
-    function rebindMenu(){
+    function rebindMenu() {
       var trigger = pane.querySelector("[data-menu]");
-      if(!trigger) return;
+      if (!trigger) return;
       var menu = document.getElementById(trigger.dataset.menu);
-      trigger.setAttribute("aria-haspopup","true"); trigger.setAttribute("aria-expanded","false");
-      trigger.addEventListener("click", function(ev){ ev.stopPropagation(); menu.hidden=!menu.hidden; });
-      document.addEventListener("click", function(ev){ if(!trigger.contains(ev.target)&&!menu.contains(ev.target)) menu.hidden=true; });
+      trigger.setAttribute("aria-haspopup", "true");
+      trigger.setAttribute("aria-expanded", "false");
+      trigger.addEventListener("click", function (ev) { ev.stopPropagation(); var open = menu.hidden; menu.hidden = !open; trigger.setAttribute("aria-expanded", String(open)); });
+      document.addEventListener("click", function (ev) { if (!trigger.contains(ev.target) && !menu.contains(ev.target)) { menu.hidden = true; trigger.setAttribute("aria-expanded", "false"); } });
     }
 
-    function emptyPane(){
+    function emptyPane() {
       return '<div class="empty-state" style="margin:auto"><div class="es-art"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg></div><h3>메일을 선택하세요</h3><p>왼쪽 목록에서 메일을 클릭하면 여기에 표시됩니다.</p></div>';
     }
 
-    renderList();
-    pane.innerHTML = emptyPane();
-    // open first by default on wide screens
-    if (window.innerWidth > 1000 && emails.length) { openEmail(emails[0], listEl.children[0]); }
+    // Folder / label switching (works from the sidebar and the mobile drawer)
+    Array.prototype.forEach.call(document.querySelectorAll(".folder-btn"), function (btn) {
+      btn.addEventListener("click", function () {
+        var key = btn.dataset.folder;
+        Array.prototype.forEach.call(document.querySelectorAll(".folder-btn"), function (b) { b.removeAttribute("aria-current"); });
+        Array.prototype.forEach.call(document.querySelectorAll('.folder-btn[data-folder="' + key + '"]'), function (b) { b.setAttribute("aria-current", "page"); });
+        showFolder(key);
+        var ov = document.getElementById("mobile-nav");
+        if (ov && !ov.hidden && window.T25 && window.T25.Drawer) window.T25.Drawer.close(ov.querySelector(".drawer"));
+      });
+    });
+
+    updateBadge();
+    showFolder("inbox");
   })();
 </script>
 </body>

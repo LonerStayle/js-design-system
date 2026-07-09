@@ -31,7 +31,7 @@
       $$("[data-theme-toggle]").forEach((b) => {
         b.setAttribute("aria-pressed", String(mode === "dark"));
         const lbl = b.querySelector("[data-theme-label]");
-        if (lbl) lbl.textContent = mode === "dark" ? "Light" : "Dark";
+        if (lbl) lbl.textContent = mode === "dark" ? "라이트 모드" : "다크 모드";
       });
       document.dispatchEvent(new CustomEvent("gmm:theme", { detail: { mode } }));
     },
@@ -224,15 +224,16 @@
     return r;
   }
   function toast(opts = {}) {
-    const { title = "Notification", text = "", type = "info", duration = 4200 } = opts;
+    const { title = "알림", text = "", type = "info", duration = 4200 } = opts;
     const region = ensureToastRegion();
     const el = document.createElement("div");
     el.className = `toast toast--${type}`;
-    el.setAttribute("role", "status");
+    // errors interrupt (assertive); everything else is polite via the region
+    el.setAttribute("role", type === "danger" ? "alert" : "status");
     el.innerHTML =
       `<div class="toast__icon">${ICONS[type] || ICONS.info}</div>
        <div class="toast__body"><div class="toast__title">${title}</div>${text ? `<div class="toast__text">${text}</div>` : ""}</div>
-       <button class="toast__close" aria-label="Dismiss">${ICONS.danger}</button>
+       <button class="toast__close" aria-label="닫기">${ICONS.danger}</button>
        <div class="toast__progress" style="animation-duration:${duration}ms"></div>`;
     region.appendChild(el);
     const remove = () => { el.classList.add("is-leaving"); setTimeout(() => el.remove(), 320); };
@@ -244,8 +245,10 @@
     $$("[data-toast]", root).forEach((b) => {
       if (b.__init) return; b.__init = true;
       on(b, "click", () => toast({
-        title: b.dataset.toastTitle || "Saved",
-        text: b.dataset.toast || "",
+        title: b.dataset.toastTitle || "저장됨",
+        // prefer data-toast-text: a bare `data-toast="본문"` collides with the
+        // trigger attribute (HTML keeps the first, dropping the body).
+        text: b.dataset.toastText || b.dataset.toast || "",
         type: b.dataset.toastType || "success",
       }));
     });
@@ -258,29 +261,32 @@
     el: null, input: null, list: null, items: [], active: 0,
     build() {
       if (this.el) return;
+      // resolve page paths relative to wherever ⌘K is opened (root vs /pages/)
+      const inPages = /\/pages\//.test(location.pathname);
+      const P = (f) => (inPages ? "" : "pages/") + f;
       const data = (window.GMM_COMMANDS) || [
-        { group: "Navigate", label: "Go to Dashboard", icon: "grid", href: "pages/dashboard.html" },
-        { group: "Navigate", label: "Go to Kanban", icon: "columns", href: "pages/kanban.html" },
-        { group: "Navigate", label: "Go to Inbox", icon: "mail", href: "pages/inbox.html" },
-        { group: "Navigate", label: "Go to Pricing", icon: "tag", href: "pages/pricing.html" },
-        { group: "Navigate", label: "Go to Settings", icon: "settings", href: "pages/settings.html" },
-        { group: "Actions", label: "Toggle dark mode", icon: "moon", action: () => Theme.toggle() },
-        { group: "Actions", label: "Toggle motion", icon: "wind", action: () => Motion.set(document.documentElement.dataset.motion === "off" ? "on" : "off") },
-        { group: "Actions", label: "Show success toast", icon: "bell", action: () => toast({ title: "It works!", text: "Command executed.", type: "success" }) },
+        { group: "이동", label: "대시보드로 이동", icon: "grid", href: P("dashboard.html") },
+        { group: "이동", label: "칸반 보드로 이동", icon: "columns", href: P("kanban.html") },
+        { group: "이동", label: "받은편지함으로 이동", icon: "mail", href: P("inbox.html") },
+        { group: "이동", label: "요금제로 이동", icon: "tag", href: P("pricing.html") },
+        { group: "이동", label: "설정으로 이동", icon: "settings", href: P("settings.html") },
+        { group: "실행", label: "다크 모드 전환", icon: "moon", action: () => Theme.toggle() },
+        { group: "실행", label: "배경 모션 전환", icon: "wind", action: () => Motion.set(document.documentElement.dataset.motion === "off" ? "on" : "off") },
+        { group: "실행", label: "알림 미리보기", icon: "bell", action: () => toast({ title: "잘 작동합니다", text: "명령을 실행했어요.", type: "success" }) },
       ];
       this.data = data;
       const el = document.createElement("div");
-      el.className = "cmdk"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", "Command palette");
+      el.className = "cmdk"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", "명령 팔레트");
       el.innerHTML =
         `<div class="overlay"></div>
          <div class="cmdk__panel">
            <div class="cmdk__search">
              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-             <input type="text" placeholder="Type a command or search…" aria-label="Command input" aria-controls="cmdk-list" aria-expanded="true" role="combobox" aria-autocomplete="list"/>
+             <input type="text" placeholder="명령을 입력하거나 검색…" aria-label="명령 입력" aria-controls="cmdk-list" aria-expanded="true" role="combobox" aria-autocomplete="list"/>
              <kbd>esc</kbd>
            </div>
-           <div class="cmdk__list" id="cmdk-list" role="listbox"></div>
-           <div class="cmdk__footer"><span><kbd>↑</kbd><kbd>↓</kbd> navigate</span><span><kbd>↵</kbd> select</span><span><kbd>esc</kbd> close</span></div>
+           <div class="cmdk__list" id="cmdk-list" role="listbox" aria-live="polite"></div>
+           <div class="cmdk__footer"><span><kbd>↑</kbd><kbd>↓</kbd> 이동</span><span><kbd>↵</kbd> 선택</span><span><kbd>esc</kbd> 닫기</span></div>
          </div>`;
       document.body.appendChild(el);
       this.el = el; this.input = $(".cmdk__search input", el); this.list = $(".cmdk__list", el);
@@ -293,7 +299,7 @@
       const q = (this.input.value || "").toLowerCase();
       const filtered = this.data.filter((d) => d.label.toLowerCase().includes(q));
       this.items = filtered; this.active = 0;
-      if (!filtered.length) { this.list.innerHTML = `<div class="cmdk__empty">No results for “${this.input.value}”</div>`; return; }
+      if (!filtered.length) { this.list.innerHTML = `<div class="cmdk__empty">‘${this.input.value}’ 검색 결과가 없어요</div>`; return; }
       const groups = {};
       filtered.forEach((d) => { (groups[d.group] = groups[d.group] || []).push(d); });
       let html = "", idx = 0;
@@ -415,26 +421,63 @@
       on(dec, "click", () => { input.value = clamp((+input.value || 0) - (+input.step || 1)); });
       on(inc, "click", () => { input.value = clamp((+input.value || 0) + (+input.step || 1)); });
     });
-    // Rating
+    // Rating — input radiogroup: role=radio + aria-checked + arrow keys + roving tabindex
     $$(".rating", root).forEach((r) => {
       if (r.__init || r.classList.contains("rating--read")) { r.__init = true; return; } r.__init = true;
       const stars = $$("button", r);
       const paint = (n) => stars.forEach((s, i) => s.classList.toggle("is-on", i < n));
+      const setVal = (n, focus) => {
+        r.dataset.value = n; paint(n);
+        stars.forEach((s, i) => {
+          const sel = i === n - 1;
+          s.setAttribute("aria-checked", String(sel));
+          s.tabIndex = sel ? 0 : -1;
+        });
+        if (!n) stars[0].tabIndex = 0; // keep the group reachable when unrated
+        if (focus) stars[Math.max(n - 1, 0)]?.focus();
+      };
       stars.forEach((s, i) => {
-        on(s, "click", () => { r.dataset.value = i + 1; paint(i + 1); s.setAttribute("aria-checked", "true"); });
+        s.setAttribute("role", "radio");
+        on(s, "click", () => setVal(i + 1));
         on(s, "mouseenter", () => paint(i + 1));
+        on(s, "keydown", (e) => {
+          const v = +r.dataset.value || 0; let nv = null;
+          if (e.key === "ArrowRight" || e.key === "ArrowUp") nv = Math.min(v + 1, stars.length);
+          if (e.key === "ArrowLeft" || e.key === "ArrowDown") nv = Math.max(v - 1, 1);
+          if (e.key === "Home") nv = 1;
+          if (e.key === "End") nv = stars.length;
+          if (nv !== null) { e.preventDefault(); setVal(nv, true); }
+        });
       });
       on(r, "mouseleave", () => paint(+r.dataset.value || 0));
-      paint(+r.dataset.value || 0);
+      setVal(+r.dataset.value || 0);
     });
-    // Segmented control
+    // Segmented control — radiogroup semantics (role=radio + aria-checked + arrows)
     $$(".segmented", root).forEach((seg) => {
       if (seg.__init) return; seg.__init = true;
-      $$("button", seg).forEach((b) => on(b, "click", () => {
-        $$("button", seg).forEach((x) => { x.classList.remove("is-active"); x.setAttribute("aria-selected", "false"); });
-        b.classList.add("is-active"); b.setAttribute("aria-selected", "true");
+      const btns = $$("button", seg);
+      const select = (b) => {
+        btns.forEach((x) => {
+          const on_ = x === b;
+          x.classList.toggle("is-active", on_);
+          x.setAttribute("aria-checked", String(on_));
+          x.tabIndex = on_ ? 0 : -1;
+        });
         seg.dispatchEvent(new CustomEvent("gmm:segment", { detail: { value: b.dataset.value } }));
-      }));
+      };
+      btns.forEach((b, i) => {
+        on(b, "click", () => select(b));
+        on(b, "keydown", (e) => {
+          let idx = null;
+          if (e.key === "ArrowRight" || e.key === "ArrowDown") idx = (i + 1) % btns.length;
+          if (e.key === "ArrowLeft" || e.key === "ArrowUp") idx = (i - 1 + btns.length) % btns.length;
+          if (e.key === "Home") idx = 0;
+          if (e.key === "End") idx = btns.length - 1;
+          if (idx !== null) { e.preventDefault(); btns[idx].focus(); select(btns[idx]); }
+        });
+      });
+      const current = btns.find((b) => b.getAttribute("aria-checked") === "true") || btns[0];
+      if (current) select(current);
     });
     // Chip input
     $$(".chip-input", root).forEach((ci) => {
@@ -443,7 +486,7 @@
       const addChip = (text) => {
         if (!text.trim()) return;
         const chip = document.createElement("span"); chip.className = "chip";
-        chip.innerHTML = `${text}<button aria-label="Remove ${text}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>`;
+        chip.innerHTML = `${text}<button aria-label="${text} 제거"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>`;
         on(chip.querySelector("button"), "click", () => chip.remove());
         ci.insertBefore(chip, input);
       };
@@ -476,7 +519,7 @@
         if (!list) return; list.innerHTML = "";
         Array.from(files).forEach((f) => {
           const row = document.createElement("div"); row.className = "fileupload__file";
-          row.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/></svg><span style="flex:1">${f.name}</span><span class="text-subtle">${(f.size/1024).toFixed(0)} KB</span>`;
+          row.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/></svg><span style="flex:1">${f.name}</span><span class="text-subtle">${(f.size/1024).toFixed(0)}KB</span>`;
           list.appendChild(row);
         });
       };
@@ -600,7 +643,7 @@
       if (b.__init) return; b.__init = true;
       on(b, "click", () => {
         const text = b.dataset.copy || b.closest(".codeblock")?.querySelector("pre")?.innerText || "";
-        navigator.clipboard?.writeText(text).then(() => { const o = b.textContent; b.textContent = "Copied!"; setTimeout(() => (b.textContent = o), 1400); }).catch(() => toast({ title: "Copy failed", type: "danger" }));
+        navigator.clipboard?.writeText(text).then(() => { const o = b.textContent; b.textContent = "복사됨"; setTimeout(() => (b.textContent = o), 1400); }).catch(() => toast({ title: "복사하지 못했어요", type: "danger" }));
       });
     });
   }
@@ -623,6 +666,100 @@
   }
 
   /* ======================================================================
+     SPOTLIGHT — pointer-reactive card bloom (Linear/Vercel style).
+     One delegated listener streams card-local --mx/--my to .card--hover so the
+     CSS radial bloom follows the cursor. Skipped under reduced motion.
+     ====================================================================== */
+  const Spotlight = {
+    raf: null, card: null, x: 0, y: 0,
+    init() {
+      if (prefersReduced()) return;
+      on(document, "pointermove", (e) => {
+        const card = e.target.closest(".card--hover");
+        if (!card) return;
+        const r = card.getBoundingClientRect();
+        this.card = card; this.x = e.clientX - r.left; this.y = e.clientY - r.top;
+        if (!this.raf) this.raf = requestAnimationFrame(() => {
+          this.raf = null;
+          if (!this.card) return;
+          this.card.style.setProperty("--mx", this.x + "px");
+          this.card.style.setProperty("--my", this.y + "px");
+        });
+      }, { passive: true });
+    },
+  };
+
+  /* ======================================================================
+     MOOD — scroll-driven mesh colour journey. Sections tagged with
+     [data-mood-scene="cool|warm|fresh|twilight"] shift body[data-mood]; the
+     ambient mesh hue transitions in CSS (base.css). Whole-page override still
+     wins if <body data-mood> is set statically.
+     ====================================================================== */
+  function initMood(root) {
+    const scenes = $$("[data-mood-scene]", root);
+    if (!scenes.length || !("IntersectionObserver" in window)) return;
+    if (document.body.dataset.mood) return; // page pinned its own mood
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        if (en.isIntersecting) document.body.dataset.mood = en.target.dataset.moodScene;
+      });
+    }, { threshold: 0.5, rootMargin: "-30% 0px -30% 0px" });
+    scenes.forEach((s) => io.observe(s));
+  }
+
+  /* ======================================================================
+     KANBAN — minimal drag-drop + keyboard column move. Opt-in markup:
+       [data-kanban]  board   ·  [data-kanban-col]  column dropzone
+       .kanban-card[draggable="true"]  cards
+     A card may carry [data-kanban-move] buttons ("← 이전 / 다음 →") for keyboard
+     users; a polite live region announces moves. Inert if the markup is absent.
+     ====================================================================== */
+  function initKanban(root) {
+    $$("[data-kanban]", root).forEach((board) => {
+      if (board.__init) return; board.__init = true;
+      const cols = $$("[data-kanban-col]", board);
+      if (!cols.length) return;
+      let live = $(".kanban-live", board);
+      if (!live) { live = document.createElement("div"); live.className = "kanban-live sr-only"; live.setAttribute("aria-live", "polite"); board.appendChild(live); }
+      const colName = (col) => col.getAttribute("aria-label") || col.dataset.kanbanCol || "다른 열";
+      const announce = (card, col) => {
+        const t = $(".kanban-card__title", card)?.textContent.trim() || "카드";
+        live.textContent = `‘${t}’ 카드를 ‘${colName(col)}’(으)로 옮겼어요.`;
+      };
+      let dragged = null;
+      board.addEventListener("dragstart", (e) => {
+        const card = e.target.closest(".kanban-card"); if (!card) return;
+        dragged = card; card.classList.add("is-dragging");
+        e.dataTransfer.effectAllowed = "move";
+      });
+      board.addEventListener("dragend", () => {
+        dragged?.classList.remove("is-dragging");
+        cols.forEach((c) => c.classList.remove("is-dropzone")); dragged = null;
+      });
+      cols.forEach((col) => {
+        on(col, "dragover", (e) => { if (dragged) { e.preventDefault(); col.classList.add("is-dropzone"); } });
+        on(col, "dragleave", (e) => { if (!col.contains(e.relatedTarget)) col.classList.remove("is-dropzone"); });
+        on(col, "drop", (e) => {
+          if (!dragged) return; e.preventDefault(); col.classList.remove("is-dropzone");
+          const list = $("[data-kanban-list]", col) || col;
+          list.appendChild(dragged); announce(dragged, col);
+        });
+      });
+      // keyboard move buttons
+      on(board, "click", (e) => {
+        const btn = e.target.closest("[data-kanban-move]"); if (!btn) return;
+        const card = btn.closest(".kanban-card"); const col = card?.closest("[data-kanban-col]");
+        if (!card || !col) return;
+        const dir = btn.dataset.kanbanMove === "next" ? 1 : -1;
+        const idx = cols.indexOf(col); const target = cols[idx + dir];
+        if (!target) return;
+        ($("[data-kanban-list]", target) || target).appendChild(card);
+        announce(card, target); card.focus?.();
+      });
+    });
+  }
+
+  /* ======================================================================
      INIT
      ====================================================================== */
   function init(root = document) {
@@ -630,13 +767,14 @@
     initToastTriggers(root); initTables(root); initForms(root); initPopovers(root);
     initSidebar(root); initCarousels(root); initContextMenus(root);
     initCountUp(root); initReveal(root); initCopy(root);
+    initMood(root); initKanban(root);
   }
 
   const GMM = { init, toast, Theme, Motion, CommandPalette, openOverlay, closeOverlay };
   window.GMM = GMM;
 
   function boot() {
-    Theme.init(); Motion.init(); Mesh.init();
+    Theme.init(); Motion.init(); Mesh.init(); Spotlight.init();
     CommandPalette.init(); initGlobalDismiss();
     init(document);
   }

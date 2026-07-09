@@ -1,15 +1,25 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Inbox · Gradient Mesh Modern</title>
+<title>받은편지함 · Gradient Mesh Modern</title>
+<script>
+  /* FOUC guard — set the theme before first paint (key matches app.js) */
+  (function () {
+    try {
+      var t = localStorage.getItem("gmm-theme");
+      if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
 <link rel="stylesheet" href="../tokens.css" />
 <link rel="stylesheet" href="../semantic.css" />
 <link rel="stylesheet" href="../base.css" />
 <link rel="stylesheet" href="../components/index.css" />
 <style>
-  .mail { display:flex; height:calc(100vh - var(--navbar-h)); overflow:hidden; }
+  .mail { display:flex; height:calc(100dvh - var(--navbar-h)); overflow:hidden; }
   .mail__folders { width:230px; flex-shrink:0; padding:var(--space-4); border-right:var(--border-1) solid var(--color-border); background:var(--color-surface-2); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); display:flex; flex-direction:column; gap:var(--space-1); overflow:auto; }
   .mail__list { width:360px; flex-shrink:0; border-right:var(--border-1) solid var(--color-border); display:flex; flex-direction:column; background:var(--color-surface-3); }
   .mail__read { flex:1; display:flex; flex-direction:column; min-width:0; }
@@ -27,102 +37,122 @@
   .mail-item__top { display:flex; justify-content:space-between; gap:var(--space-2); }
   .mail-item__name { font-weight:600; font-size:var(--text-sm); }
   .mail-item__time { font-size:var(--text-xs); color:var(--color-text-subtle); flex-shrink:0; }
-  .mail-item__subj { font-size:var(--text-sm); font-weight:600; margin-top:1px; }
+  .mail-item__subj { font-size:var(--text-sm); font-weight:600; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .mail-item__snip { font-size:var(--text-xs); color:var(--color-text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:2px; }
   .unread-dot { width:8px; height:8px; border-radius:50%; background:var(--gradient-primary); flex-shrink:0; align-self:center; }
+  .mail__back { display:none; }
   @media (max-width:1024px){ .mail__folders{ display:none; } }
-  @media (max-width:768px){ .mail__list{ width:100%; } .mail__read{ display:none; } }
+  @media (max-width:768px){
+    .mail__list{ width:100%; }
+    .mail__read{ display:none; }
+    .mail.is-reading .mail__list{ display:none; }
+    .mail.is-reading .mail__read{ display:flex; }
+    .mail__back{ display:inline-flex; }
+  }
 </style>
 </head>
-<body class="mesh-grain">
-<a href="#main" class="skip-link">Skip to content</a>
+<body class="mesh-grain" data-mood="cool">
+<a href="#main" class="skip-link">본문으로 건너뛰기</a>
 
 <header class="navbar">
-  <a href="../index.html" class="navbar__brand"><span class="navbar__logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="8" cy="9" r="5"/><circle cx="16" cy="15" r="5"/></svg></span>Mesh<span class="text-gradient">Mail</span></a>
+  <a href="../index.html" class="navbar__brand"><span class="navbar__logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="9" r="5"/><circle cx="16" cy="15" r="5"/></svg></span>Mesh<span class="brand-accent">Mail</span></a>
   <span class="navbar__spacer"></span>
-  <button class="searchbar md-hide" data-cmdk style="width:220px" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><span style="flex:1;text-align:left;color:var(--color-text-subtle);font-size:var(--text-sm)">Search mail…</span><kbd>⌘K</kbd></button>
-  <button class="btn btn--icon btn--ghost" data-theme-toggle aria-label="Toggle theme" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
-  <a class="navbar__link" href="dashboard.html">← App</a>
+  <button class="searchbar md-hide" data-cmdk style="width:220px" aria-label="명령 팔레트 열기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><span style="flex:1;text-align:left;color:var(--color-text-subtle);font-size:var(--text-sm)">메일 검색…</span><kbd>⌘K</kbd></button>
+  <button class="btn btn--icon btn--ghost" data-theme-toggle aria-label="다크 모드 전환" aria-pressed="false" title="테마 전환"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+  <a class="navbar__link" href="dashboard.html">← 앱으로</a>
   <span class="avatar avatar--sm">JS</span>
 </header>
 
 <main id="main" class="mail">
   <!-- Folders -->
-  <nav class="mail__folders" aria-label="Mailboxes">
-    <button class="btn btn--primary btn--block mb-4" data-open="#compose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Compose</button>
-    <div class="folder is-active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4z"/><path d="M4 8l8 5 8-5"/></svg> Inbox <span class="badge badge--gradient">5</span></div>
-    <div class="folder"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg> Starred</div>
-    <div class="folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg> Sent</div>
-    <div class="folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h5"/></svg> Drafts <span class="badge">2</span></div>
-    <div class="folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v13H3z"/><path d="M3 7l2-3h14l2 3M10 12h4"/></svg> Archive</div>
-    <div class="folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg> Trash</div>
-    <div class="sidebar__section-title">Labels</div>
-    <div class="folder"><span class="label-dot" style="background:var(--purple-500)"></span> Work</div>
-    <div class="folder"><span class="label-dot" style="background:var(--teal-500)"></span> Personal</div>
-    <div class="folder"><span class="label-dot" style="background:var(--pink-500)"></span> Promotions</div>
+  <nav class="mail__folders" aria-label="메일함">
+    <button class="btn btn--primary btn--block mb-4" data-open="#compose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> 새 메일</button>
+    <div class="folder is-active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4z"/><path d="M4 8l8 5 8-5"/></svg> 받은편지함 <span class="badge badge--gradient">3</span></div>
+    <div class="folder"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg> 별표</div>
+    <div class="folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg> 보낸편지함</div>
+    <div class="folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h5"/></svg> 임시보관함 <span class="badge">2</span></div>
+    <div class="folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v13H3z"/><path d="M3 7l2-3h14l2 3M10 12h4"/></svg> 보관함</div>
+    <div class="folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg> 휴지통</div>
+    <div class="sidebar__section-title">라벨</div>
+    <div class="folder"><span class="label-dot" style="background:var(--priority-mid)"></span> 업무</div>
+    <div class="folder"><span class="label-dot" style="background:var(--color-accent)"></span> 개인</div>
+    <div class="folder"><span class="label-dot" style="background:var(--priority-high)"></span> 프로모션</div>
   </nav>
 
   <!-- List -->
-  <section class="mail__list" aria-label="Message list">
+  <section class="mail__list" aria-label="메일 목록">
     <div style="padding:var(--space-3) var(--space-4);border-bottom:var(--border-1) solid var(--color-divider)">
-      <div class="searchbar mb-3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input type="text" placeholder="Search inbox…" aria-label="Search inbox" /></div>
+      <div class="searchbar mb-3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input type="text" placeholder="받은편지함 검색…" aria-label="받은편지함 검색" /></div>
       <div class="tabs tabs--pills" data-tabs>
-        <div class="tabs__list" role="tablist" aria-label="Filter">
-          <button class="tabs__tab" role="tab" id="mt1" aria-controls="mp1" aria-selected="true">All</button>
-          <button class="tabs__tab" role="tab" id="mt2" aria-controls="mp2" aria-selected="false">Unread</button>
-          <button class="tabs__tab" role="tab" id="mt3" aria-controls="mp3" aria-selected="false">Flagged</button>
+        <div class="tabs__list" role="tablist" aria-label="필터">
+          <button class="tabs__tab" role="tab" id="mt1" aria-controls="mp1" aria-selected="true">전체</button>
+          <button class="tabs__tab" role="tab" id="mt2" aria-controls="mp2" aria-selected="false">안읽음</button>
+          <button class="tabs__tab" role="tab" id="mt3" aria-controls="mp3" aria-selected="false">별표</button>
         </div>
       </div>
     </div>
     <div style="overflow:auto;flex:1" role="tabpanel" id="mp1" aria-labelledby="mt1">
-      <div class="mail-item is-selected"><span class="avatar avatar--sm" style="background:var(--gradient-accent)">MK</span><div class="mail-item__main"><div class="mail-item__top"><span class="mail-item__name">Mika Kovač</span><span class="mail-item__time">9:24</span></div><div class="mail-item__subj">Mesh engine ready for review</div><div class="mail-item__snip">I pushed the gradient mesh background work — the drift cycle is now 28s and respects reduced-motion…</div></div><span class="unread-dot"></span></div>
-      <div class="mail-item"><span class="avatar avatar--sm">DR</span><div class="mail-item__main"><div class="mail-item__top"><span class="mail-item__name">Drew Park</span><span class="mail-item__time">8:02</span></div><div class="mail-item__subj">Re: Focus ring clipping</div><div class="mail-item__snip">Good catch. I think the issue is the overflow:hidden on the card — we can use a pseudo-element instead…</div></div></div>
-      <div class="mail-item"><span class="avatar avatar--sm" style="background:var(--gradient-warm)">AL</span><div class="mail-item__main"><div class="mail-item__top"><span class="mail-item__name">Aria Lim</span><span class="mail-item__time">Yest</span></div><div class="mail-item__subj">Q3 landing copy — first draft</div><div class="mail-item__snip">Here's a soft, modern angle for the hero. Let me know if the gradient headline feels right…</div></div><span class="unread-dot"></span></div>
-      <div class="mail-item"><span class="avatar avatar--sm">FG</span><div class="mail-item__main"><div class="mail-item__top"><span class="mail-item__name">Figma</span><span class="mail-item__time">Yest</span></div><div class="mail-item__subj">3 new comments on “Mesh UI”</div><div class="mail-item__snip">Mika and 2 others left feedback on your design file…</div></div></div>
-      <div class="mail-item"><span class="avatar avatar--sm" style="background:var(--gradient-accent)">VC</span><div class="mail-item__main"><div class="mail-item__top"><span class="mail-item__name">Vercel</span><span class="mail-item__time">Wed</span></div><div class="mail-item__subj">Deployment ready: mesh-ui-prod</div><div class="mail-item__snip">Your latest changes are live. Build #482 completed in 38s…</div></div><span class="unread-dot"></span></div>
-      <div class="mail-item"><span class="avatar avatar--sm" style="background:var(--gradient-warm)">ST</span><div class="mail-item__main"><div class="mail-item__top"><span class="mail-item__name">Stripe</span><span class="mail-item__time">Tue</span></div><div class="mail-item__subj">Your June invoice is available</div><div class="mail-item__snip">Invoice #2043 for $1,240.00 has been paid successfully…</div></div></div>
-      <div class="mail-item"><span class="avatar avatar--sm">NL</span><div class="mail-item__main"><div class="mail-item__top"><span class="mail-item__name">Design Weekly</span><span class="mail-item__time">Mon</span></div><div class="mail-item__subj">The return of mesh gradients</div><div class="mail-item__snip">This week: why soft multi-color backgrounds are everywhere in 2026…</div></div></div>
+      <div class="mail-item is-selected" data-msg="m1" role="button" tabindex="0"><span class="avatar avatar--sm" style="background:var(--gradient-accent)">미강</span><div class="mail-item__main"><div class="mail-item__top"><span class="mail-item__name">정미강</span><span class="mail-item__time">오전 9:24</span></div><div class="mail-item__subj">메시 배경 엔진, 리뷰 부탁드려요</div><div class="mail-item__snip">그라디언트 메시 배경 작업을 올렸어요 — 드리프트 주기를 28초로 맞췄고 모션 최소화도 지켜집니다…</div></div><span class="unread-dot"></span></div>
+      <div class="mail-item" data-msg="m2" role="button" tabindex="0"><span class="avatar avatar--sm">도윤</span><div class="mail-item__main"><div class="mail-item__top"><span class="mail-item__name">이도윤</span><span class="mail-item__time">오전 8:02</span></div><div class="mail-item__subj">Re: 포커스 링 잘림 이슈</div><div class="mail-item__snip">좋은 지적이에요. 카드의 overflow:hidden이 원인인 것 같아요 — 가상 요소로 바꾸면 해결될 듯…</div></div></div>
+      <div class="mail-item" data-msg="m3" role="button" tabindex="0"><span class="avatar avatar--sm" style="background:var(--gradient-warm)">예리</span><div class="mail-item__main"><div class="mail-item__top"><span class="mail-item__name">한예리</span><span class="mail-item__time">어제</span></div><div class="mail-item__subj">3분기 랜딩 카피 초안</div><div class="mail-item__snip">히어로에 쓸 부드럽고 모던한 방향으로 잡아봤어요. 그라디언트 헤드라인 톤이 맞는지 봐주세요…</div></div><span class="unread-dot"></span></div>
+      <div class="mail-item" data-msg="m4" role="button" tabindex="0"><span class="avatar avatar--sm">세</span><div class="mail-item__main"><div class="mail-item__top"><span class="mail-item__name">세줄일기</span><span class="mail-item__time">어제</span></div><div class="mail-item__subj">디자인 파일에 새 댓글 3개</div><div class="mail-item__snip">미강님 외 2명이 ‘Mesh UI’ 파일에 피드백을 남겼어요…</div></div></div>
+      <div class="mail-item" data-msg="m5" role="button" tabindex="0"><span class="avatar avatar--sm" style="background:var(--gradient-accent)">네</span><div class="mail-item__main"><div class="mail-item__top"><span class="mail-item__name">네이버클라우드</span><span class="mail-item__time">수</span></div><div class="mail-item__subj">배포 완료 · mesh-ui-prod</div><div class="mail-item__snip">최신 변경 사항이 반영됐어요. 빌드 #482가 38초 만에 완료됐습니다…</div></div><span class="unread-dot"></span></div>
+      <div class="mail-item" data-msg="m6" role="button" tabindex="0"><span class="avatar avatar--sm" style="background:var(--gradient-warm)">토</span><div class="mail-item__main"><div class="mail-item__top"><span class="mail-item__name">토스페이먼츠</span><span class="mail-item__time">화</span></div><div class="mail-item__subj">6월 정산 내역서가 준비됐어요</div><div class="mail-item__snip">정산 내역서 #2043 · ₩1,240,000이 정상 처리되었습니다…</div></div></div>
+      <div class="mail-item" data-msg="m7" role="button" tabindex="0"><span class="avatar avatar--sm">디</span><div class="mail-item__main"><div class="mail-item__top"><span class="mail-item__name">디자인위클리</span><span class="mail-item__time">월</span></div><div class="mail-item__subj">이번 주: 메시 그라디언트의 귀환</div><div class="mail-item__snip">2026년, 부드러운 멀티컬러 배경이 어디서나 보이는 이유…</div></div></div>
     </div>
-    <div hidden role="tabpanel" id="mp2" aria-labelledby="mt2" style="padding:var(--space-6)"><p class="text-muted">3 unread messages — same list filtered.</p></div>
-    <div hidden role="tabpanel" id="mp3" aria-labelledby="mt3" style="padding:var(--space-6)"><p class="text-muted">No flagged messages.</p></div>
+    <div hidden role="tabpanel" id="mp2" aria-labelledby="mt2">
+      <div class="mail-item" data-msg="m1" role="button" tabindex="0"><span class="avatar avatar--sm" style="background:var(--gradient-accent)">미강</span><div class="mail-item__main"><div class="mail-item__top"><span class="mail-item__name">정미강</span><span class="mail-item__time">오전 9:24</span></div><div class="mail-item__subj">메시 배경 엔진, 리뷰 부탁드려요</div><div class="mail-item__snip">그라디언트 메시 배경 작업을 올렸어요 — 드리프트 주기를 28초로 맞췄고…</div></div><span class="unread-dot"></span></div>
+      <div class="mail-item" data-msg="m3" role="button" tabindex="0"><span class="avatar avatar--sm" style="background:var(--gradient-warm)">예리</span><div class="mail-item__main"><div class="mail-item__top"><span class="mail-item__name">한예리</span><span class="mail-item__time">어제</span></div><div class="mail-item__subj">3분기 랜딩 카피 초안</div><div class="mail-item__snip">히어로에 쓸 부드럽고 모던한 방향으로 잡아봤어요…</div></div><span class="unread-dot"></span></div>
+      <div class="mail-item" data-msg="m5" role="button" tabindex="0"><span class="avatar avatar--sm" style="background:var(--gradient-accent)">네</span><div class="mail-item__main"><div class="mail-item__top"><span class="mail-item__name">네이버클라우드</span><span class="mail-item__time">수</span></div><div class="mail-item__subj">배포 완료 · mesh-ui-prod</div><div class="mail-item__snip">최신 변경 사항이 반영됐어요. 빌드 #482가 38초 만에 완료됐습니다…</div></div><span class="unread-dot"></span></div>
+    </div>
+    <div hidden role="tabpanel" id="mp3" aria-labelledby="mt3">
+      <div class="empty" style="padding:var(--space-10) var(--space-6)">
+        <div class="empty__art"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></div>
+        <div class="empty__title">별표 메일이 없어요</div>
+        <p class="empty__text">중요한 메일에 별표를 달아두면 여기에서 한 번에 볼 수 있어요.</p>
+      </div>
+    </div>
   </section>
 
   <!-- Reading pane -->
-  <section class="mail__read" aria-label="Message">
+  <section class="mail__read" aria-label="메일 내용">
     <div class="between" style="padding:var(--space-5) var(--space-6);border-bottom:var(--border-1) solid var(--color-divider);flex-wrap:wrap;gap:var(--space-3)">
-      <h2 style="font-size:var(--text-xl)">Mesh engine ready for review</h2>
+      <div class="row gap-2" style="min-width:0">
+        <button class="btn btn--icon btn--ghost mail__back" data-mail-back aria-label="목록으로 돌아가기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <h2 style="font-size:var(--text-xl)" id="read-subject">메시 배경 엔진, 리뷰 부탁드려요</h2>
+      </div>
       <div class="row gap-1">
-        <span class="tooltip-wrap"><button class="btn btn--icon btn--ghost" aria-label="Reply"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 17l-6-6 6-6M3 11h12a6 6 0 0 1 6 6v2"/></svg></button><span class="tooltip" role="tooltip">Reply</span></span>
-        <span class="tooltip-wrap"><button class="btn btn--icon btn--ghost" aria-label="Forward"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 17l6-6-6-6M21 11H9a6 6 0 0 0-6 6v2"/></svg></button><span class="tooltip" role="tooltip">Forward</span></span>
-        <span class="tooltip-wrap"><button class="btn btn--icon btn--ghost" aria-label="Archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v13H3z"/><path d="M3 7l2-3h14l2 3M10 12h4"/></svg></button><span class="tooltip" role="tooltip">Archive</span></span>
-        <span class="tooltip-wrap"><button class="btn btn--icon btn--ghost" data-toast data-toast-title="Moved to Trash" data-toast-type="warning" aria-label="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button><span class="tooltip" role="tooltip">Delete</span></span>
+        <span class="tooltip-wrap"><button class="btn btn--icon btn--ghost" aria-label="답장"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 17l-6-6 6-6M3 11h12a6 6 0 0 1 6 6v2"/></svg></button><span class="tooltip" role="tooltip">답장</span></span>
+        <span class="tooltip-wrap"><button class="btn btn--icon btn--ghost" aria-label="전달"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 17l6-6-6-6M21 11H9a6 6 0 0 0-6 6v2"/></svg></button><span class="tooltip" role="tooltip">전달</span></span>
+        <span class="tooltip-wrap"><button class="btn btn--icon btn--ghost" aria-label="보관"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v13H3z"/><path d="M3 7l2-3h14l2 3M10 12h4"/></svg></button><span class="tooltip" role="tooltip">보관</span></span>
+        <span class="tooltip-wrap"><button class="btn btn--icon btn--ghost" data-toast data-toast-title="휴지통으로 옮겼어요" data-toast-type="warning" data-toast-text="30일 뒤 영구 삭제돼요 · 되돌리기" aria-label="삭제"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button><span class="tooltip" role="tooltip">삭제</span></span>
       </div>
     </div>
     <div style="padding:var(--space-6);overflow:auto;flex:1">
       <div class="row gap-3 mb-6">
-        <span class="avatar" style="background:var(--gradient-accent)">MK</span>
-        <div class="grow"><div class="between"><strong>Mika Kovač</strong><span class="text-subtle" style="font-size:var(--text-sm)">Jun 21, 2026 · 9:24 AM</span></div><div class="text-muted" style="font-size:var(--text-sm)">mika@meshui.dev → me</div></div>
-        <button class="btn btn--icon btn--ghost" aria-label="Star"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button>
+        <span class="avatar" id="read-avatar" style="background:var(--gradient-accent)">미강</span>
+        <div class="grow"><div class="between"><strong id="read-from">정미강</strong><span class="text-subtle" style="font-size:var(--text-sm)" id="read-time">오늘 오전 9:24</span></div><div class="text-muted" style="font-size:var(--text-sm)"><span id="read-email">mika@meshui.dev</span> → 나</div></div>
+        <button class="btn btn--icon btn--ghost" aria-label="별표"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button>
       </div>
-      <div class="stack gap-4" style="font-size:var(--text-md);line-height:var(--leading-relaxed);color:var(--color-text)">
-        <p style="color:var(--color-text)">Hey Jin,</p>
-        <p>The gradient mesh background engine is ready for review. A few highlights:</p>
+      <div id="read-body" class="stack gap-4" style="font-size:var(--text-md);line-height:var(--leading-relaxed);color:var(--color-text)">
+        <p>진수님, 안녕하세요.</p>
+        <p>그라디언트 메시 배경 엔진 작업을 마무리했어요. 리뷰 부탁드립니다. 요약하면 이렇습니다.</p>
         <ul style="padding-left:var(--space-6);color:var(--color-text-muted);display:flex;flex-direction:column;gap:6px">
-          <li>Four animated color blobs + an aurora conic wash, all CSS.</li>
-          <li>Pointer parallax nudges blob positions subtly (disabled under reduced-motion).</li>
-          <li>A <code class="code-inline">data-motion="off"</code> hook lets users freeze it entirely.</li>
+          <li>부드러운 색 블롭 4개 + 오로라 워시를 전부 CSS로 구현했어요.</li>
+          <li>포인터 패럴랙스가 블롭 위치를 은근하게 밀어줍니다(모션 최소화 시 정지).</li>
+          <li><code class="code-inline">data-motion="off"</code> 훅으로 사용자가 배경을 완전히 멈출 수 있어요.</li>
         </ul>
-        <p>I kept it matte — no glass — per the brief. Take a look and let me know if the saturation feels right in dark mode.</p>
-        <p>— Mika</p>
+        <p>브리프대로 유리 느낌 없이 매트하게 유지했어요. 다크 모드에서 채도가 적당한지 확인해 주세요.</p>
+        <p>— 미강 드림</p>
       </div>
-      <div class="row gap-3 mt-6 wrap">
-        <div class="card" style="padding:var(--space-3) var(--space-4);display:flex;align-items:center;gap:var(--space-3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary-solid)" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/></svg> mesh-engine.pdf <span class="text-subtle" style="font-size:var(--text-xs)">240 KB</span></div>
-        <div class="card" style="padding:var(--space-3) var(--space-4);display:flex;align-items:center;gap:var(--space-3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/></svg> preview.png <span class="text-subtle" style="font-size:var(--text-xs)">1.1 MB</span></div>
+      <div id="read-files" class="row gap-3 mt-6 wrap">
+        <div class="card" style="padding:var(--space-3) var(--space-4);display:flex;align-items:center;gap:var(--space-3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="stroke:var(--color-primary-solid)" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/></svg> 메시엔진-리뷰.pdf <span class="text-subtle" style="font-size:var(--text-xs)">240 KB</span></div>
+        <div class="card" style="padding:var(--space-3) var(--space-4);display:flex;align-items:center;gap:var(--space-3)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="stroke:var(--color-accent)" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/></svg> 미리보기.png <span class="text-subtle" style="font-size:var(--text-xs)">1.1 MB</span></div>
       </div>
     </div>
     <div style="padding:var(--space-4) var(--space-6);border-top:var(--border-1) solid var(--color-divider)">
-      <div class="field"><textarea class="textarea" placeholder="Quick reply to Mika…" style="min-height:72px"></textarea></div>
-      <div class="between mt-3"><button class="btn btn--ghost btn--sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Attach</button><button class="btn btn--primary btn--sm" data-toast data-toast-title="Reply sent" data-toast-type="success">Send</button></div>
+      <div class="field"><textarea class="textarea" id="read-reply" placeholder="미강님에게 답장…" aria-label="빠른 답장" style="min-height:72px"></textarea></div>
+      <div class="between mt-3"><button class="btn btn--ghost btn--sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> 첨부</button><button class="btn btn--primary btn--sm" data-toast data-toast-title="답장을 보냈어요" data-toast-type="success">보내기</button></div>
     </div>
   </section>
 </main>
@@ -130,13 +160,98 @@
 <!-- Compose drawer -->
 <div class="overlay"></div>
 <div class="drawer" id="compose" role="dialog" aria-modal="true" aria-labelledby="compose-title">
-  <div class="drawer__header"><h2 class="drawer__title" id="compose-title">New message</h2><button class="btn btn--icon btn--ghost" data-close aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
-  <div class="field"><label class="field__label">To</label><div class="chip-input"><span class="chip">drew@meshui.dev<button aria-label="remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></span><input placeholder="Add recipient…" /></div></div>
-  <div class="field"><label class="field__label">Subject</label><input class="input" placeholder="Subject" /></div>
-  <div class="field grow"><label class="field__label">Message</label><textarea class="textarea" style="min-height:200px" placeholder="Write your message…"></textarea></div>
-  <div class="between"><button class="btn btn--ghost" data-close>Discard</button><button class="btn btn--primary" data-close data-toast data-toast-title="Message sent" data-toast-type="success">Send message</button></div>
+  <div class="drawer__header"><h2 class="drawer__title" id="compose-title">새 메일</h2><button class="btn btn--icon btn--ghost" data-close aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+  <div class="field"><label class="field__label">받는 사람</label><div class="chip-input"><span class="chip">doyun@meshui.dev<button aria-label="doyun@meshui.dev 제거"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></span><input placeholder="받는 사람 추가…" aria-label="받는 사람 추가" /></div></div>
+  <div class="field"><label class="field__label">제목</label><input class="input" placeholder="제목을 입력하세요" aria-label="제목" /></div>
+  <div class="field grow"><label class="field__label">내용</label><textarea class="textarea" style="min-height:200px" placeholder="메일 내용을 작성하세요…" aria-label="메일 내용"></textarea></div>
+  <div class="between"><button class="btn btn--ghost" data-close>작성 취소</button><button class="btn btn--primary" data-close data-toast data-toast-title="메일을 보냈어요" data-toast-type="success">메일 보내기</button></div>
 </div>
 
 <script src="../app.js"></script>
+<script>
+  /* A working reader: selecting a message swaps the reading pane, and on phones
+     it slides the list out for the message (list ↔ read stack). textContent only. */
+  (function () {
+    var MSG = {
+      m1: { from:"정미강", initials:"미강", grad:"var(--gradient-accent)", email:"mika@meshui.dev", time:"오늘 오전 9:24", subject:"메시 배경 엔진, 리뷰 부탁드려요",
+        body:[["p","진수님, 안녕하세요."],["p","그라디언트 메시 배경 엔진 작업을 마무리했어요. 리뷰 부탁드립니다. 브리프대로 유리 느낌 없이 매트하게 유지했고, 다크 모드에서 채도가 적당한지 봐주세요."],["p","— 미강 드림"]],
+        files:[{n:"메시엔진-리뷰.pdf",s:"240 KB"},{n:"미리보기.png",s:"1.1 MB"}] },
+      m2: { from:"이도윤", initials:"도윤", grad:"", email:"doyun@meshui.dev", time:"오늘 오전 8:02", subject:"Re: 포커스 링 잘림 이슈",
+        body:[["p","좋은 지적이에요."],["p","카드의 overflow:hidden 때문에 포커스 링이 잘리는 것 같아요. 가상 요소(::after)로 링을 그리면 잘림 없이 해결될 것 같습니다. 오후에 PR 올릴게요."],["p","— 도윤"]], files:[] },
+      m3: { from:"한예리", initials:"예리", grad:"var(--gradient-warm)", email:"yeri@meshui.dev", time:"어제 오후 6:41", subject:"3분기 랜딩 카피 초안",
+        body:[["p","진수님, 랜딩 카피 첫 초안이에요."],["p","히어로는 ‘그라디언트를 신호로 쓰다’ 방향으로 잡았어요. 부드럽고 모던한 톤인데, 그라디언트 헤드라인과 잘 붙는지 봐주세요."],["p","— 예리"]],
+        files:[{n:"3분기-랜딩카피.docx",s:"48 KB"}] },
+      m4: { from:"세줄일기", initials:"세", grad:"", email:"no-reply@sejul.kr", time:"어제 오후 3:12", subject:"디자인 파일에 새 댓글 3개",
+        body:[["p","‘Mesh UI’ 파일에 새 댓글이 3개 달렸어요."],["p","미강님 외 2명이 히어로 섹션과 카드 컴포넌트에 피드백을 남겼습니다. 파일에서 확인해 보세요."]], files:[] },
+      m5: { from:"네이버클라우드", initials:"네", grad:"var(--gradient-accent)", email:"no-reply@ncloud.com", time:"수요일 오전 11:08", subject:"배포 완료 · mesh-ui-prod",
+        body:[["p","최신 변경 사항이 성공적으로 배포됐어요."],["p","빌드 #482가 38초 만에 완료되어 모든 리전에 반영됐습니다. 헬스 체크는 전부 정상입니다."]], files:[] },
+      m6: { from:"토스페이먼츠", initials:"토", grad:"var(--gradient-warm)", email:"no-reply@tosspayments.com", time:"화요일 오전 9:00", subject:"6월 정산 내역서가 준비됐어요",
+        body:[["p","6월 정산 내역서가 준비됐습니다."],["p","정산 내역서 #2043 · ₩1,240,000이 정상 처리되었어요. 대시보드에서 상세 내역을 확인하실 수 있어요."]],
+        files:[{n:"2026-06-정산내역서.pdf",s:"96 KB"}] },
+      m7: { from:"디자인위클리", initials:"디", grad:"", email:"hello@designweekly.kr", time:"월요일 오전 7:30", subject:"이번 주: 메시 그라디언트의 귀환",
+        body:[["p","이번 주 디자인위클리입니다."],["p","2026년, 부드러운 멀티컬러 메시 배경이 다시 주목받는 이유를 짚어봤어요. 매트한 서피스와 신호로서의 그라디언트가 핵심입니다."]], files:[] }
+    };
+    var mail = document.querySelector(".mail");
+    var subjEl = document.getElementById("read-subject");
+    var avaEl = document.getElementById("read-avatar");
+    var fromEl = document.getElementById("read-from");
+    var timeEl = document.getElementById("read-time");
+    var emailEl = document.getElementById("read-email");
+    var bodyEl = document.getElementById("read-body");
+    var filesEl = document.getElementById("read-files");
+    var replyEl = document.getElementById("read-reply");
+
+    function fileCard(f) {
+      var wrap = document.createElement("div");
+      wrap.className = "card";
+      wrap.setAttribute("style", "padding:var(--space-3) var(--space-4);display:flex;align-items:center;gap:var(--space-3)");
+      var icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="stroke:var(--color-primary-solid)" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/></svg>';
+      var span = document.createElement("span");
+      span.className = "text-subtle";
+      span.setAttribute("style", "font-size:var(--text-xs)");
+      span.textContent = f.s;
+      wrap.innerHTML = icon + " " + f.n + " ";
+      wrap.appendChild(span);
+      return wrap;
+    }
+    function render(id) {
+      var m = MSG[id]; if (!m) return;
+      subjEl.textContent = m.subject;
+      avaEl.textContent = m.initials;
+      avaEl.setAttribute("style", "background:" + (m.grad || "var(--gradient-primary)"));
+      fromEl.textContent = m.from;
+      timeEl.textContent = m.time;
+      emailEl.textContent = m.email;
+      replyEl.setAttribute("placeholder", m.from + "님에게 답장…");
+      bodyEl.innerHTML = "";
+      m.body.forEach(function (b) {
+        var el = document.createElement(b[0]);
+        el.textContent = b[1];
+        bodyEl.appendChild(el);
+      });
+      filesEl.innerHTML = "";
+      if (m.files && m.files.length) {
+        m.files.forEach(function (f) { filesEl.appendChild(fileCard(f)); });
+        filesEl.style.display = "";
+      } else {
+        filesEl.style.display = "none";
+      }
+    }
+    document.querySelectorAll(".mail-item[data-msg]").forEach(function (item) {
+      item.addEventListener("click", function () {
+        document.querySelectorAll(".mail-item.is-selected").forEach(function (x) { x.classList.remove("is-selected"); });
+        document.querySelectorAll('.mail-item[data-msg="' + item.dataset.msg + '"]').forEach(function (x) { x.classList.add("is-selected"); });
+        var dot = item.querySelector(".unread-dot"); if (dot) dot.remove();
+        render(item.dataset.msg);
+        if (mail) mail.classList.add("is-reading");
+      });
+      item.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); item.click(); }
+      });
+    });
+    var back = document.querySelector("[data-mail-back]");
+    if (back) back.addEventListener("click", function () { if (mail) mail.classList.remove("is-reading"); });
+  })();
+</script>
 </body>
 </html>

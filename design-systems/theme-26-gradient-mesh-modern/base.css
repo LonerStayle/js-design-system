@@ -7,8 +7,9 @@
    prefers-reduced-motion freezes all ambient motion.
    ============================================================================ */
 
-/* ---- Fonts (graceful: falls back to system sans offline) ---------------- */
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&family=JetBrains+Mono:wght@400;500;600&display=swap");
+/* All web fonts load from a SINGLE @import in tokens.css (Latin + Hangul faces
+   together) — see the note there. Keeping every @import in one place avoids the
+   render-blocking serial fetch that a second import in this file would cause. */
 
 /* ===========================================================================
    RESET
@@ -68,8 +69,10 @@ body::before {
   z-index: -2;
   background: var(--color-bg);
   background-attachment: fixed;
-  filter: saturate(1.08);
+  /* --mood-hue drifts the ambient palette per data-mood scene (color journey) */
+  filter: saturate(1.08) hue-rotate(var(--mood-hue, 0deg));
   animation: mesh-drift var(--duration-mesh) var(--ease-in-out) infinite alternate;
+  transition: filter var(--duration-slow) var(--ease-standard);
   will-change: transform;
   pointer-events: none;
 }
@@ -77,18 +80,31 @@ body::before {
 body::after {
   content: "";
   position: fixed;
-  inset: 0;
+  /* oversized so the rotating conic never exposes a bare corner (P5) */
+  inset: -50%;
   z-index: -1;
   background: var(--aurora);
   mix-blend-mode: normal;
   opacity: 0.7;
+  filter: hue-rotate(var(--mood-hue, 0deg));
   animation: aurora-spin var(--duration-aurora) linear infinite;
+  transition: filter var(--duration-slow) var(--ease-standard);
   will-change: transform;
   pointer-events: none;
 }
 
-/* Optional fine grain overlay — subtle matte texture, no extra DOM */
-.mesh-grain::after {
+/* Mesh mood scenes — a small hue shift gives each page/section its own emotion
+   without touching the foreground "signal" gradients. */
+[data-mood="cool"]    { --mood-hue: -14deg; }  /* dashboards — calm blue/purple */
+[data-mood="warm"]    { --mood-hue: 22deg; }   /* pricing — pink/purple glow    */
+[data-mood="fresh"]   { --mood-hue: -32deg; }  /* onboarding — teal/blue        */
+[data-mood="twilight"]{ --mood-hue: 40deg; }   /* 404 — drifted, off-key        */
+
+/* Optional fine grain overlay — subtle matte texture, no extra DOM.
+   html 의사요소를 쓰는 이유: body::after는 오로라 레이어가 사용 중이라
+   .mesh-grain::after(특이도 우위)로 두면 오로라를 통째로 덮어써 렌더가 죽음.
+   html::after는 트리 순서상 body 의사요소들보다 나중에 칠해져 그레인이 오로라 위에 얹힘. */
+html:has(body.mesh-grain)::after {
   content: "";
   position: fixed;
   inset: 0;
@@ -108,8 +124,14 @@ body::after {
   to { transform: rotate(360deg); }
 }
 
-/* Animated blob positions (driven via custom props that app.js can nudge) */
-@keyframes blob-float-1 { 0%,100%{ } } /* reserved hook */
+/* Signature motion — a slow gradient border-beam for the "gradient as signal"
+   climax (featured plan, FAB). Registered angle so conic-gradient can animate. */
+@property --gm-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes beam-spin { to { --gm-angle: 360deg; } }
 
 /* ===========================================================================
    TYPOGRAPHY
@@ -156,6 +178,12 @@ a:not([class]):hover { color: var(--purple-700); }
   .text-gradient { color: var(--purple-600); -webkit-text-fill-color: currentColor; }
 }
 
+/* Brand wordmark accent — SOLID brand colour, clears 4.5:1 in both themes.
+   text-gradient is reserved for large display headings; an ~18px wordmark in
+   gradient text can drop below 4.5:1 on its lightest stop, so brand suffixes
+   (MeshUI, AuraAudio, the footer wordmark) use this instead. */
+.brand-accent { color: var(--color-primary-solid); }
+
 .text-muted   { color: var(--color-text-muted); }
 .text-subtle  { color: var(--color-text-subtle); }
 .text-center  { text-align: center; }
@@ -164,9 +192,11 @@ a:not([class]):hover { color: var(--purple-700); }
 
 /* Display / eyebrow utilities */
 .display-1 { font-size: clamp(2.6rem, 6vw, var(--text-7xl)); font-weight: var(--weight-extra);
-             line-height: 1.02; letter-spacing: var(--tracking-tighter); font-family: var(--font-display); }
+             line-height: 1.04; letter-spacing: var(--tracking-tighter); font-family: var(--font-display);
+             text-wrap: balance; }
 .display-2 { font-size: clamp(2.2rem, 5vw, var(--text-6xl)); font-weight: var(--weight-extra);
-             line-height: 1.05; letter-spacing: var(--tracking-tighter); font-family: var(--font-display); }
+             line-height: 1.06; letter-spacing: var(--tracking-tighter); font-family: var(--font-display);
+             text-wrap: balance; }
 .eyebrow   { font-size: var(--text-xs); font-weight: var(--weight-bold);
              letter-spacing: var(--tracking-widest); text-transform: uppercase;
              color: var(--color-primary-solid); }
@@ -178,7 +208,9 @@ a:not([class]):hover { color: var(--purple-700); }
 :focus-visible {
   outline: none;
   box-shadow: var(--ring);
-  border-radius: var(--radius-sm);
+  /* NB: no border-radius here — the ring is a box-shadow that already follows the
+     element's own radius; forcing radius-sm used to square off circular controls
+     (FAB, carousel nav, pagination). */
 }
 /* Elements that manage their own focus ring opt out via .focus-self */
 .focus-self:focus-visible { box-shadow: none; }
@@ -313,3 +345,33 @@ a:not([class]):hover { color: var(--purple-700); }
 html[data-motion="off"] body::before,
 html[data-motion="off"] body::after { animation: none !important; }
 [data-motion="off"] * { animation-play-state: paused !important; }
+
+/* ===========================================================================
+   HANGUL REFINEMENT LAYER
+   Premise: <html lang="ko"> + font-stack order already corrected (tokens.css).
+   Latin figures still bind to Plus Jakarta Sans; this only re-tunes 한글 metrics.
+   =========================================================================== */
+:lang(ko) {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-break: strict;
+}
+:lang(ko) p,
+:lang(ko) .lead { line-height: var(--leading-body-ko); }
+:lang(ko) :is(h1, h2, h3, h4, h5, h6) { line-height: var(--leading-heading-ko); }
+:lang(ko) :is(.display-1, .display-2) {
+  line-height: var(--leading-display-ko);
+  letter-spacing: var(--tracking-display-ko);
+}
+:lang(ko) :is(.eyebrow, .demo-label, .sidebar__section-title, .menu__label) {
+  letter-spacing: var(--tracking-caps-ko);
+  /* 한글엔 대문자 개념이 없다 — 라틴 키커의 uppercase는 무효 처리 */
+}
+:lang(ko) :is(em, i, cite) { font-style: normal; font-weight: var(--weight-semibold); }
+:lang(ko) :is(.table td, .statcard__value, .stat__value, .price, .cell-num) {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+/* single-weight safety: if Gothic A1 800 fails to load, never synthesize bold */
+:lang(ko) :is(.display-1, .display-2, h1, h2) { font-synthesis-weight: none; }
+/* tokens that must never break mid-string */
+.nowrap { white-space: nowrap; }

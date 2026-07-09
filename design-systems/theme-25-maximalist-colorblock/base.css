@@ -110,16 +110,10 @@ h1, h2, h3, h4, h5, h6 {
 .clip-slash        { clip-path: var(--block-divide-slash); }
 .clip-corner       { clip-path: var(--block-divide-corner); }
 
-/* Diagonal two-tone split background */
+/* Diagonal two-tone split background (full-bleed break bands) */
 .split-diagonal {
   background: linear-gradient(115deg,
               var(--plane-1) 0 50%, var(--plane-2) 50% 100%);
-}
-.split-diagonal-3 {
-  background: linear-gradient(115deg,
-              var(--plane-3) 0 33.33%,
-              var(--plane-5) 33.33% 66.66%,
-              var(--plane-6) 66.66% 100%);
 }
 
 /* Overlapping / layered color planes */
@@ -148,9 +142,44 @@ h1, h2, h3, h4, h5, h6 {
 .offset-cyan   { box-shadow: var(--shadow-offset) var(--cyan-400); }
 .offset-black  { box-shadow: var(--shadow-offset) var(--color-border-strong); }
 
-/* Ticker / marquee strip of blocks */
-.block-strip { display: flex; }
-.block-strip > * { flex: 1; min-height: 8px; }
+/* Signature 8-hue bar — the system's ID card. CSS-only (no children needed). */
+.hue-bar {
+  height: 0.625rem;   /* 10px signature strip */
+  background: linear-gradient(90deg,
+    var(--plane-1) 0 12.5%,  var(--plane-2) 12.5% 25%,
+    var(--plane-3) 25% 37.5%, var(--plane-4) 37.5% 50%,
+    var(--plane-5) 50% 62.5%, var(--plane-6) 62.5% 75%,
+    var(--plane-7) 75% 87.5%, var(--plane-8) 87.5% 100%);
+}
+
+/* Giant outline watermark behind section content.
+   Compose in markup with .headline-mega .headline-stroke for the type + outline. */
+.watermark {
+  position: absolute;
+  opacity: var(--fx-watermark-opacity);
+  pointer-events: none;
+  user-select: none;
+  z-index: var(--z-base);
+  white-space: nowrap;
+}
+
+/* Corner color wedge — a vivid plane that bleeds diagonally into the canvas.
+   Compose in markup with .clip-wedge (+ a .plane-* fill). */
+.corner-wedge {
+  position: absolute;
+  width: clamp(9rem, 26vw, 22rem);
+  aspect-ratio: 1;
+  opacity: var(--fx-wedge-opacity);
+  pointer-events: none;
+  z-index: var(--z-base);
+}
+.corner-wedge--tr { top: 0; right: 0; rotate: 90deg; }
+.corner-wedge--bl { bottom: 0; left: 0; rotate: 270deg; }
+
+/* Section that hosts behind-content ambiance (watermark, corner wedges).
+   Content sits above; decorative layers stay at the base. */
+.section--clash { position: relative; overflow: clip; }
+.section--clash > :not(.watermark):not(.corner-wedge) { position: relative; z-index: var(--z-block-1); }
 
 /* =============================  LAYOUT  =================================== */
 .container {
@@ -210,7 +239,8 @@ h1, h2, h3, h4, h5, h6 {
 :focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
-  border-radius: var(--radius-sm);
+  /* NOTE: no border-radius override — box-shadow ring already follows the
+     element's own radius; forcing radius-sm here squared off pill controls. */
 }
 /* Solid complementary outline alternative for elements that can't take shadow */
 .focus-outline:focus-visible {
@@ -252,6 +282,8 @@ h1, h2, h3, h4, h5, h6 {
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+  /* Reveals must land visible, never stuck at opacity:0 */
+  html.js [data-reveal] { opacity: 1 !important; }
 }
 
 /* Shared keyframes used across components */
@@ -259,10 +291,6 @@ h1, h2, h3, h4, h5, h6 {
 @keyframes block-in {
   from { opacity: 0; transform: translateY(24px); }
   to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes block-shift {
-  from { transform: translate(0, 0); }
-  to   { transform: translate(var(--btn-shift), var(--btn-shift)); }
 }
 @keyframes shimmer {
   from { background-position: -200% 0; }
@@ -281,6 +309,13 @@ h1, h2, h3, h4, h5, h6 {
 @keyframes drawer-in-left  { from { transform: translateX(-100%); } to { transform: translateX(0); } }
 @keyframes pulse-block { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+/* Signature color-block reveal: a plane wipes across left→right, then content
+   snaps in. Uses clip-path inset so the block "arrives" like a printed layer. */
+@keyframes wipe-in {
+  from { opacity: 0; clip-path: inset(0 100% 0 0); transform: translateY(10px); }
+  60%  { opacity: 1; }
+  to   { opacity: 1; clip-path: inset(0 0 0 0);    transform: translateY(0); }
+}
 
 /* Staggered page-load reveal (apply .reveal to children of .reveal-group) */
 .reveal-group .reveal {
@@ -296,6 +331,16 @@ h1, h2, h3, h4, h5, h6 {
 .reveal-group .reveal:nth-child(7) { animation-delay: 460ms; }
 .reveal-group .reveal:nth-child(8) { animation-delay: 530ms; }
 
+/* Scroll-triggered reveal — one IntersectionObserver engine in app.js flips
+   .is-in. Hidden state gated on html.js so no-JS / JS-fail leaves content shown. */
+html.js [data-reveal] { opacity: 0; }
+html.js [data-reveal].is-in {
+  animation: wipe-in var(--duration-slow) var(--ease-emphasized) forwards;
+}
+html.js [data-reveal].is-in:nth-child(2) { animation-delay: 80ms; }
+html.js [data-reveal].is-in:nth-child(3) { animation-delay: 160ms; }
+html.js [data-reveal].is-in:nth-child(4) { animation-delay: 240ms; }
+
 /* ===========================  RESPONSIVE  ================================ */
 @media (max-width: 1024px) {
   .grid-4 { grid-template-columns: repeat(2, 1fr); }
@@ -309,4 +354,35 @@ h1, h2, h3, h4, h5, h6 {
 }
 @media (min-width: 769px) {
   .show-mobile { display: none !important; }
+}
+
+/* ==========================================================================
+   HANGUL REFINEMENT LAYER — assumes <html lang="ko"> + corrected stack order.
+   References theme tokens only. Latin metrics don't carry over to 한글.
+   ========================================================================== */
+:lang(ko) {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  line-break: strict;
+}
+:lang(ko) :is(h1, h2, h3, .card-title, .modal-title, .drawer-title) {
+  line-height: var(--leading-heading-ko);
+  letter-spacing: var(--tracking-display-ko);
+}
+:lang(ko) :is(.display, .headline-mega, .watermark) {
+  line-height: var(--leading-display-ko);
+  letter-spacing: var(--tracking-display-ko);   /* Black Han Sans: no tightening */
+}
+:lang(ko) p { text-wrap: pretty; }
+/* Wide-tracked caps labels: Latin uppercase/tracking is invalid for 한글 —
+   drop the transform and clamp the tracking. */
+:lang(ko) :is(.eyebrow, .label, .section-tag, .tab, .badge, .btn) {
+  letter-spacing: var(--tracking-caps-ko);
+}
+:lang(ko) :is(.eyebrow, .label, .section-tag, .tab, .btn) { text-transform: none; }
+/* No faux italic / small-caps in Hangul */
+:lang(ko) :is(em, i, cite) { font-style: normal; font-weight: var(--weight-bold); }
+/* Data reads with lining tabular figures (numerals come from the Latin font) */
+:lang(ko) :is(.stat-value, .cell-num, .price, .slider-val, .table td) {
+  font-variant-numeric: tabular-nums lining-nums;
 }

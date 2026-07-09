@@ -1,8 +1,18 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+  /* FOUC guard — set the theme before first paint (key matches app.js) */
+  (function () {
+    try {
+      var t = localStorage.getItem("gmm-theme");
+      if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
 <title>Aura Pro Wireless · Gradient Mesh Modern</title>
 <link rel="stylesheet" href="../tokens.css" />
 <link rel="stylesheet" href="../semantic.css" />
@@ -10,93 +20,128 @@
 <link rel="stylesheet" href="../components/index.css" />
 <style>
   .pdp { display:grid; grid-template-columns:1fr 1fr; gap:var(--space-10); align-items:start; }
-  .gallery__main { aspect-ratio:1/1; border-radius:var(--radius-xl); display:grid; place-items:center; position:relative; overflow:hidden; box-shadow:var(--shadow-lg); }
+
+  /* Gallery main — the ambient mesh condensed into a single product orb (signature). */
+  .gallery__col { position:relative; }
+  .gallery__main {
+    aspect-ratio:1/1; border-radius:var(--radius-xl); display:grid; place-items:center;
+    position:relative; overflow:hidden; box-shadow:var(--shadow-lg);
+    color:var(--color-text-on-gradient);
+    background:
+      radial-gradient(58% 58% at 30% 26%, var(--mesh-blob-1), transparent 70%),
+      radial-gradient(54% 54% at 76% 30%, var(--mesh-blob-2), transparent 70%),
+      radial-gradient(60% 60% at 24% 80%, var(--mesh-blob-3), transparent 72%),
+      radial-gradient(56% 56% at 82% 78%, var(--mesh-blob-4), transparent 70%),
+      var(--gradient-vivid);
+  }
   .gallery__main::after { content:""; position:absolute; inset:0; box-shadow:var(--glow-soft) inset; pointer-events:none; }
   .gallery__thumbs { display:flex; gap:var(--space-3); margin-top:var(--space-4); }
   .thumb { width:72px; height:72px; border-radius:var(--radius-md); border:2px solid transparent; cursor:pointer; }
-  .thumb.is-active { border-color:var(--color-primary-solid); box-shadow:var(--shadow-sm); }
+  .thumb[aria-pressed="true"] { border-color:var(--color-primary-solid); box-shadow:var(--shadow-sm); }
+
+  /* Floating matte spec chips over the orb — decorative signature detail. */
+  .pdp-chip { position:absolute; z-index:2; display:inline-flex; align-items:center; gap:var(--space-2);
+    padding:var(--space-2) var(--space-4); border-radius:var(--radius-full);
+    background:var(--color-surface); border:var(--border-1) solid var(--color-border); box-shadow:var(--shadow-md);
+    font-size:var(--text-sm); font-weight:var(--weight-semibold); color:var(--color-text);
+    -webkit-backdrop-filter:blur(10px) saturate(1.2); backdrop-filter:blur(10px) saturate(1.2); }
+  .pdp-chip--tl { top:var(--space-4); left:var(--space-4); }
+  .pdp-chip--br { right:var(--space-4); bottom:var(--space-4); }
+  .pdp-chip .dot { width:8px; height:8px; border-radius:50%; background:var(--gradient-accent); box-shadow:0 0 0 4px var(--color-accent-weak); }
+
   .swatch-btn { width:36px; height:36px; border-radius:50%; border:3px solid transparent; cursor:pointer; box-shadow:var(--shadow-sm); }
-  .swatch-btn.is-active { border-color:var(--color-text); outline:2px solid var(--color-surface-solid); }
-  .price-row { display:flex; align-items:baseline; gap:var(--space-3); }
+  .swatch-btn[aria-checked="true"] { border-color:var(--color-text); outline:2px solid var(--color-surface-solid); }
+  .price-row { display:flex; align-items:baseline; gap:var(--space-3); flex-wrap:wrap; }
+  .li-check { color:var(--color-success); flex-shrink:0; }
   .review-bars { display:grid; grid-template-columns:auto 1fr auto; gap:var(--space-2) var(--space-3); align-items:center; }
-  @media (max-width:900px){ .pdp{ grid-template-columns:1fr; gap:var(--space-6); } }
+
+  /* Half star (honest 4.6 render) — clip the gold overlay to 60% width. */
+  .star-half { position:relative; display:inline-block; width:22px; height:22px; line-height:0; }
+  .star-half svg { position:absolute; inset:0; width:22px; height:22px; fill:currentColor; }
+  .star-half__bg { color:var(--rating-empty); }
+  .star-half__fg { color:var(--rating-star); clip-path:inset(0 40% 0 0); }
+
+  @media (max-width:900px){ .pdp{ grid-template-columns:1fr; gap:var(--space-6); } .pdp-chip--br{ bottom:var(--space-4); } }
+  @media (max-width:480px){ .pdp-chip{ font-size:var(--text-xs); padding:var(--space-1) var(--space-3); } }
 </style>
 </head>
 <body class="mesh-grain">
-<a href="#main" class="skip-link">Skip to content</a>
+<a href="#main" class="skip-link">본문으로 건너뛰기</a>
 
 <header class="navbar">
-  <a href="../index.html" class="navbar__brand"><span class="navbar__logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="8" cy="9" r="5"/><circle cx="16" cy="15" r="5"/></svg></span>Aura<span class="text-gradient">Audio</span></a>
-  <nav class="navbar__nav lg-hide" aria-label="Primary"><a class="navbar__link is-active" href="#">Shop</a><a class="navbar__link" href="#">Collections</a><a class="navbar__link" href="#">About</a></nav>
+  <a href="../index.html" class="navbar__brand"><span class="navbar__logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="8" cy="9" r="5"/><circle cx="16" cy="15" r="5"/></svg></span>Aura<span class="brand-accent">Audio</span></a>
+  <nav class="navbar__nav lg-hide" aria-label="주요 메뉴"><a class="navbar__link is-active" href="product.html" aria-current="page">스토어</a><a class="navbar__link" href="../index.html#components">컬렉션</a><a class="navbar__link" href="../index.html">소개</a></nav>
   <span class="navbar__spacer"></span>
   <div class="navbar__actions">
-    <button class="btn btn--icon btn--ghost" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
-    <button class="btn btn--icon btn--ghost" data-theme-toggle aria-label="Toggle theme" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
-    <span class="avatar-wrap"><button class="btn btn--icon btn--ghost" aria-label="Cart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></button><span class="badge badge--gradient" style="position:absolute;top:-2px;right:-2px;padding:0 5px">3</span></span>
+    <button class="btn btn--icon btn--ghost" aria-label="검색"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></button>
+    <button class="btn btn--icon btn--ghost" data-theme-toggle aria-label="다크 모드 전환" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+    <span class="avatar-wrap"><button class="btn btn--icon btn--ghost" aria-label="장바구니 (3개)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></button><span class="badge badge--gradient" aria-hidden="true" style="position:absolute;top:-2px;right:-2px;padding:0 5px">3</span></span>
     <span class="avatar avatar--sm">JS</span>
   </div>
 </header>
 
 <main id="main" class="container container-wide section-sm">
-  <nav class="breadcrumb mb-6" aria-label="Breadcrumb"><a href="#">Home</a><span class="breadcrumb__sep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span><a href="#">Headphones</a><span class="breadcrumb__sep"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span><span aria-current="page">Aura Pro Wireless</span></nav>
+  <nav class="breadcrumb mb-6" aria-label="탐색 경로"><a href="../index.html">홈</a><span class="breadcrumb__sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span><a href="product.html">헤드폰</a><span class="breadcrumb__sep" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span><span aria-current="page" class="nowrap">Aura Pro Wireless</span></nav>
 
   <div class="pdp" data-reveal>
     <!-- Gallery -->
-    <div>
-      <div class="gallery__main" id="pdp-main" style="background:var(--gradient-primary)">
-        <svg width="55%" height="55%" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-label="Headphones"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="2.5" y="13.5" width="4" height="7" rx="2"/><rect x="17.5" y="13.5" width="4" height="7" rx="2"/></svg>
+    <div class="gallery__col">
+      <div class="gallery__main" id="pdp-main">
+        <svg width="55%" height="55%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-label="Aura Pro Wireless 헤드폰"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="2.5" y="13.5" width="4" height="7" rx="2"/><rect x="17.5" y="13.5" width="4" height="7" rx="2"/></svg>
+        <span class="pdp-chip pdp-chip--tl" aria-hidden="true"><span class="dot"></span>적응형 ANC</span>
+        <span class="pdp-chip pdp-chip--br" aria-hidden="true">40시간 재생</span>
       </div>
-      <div class="gallery__thumbs">
-        <button class="thumb is-active" style="background:var(--gradient-primary)" aria-label="View 1" data-grad="var(--gradient-primary)"></button>
-        <button class="thumb" style="background:var(--gradient-accent)" aria-label="View 2" data-grad="var(--gradient-accent)"></button>
-        <button class="thumb" style="background:var(--gradient-warm)" aria-label="View 3" data-grad="var(--gradient-warm)"></button>
-        <button class="thumb" style="background:linear-gradient(135deg,#3B82F6,#14B8A6)" aria-label="View 4" data-grad="linear-gradient(135deg,#3B82F6,#14B8A6)"></button>
+      <div class="gallery__thumbs" role="group" aria-label="상품 이미지">
+        <button class="thumb" aria-label="이미지 1 보기" aria-pressed="true" data-grad="radial-gradient(58% 58% at 30% 26%, var(--mesh-blob-1), transparent 70%),radial-gradient(56% 56% at 82% 78%, var(--mesh-blob-4), transparent 70%),var(--gradient-vivid)" style="background:var(--gradient-vivid)"></button>
+        <button class="thumb" aria-label="이미지 2 보기" aria-pressed="false" data-grad="var(--gradient-accent)" style="background:var(--gradient-accent)"></button>
+        <button class="thumb" aria-label="이미지 3 보기" aria-pressed="false" data-grad="var(--gradient-warm)" style="background:var(--gradient-warm)"></button>
+        <button class="thumb" aria-label="이미지 4 보기" aria-pressed="false" data-grad="var(--gradient-scene-cool)" style="background:var(--gradient-scene-cool)"></button>
       </div>
     </div>
 
     <!-- Info -->
     <div class="stack gap-5">
-      <div class="row gap-3"><span class="badge badge--gradient">New</span><span class="badge badge--success badge--dot">In stock</span></div>
-      <h1 style="font-size:var(--text-4xl)">Aura Pro Wireless</h1>
-      <div class="row gap-3">
-        <div class="rating rating--read" data-value="4" role="img" aria-label="Rated 4 out of 5">
-          <button aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button>
-          <button aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button>
-          <button aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button>
-          <button aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button>
-          <button aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button>
+      <div class="row gap-3 wrap"><span class="badge badge--gradient">신제품</span><span class="badge badge--success badge--dot">재고 있음</span></div>
+      <h1 style="font-size:var(--text-4xl)" class="nowrap">Aura Pro Wireless</h1>
+      <div class="row gap-3 wrap">
+        <div class="rating rating--read" role="img" aria-label="리뷰 평점 5점 만점에 4.6점">
+          <button class="is-on" aria-hidden="true" tabindex="-1"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button>
+          <button class="is-on" aria-hidden="true" tabindex="-1"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button>
+          <button class="is-on" aria-hidden="true" tabindex="-1"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button>
+          <button class="is-on" aria-hidden="true" tabindex="-1"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button>
+          <span class="star-half"><svg class="star-half__bg" viewBox="0 0 24 24"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg><svg class="star-half__fg" viewBox="0 0 24 24"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></span>
         </div>
-        <span class="text-muted" style="font-size:var(--text-sm)">4.6 · 218 reviews</span>
+        <span class="text-muted" style="font-size:var(--text-sm)">4.6 · 리뷰 218개</span>
       </div>
-      <div class="price-row"><span style="font-size:var(--text-3xl);font-weight:800;font-family:var(--font-display)">$249</span><span class="text-subtle" style="text-decoration:line-through">$329</span><span class="badge badge--warm">Save 24%</span></div>
-      <p class="lead" style="font-size:var(--text-md)">Studio-grade adaptive noise cancellation, 40-hour battery, and a feather-soft fit. Tuned for long, focused sessions.</p>
+      <div class="price-row"><span class="nowrap" style="font-size:var(--text-3xl);font-weight:800;font-family:var(--font-display);font-variant-numeric:tabular-nums">₩249,000</span><span class="text-subtle nowrap" style="text-decoration:line-through">₩329,000</span><span class="badge badge--warm">24% 할인</span></div>
+      <p class="lead" style="font-size:var(--text-md)">스튜디오급 적응형 노이즈 캔슬링, 40시간 배터리, 깃털처럼 가벼운 착용감. 길고 몰입이 필요한 작업에 맞춰 튜닝했습니다.</p>
 
-      <div class="field"><label class="field__label">Color — <span style="color:var(--color-text-muted)" id="color-name">Nebula Purple</span></label>
-        <div class="row gap-3" role="radiogroup" aria-label="Color">
-          <button class="swatch-btn is-active" style="background:var(--gradient-primary)" aria-label="Nebula Purple" data-name="Nebula Purple"></button>
-          <button class="swatch-btn" style="background:var(--gradient-accent)" aria-label="Teal Mist" data-name="Teal Mist"></button>
-          <button class="swatch-btn" style="background:var(--gradient-warm)" aria-label="Rose Quartz" data-name="Rose Quartz"></button>
-          <button class="swatch-btn" style="background:#1B1E2E" aria-label="Midnight" data-name="Midnight"></button>
+      <div class="field"><label class="field__label" id="color-label">색상 — <span style="color:var(--color-text-muted)" id="color-name">네뷸라 퍼플</span></label>
+        <div class="row gap-3 swatch-group" role="radiogroup" aria-labelledby="color-label">
+          <button class="swatch-btn" style="background:var(--gradient-primary)" role="radio" aria-checked="true" aria-label="네뷸라 퍼플" data-name="네뷸라 퍼플"></button>
+          <button class="swatch-btn" style="background:var(--gradient-accent)" role="radio" aria-checked="false" tabindex="-1" aria-label="틸 미스트" data-name="틸 미스트"></button>
+          <button class="swatch-btn" style="background:var(--gradient-warm)" role="radio" aria-checked="false" tabindex="-1" aria-label="로즈 쿼츠" data-name="로즈 쿼츠"></button>
+          <button class="swatch-btn" style="background:var(--neutral-900)" role="radio" aria-checked="false" tabindex="-1" aria-label="미드나잇" data-name="미드나잇"></button>
         </div>
       </div>
 
-      <div class="field"><label class="field__label">Edition</label>
-        <div class="segmented" role="group" aria-label="Edition"><button class="is-active" data-value="std" aria-selected="true">Standard</button><button data-value="pro" aria-selected="false">Pro +$40</button></div>
+      <div class="field"><label class="field__label" id="edition-label">에디션</label>
+        <div class="segmented" role="radiogroup" aria-labelledby="edition-label"><button class="is-active" role="radio" data-value="std" aria-checked="true">스탠다드</button><button role="radio" data-value="pro" aria-checked="false" tabindex="-1" class="nowrap">프로 +₩40,000</button></div>
       </div>
 
       <div class="row gap-4 wrap">
-        <div class="field" style="flex:0"><label class="field__label">Qty</label><div class="stepper"><button aria-label="Decrease"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/></svg></button><input type="number" value="1" min="1" max="10" aria-label="Quantity" /><button aria-label="Increase"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg></button></div></div>
-        <div class="field grow" style="justify-content:flex-end"><label class="field__label sr-only">Actions</label>
-          <div class="row gap-2"><button class="btn btn--primary btn--lg grow" data-toast data-toast-title="Added to cart" data-toast-type="success" data-toast="Aura Pro Wireless × 1">Add to cart</button>
-          <button class="btn btn--icon btn--outline btn--lg" aria-label="Add to wishlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg></button></div>
+        <div class="field" style="flex:0"><label class="field__label" for="pdp-qty">수량</label><div class="stepper"><button aria-label="수량 감소"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/></svg></button><input type="number" id="pdp-qty" value="1" min="1" max="10" aria-label="수량" /><button aria-label="수량 증가"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg></button></div></div>
+        <div class="field grow" style="justify-content:flex-end"><span class="field__label sr-only">구매</span>
+          <div class="row gap-2"><button class="btn btn--primary btn--lg grow" data-toast data-toast-title="장바구니에 담았어요" data-toast-type="success" data-toast-text="Aura Pro Wireless · 1개">장바구니 담기</button>
+          <button class="btn btn--icon btn--outline btn--lg" data-toast data-toast-title="위시리스트에 추가했어요" data-toast-type="info" data-toast-text="Aura Pro Wireless" aria-label="위시리스트에 추가"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg></button></div>
         </div>
       </div>
-      <button class="btn btn--ghost btn--block">Buy now — one tap checkout</button>
+      <button class="btn btn--ghost btn--block">바로 구매 · 원탭 결제</button>
 
       <ul class="list" style="margin-top:var(--space-2)">
-        <li class="list__item" style="gap:var(--space-3);padding:var(--space-2) 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Free 2-day shipping</li>
-        <li class="list__item" style="gap:var(--space-3);padding:var(--space-2) 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> 2-year warranty included</li>
-        <li class="list__item" style="gap:var(--space-3);padding:var(--space-2) 0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> 30-day free returns</li>
+        <li class="list__item" style="gap:var(--space-3);padding:var(--space-2) 0"><svg class="li-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> 무료 배송 · 2일 이내 도착</li>
+        <li class="list__item" style="gap:var(--space-3);padding:var(--space-2) 0"><svg class="li-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> 2년 무상 보증 포함</li>
+        <li class="list__item" style="gap:var(--space-3);padding:var(--space-2) 0"><svg class="li-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> 30일 무료 반품</li>
       </ul>
     </div>
   </div>
@@ -104,67 +149,67 @@
   <!-- Tabs -->
   <section class="section-sm" data-reveal>
     <div data-tabs>
-      <div class="tabs__list" role="tablist" aria-label="Product details">
-        <button class="tabs__tab" role="tab" id="pt1" aria-controls="pp1" aria-selected="true">Description</button>
-        <button class="tabs__tab" role="tab" id="pt2" aria-controls="pp2" aria-selected="false">Specifications</button>
-        <button class="tabs__tab" role="tab" id="pt3" aria-controls="pp3" aria-selected="false">Reviews (218)</button>
+      <div class="tabs__list" role="tablist" aria-label="상품 상세">
+        <button class="tabs__tab" role="tab" id="pt1" aria-controls="pp1" aria-selected="true">상세 정보</button>
+        <button class="tabs__tab" role="tab" id="pt2" aria-controls="pp2" aria-selected="false">사양</button>
+        <button class="tabs__tab" role="tab" id="pt3" aria-controls="pp3" aria-selected="false">리뷰 218</button>
       </div>
       <div class="tabs__panel" role="tabpanel" id="pp1" aria-labelledby="pt1">
         <div class="grid grid-2" style="gap:var(--space-8);align-items:start">
-          <div class="stack gap-4"><p>The Aura Pro Wireless is built for people who live in their headphones. Adaptive noise cancellation reads your environment 200× per second and adjusts in real time — quiet enough for deep work, transparent enough to hear your name.</p><p>A memory-foam headband and breathable ear cushions keep things comfortable through marathon sessions, while 40 hours of battery means you'll forget where you left the charger.</p></div>
+          <div class="stack gap-4"><p>Aura Pro Wireless는 하루의 대부분을 헤드폰과 보내는 사람을 위해 만들었습니다. 적응형 노이즈 캔슬링이 주변 환경을 초당 200회 읽고 실시간으로 조정해요. 깊이 집중할 땐 충분히 조용하게, 이름을 부르면 들릴 만큼 투명하게.</p><p>메모리폼 헤드밴드와 통기성 이어쿠션이 마라톤 같은 작업 시간에도 편안함을 지켜 줍니다. 40시간 배터리 덕분에 충전기를 어디 뒀는지 잊게 될 거예요.</p></div>
           <div class="grid grid-2" style="gap:var(--space-4)">
-            <div class="card"><span class="statcard__icon mb-3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><strong>40h battery</strong><p style="font-size:var(--text-sm)">USB-C fast charge</p></div>
-            <div class="card"><span class="statcard__icon statcard__icon--teal mb-3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1v-4h3zM3 19a2 2 0 0 0 2 2h1v-4H3z"/></svg></span><strong>Adaptive ANC</strong><p style="font-size:var(--text-sm)">200× / second</p></div>
-            <div class="card"><span class="statcard__icon statcard__icon--warm mb-3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span><strong>Low latency</strong><p style="font-size:var(--text-sm)">≤ 40ms gaming</p></div>
-            <div class="card"><span class="statcard__icon mb-3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></span><strong>Multipoint</strong><p style="font-size:var(--text-sm)">2 devices at once</p></div>
+            <div class="card"><span class="statcard__icon mb-3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><strong>40시간 재생</strong><p style="font-size:var(--text-sm)">USB-C 고속 충전</p></div>
+            <div class="card"><span class="statcard__icon statcard__icon--teal mb-3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1v-4h3zM3 19a2 2 0 0 0 2 2h1v-4H3z"/></svg></span><strong>적응형 ANC</strong><p style="font-size:var(--text-sm)">초당 200회 측정</p></div>
+            <div class="card"><span class="statcard__icon statcard__icon--warm mb-3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span><strong>저지연</strong><p style="font-size:var(--text-sm)">게이밍 ≤ 40ms</p></div>
+            <div class="card"><span class="statcard__icon mb-3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></span><strong>멀티포인트</strong><p style="font-size:var(--text-sm)">동시 2대 연결</p></div>
           </div>
         </div>
       </div>
       <div class="tabs__panel" role="tabpanel" id="pp2" aria-labelledby="pt2" hidden>
         <div class="table-wrap" style="max-width:640px"><table class="table"><tbody>
-          <tr><td class="cell-strong">Driver</td><td>40mm dynamic, titanium-coated</td></tr>
-          <tr><td class="cell-strong">Bluetooth</td><td>5.4, LDAC + aptX Adaptive</td></tr>
-          <tr><td class="cell-strong">Battery</td><td>40h (ANC on), 60h (ANC off)</td></tr>
-          <tr><td class="cell-strong">Charging</td><td>USB-C, 10 min = 5 hours</td></tr>
-          <tr><td class="cell-strong">Weight</td><td>248 g</td></tr>
-          <tr><td class="cell-strong">Water resistance</td><td>IPX4</td></tr>
+          <tr><td class="cell-strong">드라이버</td><td>40mm 다이내믹, 티타늄 코팅</td></tr>
+          <tr><td class="cell-strong">블루투스</td><td>5.4, LDAC + aptX Adaptive</td></tr>
+          <tr><td class="cell-strong">배터리</td><td>40시간 (ANC 켬), 60시간 (ANC 끔)</td></tr>
+          <tr><td class="cell-strong">충전</td><td>USB-C · 10분 충전으로 5시간 재생</td></tr>
+          <tr><td class="cell-strong">무게</td><td>248g</td></tr>
+          <tr><td class="cell-strong">방수 등급</td><td>IPX4</td></tr>
         </tbody></table></div>
       </div>
       <div class="tabs__panel" role="tabpanel" id="pp3" aria-labelledby="pt3" hidden>
         <div class="grid grid-2" style="gap:var(--space-8);align-items:start">
           <div class="card center" style="flex-direction:column;gap:var(--space-3)">
             <span style="font-size:var(--text-6xl);font-weight:800;font-family:var(--font-display)" class="text-gradient">4.6</span>
-            <div class="rating rating--read" data-value="5" role="img" aria-label="4.6 of 5"><button aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><button aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><button aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><button aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><button aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button></div>
-            <span class="text-muted" style="font-size:var(--text-sm)">218 verified reviews</span>
+            <div class="rating rating--read" role="img" aria-label="평균 평점 5점 만점에 4.6점"><button class="is-on" aria-hidden="true" tabindex="-1"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><button class="is-on" aria-hidden="true" tabindex="-1"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><button class="is-on" aria-hidden="true" tabindex="-1"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><button class="is-on" aria-hidden="true" tabindex="-1"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><span class="star-half"><svg class="star-half__bg" viewBox="0 0 24 24"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg><svg class="star-half__fg" viewBox="0 0 24 24"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></span></div>
+            <span class="text-muted" style="font-size:var(--text-sm)">구매 인증 리뷰 218개</span>
             <div class="review-bars" style="width:100%;margin-top:var(--space-3)">
-              <span style="font-size:var(--text-xs)">5★</span><div class="progress progress--sm"><div class="progress__bar" style="width:72%"></div></div><span style="font-size:var(--text-xs)">72%</span>
-              <span style="font-size:var(--text-xs)">4★</span><div class="progress progress--sm"><div class="progress__bar" style="width:18%"></div></div><span style="font-size:var(--text-xs)">18%</span>
-              <span style="font-size:var(--text-xs)">3★</span><div class="progress progress--sm"><div class="progress__bar" style="width:6%"></div></div><span style="font-size:var(--text-xs)">6%</span>
-              <span style="font-size:var(--text-xs)">2★</span><div class="progress progress--sm"><div class="progress__bar" style="width:2%"></div></div><span style="font-size:var(--text-xs)">2%</span>
-              <span style="font-size:var(--text-xs)">1★</span><div class="progress progress--sm"><div class="progress__bar" style="width:2%"></div></div><span style="font-size:var(--text-xs)">2%</span>
+              <span style="font-size:var(--text-xs)">5점</span><div class="progress progress--sm" role="img" aria-label="5점 72%"><div class="progress__bar" style="width:72%"></div></div><span style="font-size:var(--text-xs)">72%</span>
+              <span style="font-size:var(--text-xs)">4점</span><div class="progress progress--sm" role="img" aria-label="4점 18%"><div class="progress__bar" style="width:18%"></div></div><span style="font-size:var(--text-xs)">18%</span>
+              <span style="font-size:var(--text-xs)">3점</span><div class="progress progress--sm" role="img" aria-label="3점 6%"><div class="progress__bar" style="width:6%"></div></div><span style="font-size:var(--text-xs)">6%</span>
+              <span style="font-size:var(--text-xs)">2점</span><div class="progress progress--sm" role="img" aria-label="2점 2%"><div class="progress__bar" style="width:2%"></div></div><span style="font-size:var(--text-xs)">2%</span>
+              <span style="font-size:var(--text-xs)">1점</span><div class="progress progress--sm" role="img" aria-label="1점 2%"><div class="progress__bar" style="width:2%"></div></div><span style="font-size:var(--text-xs)">2%</span>
             </div>
           </div>
           <div class="stack gap-4">
-            <div class="card"><div class="row gap-3 mb-2"><span class="avatar avatar--sm">EK</span><div><strong>Elena K.</strong><div class="text-subtle" style="font-size:var(--text-xs)">Jun 12, 2026 · Verified</div></div></div><div class="rating rating--read" data-value="5" style="margin-bottom:6px" role="img" aria-label="5 stars"><button aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><button aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><button aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><button aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><button aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button></div><p style="font-size:var(--text-sm)">"The ANC is genuinely the best I've used. Wore them on a 9-hour flight and forgot they were on."</p></div>
-            <div class="card"><div class="row gap-3 mb-2"><span class="avatar avatar--sm" style="background:var(--gradient-accent)">TM</span><div><strong>Theo M.</strong><div class="text-subtle" style="font-size:var(--text-xs)">Jun 8, 2026 · Verified</div></div></div><div class="rating rating--read" data-value="4" style="margin-bottom:6px" role="img" aria-label="4 stars"><button aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><button aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><button aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><button aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><button aria-hidden="true" style="color:var(--color-border-strong)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button></div><p style="font-size:var(--text-sm)">"Sound is fantastic and battery is unreal. Knocked one star because the case is a little bulky."</p></div>
+            <div class="card"><div class="row gap-3 mb-2"><span class="avatar avatar--sm">서연</span><div><strong>김서연</strong><div class="text-subtle" style="font-size:var(--text-xs)">2026년 6월 12일 · 구매 인증</div></div></div><div class="rating rating--read" role="img" aria-label="5점 만점에 5점" style="margin-bottom:6px"><button class="is-on" aria-hidden="true" tabindex="-1"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><button class="is-on" aria-hidden="true" tabindex="-1"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><button class="is-on" aria-hidden="true" tabindex="-1"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><button class="is-on" aria-hidden="true" tabindex="-1"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><button class="is-on" aria-hidden="true" tabindex="-1"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button></div><p style="font-size:var(--text-sm)">노이즈 캔슬링이 지금까지 써 본 것 중 최고예요. 9시간 비행 내내 끼고 있었는데 쓰고 있다는 걸 잊을 정도였습니다.</p></div>
+            <div class="card"><div class="row gap-3 mb-2"><span class="avatar avatar--sm" style="background:var(--gradient-accent)">준호</span><div><strong>박준호</strong><div class="text-subtle" style="font-size:var(--text-xs)">2026년 6월 8일 · 구매 인증</div></div></div><div class="rating rating--read" role="img" aria-label="5점 만점에 4점" style="margin-bottom:6px"><button class="is-on" aria-hidden="true" tabindex="-1"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><button class="is-on" aria-hidden="true" tabindex="-1"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><button class="is-on" aria-hidden="true" tabindex="-1"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><button class="is-on" aria-hidden="true" tabindex="-1"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button><button aria-hidden="true" tabindex="-1"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6.5 7 .8-5 4.7 1.3 7L12 17.8 5.4 21l1.3-7-5-4.7 7-.8z"/></svg></button></div><p style="font-size:var(--text-sm)">소리도 훌륭하고 배터리도 놀라워요. 케이스가 조금 두꺼워서 별 하나만 뺐습니다.</p></div>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- You may also like -->
+  <!-- Related -->
   <section class="section-sm" data-reveal>
-    <h2 class="mb-6">You may also like</h2>
+    <h2 class="mb-6">함께 보면 좋은 제품</h2>
     <div class="carousel" data-carousel style="padding-inline:var(--space-6)">
-      <button class="carousel__nav carousel__nav--prev" aria-label="Previous"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button class="carousel__nav carousel__nav--prev" aria-label="이전"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>
       <div class="carousel__track">
-        <div class="carousel__slide card" style="width:240px"><div style="height:130px;border-radius:var(--radius-md);background:var(--gradient-accent);margin-bottom:var(--space-3)"></div><strong>Aura Buds</strong><p style="font-size:var(--text-sm)">$129</p><button class="btn btn--secondary btn--sm btn--block mt-2">Add to cart</button></div>
-        <div class="carousel__slide card" style="width:240px"><div style="height:130px;border-radius:var(--radius-md);background:var(--gradient-warm);margin-bottom:var(--space-3)"></div><strong>Aura Mini</strong><p style="font-size:var(--text-sm)">$89</p><button class="btn btn--secondary btn--sm btn--block mt-2">Add to cart</button></div>
-        <div class="carousel__slide card" style="width:240px"><div style="height:130px;border-radius:var(--radius-md);background:linear-gradient(135deg,#3B82F6,#14B8A6);margin-bottom:var(--space-3)"></div><strong>Aura Stand</strong><p style="font-size:var(--text-sm)">$49</p><button class="btn btn--secondary btn--sm btn--block mt-2">Add to cart</button></div>
-        <div class="carousel__slide card" style="width:240px"><div style="height:130px;border-radius:var(--radius-md);background:var(--gradient-primary);margin-bottom:var(--space-3)"></div><strong>Aura Case</strong><p style="font-size:var(--text-sm)">$39</p><button class="btn btn--secondary btn--sm btn--block mt-2">Add to cart</button></div>
+        <div class="carousel__slide card" style="width:240px"><div style="height:130px;border-radius:var(--radius-md);background:var(--gradient-accent);margin-bottom:var(--space-3)" aria-hidden="true"></div><strong>Aura Buds</strong><p class="nowrap" style="font-size:var(--text-sm)">₩129,000</p><button class="btn btn--secondary btn--sm btn--block mt-2" data-toast data-toast-title="장바구니에 담았어요" data-toast-type="success" data-toast-text="Aura Buds · 1개">담기</button></div>
+        <div class="carousel__slide card" style="width:240px"><div style="height:130px;border-radius:var(--radius-md);background:var(--gradient-warm);margin-bottom:var(--space-3)" aria-hidden="true"></div><strong>Aura Mini</strong><p class="nowrap" style="font-size:var(--text-sm)">₩89,000</p><button class="btn btn--secondary btn--sm btn--block mt-2" data-toast data-toast-title="장바구니에 담았어요" data-toast-type="success" data-toast-text="Aura Mini · 1개">담기</button></div>
+        <div class="carousel__slide card" style="width:240px"><div style="height:130px;border-radius:var(--radius-md);background:var(--gradient-scene-cool);margin-bottom:var(--space-3)" aria-hidden="true"></div><strong>Aura Stand</strong><p class="nowrap" style="font-size:var(--text-sm)">₩49,000</p><button class="btn btn--secondary btn--sm btn--block mt-2" data-toast data-toast-title="장바구니에 담았어요" data-toast-type="success" data-toast-text="Aura Stand · 1개">담기</button></div>
+        <div class="carousel__slide card" style="width:240px"><div style="height:130px;border-radius:var(--radius-md);background:var(--gradient-primary);margin-bottom:var(--space-3)" aria-hidden="true"></div><strong>Aura Case</strong><p class="nowrap" style="font-size:var(--text-sm)">₩39,000</p><button class="btn btn--secondary btn--sm btn--block mt-2" data-toast data-toast-title="장바구니에 담았어요" data-toast-type="success" data-toast-text="Aura Case · 1개">담기</button></div>
       </div>
-      <button class="carousel__nav carousel__nav--next" aria-label="Next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button class="carousel__nav carousel__nav--next" aria-label="다음"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>
       <div class="carousel__dots"><span class="carousel__dot is-active"></span><span class="carousel__dot"></span><span class="carousel__dot"></span></div>
     </div>
   </section>
@@ -172,12 +217,40 @@
 
 <script src="../app.js"></script>
 <script>
-  /* gallery thumb + color swatch (page-local, after app.js) */
+  /* gallery thumb switch + color swatch radiogroup (page-local, after app.js) */
   (function(){
     var main=document.getElementById('pdp-main');
-    document.querySelectorAll('.thumb').forEach(function(t){ t.addEventListener('click',function(){ document.querySelectorAll('.thumb').forEach(function(x){x.classList.remove('is-active')}); t.classList.add('is-active'); if(main) main.style.background=t.dataset.grad; }); });
-    var name=document.getElementById('color-name');
-    document.querySelectorAll('.swatch-btn').forEach(function(s){ s.addEventListener('click',function(){ document.querySelectorAll('.swatch-btn').forEach(function(x){x.classList.remove('is-active')}); s.classList.add('is-active'); if(name) name.textContent=s.dataset.name; }); });
+    var thumbs=Array.prototype.slice.call(document.querySelectorAll('.thumb'));
+    thumbs.forEach(function(t){
+      t.addEventListener('click',function(){
+        thumbs.forEach(function(x){ x.setAttribute('aria-pressed','false'); });
+        t.setAttribute('aria-pressed','true');
+        if(main) main.style.background=t.dataset.grad;
+      });
+    });
+
+    var nameEl=document.getElementById('color-name');
+    var swatches=Array.prototype.slice.call(document.querySelectorAll('.swatch-group .swatch-btn'));
+    function selectSwatch(btn, focus){
+      swatches.forEach(function(s){
+        var on=s===btn;
+        s.setAttribute('aria-checked',String(on));
+        s.tabIndex=on?0:-1;
+      });
+      if(nameEl) nameEl.textContent=btn.dataset.name;
+      if(focus) btn.focus();
+    }
+    swatches.forEach(function(s,i){
+      s.addEventListener('click',function(){ selectSwatch(s); });
+      s.addEventListener('keydown',function(e){
+        var idx=null;
+        if(e.key==='ArrowRight'||e.key==='ArrowDown') idx=(i+1)%swatches.length;
+        if(e.key==='ArrowLeft'||e.key==='ArrowUp') idx=(i-1+swatches.length)%swatches.length;
+        if(e.key==='Home') idx=0;
+        if(e.key==='End') idx=swatches.length-1;
+        if(idx!==null){ e.preventDefault(); selectSwatch(swatches[idx],true); }
+      });
+    });
   })();
 </script>
 </body>

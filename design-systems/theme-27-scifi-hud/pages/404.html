@@ -1,68 +1,104 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Signal Lost · 404 · AETHER-HUD</title>
+<script>
+  /* Pre-paint theme + js flag — prevents light/dark flash and gates reveal-hiding. */
+  (function(){try{var t=localStorage.getItem('scifi-hud-theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();
+</script>
+<title>신호 손실 · 404 · AETHER-HUD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Gothic+A1:wght@400;500;700&family=Nanum+Gothic+Coding:wght@400;700&family=Noto+Sans+KR:wght@400;500;700&family=Orbitron:wght@400;500;600;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../semantic.css">
 <link rel="stylesheet" href="../base.css">
 <link rel="stylesheet" href="../components/index.css">
 <style>
-  .lost-wrap { min-height: 100vh; display: grid; place-items: center; padding: var(--space-6); text-align: center; position: relative; }
-  .lost-reticle { width: 220px; height: 220px; margin-inline: auto; position: relative; }
-  .lost-reticle .reticle { width: 100%; height: 100%; opacity: .6; }
-  .lost-404 { font-family: var(--font-display); font-weight: 900; font-size: clamp(5rem, 18vw, 11rem); line-height: .9; color: var(--color-primary); text-shadow: 0 0 40px var(--glow-cyan); letter-spacing: var(--tracking-wide); position: relative; }
+  .lost-wrap { min-height: 100dvh; display: grid; place-items: center; padding: var(--space-8) var(--space-5); }
+  /* The search field — a positioned host so the tracking reticle sweeps inside it. */
+  .search-field { position: relative; width: 100%; max-width: 640px; margin-inline: auto; text-align: center; padding-block: var(--space-6); }
+  /* Decorative scope reticle, always centred (the "scanner locked on this sector"). */
+  .scope { position: absolute; left: 50%; top: 46%; width: min(74vw, 360px); height: auto; aspect-ratio: 1; transform: translate(-50%, -50%); opacity: 0.32; pointer-events: none; }
+  /* Small crosshair that hunts the pointer (data-reticle-track). Desktop-pointer only. */
+  .search-reticle { position: absolute; top: 0; left: 0; width: 120px; height: 120px; opacity: 0; transition: opacity var(--duration-base) var(--ease-out); pointer-events: none; z-index: 1; filter: drop-shadow(0 0 8px var(--glow-cyan)); }
+  @media (hover: hover) and (pointer: fine) {
+    .search-field:hover .search-reticle { opacity: 0.9; }
+  }
+  @media (hover: none), (prefers-reduced-motion: reduce) { .search-reticle { display: none; } }
+
+  .lost-404 { position: relative; z-index: 2; font-family: var(--font-display); font-weight: var(--weight-black); font-size: clamp(6rem, 22vw, 13rem); line-height: 0.9; color: var(--color-primary); text-shadow: var(--text-holo), 0 0 40px var(--glow-cyan); letter-spacing: var(--tracking-wide); }
   .lost-404 .flicker { animation: hud-blink 1.4s steps(1) infinite; }
-  .lost-sub { font-family: var(--font-mono); letter-spacing: var(--tracking-widest); text-transform: uppercase; color: var(--color-danger); margin-block: var(--space-4); }
-  .lost-code { font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--color-text-faint); letter-spacing: var(--tracking-wide); }
-  .empty-demos { display: grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap: var(--space-5); margin-top: var(--space-11); }
+  .lost-sub { position: relative; z-index: 2; font-family: var(--font-mono); letter-spacing: var(--tracking-widest); text-transform: uppercase; color: var(--color-danger); margin-block: var(--space-3) var(--space-2); font-size: var(--text-xs); }
+  .lost-tag { position: relative; z-index: 2; font-family: var(--font-display); font-size: clamp(1.1rem, 3.5vw, 1.6rem); letter-spacing: var(--tracking-wide); margin-bottom: var(--space-4); }
+  .lost-lead { position: relative; z-index: 2; color: var(--color-text-muted); max-width: 44ch; margin: 0 auto var(--space-6); }
+  .lost-actions { position: relative; z-index: 2; display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: center; }
+  .lost-code { position: relative; z-index: 2; font-family: var(--font-mono); font-size: var(--text-2xs); color: var(--color-text-faint); letter-spacing: var(--tracking-wide); margin-top: var(--space-6); }
+
+  /* Recovery — charted coordinates the operator can jump back to. Real nav. */
+  .recover-head { display: flex; align-items: center; gap: var(--space-3); max-width: 640px; margin: var(--space-11) auto var(--space-4); }
+  .recover-head .rh-label { font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: var(--tracking-widest); text-transform: uppercase; color: var(--color-primary); white-space: nowrap; }
+  .recover-head .rh-line { flex: 1; height: 1px; background: linear-gradient(90deg, var(--color-border-strong), transparent); }
+  .recover-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); max-width: 640px; margin-inline: auto; }
+  .recover { position: relative; display: grid; gap: var(--space-2); padding: var(--space-5); background: var(--color-surface); border: 1px solid var(--color-border-faint); clip-path: var(--clip-bevel); --bevel: 8px; text-align: left; transition: background var(--duration-fast) var(--ease-out), border-color var(--duration-fast); }
+  .recover:hover, .recover:focus-visible { background: var(--color-primary-muted); border-color: var(--color-border-strong); }
+  .recover .rc-coord { font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: var(--tracking-wide); color: var(--color-text-faint); }
+  .recover .rc-name { font-family: var(--font-display); font-size: var(--text-md); letter-spacing: var(--tracking-wide); color: var(--color-text-strong); }
+  .recover .rc-arrow { position: absolute; right: var(--space-4); bottom: var(--space-4); color: var(--color-primary); transition: transform var(--duration-fast); }
+  .recover:hover .rc-arrow, .recover:focus-visible .rc-arrow { transform: translateX(4px); }
+  @media (max-width: 560px) { .recover-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
-<a class="skip-link" href="#main">Skip to content</a>
-<div class="lost-wrap" id="main">
-  <div class="container" style="max-width:680px">
-    <div class="coord-frame">
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
+<main class="lost-wrap" id="main">
+  <div class="container" style="max-width:720px">
+
+    <section class="search-field coord-frame" aria-labelledby="lost-title">
       <span class="cf-tl" aria-hidden="true">SIGNAL//LOST</span><span class="cf-tr" aria-hidden="true">ERR 0x194</span>
       <span class="cf-bl" aria-hidden="true">RETRY <span data-telemetry data-base="3" data-range="2">3</span></span><span class="cf-br" aria-hidden="true">UPLINK <span class="text-danger">DOWN</span></span>
-      <div class="lost-reticle" aria-hidden="true"><div class="reticle spin"></div></div>
-      <div class="lost-404"><span>4</span><span class="flicker">0</span><span>4</span></div>
-      <div class="lost-sub">⚠ Signal Lost · Coordinate Not Found</div>
-      <p class="text-muted" style="max-width:46ch;margin-inline:auto">The sector you requested is outside known space, or the uplink was severed. Re-establish connection to a charted coordinate.</p>
-      <div class="row center mt-6" style="gap:var(--space-3)">
-        <a class="btn btn-primary btn-lg" href="../index.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Return to Hub</a>
-        <button class="btn btn-secondary btn-lg" data-toast="warning" data-toast-title="RE-SCANNING" data-toast-msg="Sweeping for signal…"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.5 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.5 15"/></svg>Re-scan</button>
-      </div>
-      <p class="lost-code mt-6">TRACE · sector=??? · bearing=null · last_ping=signal_lost</p>
-    </div>
 
-    <!-- Empty state variants -->
-    <div class="empty-demos">
-      <div class="card empty-state">
-        <span class="es-art" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
-        <span class="es-code">NO TELEMETRY</span>
-        <h3 style="font-size:var(--text-md)">No Data Stream</h3>
-        <p class="text-muted" style="font-size:var(--text-sm)">No telemetry has been received from this unit yet.</p>
-        <button class="btn btn-secondary btn-sm">Connect Source</button>
+      <div class="reticle spin scope" aria-hidden="true"></div>
+      <div class="reticle search-reticle" data-reticle-track aria-hidden="true"></div>
+
+      <h1 id="lost-title" class="sr-only">404 · 신호 손실 — 요청한 좌표를 찾을 수 없습니다</h1>
+      <div class="lost-404" aria-hidden="true"><span>4</span><span class="flicker">0</span><span>4</span></div>
+      <p class="lost-sub" aria-hidden="true"><span aria-hidden="true">⚠</span> SIGNAL LOST · COORDINATE NOT FOUND</p>
+      <p class="lost-tag"><span class="u-holo">신호를 수색하고 있습니다</span></p>
+      <p class="lost-lead">요청하신 섹터는 미확인 공간이거나 업링크가 끊긴 좌표입니다. 등록된 좌표로 다시 연결하세요.</p>
+
+      <div class="lost-actions">
+        <a class="btn btn-primary btn-lg" href="../index.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>허브로 복귀</a>
+        <button class="btn btn-secondary btn-lg" data-toast="warning" data-toast-title="재탐색" data-toast-msg="주변 섹터에서 신호를 다시 훑고 있습니다…"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.5 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.5 15"/></svg>재탐색</button>
       </div>
-      <div class="card empty-state">
-        <span class="es-art" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/></svg></span>
-        <span class="es-code">INBOX EMPTY</span>
-        <h3 style="font-size:var(--text-md)">No Transmissions</h3>
-        <p class="text-muted" style="font-size:var(--text-sm)">Your comms channel is clear. No new signals.</p>
-        <button class="btn btn-secondary btn-sm">Compose</button>
-      </div>
-      <div class="card empty-state">
-        <span class="es-art" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M21 21l-4.35-4.35M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"/></svg></span>
-        <span class="es-code">NO RESULTS</span>
-        <h3 style="font-size:var(--text-md)">Nothing Found</h3>
-        <p class="text-muted" style="font-size:var(--text-sm)">No units match your scan parameters. Adjust filters.</p>
-        <button class="btn btn-secondary btn-sm">Clear Filters</button>
-      </div>
+
+      <p class="lost-code" aria-hidden="true">TRACE · sector=??? · bearing=null · last_ping=signal_lost</p>
+    </section>
+
+    <div class="recover-head">
+      <span class="rh-label">복귀 좌표</span><span class="rh-line" aria-hidden="true"></span>
     </div>
+    <nav class="recover-grid" aria-label="복귀 좌표">
+      <a class="recover bracket-frame" href="dashboard.html">
+        <span class="rc-coord">SECTOR Alpha-7</span>
+        <span class="rc-name">관제 대시보드</span>
+        <span class="rc-arrow" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+      </a>
+      <a class="recover bracket-frame" href="inbox.html">
+        <span class="rc-coord">SECTOR Bravo-2</span>
+        <span class="rc-name">교신 콘솔</span>
+        <span class="rc-arrow" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+      </a>
+      <a class="recover bracket-frame" href="kanban.html">
+        <span class="rc-coord">SECTOR Delta-9</span>
+        <span class="rc-name">임무 보드</span>
+        <span class="rc-arrow" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+      </a>
+    </nav>
+
   </div>
-</div>
+</main>
 
 <script src="../app.js"></script>
 </body>

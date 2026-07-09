@@ -1,15 +1,27 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>System Initialization · AETHER-HUD</title>
+<script>
+  (function(){try{var t=localStorage.getItem('scifi-hud-theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}document.documentElement.classList.add('js');})();
+</script>
+<title>시스템 초기화 · AETHER-HUD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Gothic+A1:wght@400;500;700&family=Nanum+Gothic+Coding:wght@400;700&family=Noto+Sans+KR:wght@400;500;700&family=Orbitron:wght@400;500;600;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap">
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../semantic.css">
 <link rel="stylesheet" href="../base.css">
 <link rel="stylesheet" href="../components/index.css">
 <style>
-  .ob-wrap { min-height: 100vh; display: grid; place-items: center; padding: var(--space-6); }
+  .ob-topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--color-border-faint); }
+  .ob-topbar .coord { font-family: var(--font-mono); }
+  .ob-exit { font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: var(--tracking-wide); text-transform: uppercase; color: var(--color-text-muted); text-decoration: none; padding: var(--space-1) var(--space-2); }
+  .ob-exit:hover { color: var(--color-primary); }
+  .ob-exit:focus-visible { box-shadow: var(--ring-cyan); }
+
+  .ob-wrap { min-height: calc(100dvh - 58px); display: grid; place-items: center; padding: var(--space-6); }
   .ob-card { width: min(680px, 100%); position: relative; }
   .ob-steps { margin-bottom: var(--space-8); }
   .ob-panel { min-height: 320px; display: flex; flex-direction: column; }
@@ -17,110 +29,160 @@
   .ob-head { text-align: center; margin-bottom: var(--space-7); }
   .ob-head .obh-eyebrow { font-family: var(--font-mono); font-size: var(--text-2xs); letter-spacing: var(--tracking-widest); text-transform: uppercase; color: var(--color-primary); }
   .ob-head h2 { font-size: var(--text-2xl); margin-top: var(--space-2); }
-  .ob-foot { margin-top: auto; padding-top: var(--space-6); display: flex; justify-content: space-between; gap: var(--space-3); }
+  .ob-foot { margin-top: auto; padding-top: var(--space-6); display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); }
+  .set-row { display: flex; align-items: center; gap: var(--space-4); }
+  .set-row .sr-main { flex: 1; }
+  .set-row .sr-name { font-weight: 600; }
+  .set-row .sr-desc { font-size: var(--text-xs); color: var(--color-text-muted); }
+
   .choice-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: var(--space-4); }
-  .choice { display: grid; gap: var(--space-2); place-items: center; padding: var(--space-6) var(--space-4); text-align: center; border: var(--border-1); clip-path: var(--clip-bevel); --bevel: 8px; cursor: pointer; transition: all var(--duration-fast); }
+  .choice { display: grid; gap: var(--space-2); place-items: center; padding: var(--space-6) var(--space-4); text-align: center; border: var(--border-1); clip-path: var(--clip-bevel); --bevel: 8px; cursor: pointer; transition: border-color var(--duration-fast), background var(--duration-fast), box-shadow var(--duration-fast); }
   .choice svg { width: 32px; height: 32px; color: var(--color-primary); }
   .choice:hover { border-color: var(--color-primary); background: var(--color-primary-muted); }
-  .choice.is-active { border-color: var(--color-primary); background: var(--color-primary-muted); box-shadow: var(--glow-sm); }
+  .choice[aria-checked="true"] { border-color: var(--color-primary); background: var(--color-primary-muted); box-shadow: var(--glow-sm); }
+  .choice:focus-visible { box-shadow: var(--ring-cyan); z-index: 1; }
   .choice .ch-name { font-weight: 600; }
-  .boot-final { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var(--leading-relaxed); color: var(--color-primary); }
+  .choice .ch-role { font-family: var(--font-mono); font-size: 9px; letter-spacing: var(--tracking-wide); color: var(--color-text-faint); }
+
+  .boot-final { font-family: var(--font-mono); font-size: var(--text-xs); line-height: var(--leading-relaxed); text-align: left; color: var(--code-fg); background: var(--code-bg); border: var(--border-1); clip-path: var(--clip-bevel); --bevel: 8px; padding: var(--space-4) var(--space-5); }
+  .boot-final .ln { color: var(--code-com); }
   .boot-final .ok { color: var(--color-success); }
 </style>
 </head>
 <body>
-<div class="ob-wrap">
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
+<header class="ob-topbar">
+  <a class="brand" href="../index.html" aria-label="AETHER-HUD 홈"><span class="brand-mark" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M16 2l12 7v14l-12 7L4 23V9z"/><circle cx="16" cy="16" r="5"/></svg></span><span class="brand-name">AETHER<b>·HUD</b></span></a>
+  <a class="ob-exit" href="dashboard.html">나중에 설정</a>
+</header>
+
+<main id="main" class="ob-wrap">
   <div class="card panel ob-card scan-host">
     <span class="brackets" aria-hidden="true"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></span>
 
-    <!-- Steps header -->
+    <!-- 진행 단계 -->
     <div class="steps ob-steps" id="ob-stepper">
-      <div class="step is-active"><span class="step-dot">1</span><span class="step-label">Identity</span><span class="step-sub">CALLSIGN</span></div>
-      <div class="step"><span class="step-dot">2</span><span class="step-label">Role</span><span class="step-sub">FUNCTION</span></div>
-      <div class="step"><span class="step-dot">3</span><span class="step-label">Systems</span><span class="step-sub">CALIBRATE</span></div>
-      <div class="step"><span class="step-dot">4</span><span class="step-label">Launch</span><span class="step-sub">DEPLOY</span></div>
+      <div class="step is-active"><span class="step-dot">1</span><span class="step-label">신원</span><span class="step-sub">CALLSIGN</span></div>
+      <div class="step"><span class="step-dot">2</span><span class="step-label">보직</span><span class="step-sub">FUNCTION</span></div>
+      <div class="step"><span class="step-dot">3</span><span class="step-label">보정</span><span class="step-sub">CALIBRATE</span></div>
+      <div class="step"><span class="step-dot">4</span><span class="step-label">배치</span><span class="step-sub">DEPLOY</span></div>
     </div>
 
-    <!-- Step 1 -->
-    <div class="ob-panel" role="tabpanel" data-step="0">
-      <div class="ob-head"><span class="obh-eyebrow">STEP 01 / 04</span><h2>Register Identity</h2></div>
+    <!-- 1단계 -->
+    <section class="ob-panel" data-step="0" aria-label="1단계 · 신원 등록">
+      <div class="ob-head"><span class="obh-eyebrow">STEP 01 / 04</span><h2>신원 등록</h2></div>
       <div class="stack" style="--stack-gap:var(--space-4)">
-        <div class="field"><label class="field-label" for="ob-call">Callsign <span class="req">*</span></label><div class="input-group"><span class="input-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><input class="input" id="ob-call" placeholder="ENTER CALLSIGN" autofocus></div></div>
+        <div class="field"><label class="field-label" for="ob-call">콜사인 <span class="req">*</span></label><div class="input-group"><span class="input-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><input class="input" id="ob-call" placeholder="콜사인 입력 (예: NX-7)" autocomplete="off" aria-describedby="ob-call-err"></div><span class="field-error" id="ob-call-err" hidden><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>콜사인을 입력해 주세요.</span></div>
         <div class="grid grid-2" style="gap:var(--space-4)">
-          <div class="field"><label class="field-label" for="ob-sec">Home Sector</label><div class="select-wrap"><select class="select" id="ob-sec"><option>Alpha-7</option><option>Bravo-2</option><option>Delta-9</option></select></div></div>
-          <div class="field"><label class="field-label" for="ob-clr">Clearance</label><div class="select-wrap"><select class="select" id="ob-clr"><option>Standard</option><option>Elevated</option><option>Omega</option></select></div></div>
+          <div class="field"><label class="field-label" for="ob-sec">소속 섹터</label><div class="select-wrap"><select class="select" id="ob-sec"><option>Alpha-7</option><option>Bravo-2</option><option>Delta-9</option></select></div></div>
+          <div class="field"><label class="field-label" for="ob-clr">접근 등급</label><div class="select-wrap"><select class="select" id="ob-clr"><option>표준</option><option>상위</option><option>오메가</option></select></div></div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- Step 2 -->
-    <div class="ob-panel" role="tabpanel" data-step="1" hidden>
-      <div class="ob-head"><span class="obh-eyebrow">STEP 02 / 04</span><h2>Select Function</h2></div>
-      <div class="choice-grid" role="radiogroup" aria-label="Role">
-        <div class="choice is-active" role="radio" aria-checked="true" tabindex="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg><span class="ch-name">Commander</span></div>
-        <div class="choice" role="radio" aria-checked="false" tabindex="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3"/></svg><span class="ch-name">Gunner</span></div>
-        <div class="choice" role="radio" aria-checked="false" tabindex="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l8 5v10l-8 5-8-5V7z"/><path d="M12 12v5"/></svg><span class="ch-name">Engineer</span></div>
-        <div class="choice" role="radio" aria-checked="false" tabindex="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12h4l3 8 4-16 3 8h4"/></svg><span class="ch-name">Comms</span></div>
+    <!-- 2단계 -->
+    <section class="ob-panel" data-step="1" aria-label="2단계 · 보직 선택" hidden>
+      <div class="ob-head"><span class="obh-eyebrow">STEP 02 / 04</span><h2>보직 선택</h2></div>
+      <div class="choice-grid" role="radiogroup" data-radio-group aria-label="보직">
+        <div class="choice" role="radio" aria-checked="true" data-value="commander"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg><span class="ch-name">지휘관</span><span class="ch-role">COMMANDER</span></div>
+        <div class="choice" role="radio" aria-checked="false" data-value="gunner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3"/></svg><span class="ch-name">화기관제</span><span class="ch-role">GUNNER</span></div>
+        <div class="choice" role="radio" aria-checked="false" data-value="engineer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l8 5v10l-8 5-8-5V7z"/><path d="M12 12v5"/></svg><span class="ch-name">기관사</span><span class="ch-role">ENGINEER</span></div>
+        <div class="choice" role="radio" aria-checked="false" data-value="comms"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12h4l3 8 4-16 3 8h4"/></svg><span class="ch-name">통신</span><span class="ch-role">COMMS</span></div>
       </div>
-    </div>
+    </section>
 
-    <!-- Step 3 -->
-    <div class="ob-panel" role="tabpanel" data-step="2" hidden>
-      <div class="ob-head"><span class="obh-eyebrow">STEP 03 / 04</span><h2>Calibrate Systems</h2></div>
+    <!-- 3단계 -->
+    <section class="ob-panel" data-step="2" aria-label="3단계 · 시스템 보정" hidden>
+      <div class="ob-head"><span class="obh-eyebrow">STEP 03 / 04</span><h2>시스템 보정</h2></div>
       <div class="stack" style="--stack-gap:var(--space-5)">
-        <div class="set-row" style="display:flex;align-items:center;gap:var(--space-4)"><div style="flex:1"><div style="font-weight:600">Enable radar scanning</div><div class="text-muted" style="font-size:var(--text-xs)">360° proximity detection.</div></div><label class="toggle"><input type="checkbox" checked><span class="track"></span></label></div>
-        <div class="set-row" style="display:flex;align-items:center;gap:var(--space-4)"><div style="flex:1"><div style="font-weight:600">Stream telemetry</div><div class="text-muted" style="font-size:var(--text-xs)">Send live data to command.</div></div><label class="toggle"><input type="checkbox" checked><span class="track"></span></label></div>
-        <div><div class="between mb-2"><label class="field-label" for="ob-sens">Sensor sensitivity</label><span class="slider-value u-data" id="ob-sens-out">75%</span></div><input class="slider" type="range" id="ob-sens" min="0" max="100" value="75" data-slider data-output="#ob-sens-out" data-suffix="%"></div>
-        <div class="field"><label class="field-label">Mission tags</label><div class="chip-input" data-chip-input><span class="chip"><span>recon</span><button type="button" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></span><input placeholder="Add tag…" aria-label="Add tag"></div></div>
+        <div class="set-row"><div class="sr-main"><div class="sr-name">레이더 스캐닝 활성화</div><div class="sr-desc">360° 근접 탐지를 켭니다.</div></div><label class="toggle"><input type="checkbox" checked><span class="track"></span><span class="sr-only">레이더 스캐닝</span></label></div>
+        <div class="set-row"><div class="sr-main"><div class="sr-name">텔레메트리 스트리밍</div><div class="sr-desc">관제에 실시간 데이터를 전송합니다.</div></div><label class="toggle"><input type="checkbox" checked><span class="track"></span><span class="sr-only">텔레메트리 스트리밍</span></label></div>
+        <div><div class="between mb-2"><label class="field-label" for="ob-sens">센서 감도</label><span class="slider-value u-data" id="ob-sens-out">75%</span></div><input class="slider" type="range" id="ob-sens" min="0" max="100" value="75" data-slider data-output="#ob-sens-out" data-suffix="%"></div>
+        <div class="field"><label class="field-label">임무 태그</label><div class="chip-input" data-chip-input><span class="chip"><span>정찰</span><button type="button" aria-label="정찰 태그 제거"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></span><input placeholder="태그 추가…" aria-label="태그 추가"></div></div>
       </div>
-    </div>
+    </section>
 
-    <!-- Step 4 -->
-    <div class="ob-panel" role="tabpanel" data-step="3" hidden>
-      <div class="ob-head"><span class="obh-eyebrow">STEP 04 / 04</span><h2>System Ready</h2></div>
+    <!-- 4단계 -->
+    <section class="ob-panel" data-step="3" aria-label="4단계 · 배치 완료" hidden>
+      <div class="ob-head"><span class="obh-eyebrow">STEP 04 / 04</span><h2>배치 <span class="u-holo">준비 완료</span></h2></div>
       <div class="center" style="gap:var(--space-5);text-align:center">
-        <div class="radial" data-radial data-value="100" aria-label="Initialization complete"><svg viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="42"/><circle class="fill" cx="50" cy="50" r="42" style="stroke:var(--color-success)"/></svg><span class="radial-num" style="color:var(--color-success)">100%</span></div>
-        <div class="boot-final">
-          &gt; IDENTITY REGISTERED ......... <span class="ok">OK</span><br>
-          &gt; ROLE ASSIGNED .............. <span class="ok">OK</span><br>
-          &gt; SYSTEMS CALIBRATED ......... <span class="ok">OK</span><br>
-          &gt; HUD GRID ONLINE ........... <span class="ok">READY</span>
+        <div class="radial" data-radial data-value="100" aria-label="초기화 100% 완료"><svg viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="42"/><circle class="fill" cx="50" cy="50" r="42" style="stroke:var(--color-success)"/></svg><span class="radial-num" style="color:var(--color-success)">100%</span></div>
+        <div class="boot-final" role="status" aria-live="polite">
+          <span class="ln">&gt; 신원 등록 ............ </span><span class="ok">완료</span><br>
+          <span class="ln">&gt; 보직 배정 ............ </span><span class="ok">완료</span><br>
+          <span class="ln">&gt; 시스템 보정 .......... </span><span class="ok">완료</span><br>
+          <span class="ln">&gt; HUD 그리드 ........... </span><span class="ok">온라인</span>
         </div>
-        <p class="text-muted">All systems nominal. Your console is ready for deployment.</p>
+        <p class="text-muted">모든 시스템 정상입니다. 콘솔 배치 준비가 끝났습니다.</p>
       </div>
-    </div>
+    </section>
 
-    <!-- Footer nav -->
+    <!-- 하단 내비 -->
     <div class="ob-foot">
-      <button class="btn btn-ghost" id="ob-prev" disabled><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Back</button>
-      <div class="row"><span class="coord" id="ob-count">01 / 04</span></div>
-      <button class="btn btn-primary" id="ob-next">Continue<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      <button class="btn btn-ghost" id="ob-prev" disabled><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>이전</button>
+      <span class="coord" id="ob-count" aria-hidden="true">01 / 04</span>
+      <button class="btn btn-primary" id="ob-next">계속<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
     </div>
   </div>
-</div>
+</main>
 
 <script src="../app.js"></script>
 <script>
   (function(){
-    var steps=[].slice.call(document.querySelectorAll('#ob-stepper .step'));
-    var panels=[].slice.call(document.querySelectorAll('.ob-panel'));
-    var prev=document.getElementById('ob-prev'), next=document.getElementById('ob-next'), count=document.getElementById('ob-count');
-    var cur=0;
-    function render(){
-      panels.forEach(function(p,i){ p.hidden=i!==cur; });
-      steps.forEach(function(s,i){ s.classList.toggle('is-active',i===cur); s.classList.toggle('is-done',i<cur);
-        var dot=s.querySelector('.step-dot'); dot.innerHTML = i<cur ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : (i+1);
-      });
-      prev.disabled = cur===0;
-      count.textContent='0'+(cur+1)+' / 04';
-      next.innerHTML = cur===panels.length-1 ? 'Deploy Console<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12l5 5L20 7"/></svg>' : 'Continue<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+    var steps = [].slice.call(document.querySelectorAll('#ob-stepper .step'));
+    var panels = [].slice.call(document.querySelectorAll('.ob-panel'));
+    var prev = document.getElementById('ob-prev'), next = document.getElementById('ob-next'), count = document.getElementById('ob-count');
+    var callInput = document.getElementById('ob-call'), callErr = document.getElementById('ob-call-err');
+    var cur = 0, touched = false;
+
+    function focusStep(){
+      if (!touched) return;                       // 최초 로드 시 스크롤 점프 방지
+      var panel = panels[cur];
+      var focusable = panel.querySelector('input, select, [role="radio"][aria-checked="true"], [tabindex]');
+      if (focusable) focusable.focus();
     }
-    next.addEventListener('click',function(){
-      if(cur<panels.length-1){ cur++; render(); }
-      else { window.HUD && window.HUD.toast({type:'success',title:'DEPLOYED',message:'Console online. Welcome aboard, Commander.'}); setTimeout(function(){ window.location.href='dashboard.html'; },1400); }
+    function render(){
+      panels.forEach(function(p,i){ p.hidden = i !== cur; });
+      steps.forEach(function(s,i){
+        s.classList.toggle('is-active', i === cur);
+        s.classList.toggle('is-done', i < cur);
+        var dot = s.querySelector('.step-dot');
+        dot.innerHTML = i < cur ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : (i + 1);
+      });
+      prev.disabled = cur === 0;
+      count.textContent = '0' + (cur + 1) + ' / 04';
+      next.innerHTML = cur === panels.length - 1
+        ? '콘솔 배치<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12l5 5L20 7"/></svg>'
+        : '계속<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+      focusStep();
+    }
+    function validateStep1(){
+      if (!callInput.value.trim()){
+        callInput.classList.add('is-invalid');
+        callInput.setAttribute('aria-invalid', 'true');
+        callErr.hidden = false;
+        callInput.focus();
+        return false;
+      }
+      callInput.classList.remove('is-invalid');
+      callInput.removeAttribute('aria-invalid');
+      callErr.hidden = true;
+      return true;
+    }
+    callInput.addEventListener('input', function(){
+      if (callInput.value.trim() && !callErr.hidden){ callInput.classList.remove('is-invalid'); callInput.removeAttribute('aria-invalid'); callErr.hidden = true; }
     });
-    prev.addEventListener('click',function(){ if(cur>0){cur--;render();} });
-    document.querySelectorAll('.choice').forEach(function(c){ c.addEventListener('click',function(){ c.parentElement.querySelectorAll('.choice').forEach(function(x){x.classList.remove('is-active');x.setAttribute('aria-checked','false');}); c.classList.add('is-active'); c.setAttribute('aria-checked','true'); }); });
+    next.addEventListener('click', function(){
+      touched = true;
+      if (cur === 0 && !validateStep1()) return;   // 필수값 에러 1회 경험
+      if (cur < panels.length - 1){ cur++; render(); }
+      else {
+        var call = callInput.value.trim() || '지휘관';
+        window.HUD && window.HUD.toast({ type:'success', title:'배치 완료', message:'‹' + call + '› 콘솔이 온라인 상태입니다. 함교에 오신 걸 환영합니다.' });
+        setTimeout(function(){ window.location.href = 'dashboard.html'; }, 1500);
+      }
+    });
+    prev.addEventListener('click', function(){ touched = true; if (cur > 0){ cur--; render(); } });
     render();
   })();
 </script>

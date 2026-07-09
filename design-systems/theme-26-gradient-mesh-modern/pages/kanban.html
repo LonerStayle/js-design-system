@@ -1,122 +1,167 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="ko">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Kanban Board · Gradient Mesh Modern</title>
+<title>칸반 보드 · Gradient Mesh Modern</title>
+<script>
+  /* FOUC guard — set the theme before first paint (key matches app.js) */
+  (function () {
+    try {
+      var t = localStorage.getItem("gmm-theme");
+      if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
 <link rel="stylesheet" href="../tokens.css" />
 <link rel="stylesheet" href="../semantic.css" />
 <link rel="stylesheet" href="../base.css" />
 <link rel="stylesheet" href="../components/index.css" />
 <style>
-  .shell { display:flex; min-height:calc(100vh - var(--navbar-h)); }
+  .shell { display:flex; min-height:calc(100dvh - var(--navbar-h)); }
+  .board-main { padding:var(--space-8); min-width:0; }
   .board { display:flex; gap:var(--space-5); overflow-x:auto; padding-bottom:var(--space-4); align-items:flex-start; }
   .column { flex:0 0 300px; background:var(--color-surface-2); border:var(--border-1) solid var(--color-border); border-radius:var(--radius-lg); padding:var(--space-4); display:flex; flex-direction:column; gap:var(--space-3); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
   .column__head { display:flex; align-items:center; justify-content:space-between; gap:var(--space-2); }
   .column__title { display:flex; align-items:center; gap:var(--space-2); font-weight:700; font-family:var(--font-display); font-size:var(--text-sm); }
-  .column__dot { width:9px; height:9px; border-radius:50%; }
-  .column__cards { display:flex; flex-direction:column; gap:var(--space-3); min-height:40px; }
+  .column__dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .column__cards { display:flex; flex-direction:column; gap:var(--space-3); min-height:48px; }
   .meta-mini { display:inline-flex; align-items:center; gap:4px; font-size:var(--text-xs); color:var(--color-text-subtle); }
   .meta-mini svg { width:14px; height:14px; }
-  @media (max-width:768px){ .sidebar{ position:fixed; z-index:var(--z-drawer); height:100%; } }
+
+  /* priority accent — semantic tokens, never raw ramps */
+  .kanban-card--p-low  { border-left:var(--border-thick) solid var(--priority-low); }
+  .kanban-card--p-mid  { border-left:var(--border-thick) solid var(--priority-mid); }
+  .kanban-card--p-high { border-left:var(--border-thick) solid var(--priority-high); }
+
+  /* settled/done cards */
+  .kanban-card--done { opacity:.72; }
+  .kanban-card__title--done { text-decoration:line-through; color:var(--color-text-muted); }
+
+  /* keyboard column-move controls — the accessible alternative to drag */
+  .kanban-card__actions { display:flex; gap:var(--space-1); margin-top:2px; opacity:0; transition:opacity var(--duration-fast) var(--ease-standard); }
+  .kanban-card:hover .kanban-card__actions,
+  .kanban-card:focus-within .kanban-card__actions { opacity:1; }
+  @media (hover:none) { .kanban-card__actions { opacity:1; } }
+
+  /* Mobile: the sidebar becomes a horizontal, scrollable nav strip above the
+     board. The hamburger toggles .is-collapsed to hide it — navigation is never
+     absent and never overlays the content. */
+  @media (max-width:768px){
+    .shell { flex-direction:column; }
+    .board-main { padding:var(--space-4); }
+    .sidebar { width:100%; flex-direction:row; align-items:center; gap:var(--space-2);
+      overflow-x:auto; padding:var(--space-3) var(--space-4);
+      border-right:none; border-bottom:var(--border-1) solid var(--nav-border); }
+    .sidebar__section-title { display:none; }
+    .sidebar__item { white-space:nowrap; }
+    .sidebar__item.is-active::before { display:none; }
+    .sidebar.is-collapsed { display:none; }
+  }
 </style>
 </head>
-<body class="mesh-grain">
-<a href="#main" class="skip-link">Skip to content</a>
+<body class="mesh-grain" data-mood="cool">
+<a href="#main" class="skip-link">본문으로 건너뛰기</a>
 
 <header class="navbar">
-  <button class="btn btn--icon btn--ghost" data-sidebar-toggle=".sidebar" aria-label="Toggle sidebar" aria-expanded="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
-  <a href="../index.html" class="navbar__brand"><span class="navbar__logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="8" cy="9" r="5"/><circle cx="16" cy="15" r="5"/></svg></span>Mesh<span class="text-gradient">UI</span></a>
+  <button class="btn btn--icon btn--ghost" data-sidebar-toggle=".sidebar" aria-label="사이드바 전환" aria-expanded="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+  <a href="../index.html" class="navbar__brand"><span class="navbar__logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="8" cy="9" r="5"/><circle cx="16" cy="15" r="5"/></svg></span>Mesh<span class="brand-accent">UI</span></a>
   <span class="navbar__spacer"></span>
-  <button class="searchbar md-hide" data-cmdk style="width:220px" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><span style="flex:1;text-align:left;color:var(--color-text-subtle);font-size:var(--text-sm)">Search…</span><kbd>⌘K</kbd></button>
-  <button class="btn btn--icon btn--ghost" data-theme-toggle aria-label="Toggle theme" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
-  <span class="avatar avatar--sm">JS</span>
+  <button class="searchbar md-hide" data-cmdk style="width:220px" aria-label="명령 팔레트 열기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><span style="flex:1;text-align:left;color:var(--color-text-subtle);font-size:var(--text-sm)">검색…</span><kbd>⌘K</kbd></button>
+  <button class="btn btn--icon btn--ghost" data-theme-toggle aria-label="다크 모드 전환" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+  <span class="avatar avatar--sm" title="김서연">서연</span>
 </header>
 
 <div class="shell">
-  <aside class="sidebar" aria-label="Sidebar">
-    <div class="sidebar__section-title">Menu</div>
-    <a class="sidebar__item" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg><span class="sidebar__label">Dashboard</span></a>
-    <a class="sidebar__item is-active" href="kanban.html" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h6v16H4zM14 4h6v10h-6z"/></svg><span class="sidebar__label">Board</span></a>
-    <a class="sidebar__item" href="inbox.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4z"/><path d="M4 7l8 6 8-6"/></svg><span class="sidebar__label">Inbox</span><span class="sidebar__badge badge badge--gradient">5</span></a>
-    <a class="sidebar__item" href="product.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2l-4 4v14a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6l-4-4zM2 6h20M16 10a4 4 0 0 1-8 0"/></svg><span class="sidebar__label">Products</span></a>
-    <div class="sidebar__section-title">Account</div>
-    <a class="sidebar__item" href="pricing.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 9-7 7-9-9V2z"/><circle cx="7" cy="7" r="1.5"/></svg><span class="sidebar__label">Pricing</span></a>
-    <a class="sidebar__item" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg><span class="sidebar__label">Profile</span></a>
-    <a class="sidebar__item" href="settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 0 1-4 0v-.1A1.6 1.6 0 0 0 7 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H3a2 2 0 0 1 0-4h.1A1.6 1.6 0 0 0 4.6 7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg><span class="sidebar__label">Settings</span></a>
+  <aside class="sidebar" aria-label="주 메뉴">
+    <div class="sidebar__section-title">메뉴</div>
+    <a class="sidebar__item" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg><span class="sidebar__label">대시보드</span></a>
+    <a class="sidebar__item is-active" href="kanban.html" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h6v16H4zM14 4h6v10h-6z"/></svg><span class="sidebar__label">보드</span></a>
+    <a class="sidebar__item" href="inbox.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4z"/><path d="M4 7l8 6 8-6"/></svg><span class="sidebar__label">받은편지함</span><span class="sidebar__badge badge badge--gradient">5</span></a>
+    <a class="sidebar__item" href="product.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2l-4 4v14a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6l-4-4zM2 6h20M16 10a4 4 0 0 1-8 0"/></svg><span class="sidebar__label">상품</span></a>
+    <div class="sidebar__section-title">계정</div>
+    <a class="sidebar__item" href="pricing.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 9-7 7-9-9V2z"/><circle cx="7" cy="7" r="1.5"/></svg><span class="sidebar__label">요금제</span></a>
+    <a class="sidebar__item" href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg><span class="sidebar__label">프로필</span></a>
+    <a class="sidebar__item" href="settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 0 1-4 0v-.1A1.6 1.6 0 0 0 7 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H3a2 2 0 0 1 0-4h.1A1.6 1.6 0 0 0 4.6 7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg><span class="sidebar__label">설정</span></a>
   </aside>
 
-  <main id="main" class="grow" style="padding:var(--space-8);min-width:0">
+  <main id="main" class="grow board-main">
     <div class="between mb-6" style="flex-wrap:wrap;gap:var(--space-4)">
       <div>
-        <h1>Product roadmap</h1>
-        <p>Sprint 24 · 18 tasks across 4 stages</p>
+        <h1>제품 로드맵</h1>
+        <p>스프린트 24 · 4개 단계 · 작업 12개</p>
       </div>
       <div class="row gap-3" style="flex-wrap:wrap">
-        <div class="avatar-group"><span class="avatar avatar--sm">JS</span><span class="avatar avatar--sm" style="background:var(--gradient-accent)">MK</span><span class="avatar avatar--sm" style="background:var(--gradient-warm)">DR</span><span class="avatar avatar--sm avatar-group__more">+4</span></div>
-        <div class="searchbar" style="width:200px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input type="text" placeholder="Filter tasks…" aria-label="Filter tasks" /></div>
-        <button class="btn btn--primary" data-open="#new-task"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> New task</button>
+        <div class="avatar-group" aria-label="담당자 5명">
+          <span class="avatar avatar--sm" title="김서연">서연</span>
+          <span class="avatar avatar--sm" style="background:var(--gradient-accent)" title="박지훈">지훈</span>
+          <span class="avatar avatar--sm" style="background:var(--gradient-warm)" title="한예리">예리</span>
+          <span class="avatar avatar--sm avatar-group__more">+2</span>
+        </div>
+        <div class="searchbar" style="width:200px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input type="text" placeholder="작업 검색…" aria-label="작업 검색" /></div>
+        <button class="btn btn--primary" data-open="#new-task"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> 새 작업</button>
       </div>
     </div>
 
-    <div class="board" data-reveal>
-      <!-- Backlog -->
-      <section class="column" aria-label="Backlog">
-        <div class="column__head"><span class="column__title"><span class="column__dot" style="background:var(--color-text-subtle)"></span> Backlog <span class="badge">4</span></span><button class="btn btn--icon btn--ghost btn--sm" aria-label="Add to Backlog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div>
-        <div class="column__cards">
-          <article class="kanban-card" draggable="true" style="border-left:3px solid var(--blue-400)"><div class="kanban-card__title">Research competitor onboarding flows</div><div class="kanban-card__tags"><span class="badge badge--info">Research</span></div><div class="kanban-card__meta"><span class="avatar avatar--xs">DR</span><span class="meta-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Jun 28</span></div></article>
-          <article class="kanban-card" draggable="true" style="border-left:3px solid var(--color-text-subtle)"><div class="kanban-card__title">Define mesh animation performance budget</div><div class="kanban-card__tags"><span class="badge badge--accent">Perf</span></div><div class="kanban-card__meta"><span class="avatar avatar--xs" style="background:var(--gradient-accent)">MK</span><span class="meta-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> 2</span></div></article>
-          <article class="kanban-card" draggable="true" style="border-left:3px solid var(--pink-400)"><div class="kanban-card__title">Draft Q3 marketing landing copy</div><div class="kanban-card__tags"><span class="badge badge--warm">Marketing</span></div><div class="kanban-card__meta"><span class="avatar avatar--xs" style="background:var(--gradient-warm)">AL</span><span class="meta-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Jul 2</span></div></article>
-          <article class="kanban-card" draggable="true" style="border-left:3px solid var(--blue-400)"><div class="kanban-card__title">Audit color contrast across components</div><div class="kanban-card__tags"><span class="badge badge--info">a11y</span></div><div class="kanban-card__meta"><span class="avatar avatar--xs">JS</span></div></article>
+    <div class="board" data-kanban data-reveal>
+      <!-- 대기 -->
+      <section class="column" data-kanban-col aria-label="대기">
+        <div class="column__head"><span class="column__title"><span class="column__dot" style="background:var(--color-text-subtle)"></span> 대기 <span class="badge">4</span></span><button class="btn btn--icon btn--ghost btn--sm" aria-label="대기에 작업 추가" data-open="#new-task"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+        <div class="column__cards" data-kanban-list>
+          <article class="kanban-card kanban-card--p-low" draggable="true"><div class="kanban-card__title">경쟁사 온보딩 플로우 리서치</div><div class="kanban-card__tags"><span class="badge badge--info">리서치</span></div><div class="kanban-card__meta"><span class="avatar avatar--xs" title="윤도현">도현</span><span class="meta-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> 3일 후</span></div><div class="kanban-card__actions"><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="prev" aria-label="이전 열로 이동" title="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="next" aria-label="다음 열로 이동" title="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button></div></article>
+          <article class="kanban-card kanban-card--p-mid" draggable="true"><div class="kanban-card__title">메시 애니메이션 성능 예산 정의</div><div class="kanban-card__tags"><span class="badge badge--accent">성능</span></div><div class="kanban-card__meta"><span class="avatar avatar--xs" style="background:var(--gradient-accent)" title="오세훈">세훈</span><span class="meta-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> 2</span></div><div class="kanban-card__actions"><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="prev" aria-label="이전 열로 이동" title="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="next" aria-label="다음 열로 이동" title="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button></div></article>
+          <article class="kanban-card kanban-card--p-high" draggable="true"><div class="kanban-card__title">3분기 랜딩 페이지 카피 초안</div><div class="kanban-card__tags"><span class="badge badge--warm">마케팅</span></div><div class="kanban-card__meta"><span class="avatar avatar--xs" style="background:var(--gradient-warm)" title="한예리">예리</span><span class="meta-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> 다음 주</span></div><div class="kanban-card__actions"><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="prev" aria-label="이전 열로 이동" title="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="next" aria-label="다음 열로 이동" title="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button></div></article>
+          <article class="kanban-card kanban-card--p-low" draggable="true"><div class="kanban-card__title">컴포넌트 색 대비 감사</div><div class="kanban-card__tags"><span class="badge badge--info">접근성</span></div><div class="kanban-card__meta"><span class="avatar avatar--xs" title="김서연">서연</span></div><div class="kanban-card__actions"><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="prev" aria-label="이전 열로 이동" title="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="next" aria-label="다음 열로 이동" title="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button></div></article>
         </div>
       </section>
 
-      <!-- In progress -->
-      <section class="column" aria-label="In progress">
-        <div class="column__head"><span class="column__title"><span class="column__dot" style="background:var(--blue-500)"></span> In progress <span class="badge">3</span></span><button class="btn btn--icon btn--ghost btn--sm" aria-label="Add to In progress"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div>
-        <div class="column__cards">
-          <article class="kanban-card" draggable="true" style="border-left:3px solid var(--purple-500)"><div class="kanban-card__title">Build gradient mesh background engine</div><div class="kanban-card__tags"><span class="badge badge--gradient">Feature</span><span class="badge badge--danger">High</span></div><div class="progress progress--sm"><div class="progress__bar" style="width:60%"></div></div><div class="kanban-card__meta"><span class="avatar avatar--xs" style="background:var(--gradient-accent)">MK</span><span class="meta-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> 8/14</span></div></article>
-          <article class="kanban-card" draggable="true" style="border-left:3px solid var(--purple-500)"><div class="kanban-card__title">Implement command palette (⌘K)</div><div class="kanban-card__tags"><span class="badge badge--gradient">Feature</span></div><div class="progress progress--sm"><div class="progress__bar" style="width:85%;background:var(--gradient-accent)"></div></div><div class="kanban-card__meta"><span class="avatar avatar--xs">JS</span><span class="meta-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> 5</span></div></article>
-          <article class="kanban-card" draggable="true" style="border-left:3px solid var(--pink-500)"><div class="kanban-card__title">Fix focus ring clipping on rounded cards</div><div class="kanban-card__tags"><span class="badge badge--danger">Bug</span></div><div class="kanban-card__meta"><span class="avatar avatar--xs" style="background:var(--gradient-warm)">DR</span><span class="meta-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Today</span></div></article>
+      <!-- 진행 중 -->
+      <section class="column" data-kanban-col aria-label="진행 중">
+        <div class="column__head"><span class="column__title"><span class="column__dot" style="background:var(--color-info)"></span> 진행 중 <span class="badge">3</span></span><button class="btn btn--icon btn--ghost btn--sm" aria-label="진행 중에 작업 추가" data-open="#new-task"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+        <div class="column__cards" data-kanban-list>
+          <article class="kanban-card kanban-card--p-high" draggable="true"><div class="kanban-card__title">그라디언트 메시 배경 엔진 구현</div><div class="kanban-card__tags"><span class="badge badge--gradient">기능</span><span class="badge badge--danger">높음</span></div><div class="progress progress--sm"><div class="progress__bar" style="width:60%"></div></div><div class="kanban-card__meta"><span class="avatar avatar--xs" style="background:var(--gradient-accent)" title="오세훈">세훈</span><span class="meta-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> 8/14</span></div><div class="kanban-card__actions"><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="prev" aria-label="이전 열로 이동" title="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="next" aria-label="다음 열로 이동" title="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button></div></article>
+          <article class="kanban-card kanban-card--p-mid" draggable="true"><div class="kanban-card__title">명령 팔레트(⌘K) 구현</div><div class="kanban-card__tags"><span class="badge badge--gradient">기능</span></div><div class="progress progress--sm"><div class="progress__bar" style="width:85%;background:var(--gradient-accent)"></div></div><div class="kanban-card__meta"><span class="avatar avatar--xs" title="김서연">서연</span><span class="meta-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> 5</span></div><div class="kanban-card__actions"><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="prev" aria-label="이전 열로 이동" title="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="next" aria-label="다음 열로 이동" title="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button></div></article>
+          <article class="kanban-card kanban-card--p-high" draggable="true"><div class="kanban-card__title">둥근 카드 포커스 링 잘림 수정</div><div class="kanban-card__tags"><span class="badge badge--danger">버그</span></div><div class="kanban-card__meta"><span class="avatar avatar--xs" title="윤도현">도현</span><span class="meta-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> 오늘</span></div><div class="kanban-card__actions"><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="prev" aria-label="이전 열로 이동" title="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="next" aria-label="다음 열로 이동" title="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button></div></article>
         </div>
       </section>
 
-      <!-- In review -->
-      <section class="column" aria-label="In review">
-        <div class="column__head"><span class="column__title"><span class="column__dot" style="background:var(--pink-500)"></span> In review <span class="badge">2</span></span><button class="btn btn--icon btn--ghost btn--sm" aria-label="Add to In review"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div>
-        <div class="column__cards">
-          <article class="kanban-card" draggable="true" style="border-left:3px solid var(--teal-500)"><div class="kanban-card__title">Token scale documentation</div><div class="kanban-card__tags"><span class="badge badge--info">Docs</span></div><div class="kanban-card__meta"><span class="avatar avatar--xs" style="background:var(--gradient-accent)">MK</span><span class="meta-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> 3</span></div></article>
-          <article class="kanban-card" draggable="true" style="border-left:3px solid var(--purple-500)"><div class="kanban-card__title">Dark mode semantic mapping</div><div class="kanban-card__tags"><span class="badge badge--gradient">Feature</span><span class="badge">Review</span></div><div class="kanban-card__meta"><span class="avatar avatar--xs">JS</span></div></article>
+      <!-- 리뷰 -->
+      <section class="column" data-kanban-col aria-label="리뷰">
+        <div class="column__head"><span class="column__title"><span class="column__dot" style="background:var(--color-warning)"></span> 리뷰 <span class="badge">2</span></span><button class="btn btn--icon btn--ghost btn--sm" aria-label="리뷰에 작업 추가" data-open="#new-task"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+        <div class="column__cards" data-kanban-list>
+          <article class="kanban-card kanban-card--p-mid" draggable="true"><div class="kanban-card__title">토큰 스케일 문서화</div><div class="kanban-card__tags"><span class="badge badge--info">문서</span></div><div class="kanban-card__meta"><span class="avatar avatar--xs" style="background:var(--gradient-accent)" title="오세훈">세훈</span><span class="meta-mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> 3</span></div><div class="kanban-card__actions"><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="prev" aria-label="이전 열로 이동" title="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="next" aria-label="다음 열로 이동" title="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button></div></article>
+          <article class="kanban-card kanban-card--p-mid" draggable="true"><div class="kanban-card__title">다크 모드 시맨틱 매핑</div><div class="kanban-card__tags"><span class="badge badge--gradient">기능</span><span class="badge">리뷰 중</span></div><div class="kanban-card__meta"><span class="avatar avatar--xs" title="김서연">서연</span></div><div class="kanban-card__actions"><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="prev" aria-label="이전 열로 이동" title="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="next" aria-label="다음 열로 이동" title="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button></div></article>
         </div>
       </section>
 
-      <!-- Done -->
-      <section class="column" aria-label="Done">
-        <div class="column__head"><span class="column__title"><span class="column__dot" style="background:var(--teal-500)"></span> Done <span class="badge">3</span></span></div>
-        <div class="column__cards">
-          <article class="kanban-card" draggable="true" style="opacity:.7"><div class="kanban-card__title" style="text-decoration:line-through;color:var(--color-text-muted)">Set up design token architecture</div><div class="kanban-card__tags"><span class="badge badge--success badge--dot">Done</span></div><div class="kanban-card__meta"><span class="avatar avatar--xs">JS</span></div></article>
-          <article class="kanban-card" draggable="true" style="opacity:.7"><div class="kanban-card__title" style="text-decoration:line-through;color:var(--color-text-muted)">Build button + form components</div><div class="kanban-card__tags"><span class="badge badge--success badge--dot">Done</span></div><div class="kanban-card__meta"><span class="avatar avatar--xs" style="background:var(--gradient-accent)">MK</span></div></article>
-          <article class="kanban-card" draggable="true" style="opacity:.7"><div class="kanban-card__title" style="text-decoration:line-through;color:var(--color-text-muted)">Pick brand gradient palette</div><div class="kanban-card__tags"><span class="badge badge--success badge--dot">Done</span></div><div class="kanban-card__meta"><span class="avatar avatar--xs" style="background:var(--gradient-warm)">AL</span></div></article>
+      <!-- 완료 -->
+      <section class="column" data-kanban-col aria-label="완료">
+        <div class="column__head"><span class="column__title"><span class="column__dot" style="background:var(--color-success)"></span> 완료 <span class="badge">3</span></span></div>
+        <div class="column__cards" data-kanban-list>
+          <article class="kanban-card kanban-card--done" draggable="true"><div class="kanban-card__title kanban-card__title--done">디자인 토큰 아키텍처 설계</div><div class="kanban-card__tags"><span class="badge badge--success badge--dot">완료</span></div><div class="kanban-card__meta"><span class="avatar avatar--xs" title="김서연">서연</span></div><div class="kanban-card__actions"><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="prev" aria-label="이전 열로 이동" title="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="next" aria-label="다음 열로 이동" title="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button></div></article>
+          <article class="kanban-card kanban-card--done" draggable="true"><div class="kanban-card__title kanban-card__title--done">버튼·폼 컴포넌트 구축</div><div class="kanban-card__tags"><span class="badge badge--success badge--dot">완료</span></div><div class="kanban-card__meta"><span class="avatar avatar--xs" style="background:var(--gradient-accent)" title="오세훈">세훈</span></div><div class="kanban-card__actions"><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="prev" aria-label="이전 열로 이동" title="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="next" aria-label="다음 열로 이동" title="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button></div></article>
+          <article class="kanban-card kanban-card--done" draggable="true"><div class="kanban-card__title kanban-card__title--done">브랜드 그라디언트 팔레트 선정</div><div class="kanban-card__tags"><span class="badge badge--success badge--dot">완료</span></div><div class="kanban-card__meta"><span class="avatar avatar--xs" style="background:var(--gradient-warm)" title="한예리">예리</span></div><div class="kanban-card__actions"><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="prev" aria-label="이전 열로 이동" title="이전 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button><button class="btn btn--icon btn--ghost btn--sm" data-kanban-move="next" aria-label="다음 열로 이동" title="다음 열로 이동"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button></div></article>
         </div>
       </section>
     </div>
   </main>
 </div>
 
-<!-- New task modal -->
+<!-- 새 작업 모달 -->
 <div class="overlay"></div>
 <div class="modal" id="new-task" role="dialog" aria-modal="true" aria-labelledby="new-task-title">
   <div class="modal__panel">
-    <div class="modal__header"><h2 class="modal__title" id="new-task-title">New task</h2><button class="modal__close" data-close aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+    <div class="modal__header"><h2 class="modal__title" id="new-task-title">새 작업</h2><button class="modal__close" data-close aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
     <div class="modal__body stack gap-5">
-      <div class="field"><label class="field__label" for="t-title">Title <span class="req">*</span></label><input class="input" id="t-title" placeholder="What needs doing?" /></div>
+      <div class="field"><label class="field__label" for="t-title">제목 <span class="req">*</span></label><input class="input" id="t-title" placeholder="무엇을 해야 하나요?" /></div>
       <div class="grid grid-2">
-        <div class="field"><label class="field__label" for="t-col">Column</label><div class="select-wrap"><select class="select" id="t-col"><option>Backlog</option><option>In progress</option><option>In review</option><option>Done</option></select></div></div>
-        <div class="field"><label class="field__label" for="t-pri">Priority</label><div class="select-wrap"><select class="select" id="t-pri"><option>Low</option><option>Medium</option><option>High</option></select></div></div>
+        <div class="field"><label class="field__label" for="t-col">열</label><div class="select-wrap"><select class="select" id="t-col"><option>대기</option><option>진행 중</option><option>리뷰</option><option>완료</option></select></div></div>
+        <div class="field"><label class="field__label" for="t-pri">우선순위</label><div class="select-wrap"><select class="select" id="t-pri"><option>낮음</option><option>보통</option><option>높음</option></select></div></div>
       </div>
-      <div class="field"><label class="field__label" for="t-desc">Description</label><textarea class="textarea" id="t-desc" placeholder="Add details…"></textarea></div>
+      <div class="field"><label class="field__label" for="t-desc">설명</label><textarea class="textarea" id="t-desc" placeholder="자세한 내용을 적어 주세요…"></textarea></div>
     </div>
-    <div class="modal__footer"><button class="btn btn--ghost" data-close>Cancel</button><button class="btn btn--primary" data-close data-toast data-toast-title="Task created" data-toast-type="success" data-toast="Added to Backlog.">Create task</button></div>
+    <div class="modal__footer"><button class="btn btn--ghost" data-close>취소</button><button class="btn btn--primary" data-close data-toast data-toast-title="작업을 추가했어요" data-toast-type="success" data-toast-text="‘대기’ 열에 담았어요.">작업 만들기</button></div>
   </div>
 </div>
 

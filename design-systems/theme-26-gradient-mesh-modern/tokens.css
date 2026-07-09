@@ -9,7 +9,16 @@
    Replace a value here and it ripples everywhere consistently.
    ============================================================================ */
 
-@import url("https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@400;500;600;700&display=swap");
+/* Web fonts — ALL faces loaded here in a SINGLE request (never scatter @import
+   across files: a second import in a later stylesheet only starts fetching once
+   this file has parsed → render-blocking serial load).
+     · Plus Jakarta Sans — Latin display/body voice (glyphs + digits)
+     · JetBrains Mono     — Latin mono
+     · Gothic A1 (400/500/700/800) — Hangul display voice; 800 so display-1/2
+       (--weight-extra) render at true weight, no faux-bold
+     · Noto Sans KR — wide-coverage Hangul safety net
+   display=swap; only the weights actually used are requested. */
+@import url("https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap");
 
 :root {
   /* ------------------------------------------------------------------ *
@@ -77,6 +86,12 @@
   --indigo-800: #3730A3;
   --indigo-900: #292373;
 
+  /* Amber — warm gold, used only for rating stars (kept off the mesh palette) */
+  --amber-400: #FBBF24;
+  --amber-500: #F59E0B;
+  --amber-600: #D97706;
+  --amber-700: #B45309;
+
   /* Neutral — cool slate with a faint indigo cast (not pure grey) */
   --neutral-0:   #FFFFFF;
   --neutral-50:  #F8F9FD;
@@ -117,6 +132,36 @@
   /* Subtle surface tint — barely-there gradient laid over cards */
   --gradient-tint:
       linear-gradient(160deg, rgba(124,92,255,0.05) 0%, rgba(20,184,166,0.04) 100%);
+
+  /* Deep-stop gradients — WHITE text clears 4.5:1 on the lightest stop.
+     Small elements (badges, chips) sit on the bright base stops, so they need
+     the deep siblings to stay legible. */
+  --gradient-accent-deep:
+      linear-gradient(135deg, #0F766E 0%, #1D4ED8 100%);   /* teal-700 → blue-700 */
+  --gradient-warm-deep:
+      linear-gradient(135deg, #BE185D 0%, #6A47E8 100%);   /* pink-700 → purple-600 */
+  --gradient-danger:
+      linear-gradient(135deg, #E11D48 0%, #BE185D 100%);   /* danger action fill */
+  --gradient-danger-hover:
+      linear-gradient(135deg, #BE123C 0%, #9D174D 100%);
+
+  /* Border-beam — the rotating 5-stop conic "gradient as signal" climax
+     (featured plan, FAB). --gm-angle is a registered @property (base.css) that
+     the beam-spin keyframe animates on the consuming element. */
+  --gradient-beam:
+      conic-gradient(from var(--gm-angle),
+        var(--purple-500), var(--pink-500), var(--teal-400), var(--blue-500), var(--purple-500));
+  /* Spinner arc — a two-tone conic sweep faded to transparent at both ends. */
+  --gradient-spinner:
+      conic-gradient(from 0deg, transparent, var(--purple-500), var(--pink-500), transparent);
+
+  /* Decorative scene blends — page & thumbnail art ONLY (never text/actions).
+     Tokenised so HTML never reaches into the raw ramps for one-off gradients. */
+  --gradient-scene-cool:   linear-gradient(135deg, var(--blue-500),   var(--teal-500));
+  --gradient-scene-grape:  linear-gradient(135deg, var(--purple-500), var(--pink-500));
+  --gradient-scene-dusk:   linear-gradient(135deg, var(--indigo-500), var(--blue-500));
+  --gradient-scene-spring: linear-gradient(135deg, var(--teal-500),   var(--purple-500));
+  --gradient-scene-bloom:  linear-gradient(135deg, var(--pink-500),   var(--indigo-500));
 
   /* ------------------------------------------------------------------ *
    *  MESH / AURORA  ·  the hero of this theme
@@ -170,12 +215,16 @@
   /* ------------------------------------------------------------------ *
    *  TYPOGRAPHY
    * ------------------------------------------------------------------ */
-  --font-display: "Plus Jakarta Sans", "Geist", ui-sans-serif, system-ui,
-                  -apple-system, "Segoe UI", Roboto, "Gothic A1", "Noto Sans KR", sans-serif;
-  --font-body:    "Plus Jakarta Sans", ui-sans-serif, system-ui,
-                  -apple-system, "Segoe UI", Roboto, "Gothic A1", "Noto Sans KR", sans-serif;
+  /* Stack order is load-bearing: ① Latin mood → ② Hangul mood → ③ Hangul safety
+     → ④ system generic. Latin glyphs & digits still bind to Plus Jakarta Sans
+     (no Hangul in it), so Korean falls through to Gothic A1 — NOT system-ui.
+     Putting system-ui ahead of Gothic A1 would kill the mood font on macOS. */
+  --font-display: "Plus Jakarta Sans", "Gothic A1", "Noto Sans KR",
+                  ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-body:    "Plus Jakarta Sans", "Gothic A1", "Noto Sans KR",
+                  ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono:    "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo,
-                  Consolas, "Liberation Mono", "Noto Sans KR", monospace;
+                  Consolas, "Liberation Mono", monospace;
 
   /* Type scale — fluid-ish, rem based */
   --text-2xs: 0.6875rem;  /* 11 */
@@ -197,12 +246,21 @@
   --leading-normal:  1.55;
   --leading-relaxed: 1.75;
 
+  /* Hangul leading — the Latin figures above pack too tight for 한글; these are
+     consumed by the :lang(ko) refinement layer in base.css. */
+  --leading-body-ko:    1.7;
+  --leading-heading-ko: 1.3;
+  --leading-display-ko: 1.14;
+
   --tracking-tighter: -0.04em;
   --tracking-tight:   -0.02em;
   --tracking-normal:  0;
   --tracking-wide:    0.02em;
   --tracking-wider:   0.06em;
   --tracking-widest:  0.14em;
+  /* Hangul tracking — Latin display tracking is far too tight for 한글 blocks. */
+  --tracking-display-ko: -0.01em;
+  --tracking-caps-ko:     0.06em;
 
   --weight-regular:  400;
   --weight-medium:   500;
@@ -244,15 +302,12 @@
   --glow-gradient:
       0 10px 30px rgba(124, 92, 255, 0.32),
       0 4px 12px rgba(236, 72, 153, 0.20);
-  --glow-teal:
-      0 10px 30px rgba(20, 184, 166, 0.30);
 
   /* ------------------------------------------------------------------ *
    *  FOCUS RINGS  ·  gradient-flavoured
    * ------------------------------------------------------------------ */
   --ring-width: 3px;
   --ring-color: rgba(124, 92, 255, 0.55);
-  --ring-color-strong: rgba(124, 92, 255, 0.9);
   --ring-offset: 2px;
   --ring: 0 0 0 var(--ring-offset) var(--surface-ring-base, #fff),
           0 0 0 calc(var(--ring-offset) + var(--ring-width)) var(--ring-color);

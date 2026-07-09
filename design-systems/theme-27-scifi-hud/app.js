@@ -28,12 +28,14 @@
     $$('[data-theme-toggle]').forEach((b) => {
       b.setAttribute('aria-pressed', String(t === 'light'));
       const lbl = b.querySelector('[data-theme-label]');
-      if (lbl) lbl.textContent = t === 'light' ? 'LIGHT' : 'DARK';
+      if (lbl) lbl.textContent = t === 'light' ? '라이트' : '다크';
     });
   }
   function initTheme() {
-    let t = 'dark';
-    try { t = localStorage.getItem(THEME_KEY) || 'dark'; } catch (e) {}
+    // Respect the pre-paint decision made by the <head> FOUC snippet; only fall
+    // back to a fresh default if neither storage nor attribute is set.
+    let t = document.documentElement.getAttribute('data-theme') || 'dark';
+    try { t = localStorage.getItem(THEME_KEY) || t; } catch (e) {}
     applyTheme(t);
     $$('[data-theme-toggle]').forEach((b) =>
       on(b, 'click', () => {
@@ -149,23 +151,39 @@
   function initSegmented() {
     $$('[data-segmented]').forEach((seg) => {
       const btns = $$('button', seg);
-      btns.forEach((b) =>
-        on(b, 'click', () => {
-          btns.forEach((x) => x.setAttribute('aria-selected', 'false'));
-          b.setAttribute('aria-selected', 'true');
-          seg.dispatchEvent(new CustomEvent('segment:change', { detail: { value: b.dataset.value } }));
-          // Pricing toggle hook
-          if (seg.dataset.segmented === 'billing') {
-            const annual = b.dataset.value === 'annual';
-            $$('[data-price]').forEach((p) => {
-              p.textContent = annual ? p.dataset.priceAnnual : p.dataset.priceMonthly;
-            });
-            $$('[data-price-note]').forEach((n) => {
-              n.textContent = annual ? n.dataset.noteAnnual || '/yr · billed annually' : '/mo';
-            });
-          }
-        })
-      );
+      // radiogroup → aria-checked + arrow-key roving; plain group → aria-selected.
+      const isRadio = seg.getAttribute('role') === 'radiogroup';
+      const attr = isRadio ? 'aria-checked' : 'aria-selected';
+      const select = (b) => {
+        btns.forEach((x) => { x.setAttribute(attr, 'false'); if (isRadio) x.tabIndex = -1; });
+        b.setAttribute(attr, 'true'); if (isRadio) b.tabIndex = 0;
+        seg.dispatchEvent(new CustomEvent('segment:change', { detail: { value: b.dataset.value } }));
+        // Pricing toggle hook
+        if (seg.dataset.segmented === 'billing') {
+          const annual = b.dataset.value === 'annual';
+          $$('[data-price]').forEach((p) => {
+            p.textContent = annual ? p.dataset.priceAnnual : p.dataset.priceMonthly;
+          });
+          $$('[data-price-note]').forEach((n) => {
+            n.textContent = annual ? (n.dataset.noteAnnual || '/년 · 연간 결제') : (n.dataset.noteMonthly || '/월');
+          });
+        }
+      };
+      btns.forEach((b, i) => {
+        on(b, 'click', () => select(b));
+        if (isRadio) on(b, 'keydown', (e) => {
+          let n = null;
+          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') n = (i + 1) % btns.length;
+          else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') n = (i - 1 + btns.length) % btns.length;
+          else if (e.key === 'Home') n = 0;
+          else if (e.key === 'End') n = btns.length - 1;
+          if (n !== null) { e.preventDefault(); select(btns[n]); btns[n].focus(); }
+        });
+      });
+      if (isRadio) {
+        const cur = btns.findIndex((b) => b.getAttribute('aria-checked') === 'true');
+        btns.forEach((b, i) => { b.tabIndex = (i === (cur >= 0 ? cur : 0)) ? 0 : -1; });
+      }
     });
   }
 
@@ -229,9 +247,11 @@
         if (!text) return;
         const chip = document.createElement('span');
         chip.className = 'chip';
-        chip.innerHTML = '<span></span><button type="button" aria-label="Remove ' + text + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
+        chip.innerHTML = '<span></span><button type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
         chip.querySelector('span').textContent = text;
-        on(chip.querySelector('button'), 'click', () => chip.remove());
+        const rm = chip.querySelector('button');
+        rm.setAttribute('aria-label', text + ' 태그 제거');   // set as attr, not interpolated into HTML
+        on(rm, 'click', () => chip.remove());
         wrap.insertBefore(chip, input);
       };
       on(input, 'keydown', (e) => {
@@ -262,9 +282,9 @@
           const row = document.createElement('div');
           row.className = 'file-row';
           row.innerHTML =
-            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>' +
             '<span class="fr-name"></span><span class="fr-size">' + fmtSize(f.size) + '</span>' +
-            '<button class="btn btn-icon btn-sm btn-ghost" aria-label="Remove"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
+            '<button class="btn btn-icon btn-sm btn-ghost" aria-label="파일 제거"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
           row.querySelector('.fr-name').textContent = f.name;
           on(row.querySelector('button'), 'click', () => row.remove());
           list.appendChild(row);
@@ -445,7 +465,7 @@
       region = document.createElement('div');
       region.className = 'toast-region';
       region.setAttribute('role', 'region');
-      region.setAttribute('aria-label', 'Notifications');
+      region.setAttribute('aria-label', '알림');
       region.setAttribute('aria-live', 'polite');
       document.body.appendChild(region);
     }
@@ -467,9 +487,9 @@
     el.innerHTML =
       '<span class="toast-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (ICONS[type] || ICONS.info) + '</svg></span>' +
       '<div><div class="toast-title"></div><div class="toast-msg"></div></div>' +
-      '<button class="toast-close" aria-label="Dismiss"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' +
+      '<button class="toast-close" aria-label="닫기"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' +
       (RM ? '' : '<span class="toast-bar"></span>');
-    el.querySelector('.toast-title').textContent = opts.title || 'NOTICE';
+    el.querySelector('.toast-title').textContent = opts.title || '알림';
     el.querySelector('.toast-msg').textContent = opts.message || '';
     region.appendChild(el);
     const remove = () => { el.classList.add('is-leaving'); setTimeout(() => el.remove(), 240); };
@@ -481,7 +501,7 @@
   function initToastTriggers() {
     $$('[data-toast]').forEach((btn) =>
       on(btn, 'click', () =>
-        toast({ type: btn.dataset.toast || 'info', title: btn.dataset.toastTitle || 'SYSTEM', message: btn.dataset.toastMsg || 'Signal received.' })
+        toast({ type: btn.dataset.toast || 'info', title: btn.dataset.toastTitle || '시스템 알림', message: btn.dataset.toastMsg || '신호를 수신했습니다.' })
       )
     );
   }
@@ -527,10 +547,12 @@
     items.forEach((i) =>
       on(i, 'click', () => {
         const t = i.dataset.action;
+        const name = i.textContent.trim();
         close();
         if (t === 'theme') { const cur = document.documentElement.getAttribute('data-theme'); applyTheme(cur === 'light' ? 'dark' : 'light'); }
-        else if (t && t.indexOf('http') === 0 || (t && t.endsWith('.html'))) { window.location.href = t; }
-        else toast({ type: 'info', title: 'COMMAND', message: (i.textContent.trim()) + ' executed.' });
+        else if (t === 'alert') { const cur = document.documentElement.getAttribute('data-alert'); setAlert(cur === 'red' ? 'nominal' : cur === 'amber' ? 'red' : 'amber'); }
+        else if ((t && t.indexOf('http') === 0) || (t && t.endsWith('.html'))) { window.location.href = t; }
+        else toast({ type: 'info', title: '명령 실행', message: '‹' + name + '› 명령을 실행했습니다.' });
       })
     );
     $$('[data-cmdk-open]').forEach((b) => on(b, 'click', open));
@@ -621,7 +643,7 @@
       if (dots) {
         slides.forEach((_, i) => {
           const b = document.createElement('button');
-          b.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+          b.setAttribute('aria-label', (i + 1) + '번 슬라이드로 이동');
           on(b, 'click', () => slides[i].scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' }));
           dots.appendChild(b);
         });
@@ -656,7 +678,7 @@
     $$('[data-copy]').forEach((b) =>
       on(b, 'click', () => {
         const text = b.dataset.copy || (b.previousElementSibling && b.previousElementSibling.textContent) || '';
-        const done = () => toast({ type: 'success', title: 'COPIED', message: 'Buffer written to clipboard.' });
+        const done = () => toast({ type: 'success', title: '복사됨', message: '클립보드에 복사했습니다.' });
         if (navigator.clipboard) navigator.clipboard.writeText(text).then(done).catch(done);
         else done();
       })
@@ -730,9 +752,152 @@
   }
 
   /* ----------------------------------------------------------------------
+   * COCKPIT FRAME — inject the fixed viewport HUD chrome into <body>.
+   * Decorative (aria-hidden, pointer-events:none). Every page gets it free.
+   * -------------------------------------------------------------------- */
+  function initCockpit() {
+    if ($('.hud-cockpit')) return;
+    const c = document.createElement('div');
+    c.className = 'hud-cockpit';
+    c.setAttribute('aria-hidden', 'true');
+    c.innerHTML =
+      '<i class="hc-corner tl"></i><i class="hc-corner tr"></i><i class="hc-corner bl"></i><i class="hc-corner br"></i>' +
+      '<div class="hc-ruler left"></div><div class="hc-ruler right"></div>' +
+      '<div class="hc-status"><span class="hc-dot"></span><span>SYS//AETHER-HUD</span><span class="hc-state">ONLINE</span></div>';
+    document.body.appendChild(c);
+  }
+
+  /* ----------------------------------------------------------------------
+   * NAV TOGGLE — inject a mobile menu button into every .navbar so the links
+   * never become unreachable below the 860px breakpoint.
+   * -------------------------------------------------------------------- */
+  function initNavToggle() {
+    $$('.navbar').forEach((nav) => {
+      const links = $('.navbar-links', nav);
+      if (!links || $('.navbar-toggle', nav)) return;
+      if (!links.id) links.id = 'navbar-links-' + Math.random().toString(36).slice(2, 7);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-icon btn-secondary btn-sm navbar-toggle';
+      btn.setAttribute('aria-label', '메뉴 열기');
+      btn.setAttribute('aria-expanded', 'false');
+      btn.setAttribute('aria-controls', links.id);
+      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>';
+      (($('.navbar-actions', nav)) || nav).appendChild(btn);
+      const setOpen = (open) => {
+        links.classList.toggle('is-open', open);
+        btn.setAttribute('aria-expanded', String(open));
+        btn.setAttribute('aria-label', open ? '메뉴 닫기' : '메뉴 열기');
+      };
+      on(btn, 'click', (e) => { e.stopPropagation(); setOpen(!links.classList.contains('is-open')); });
+      $$('.nav-link', links).forEach((l) => on(l, 'click', () => setOpen(false)));
+      on(document, 'click', (e) => { if (!nav.contains(e.target)) setOpen(false); });
+      on(document, 'keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
+    });
+  }
+
+  /* ----------------------------------------------------------------------
+   * SCROLL REVEAL — signature "rise" via one shared IntersectionObserver.
+   * CSS only hides under html.js, so a dead script never traps content.
+   * -------------------------------------------------------------------- */
+  function initReveal() {
+    const els = $$('[data-reveal]');
+    if (!els.length) return;
+    if (RM || !('IntersectionObserver' in window)) { els.forEach((el) => el.classList.add('is-in')); return; }
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); } });
+    }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+    els.forEach((el) => {
+      // stagger within each element's own group of reveal siblings
+      const sibs = Array.from(el.parentElement ? el.parentElement.children : [el]).filter((n) => n.hasAttribute && n.hasAttribute('data-reveal'));
+      el.style.transitionDelay = Math.min(sibs.indexOf(el), 6) * 70 + 'ms';
+      io.observe(el);
+    });
+  }
+
+  /* ----------------------------------------------------------------------
+   * RETICLE TRACKING — [data-reticle-track] follows the pointer across its
+   * host (e.g. the 404 search scene). Skipped entirely under reduced-motion.
+   * -------------------------------------------------------------------- */
+  function initReticleTrack() {
+    const els = $$('[data-reticle-track]');
+    if (!els.length || RM) return;
+    on(document, 'pointermove', (e) => {
+      els.forEach((el) => {
+        const host = el.offsetParent || document.body;
+        const r = host.getBoundingClientRect();
+        el.style.transform = 'translate(' + (e.clientX - r.left - el.offsetWidth / 2) + 'px,' + (e.clientY - r.top - el.offsetHeight / 2) + 'px)';
+      });
+    });
+  }
+
+  /* ----------------------------------------------------------------------
+   * RADIO GROUP — keyboard-complete custom radios [data-radio-group] with
+   * [role=radio][aria-checked]. Space/Enter select; arrows roam.
+   * -------------------------------------------------------------------- */
+  function initRadioGroup() {
+    $$('[data-radio-group]').forEach((group) => {
+      const radios = $$('[role="radio"]', group);
+      if (!radios.length) return;
+      const select = (r) => {
+        radios.forEach((x) => { x.setAttribute('aria-checked', 'false'); x.tabIndex = -1; });
+        r.setAttribute('aria-checked', 'true'); r.tabIndex = 0;
+        group.dispatchEvent(new CustomEvent('radio:change', { detail: { value: r.dataset.value } }));
+      };
+      radios.forEach((r, i) => {
+        on(r, 'click', () => select(r));
+        on(r, 'keydown', (e) => {
+          if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); select(r); return; }
+          let n = null;
+          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') n = (i + 1) % radios.length;
+          else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') n = (i - 1 + radios.length) % radios.length;
+          if (n !== null) { e.preventDefault(); select(radios[n]); radios[n].focus(); }
+        });
+      });
+      const cur = radios.findIndex((r) => r.getAttribute('aria-checked') === 'true');
+      radios.forEach((r, i) => { r.tabIndex = (i === (cur >= 0 ? cur : 0)) ? 0 : -1; });
+    });
+  }
+
+  /* ----------------------------------------------------------------------
+   * THREAT MODE — one <html data-alert> attribute repaints the whole signal
+   * palette (see semantic.css). Syncs cockpit status + any live region.
+   * -------------------------------------------------------------------- */
+  function setAlert(level) {
+    if (!level || level === 'nominal') document.documentElement.removeAttribute('data-alert');
+    else document.documentElement.setAttribute('data-alert', level);
+    const map = { amber: ['CAUTION', 'is-warn'], red: ['ALERT', 'is-alert'] };
+    const w = map[level];
+    $$('.hud-cockpit .hc-state').forEach((s) => {
+      s.className = 'hc-state' + (w ? ' ' + w[1] : '');
+      s.textContent = w ? w[0] : 'ONLINE';
+    });
+    $$('[data-alert-control] [role="radio"]').forEach((r) => {
+      const sel = r.dataset.value === (level || 'nominal');
+      r.setAttribute('aria-checked', String(sel));
+      r.tabIndex = sel ? 0 : -1;
+    });
+    $$('[data-alert-live]').forEach((el) => {
+      el.textContent = level === 'red'
+        ? '경계 태세로 전환했습니다. 전 구역 신호 팔레트가 레드로 바뀝니다.'
+        : level === 'amber'
+        ? '주의 태세로 전환했습니다. 시스템이 앰버 경계 상태입니다.'
+        : '정상 운용 중입니다. 모든 시스템이 시안 상태로 안정적입니다.';
+    });
+  }
+  function initAlertToggle() {
+    const ctrl = $('[data-alert-control]');
+    if (ctrl) on(ctrl, 'radio:change', (e) => setAlert(e.detail.value));
+    setAlert(document.documentElement.getAttribute('data-alert') || 'nominal');
+  }
+
+  /* ----------------------------------------------------------------------
    * INIT ALL
    * -------------------------------------------------------------------- */
   function init() {
+    initReveal();      // first — never leave [data-reveal] trapped if a later widget throws
+    initCockpit();
+    initNavToggle();
     initTheme();
     initTelemetry();
     initBoot();
@@ -758,10 +923,13 @@
     initCopy();
     initWidgets();
     initKanban();
+    initRadioGroup();
+    initAlertToggle();
+    initReticleTrack();
   }
 
   // Public API
-  window.HUD = { toast: toast, theme: applyTheme };
+  window.HUD = { toast: toast, theme: applyTheme, alert: setAlert };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
