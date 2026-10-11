@@ -6,7 +6,7 @@ android {
  compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
  kotlinOptions { jvmTarget = "17" }
  buildFeatures { compose = true; buildConfig = true }
- sourceSets["main"].res.srcDirs("src/main/res", "src/main/java/com/jinsup/ds/t01_neobrutalism/res", "src/main/java/com/jinsup/ds/t30_corporate_clean_saas/res")
+ sourceSets["main"].res.srcDirs("src/main/res", "src/main/java/com/jinsup/ds/t15_hygge/res", "src/main/java/com/jinsup/ds/t02_swiss/res", "src/main/java/com/jinsup/ds/t03_editorial/res", "src/main/java/com/jinsup/ds/t04_glass/res", "src/main/java/com/jinsup/ds/t01_neobrutalism/res", "src/main/java/com/jinsup/ds/t30_corporate_clean_saas/res")
 }
 dependencies {
  implementation(platform("androidx.compose:compose-bom:2024.10.00"))

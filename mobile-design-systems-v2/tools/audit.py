@@ -24,7 +24,9 @@ def luminance(h):
 checked=0
 for theme in (root/'flutter/lib/themes').glob('t*'):
  colors=dict((name,(dark,light)) for name,dark,light in re.findall(r'Color get (\w+)\s*=>\s*dark\s*\? const Color\(0x([0-9A-F]+)\)\s*:\s*const Color\(0x([0-9A-F]+)\)',(theme/'theme/colors.dart').read_text()))
- pairs=[('fg','surface'),('fgMuted','surface'),('onAccent','accent'),('onHighlight','highlight'),('onSlabInk','slabInk')] if theme.name.startswith('t01') else [('text','surface'),('text2','surface'),('text3','surface'),('onInk','ink'),('primary','primaryTint'),('stamp','surface')]
+ pairs=[('fg','surface'),('fgMuted','surface'),('onAccent','accent'),('onHighlight','highlight'),('onSlabInk','slabInk')] if theme.name.startswith('t01') else [('text','surface'),('text2','surface'),('text3','surface'),('onPrimaryFill','primaryFill') if theme.name.startswith('t15') else ('onInk','ink'),('primary','surface'),('stamp','surface')]
+ if theme.name.startswith("t15"):
+  pairs += [("text",room) for room in ["roomButter","roomSage","roomFjord","roomOak","roomRose","roomEmber"]]+[("inkOnRoom",room) for room in ["roomButter","roomSage","roomFjord","roomOak","roomRose"]]+[("onAttic","roomAttic")]
  for mode in [0,1]:
   for fg,bg in pairs:
    a,b=luminance(colors[fg][mode]),luminance(colors[bg][mode]);ratio=(max(a,b)+.05)/(min(a,b)+.05)

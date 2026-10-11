@@ -1,32 +1,35 @@
-# 모바일 디자인 시스템 v2 · 파일럿
+# 모바일 디자인 시스템 v2
 
-웹 v2의 **01 판판레코드**와 **30 레저라인**을 Android Compose와 Flutter의 독립 테마로 옮겼습니다. 각 플랫폼 앱은 하나이며, 런처에서 테마를 선택하고 밝기를 전환합니다. 나머지 28개는 파일럿 검토 후 진행합니다.
+웹 v2에서 완성이 확정된 **01·02·03·04·15·30**을 Android Compose와 Flutter로 구현했습니다. 플랫폼마다 앱 하나에서 테마를 선택하고 낮·밤을 전환합니다. 각 테마는 독립 폴더입니다.
 
-| 테마 폴더 | 브랜드 | 화면 |
+| 폴더 | 브랜드 | 네 화면과 시그니처 |
 |---|---|---|
-| `t01_neobrutalism` | 판판레코드 | 운영 보드, 음반 상세, 문의함, 매장 설정 |
-| `t30_corporate_clean_saas` | 레저라인 | 마감 현황, 결재함, 지출결의서 상세, 결재 규칙 |
+| `t01_neobrutalism` | 판판레코드 | 운영 보드·음반·문의·매장 / 가격 스티커·크레이트 탭·음반 표지 |
+| `t02_swiss` | 오선음악당 | 매표·공연·편지·계정 / 노출 그리드·잘린 숫자·붉은 공연 포스터 |
+| `t03_editorial` | 월간 행간 | 편집국·단권·독자 편지·구독 / 폴리오·옥스퍼드 룰·112쪽 플랫플랜 |
+| `t04_glass` | 윤슬홈 | 집·무드등·알림·허브 설정 / 도시와 강·빛 테두리 유리·깊이 후퇴 |
+| `t15_hygge` | 모닥 | 쇼룸·담요·상담·계정 / 방 단면·사물 일러스트·콜아웃·연필 메모 |
+| `t30_corporate_clean_saas` | 레저라인 | 마감·결재·지출결의서·규칙 / 결재 도장·원장 행 |
 
 ## 실행
 
 ### Android
 
-설치된 최신 SDK 36, minSdk 26, JDK 17, AGP 8.11.1, Gradle 8.13입니다.
+SDK 36, minSdk 26, JDK 17, Kotlin 2.2.0, AGP 8.11.1, Gradle 8.13.
 
 ```sh
 cd mobile-design-systems-v2/android
-# 다른 컴퓨터에서는 local.properties의 sdk.dir와 gradle.properties의 JDK 경로를 맞춥니다.
+# 다른 컴퓨터에서는 local.properties의 SDK 경로와 gradle.properties의 JDK 경로를 맞춥니다.
 ./gradlew :app:assembleDebug
-# Android Studio에서 이 폴더를 열어 실행하거나:
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb shell am start -n com.jinsup.ds.v2/com.jinsup.ds.catalog.MainActivity
 ```
 
-스크린샷 검증용 진입 인자: `--ei theme 1|30 --ei screen 0|1|2|3 --ez dark true|false`.
+검증 진입 인자: `--ei theme 1|2|3|4|15|30 --ei screen 0|1|2|3 --ez dark true|false`.
 
 ### Flutter
 
-Flutter 3.44.5 / Dart 3.12.2를 사용합니다.
+Flutter 3.44.5 / Dart 3.12.2.
 
 ```sh
 cd mobile-design-systems-v2/flutter
@@ -37,42 +40,43 @@ flutter test
 flutter build apk --debug
 ```
 
-Google Fonts의 TTF를 OFL과 함께 번들했습니다. `GoogleFonts.config.allowRuntimeFetching = false`이므로 폰트 표시와 골든 테스트에 네트워크가 필요하지 않습니다. 처음 패키지를 설치하고 빌드할 때는 네트워크가 필요할 수 있습니다.
+Google Fonts TTF와 OFL을 테마 폴더에 번들했습니다. `GoogleFonts.config.allowRuntimeFetching = false`이므로 화면·골든에 폰트 다운로드가 필요하지 않습니다.
 
-## 테마 폴더를 복사해서 쓰기
+## 폴더 복사
 
-테마 폴더 사이에 import가 없습니다. 카탈로그에 대한 역방향 의존도 없습니다.
+테마 사이의 import와 카탈로그에 대한 역방향 의존은 없습니다.
 
-- **Flutter**: `lib/themes/tNN_.../` 전체를 복사합니다. 대상 앱의 `pubspec.yaml`에 해당 테마의 `fonts/` 폰트들을 같은 family 이름으로 등록합니다. `theme/theme.dart`의 `panpanTheme()` 또는 `ledgerTheme()`를 적용하고, `components/components.dart`와 `components/signatures.dart`를 사용합니다. `screens/`는 샘플이며 필요에 따라 제외할 수 있습니다. 양쪽 테마가 함께 있으면 IBM Plex Sans KR와 Noto Sans KR은 한 번만 등록해도 됩니다. 각 폴더에는 독립 복사를 위해 같은 폰트를 모두 포함했습니다.
-- **Android**: `app/src/main/java/com/jinsup/ds/tNN_.../` 전체를 복사합니다. 대상 모듈의 `sourceSets["main"].res.srcDir(...)`에 테마의 `res/`를 추가합니다. 대상 앱 namespace가 다르면 `Type.kt`의 `R` import를 맞춥니다. Compose/Material 3와 material-icons-extended를 의존성에 추가하고 `PanpanTheme` 또는 `LedgerTheme`로 감쌉니다. 앱 진입점은 각각 `PanpanApp` / `LedgerApp`입니다.
+- **Flutter:** `lib/themes/tNN_.../`를 복사하고 해당 `fonts/`를 `pubspec.yaml`에 같은 family·weight로 등록합니다. `theme/theme.dart`의 `panpanTheme`, `oseonTheme`, `haengganTheme`, `yunseulTheme`, `modakTheme`, `ledgerTheme` 중 해당 함수를 적용합니다. 구성품은 `components/`, 장면 예시는 `screens/`, 사실 정본은 `facts.dart`입니다. 중복 폰트 family는 앱에서 한 번만 등록해도 되며, 각 폴더에는 독립 복사용 파일이 있습니다.
+- **Android:** `app/src/main/java/com/jinsup/ds/tNN_.../`를 복사하고 모듈의 `sourceSets["main"].res.srcDir(...)`에 그 폴더의 `res/`를 추가합니다. 다른 namespace에서는 `Type.kt`의 `R` import를 맞춥니다. Compose/Material 3·material-icons-extended를 의존성에 추가하고 해당 `*Theme`로 감쌉니다. 앱 예시는 `PanpanApp`, `OseonApp`, `HaengganApp`, `YunseulApp`, `ModakApp`, `LedgerApp`입니다.
 
-`theme/`는 Color, Type, Shape, Spacing, Motion, Elevation, Theme 7종입니다. 웹의 색상 의미를 같은 이름의 프로퍼티로 대응했습니다. Android는 `CompositionLocal`, Flutter는 `ThemeExtension`을 통해 Material 밖의 토큰을 제공합니다.
+각 `theme/`는 Color·Type·Shape·Spacing·Motion·Elevation·Theme 7종입니다. Material에 없는 의미 토큰은 Android `CompositionLocal`, Flutter `ThemeExtension`으로 제공합니다. 폰트 라이선스는 Flutter `fonts/*/OFL.txt`, Android `font-licenses/`에 있습니다.
 
-## 구성품
+## 구성품과 샘플 상태
 
-두 테마 모두 버튼(주요·보조·고스트·위험·비활성·처리 중), 아이콘 버튼, 입력(label/helper/error), 카드, 배지, 탭, 상단바, 하단 내비, 목록 행, 다이얼로그, 바텀시트, 스낵바, 스위치, 체크박스, 라디오, 진행률, 빈 상태, 스켈레톤을 제공합니다.
+각 테마는 버튼(주요·보조·고스트·위험·비활성·처리 중), 아이콘 버튼, 입력(도움말·오류), 카드, 배지, 탭, 상단바, 하단 내비, 목록, 다이얼로그, 시트, 스낵바, 스위치, 체크박스, 라디오, 진행률, 빈 상태, 스켈레톤과 테마별 시그니처를 포함합니다.
 
-판판레코드에는 가격 스티커와 솟아오른 크레이트 탭, Canvas 음반 표지를 추가했습니다. 레저라인에는 원형 인주 도장 결재란, 미니 결재 진행칸, 원장 행을 추가했습니다. 정적인 패널에는 그림자를 쓰지 않으며, 판판레코드의 버튼은 누를 때 오프셋 그림자가 줄어듭니다.
+검색·필터·초안·답장 저장, 좌석 등급·할인·수량·배송 계산, 결재 상태 변경, 조명·온도·방 필터·영화 장면, 방문 처리, 장바구니 합산, 주소·설정 유효성 검증을 조작할 수 있습니다. 상태는 앱 메모리에 유지됩니다. 외부 전송이나 실제 구매·결재·가정 기기 제어는 연결하지 않았습니다.
 
-## 샘플 동작과 데이터 범위
+팩트는 DIRECTION 정본과 확인한 웹 장면에서 가져와 `facts.dart` / `Facts.kt`에 보존했습니다. 원본에 개별 항목이 없는 전체 현황은 요약 수치로만 표시합니다. 모닥 장바구니 초기 ₩232,000과 새로 담은 담요의 합계, 담요 리뷰와 쇼룸 리뷰는 구분합니다.
 
-문의 필터·검색, 답장 초안, 음반 수령 방법 선택·담기, 매장 입력 검증, 결재 승인·반려, 승인 상태 필터, 전결 한도 편집·검증, 알림 설정을 조작할 수 있습니다. 샘플 상태는 앱 메모리에만 유지되며 서버 전송·실제 구매·실제 결재는 수행하지 않습니다.
-
-팩트는 테마의 `facts.dart` / `Facts.kt`에 모았습니다. DIRECTION 정본에 명시된 문의 3건과 결재 상세 1건을 구현했으며, 화면의 전체 현황 숫자(결재 대기 12건 등)는 정본의 운영 지표입니다. 원본에 없는 개별 문서나 금액을 만들어 채우지 않았습니다.
-
-## 검증
+## 검증과 화면 비교
 
 ```sh
 python3 mobile-design-systems-v2/tools/audit.py
 cd mobile-design-systems-v2/flutter
 flutter analyze
 flutter test
-# 화면을 의도적으로 바꾼 경우에만:
+# 화면을 의도적으로 바꾼 경우:
 flutter test --update-goldens
 ```
 
-골든 기준 이미지는 `flutter/test/goldens/`에 있습니다. 웹 참조와 Android·Flutter 검토용 이미지는 `/private/tmp/mobile-v2-shots/`에 둡니다. Android 검증 이미지는 디버그 앱의 `PixelCopy`로 해당 앱의 Window 표면을 캡처합니다. 앱 밖의 플로팅 창이 스크린샷에 섞이지 않으며, 디버그 인자가 없는 일반 실행에는 캡처 코드가 작동하지 않습니다.
+골든 기준은 `flutter/test/goldens/`. 웹·Android·Flutter 검토 PNG와 갤러리는 `/private/tmp/mobile-v2-shots/`에 있습니다.
 
-Android 캡처는 `ANDROID_SERIAL=emulator-5580 python3 mobile-design-systems-v2/tools/android_shots.py`로 재생성할 수 있습니다. `MOBILE_SHOT_THEMES`, `MOBILE_SHOT_MODES`, `MOBILE_SHOT_SCALES`로 부분 재검증할 수 있고, 표시 설정은 종료 시 복구합니다. `tools/review_gallery.py`는 같은 임시 폴더에 비교용 HTML을 만듭니다.
+```sh
+ANDROID_SERIAL=emulator-5580 MOBILE_SHOT_THEMES=2,3,4,15 python3 mobile-design-systems-v2/tools/android_shots.py
+python3 mobile-design-systems-v2/tools/review_gallery.py
+```
 
-자세한 결과와 원본 데이터 충돌은 [검증 기록](VERIFICATION.md)을 참고하세요.
+Android 디버그 캡처는 앱 Window를 `PixelCopy`로 기록합니다. 다른 앱의 오버레이가 포함되지 않고 일반 실행에서는 캡처가 작동하지 않습니다. 검증 스크립트는 표시 크기·밀도·글자 크기를 종료 시 복원합니다. `MOBILE_SHOT_THEMES`, `MOBILE_SHOT_SCREENS`, `MOBILE_SHOT_MODES`, `MOBILE_SHOT_SCALES`로 부분 재검증합니다. 이미 설치된 APK를 그대로 재검증할 때는 `MOBILE_SKIP_INSTALL=1`을 지정합니다.
+
+상세 결과·원본 충돌·배치 교훈은 [검증 기록](VERIFICATION.md), 확산 원본 해시는 [원본 기록](BATCH-02-SOURCE.md)을 참고하세요. 원격 push는 하지 않았습니다.
