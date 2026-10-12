@@ -1,0 +1,67 @@
+/* toast — 「발행 알림」: 오른쪽 아래, 1px 프레임 + 왼쪽 상태 기호(▲ 레드라인 / ■ ok / □ 정보)
+   등장 = 위 가장자리에서 출력되듯 펼친다(clip-path). 닫힘 = 빨간 취소선이 그어진 뒤(160ms) 사라진다
+   app.js: GSA.toast({ title, text, tone: 'ok'|'red'|'info', ref, action }) */
+.toasts {
+  position: fixed;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--space-2);
+  width: min(380px, calc(100vw - 2 * var(--space-3)));
+  pointer-events: none;
+}
+.toast {
+  position: relative;
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-2) var(--space-3) var(--space-4);
+  border: var(--rule-ink);
+  background: var(--paper-sheet);
+  color: var(--ink);
+  pointer-events: auto;
+}
+.toast.is-opening { animation: sheet-print var(--dur-base) var(--ease-plot) both; }
+.toast__sym { width: 12px; height: 12px; margin-top: 5px; background: var(--ink); }
+.toast--ok .toast__sym { background: var(--ok); }
+.toast--red .toast__sym { background: var(--redline); clip-path: polygon(50% 0, 100% 100%, 0 100%); width: 14px; }
+.toast--info .toast__sym { background: none; border: 1.5px solid var(--ink); }
+.toast--red { border-color: var(--redline); }
+.toast__body { display: grid; gap: 2px; min-width: 0; padding-top: 1px; }
+.toast__title { font-size: var(--fs-body); font-weight: 600; line-height: 1.45; }
+.toast__text { font-size: var(--fs-small); color: var(--ink-2); line-height: 1.55; }
+.toast__ref { font-family: var(--type-mono); font-size: 12px; color: var(--ink-2); }
+.toast__actions { display: flex; gap: var(--space-2); margin-top: var(--space-2); }
+.toast__close { margin: -8px 0 -8px 0; align-self: start; }
+
+/* 닫힘: 취소선 → 사라짐 */
+.toast::after {
+  content: "";
+  position: absolute;
+  left: var(--space-3);
+  right: var(--space-3);
+  top: 50%;
+  height: 1.5px;
+  background: var(--redline);
+  transform: scaleX(0);
+  transform-origin: left center;
+  pointer-events: none;
+}
+.toast.is-closing::after { transform: scaleX(1); transition: transform 160ms var(--ease-plot); }
+.toast.is-closing { animation: toast-out var(--dur-tick) var(--ease-plot) 160ms both; }
+@keyframes toast-out { to { opacity: 0; clip-path: inset(0 0 100% 0); } }
+
+/* 시간 막대: 자동 닫힘까지 남은 시간 — 아래 1px 선이 줄어든다 */
+.toast__timer { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--ink); transform-origin: left; animation: toast-timer var(--toast-dur, 5000ms) linear forwards; }
+.toast:hover .toast__timer, .toast:focus-within .toast__timer { animation-play-state: paused; }
+@keyframes toast-timer { to { transform: scaleX(0); } }
+
+/* 정적 견본 */
+.toasts--static { position: relative; right: auto; bottom: auto; z-index: auto; width: 100%; pointer-events: auto; }
+
+@media (max-width: 599px) {
+  .toasts { right: var(--space-3); left: var(--space-3); bottom: var(--space-3); width: auto; }
+}

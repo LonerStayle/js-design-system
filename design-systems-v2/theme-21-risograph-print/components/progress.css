@@ -1,0 +1,137 @@
+/* progress — 「드럼 잉크 / 인쇄 진행」
+   막대 = 바탕 망점 20% · 진행분 = 1번 판 면 + 2번 판 겹침 · 수치 Martian 오른쪽 · 원형 진행 금지
+   + .drum(잉크 드럼 원통 잔량) · .stackbar(100% 누적 막대) · .barpair(계획 망점 × 실제 실면 겹침 막대) */
+.meter { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.meter__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); font-size: 13px; }
+.meter__label { font-family: var(--font-ko); font-weight: 500; min-width: 0; }
+.meter__value { font-family: var(--font-mono); font-variation-settings: "wdth" 87.5; font-size: 12px; font-weight: 500; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.meter__track {
+  position: relative;
+  isolation: isolate;
+  height: 12px;
+  color: var(--ink-muted);
+  background: radial-gradient(circle, currentColor var(--dot-r-20), transparent calc(var(--dot-r-20) + .5px)) 0 0 / 6px 6px;
+}
+.meter__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--v, 0%);
+  background: var(--ink-pink);
+  transition: width var(--dur-pass) var(--ease-feed);
+}
+/* 2번 판(블루)이 진행분 위에 겹쳐 찍힘 — 살짝 짧고 아래로 어긋남 */
+.meter__fill::after {
+  content: "";
+  position: absolute;
+  left: 3px; right: -3px; top: 3px; bottom: -2px;
+  background: var(--ink-blue);
+  mix-blend-mode: var(--blend);
+}
+.meter--sm .meter__track { height: 8px; }
+.meter--lg .meter__track { height: 20px; }
+/* 부족 경고 — 1번 판만, 수치 핑크 글자 */
+.meter--low .meter__fill::after { display: none; }
+.meter--low .meter__value { color: var(--text-pink); font-weight: 600; }
+.meter--low .meter__track { outline: 1.5px solid var(--text-pink); outline-offset: 2px; }
+/* 완료 — 성공 */
+.meter--done .meter__fill { background: var(--success-fill); }
+.meter--done .meter__fill::after { display: none; }
+/* 판별 진행(옐로판 완료 → 핑크판 진행) */
+.meter__fill--y { background: var(--ink-yellow); }
+.meter__fill--y::after { display: none; }
+.meter__fill--p2 { background: var(--ink-pink); mix-blend-mode: var(--blend); }
+.meter__fill--p2::after { display: none; }
+/* 밤: screen 이면 핑크×옐로가 연노랑(#FFEFB0)으로 날아가 핑크 진행분이 사라진다 → 핑크 판을 그대로 얹는다 */
+[data-theme="dark"] .meter__fill--p2 { mix-blend-mode: normal; }
+/* 불확정(마스터 제작 중) */
+.meter--indeterminate .meter__fill { width: 34%; animation: meter-run 1.4s var(--ease-feed) infinite; }
+@keyframes meter-run { from { translate: -100% 0; } to { translate: 300% 0; } }
+.meter--indeterminate .meter__track { overflow: hidden; }
+
+/* ── 드럼 원통 잔량 ─────────────────────────────────────────────── */
+/* <div class="drum ink-p is-low" role="meter" aria-valuenow="18" aria-valuemin="0" aria-valuemax="100" aria-label="형광 핑크 잔량 18%"> … */
+.drum {
+  --v: 50%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.drum__can {
+  position: relative;
+  width: 100%;
+  max-width: 96px;
+  aspect-ratio: 1 / 1.7;
+  isolation: isolate;
+  border-radius: 50% / 13%;
+  overflow: hidden;
+  color: var(--ink-muted);
+  background: radial-gradient(circle, currentColor var(--dot-r-10), transparent calc(var(--dot-r-10) + .5px)) 0 0 / 6px 6px;
+}
+/* 뚜껑 타원 */
+.drum__can::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 26%;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 2px var(--ink);
+  z-index: 2;
+}
+/* 잉크 높이 */
+.drum__ink {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: var(--v);
+  background: var(--c, var(--ink-pink));
+  border-radius: 0 0 50% 50% / 0 0 22% 22%;
+  -webkit-mask-image: var(--grain);
+  mask-image: var(--grain);
+  -webkit-mask-size: 260px;
+  mask-size: 260px;
+  transition: height var(--dur-pass) var(--ease-feed);
+}
+.drum__ink::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: -9%;
+  height: 18%;
+  border-radius: 50%;
+  background: var(--c, var(--ink-pink));
+  filter: brightness(.92);
+}
+.drum__label { display: flex; flex-direction: column; align-items: center; gap: 0; text-align: center; font-family: var(--font-ko); font-size: 13px; line-height: 1.35; }
+.drum__name { font-weight: 700; }
+.drum__val { font-family: var(--font-mono); font-variation-settings: "wdth" 87.5; font-size: 12px; font-weight: 500; }
+.drum__code { font-family: var(--font-display); font-weight: 900; font-stretch: 150%; font-size: 20px; line-height: 1; }
+.drum.is-low .drum__val { color: var(--text-pink); font-weight: 600; }
+.drum.is-low .drum__can { outline: 2px dashed var(--text-pink); outline-offset: 4px; }
+.drums { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--sp-4); align-items: end; }
+@media (max-width: 719px) { .drums { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: var(--sp-5); } }
+
+/* ── 100% 누적 막대 ─────────────────────────────────────────────── */
+.stackbar { display: flex; flex-direction: column; gap: 8px; }
+.stackbar__bar { display: flex; height: 28px; gap: 2px; }
+.stackbar__seg { position: relative; flex: var(--n, 1) 1 0; min-width: 4px; background: var(--c); }
+.stackbar__seg--dots { background: radial-gradient(circle, var(--c) var(--dot-r-40), transparent calc(var(--dot-r-40) + .5px)) 0 0 / 6px 6px; }
+.stackbar__legend { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; font-family: var(--font-ko); font-size: 13px; }
+.stackbar__legend li { display: inline-flex; align-items: center; gap: 6px; }
+.stackbar__legend i { width: 12px; height: 12px; background: var(--c); flex: none; }
+.stackbar__legend .mono { font-size: 12px; font-weight: 600; }
+
+/* ── 계획 × 실제 겹침 막대 ──────────────────────────────────────── */
+/* 세 구간으로 찍는다: 0 → min(계획, 실제) = 두 판이 겹친 달성분(--chart-over 실면)
+   실제 < 계획 → 실제 위 ~ 계획 = 블루 40% 망점만(모자란 분) · 실제 > 계획 → 계획 위 ~ 실제 = 핑크 실면만(넘긴 분)
+   마크업: <div class="barpair__col" data-plan data-real><span class="barpair__plan"></span><span class="barpair__real"></span><span class="barpair__over"></span></div> */
+.barpair { display: grid; grid-template-columns: repeat(var(--bars, 10), minmax(0, 1fr)); gap: 10px; align-items: end; height: var(--h, 220px); }
+.barpair__col { position: relative; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; }
+.barpair__plan, .barpair__real, .barpair__over { position: absolute; left: 0; right: 0; bottom: 0; }
+.barpair__plan { height: var(--plan); background: radial-gradient(circle, var(--ink-blue) var(--dot-r-40), transparent calc(var(--dot-r-40) + .5px)) 0 100% / 6px 6px; box-shadow: inset 0 2px 0 var(--ink-blue); }
+.barpair__real { height: var(--real); background: var(--ink-pink); }
+.barpair__over { height: min(var(--plan), var(--real)); background: var(--chart-over); -webkit-mask-image: var(--grain-soft); mask-image: var(--grain-soft); -webkit-mask-size: 260px; mask-size: 260px; }
+/* 오늘(진행 중): 달성 실면 꼭대기에 핑크 띠 = 지금 드럼이 도는 자리. 남은 계획은 망점으로만 */
+.barpair__col.is-live .barpair__over { box-shadow: inset 0 4px 0 var(--ink-pink); }
+.barpair__axis { display: grid; grid-template-columns: repeat(var(--bars, 10), minmax(0, 1fr)); gap: 10px; margin-top: 8px; font-family: var(--font-mono); font-variation-settings: "wdth" 87.5; font-size: 11px; color: var(--ink-muted); text-align: center; }
+.barpair__axis .is-today { color: var(--ink); font-weight: 600; }

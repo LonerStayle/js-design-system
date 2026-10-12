@@ -1,0 +1,92 @@
+/* ==========================================================================
+   progress — 레벨 미터 + 선형 막대
+   .meter  파인 트랙 안 LED 세그먼트(그린 → 앰버 → 빨강) + 숫자 판독값 (색만으로 전달 금지)
+   .meter--mono  비율·진행 미터 — 그린 한 색 (빨강은 클립·오류 전용이라 쓰지 않는다)
+           app.js 가 data-segments 개수만큼 .meter__seg 생성, aria-valuenow 로 점등
+           .is-clip → "CLIP" 빨강 텍스트
+   .bar    파인 트랙 안 솟은 막대 + 막대 위 LED 띠. --orange · --busy(불확정) · --error
+   ========================================================================== */
+.meter { display: grid; gap: 8px; min-width: 0; }
+.meter__top { display: flex; align-items: baseline; gap: var(--sp-2); }
+.meter__name { font-size: 14px; color: var(--ink-2); }
+.meter__readout { margin-left: auto; font-family: var(--font-mono); font-size: 15px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.meter__clip { display: none; font-family: var(--font-legend); font-weight: 600; font-size: 11px; letter-spacing: .14em; color: var(--text-red); }
+.meter.is-clip .meter__clip { display: inline; }
+.meter__track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 3px;
+  padding: 6px;
+  border-radius: 10px;
+  background: var(--surface-deep);
+  box-shadow: var(--sh-well-deep);
+  height: 24px;
+}
+.meter__seg {
+  border-radius: 2px;
+  background: var(--surface);
+  box-shadow: var(--sh-pressed-sm);
+  opacity: .9;
+  transition: background-color var(--dur-led) ease-out, box-shadow var(--dur-led) ease-out;
+}
+.meter__seg.is-on { background: var(--led-green); box-shadow: 0 0 6px var(--led-green); opacity: 1; }
+.meter__seg.is-on.is-warn { background: var(--led-amber); box-shadow: 0 0 6px var(--led-amber); }
+.meter__seg.is-on.is-peak { background: var(--led-red); box-shadow: 0 0 6px var(--led-red); }
+/* 단색 미터(비율·진행) — 값과 무관하게 그린 한 색. 그린→앰버→빨강은 출력 dB 미터에만 */
+.meter--mono .meter__seg.is-on,
+.meter--mono .meter__seg.is-on.is-warn,
+.meter--mono .meter__seg.is-on.is-peak { background: var(--led-green); box-shadow: 0 0 6px var(--led-green); }
+.meter--lg .meter__track { height: 32px; }
+/* 세로 레벨 미터 */
+.meter--v { justify-items: center; }
+.meter--v .meter__track { grid-auto-flow: row; grid-auto-rows: minmax(0, 1fr); width: 24px; height: 160px; direction: ltr; }
+.meter--v .meter__track { display: flex; flex-direction: column-reverse; }
+.meter--v .meter__seg { flex: 1; }
+
+/* 선형 막대 — 파인 트랙 안 솟은 막대 + 막대 길이만큼 켜진 LED 띠(값이 색으로도 읽힌다)
+   0% 이면 채움이 사라지고 트랙만 보인다. 수치 판독값은 늘 .bar__top 에 병기. */
+.bar { display: grid; gap: 8px; min-width: 0; }
+.bar__top { display: flex; align-items: baseline; gap: var(--sp-2); font-size: 14px; color: var(--ink-2); }
+.bar__top .mono { margin-left: auto; color: var(--ink); font-size: 15px; }
+.bar__track {
+  position: relative;
+  display: block;
+  height: 16px;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--well-floor);
+  box-shadow: var(--sh-well-deep);
+  overflow: hidden;
+}
+.bar__fill {
+  --v: 0%;
+  --bar-led: var(--led-green);
+  --bar-glow: var(--glow-green);
+  position: relative;
+  display: block;
+  height: 100%;
+  width: var(--v);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: -1px -1px 2px var(--hi), 2px 2px 4px var(--lo), inset 1px 1px 0 var(--hi-line);
+  transition: width var(--dur-spring) var(--ease-detent);
+}
+.bar__fill::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 50%;
+  height: 3px;
+  margin-top: -1.5px;
+  border-radius: 2px;
+  background: var(--bar-led);
+  box-shadow: var(--bar-glow);
+}
+.bar__fill[style*="--v:0%"], .bar__fill[style*="--v: 0%"] { visibility: hidden; }
+.bar--orange .bar__fill { --bar-led: var(--led-orange); --bar-glow: var(--glow-orange); }
+.bar--error .bar__fill { --bar-led: var(--led-red); --bar-glow: var(--glow-red); }
+.bar--error .bar__top { color: var(--text-red); }
+.bar--busy .bar__fill { width: 30%; --bar-led: var(--led-amber); --bar-glow: var(--glow-amber); animation: bar-shuttle 1.4s var(--ease-detent) infinite alternate; }
+@keyframes bar-shuttle { from { transform: translateX(0); } to { transform: translateX(calc(233% + 0px)); } }

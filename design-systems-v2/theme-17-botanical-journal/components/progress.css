@@ -1,0 +1,82 @@
+/* progress — 축척자 진행 바: 축척자 위로 녹 띠가 차오르고 값은 눈금으로 읽는다("건조 5 / 7일")
+   <div class="gauge" role="progressbar" aria-valuemin="0" aria-valuemax="7" aria-valuenow="5"
+        aria-valuetext="건조 5일째, 7일 중" aria-labelledby="g-x" style="--val:71.4%; --steps:7">
+     <div class="gauge__top"><span class="gauge__name" id="g-x">건조</span><span class="gauge__value">5 / 7<span class="gauge__unit">일</span></span></div>
+     <div class="gauge__track"><span class="gauge__fill"></span></div>
+     <div class="gauge__scale"><span>0</span><span>7<span class="gauge__unit">일</span></span></div>
+   </div>
+   --steps : 큰 눈금 수(기본 10). 상태: .gauge--warn · .gauge--error · .gauge--done · [aria-busy="true"](값 모름) */
+
+.gauge {
+  --val: 0%;
+  --steps: 10;
+  --gauge-c: var(--sap);
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.gauge__top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-3); }
+.gauge__name { font-size: 13px; font-weight: 500; color: var(--ink); }
+.gauge__value { font-family: var(--font-ui); font-variant-numeric: tabular-nums; letter-spacing: 0; font-size: 14px; color: var(--ink); white-space: nowrap; }
+/* 한글 단위(일·명·부)는 모노가 아니라 UI 고딕으로 */
+.gauge__unit { font-family: var(--font-ui); letter-spacing: 0; margin-left: 1px; }
+.gauge__track {
+  position: relative;
+  height: 22px;
+  background:
+    repeating-linear-gradient(90deg, var(--ink) 0 1px, transparent 1px calc(100% / var(--steps))) 0 100% / calc(100% - 1px) 10px no-repeat,
+    repeating-linear-gradient(90deg, var(--ink-3) 0 1px, transparent 1px calc(100% / var(--steps) / 2)) 0 100% / 100% 5px no-repeat,
+    linear-gradient(var(--ink), var(--ink)) 0 100% / 100% 1px no-repeat;
+  box-shadow: inset -1px 0 0 var(--ink);
+}
+.gauge__fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 10px;
+  width: var(--val);
+  background: var(--gauge-c);
+  transition: width var(--dur-settle) var(--ease-paper);
+}
+.gauge__fill::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  top: -3px;
+  width: 2px;
+  height: 25px;
+  background: var(--gauge-c);
+}
+.gauge__scale {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-num);
+  font-size: 10px;
+  color: var(--ink-3);
+}
+.gauge__note { font-size: 12px; color: var(--ink-3); }
+
+.gauge--warn { --gauge-c: var(--warn); }
+.gauge--error { --gauge-c: var(--danger); }
+.gauge--error .gauge__value { color: var(--danger); }
+.gauge--done { --gauge-c: var(--ok); }
+.gauge--done .gauge__value::after { content: " ✓"; color: var(--ok); }
+
+/* 값 모름(불러오는 중) — 빗금 띠가 흐른다 */
+.gauge[aria-busy="true"] .gauge__fill {
+  width: 100%;
+  background: repeating-linear-gradient(135deg, var(--gauge-c) 0 6px, transparent 6px 12px);
+  background-size: 34px 10px;
+  opacity: .55;
+  animation: dmh-hatch 900ms linear infinite;
+}
+.gauge[aria-busy="true"] .gauge__fill::after { display: none; }
+
+/* 얇은 막대 (표 칸 · 칸반 카드 안) */
+.gauge--mini .gauge__track { height: 12px; }
+.gauge--mini .gauge__fill { height: 5px; }
+.gauge--mini .gauge__fill::after { height: 14px; top: -2px; }
+.gauge--mini .gauge__track { background:
+    repeating-linear-gradient(90deg, var(--ink-2) 0 1px, transparent 1px calc(100% / var(--steps))) 0 100% / calc(100% - 1px) 6px no-repeat,
+    linear-gradient(var(--ink-2), var(--ink-2)) 0 100% / 100% 1px no-repeat; }
+.gauge--mini .gauge__name, .gauge--mini .gauge__value { font-size: 12px; }

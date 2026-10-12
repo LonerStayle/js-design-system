@@ -1,0 +1,368 @@
+/* ==========================================================================
+   onboarding — 판판 회원 가입 3단계 (+ 회원 카드)
+   구도: 크레이트 인덱스 한 장. 왼쪽 고정 열 = 가입 단계 칸막이(고른 만큼 ✓ · 다음 단계가 솟음),
+        오른쪽 = 01 크레이트 칸막이 고르기 → 02 받는 방법 → 03 팔로우 행 → 04 회원 카드 미리보기.
+   단계 상태와 카드 미리보기는 JS 없이 :has()로 폼 값을 읽는다.
+   semantic 토큰만 사용
+   ========================================================================== */
+
+.ob > :first-child { border-top: 0; }
+
+/* ---- 왼쪽 고정 열 --------------------------------------------------- */
+.ob-index { padding-right: var(--gutter); }
+.ob-index__title { margin: var(--s-12) 0 var(--s-32); }
+.ob-index__skip { display: grid; gap: var(--s-4); margin-top: var(--s-32); padding-top: var(--s-16); border-top: var(--line-thin); }
+.ob-index__skip a { justify-self: start; display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; }
+
+/* 단계 칸막이: 끝낸 단계 = 잉크 + ✓, 지금 단계 = 옐로 + 오른쪽으로 솟음 */
+.ob-step__mark::before { content: ""; }
+.ob-form:has(#s1 input:checked) .ob-step--1,
+.ob-form:has(#s2 input[name="recv"]:checked) .ob-step--2,
+.ob-form:has(#s3 input:checked) .ob-step--3 {
+  background: var(--invert);
+  color: var(--on-invert);
+}
+.ob-form:has(#s1 input:checked) .ob-step--1 .ob-step__mark::before,
+.ob-form:has(#s2 input[name="recv"]:checked) .ob-step--2 .ob-step__mark::before,
+.ob-form:has(#s3 input:checked) .ob-step--3 .ob-step__mark::before { content: "✓"; font-size: var(--fs-body); }
+
+.ob-form:not(:has(#s1 input:checked)) .ob-step--1,
+.ob-form:has(#s1 input:checked):not(:has(#s2 input[name="recv"]:checked)) .ob-step--2,
+.ob-form:has(#s1 input:checked):has(#s2 input[name="recv"]:checked):not(:has(#s3 input:checked)) .ob-step--3,
+.ob-form:has(#s1 input:checked):has(#s2 input[name="recv"]:checked):has(#s3 input:checked) .ob-step--4 {
+  z-index: var(--z-raise);
+  margin-right: calc((var(--rise) + var(--bw)) * -1);
+  border-right: var(--line);
+  background: var(--highlight);
+  color: var(--on-highlight);
+}
+.ob-form:not(:has(#s1 input:checked)) .ob-step--1 .ob-step__mark::before,
+.ob-form:has(#s1 input:checked):not(:has(#s2 input[name="recv"]:checked)) .ob-step--2 .ob-step__mark::before,
+.ob-form:has(#s1 input:checked):has(#s2 input[name="recv"]:checked):not(:has(#s3 input:checked)) .ob-step--3 .ob-step__mark::before,
+.ob-form:has(#s1 input:checked):has(#s2 input[name="recv"]:checked):has(#s3 input:checked) .ob-step--4 .ob-step__mark::before { content: "지금"; }
+
+/* ---- 단계 공통: 머리는 크레이트 칸막이 손잡이 ---------------------------
+   [손잡이: 모노 번호 + 질문] ─ 패널 윗선 ─ [모노 메타]. 지금 단계 손잡이만 옐로로 12px 솟는다.
+   (거대 번호 + 제목 + 회색 부제 머리를 반복하지 않는다 — 수정 2) */
+.ob-sec { padding: var(--s-32) var(--s-48) var(--s-72); scroll-margin-top: var(--nav-h); }
+.ob-sec__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-16);
+  margin: 0 calc(var(--s-48) * -1) var(--s-48);
+  padding: 0 var(--s-48);
+  border-bottom: var(--line);
+}
+.ob-sec__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-12);
+  min-height: var(--tab-h);
+  margin: 0 0 calc(var(--bw) * -1);
+  padding: 0 var(--s-24) 0 var(--s-16);
+  border: var(--line);
+  border-bottom-color: var(--surface-2);
+  background: var(--surface-2);
+  font-size: var(--fs-h2);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: var(--ls-head);
+  transition: min-height var(--t-snap) var(--ease-snap);
+}
+.ob-sec__no { font: 600 var(--fs-label)/1 var(--font-mono); letter-spacing: var(--ls-label); }
+.ob-sec__meta { padding-bottom: var(--s-12); font: 500 var(--fs-label)/1.3 var(--font-label); color: var(--fg-muted); white-space: nowrap; }
+/* 끝낸 단계 = 잉크 손잡이 + ✓ */
+.ob-form:has(#s1 input:checked) #s1 .ob-sec__tab,
+.ob-form:has(#s2 input[name="recv"]:checked) #s2 .ob-sec__tab,
+.ob-form:has(#s3 input:checked) #s3 .ob-sec__tab { background: var(--invert); color: var(--on-invert); border-bottom-color: var(--invert); }
+.ob-form:has(#s1 input:checked) #s1 .ob-sec__tab::after,
+.ob-form:has(#s2 input[name="recv"]:checked) #s2 .ob-sec__tab::after,
+.ob-form:has(#s3 input:checked) #s3 .ob-sec__tab::after { content: "✓"; font-size: var(--fs-body); }
+/* 지금 단계 = 옐로 + 솟음 (왼쪽 단계표와 같은 조건) */
+.ob-form:not(:has(#s1 input:checked)) #s1 .ob-sec__tab,
+.ob-form:has(#s1 input:checked):not(:has(#s2 input[name="recv"]:checked)) #s2 .ob-sec__tab,
+.ob-form:has(#s1 input:checked):has(#s2 input[name="recv"]:checked):not(:has(#s3 input:checked)) #s3 .ob-sec__tab,
+.ob-form:has(#s1 input:checked):has(#s2 input[name="recv"]:checked):has(#s3 input:checked) #s4 .ob-sec__tab {
+  min-height: var(--tab-h-on);
+  background: var(--highlight);
+  color: var(--on-highlight);
+  border-bottom-color: var(--highlight);
+}
+.ob-help { margin: var(--s-16) 0 0; }
+
+/* ---- 02: 7/5 — 받는 방법 | 망원점 픽업 안내 잉크 전단 -------------------- */
+.ob-split { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--s-32); align-items: start; }
+.ob-split .ob-recv__opts { grid-template-columns: minmax(0, 1fr); }
+.ob-split .ob-recv__opts > .choice + .choice { margin: calc(var(--bw) * -1) 0 0; }
+.ob-pickup {
+  display: grid;
+  gap: var(--s-16);
+  padding: var(--s-24);
+  background: var(--slab-ink);
+  color: var(--on-slab-ink);
+  border: var(--bw) solid var(--slab-edge);
+}
+.ob-pickup__tag { margin: 0; color: var(--highlight); }
+.ob-pickup__title { margin: 0; font: 400 var(--fs-d3)/1 var(--font-poster); letter-spacing: 0; font-synthesis: none; }
+.ob-pickup__addr { display: grid; gap: 4px; margin: 0; font-size: var(--fs-body); font-weight: 700; line-height: 1.5; }
+.ob-pickup__addr span { font-size: var(--fs-xs); font-weight: 500; }
+.ob-pickup__hours { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0 var(--s-16); margin: 0; padding-top: var(--s-12); border-top: var(--bw-thin) solid var(--on-slab-ink); font: 500 var(--fs-sm)/1.9 var(--font-label); font-variant-numeric: tabular-nums; }
+.ob-pickup__hours dt { font-weight: 700; }
+.ob-pickup__hours dd { margin: 0; }
+.ob-pickup__hours .is-off { color: var(--accent); }
+.ob-pickup__keep { display: flex; align-items: flex-end; gap: var(--s-8); margin: 0; padding-top: var(--s-12); border-top: var(--bw-thin) solid var(--on-slab-ink); }
+.ob-pickup__keep b { font-size: var(--fs-d1); line-height: .8; color: var(--highlight); }
+.ob-pickup__keep span { display: grid; gap: 4px; padding-bottom: 4px; font-size: var(--fs-h3); font-weight: 700; line-height: 1.2; }
+.ob-pickup__keep small { font-size: var(--fs-xs); font-weight: 500; line-height: 1.5; }
+
+/* ---- 01 크레이트 칸막이 ---------------------------------------------- */
+.ob-crate { min-width: 0; margin: 0; padding: 0; border: 0; counter-reset: picked; }
+.ob-crate__dividers {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: end;
+  padding: 44px var(--s-16) 0;
+}
+.ob-div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  min-height: 236px;
+  margin-left: calc(var(--bw) * -1);
+  padding: var(--s-16) var(--s-12) 88px;
+  transition: transform var(--t-snap) var(--ease-snap), background-color var(--t-press) linear;
+}
+.ob-div:first-child { margin-left: 0; }
+.ob-div > input { margin: 0 0 var(--s-8); }
+.ob-div .choice__title { font-size: var(--fs-h3); }
+.ob-div .choice__text { grid-column: auto; }
+.ob-div:has(input:checked) { transform: translateY(calc(var(--rise) * -1)); z-index: 1; }
+.ob-div input:checked { counter-increment: picked; }
+.ob-div__tab {
+  position: absolute;
+  bottom: calc(100% - var(--bw));
+  left: calc(var(--bw) * -1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 34px;
+  padding: 0 var(--s-12);
+  border: var(--line);
+  border-bottom: 0;
+  background: inherit;
+  font: 600 var(--fs-sm)/1 var(--font-mono);
+}
+.ob-div:nth-child(3n+2) .ob-div__tab { left: 30%; }
+.ob-div:nth-child(3n+3) .ob-div__tab { left: auto; right: 12%; }
+
+/* 상자 앞판: 칸막이 아래를 가리고, 고른 칸 수를 센다 */
+.ob-crate__front {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-16);
+  min-height: 80px;
+  margin-top: -64px;
+  padding: var(--s-12) var(--s-24);
+  border: var(--line);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.ob-crate__code { font: 600 var(--fs-label)/1 var(--font-label); letter-spacing: 0; }
+.ob-crate__count { display: inline-flex; align-items: baseline; gap: var(--s-8); font-weight: 700; }
+.ob-crate__count::before {
+  content: counter(picked);
+  font: 900 var(--fs-d3)/1 var(--font-display);
+  font-synthesis: none;
+}
+
+/* ---- 02 받는 방법 ---------------------------------------------------- */
+.ob-recv { margin-bottom: var(--s-32); }
+.ob-recv__opts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.ob-recv__opts > .choice + .choice { margin-left: calc(var(--bw) * -1); }
+.ob-recv .field__error { margin-top: var(--s-16); }
+.ob-recv > legend .field__req { color: var(--on-highlight); text-decoration: underline; }
+.ob-ship { display: none; }
+.ob-form:has(input[name="recv"][value="ship"]:checked) .ob-ship { display: grid; }
+
+/* ---- 03 팔로우 ------------------------------------------------------- */
+.ob-artists { min-width: 0; margin: 0; padding: 0; border: 0; }
+.ob-artists__list { margin: 0; padding: 0; list-style: none; border-block: var(--line); }
+.ob-artist {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) minmax(0, 15em) auto;
+  align-items: center;
+  gap: var(--s-16) var(--s-24);
+  padding: var(--s-12) 0;
+}
+.ob-artist + .ob-artist { border-top: var(--line-thin); }
+.ob-artist__cover { border: var(--line-thin); }
+.ob-artist__main { display: grid; gap: 2px; min-width: 0; }
+.ob-artist__name { font-size: var(--fs-h3); font-weight: 700; line-height: 1.35; }
+.ob-artist__meta { font-size: var(--fs-xs); color: var(--fg-muted); }
+.ob-artist__next { display: flex; align-items: center; gap: var(--s-8); font-size: var(--fs-sm); line-height: 1.4; }
+.ob-artist__next .badge { flex: none; font-family: var(--font-mono); font-weight: 600; word-spacing: var(--ws-mix); }
+
+.ob-follow {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 112px;
+  min-height: 44px;
+  padding: 0 var(--s-16);
+  border: var(--line);
+  background: var(--surface);
+  color: var(--fg);
+  box-shadow: var(--shadow-sticker);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  transition: transform var(--t-press) var(--ease-snap), box-shadow var(--t-press) var(--ease-snap);
+}
+.ob-follow:hover { background: var(--surface-2); }
+.ob-follow:active { transform: translate(var(--off-sticker), var(--off-sticker)); box-shadow: var(--shadow-0); }
+.ob-follow:has(input:focus-visible) { outline: var(--bw) solid var(--focus); outline-offset: var(--bw); }
+.ob-follow__on { display: none; }
+.ob-follow:has(input:checked) {
+  background: var(--highlight);
+  color: var(--on-highlight);
+  border-color: var(--sticker-edge);
+  transform: translate(var(--off-sticker), var(--off-sticker));
+  box-shadow: var(--shadow-0);
+}
+.ob-follow:has(input:checked) .ob-follow__off { display: none; }
+.ob-follow:has(input:checked) .ob-follow__on { display: inline; }
+.ob-follow:has(input:checked) .ob-follow__on::before { content: "✓ "; }
+
+/* ---- 04 회원 카드 ---------------------------------------------------- */
+.ob-final {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: var(--s-72);
+  align-items: start;
+}
+.ob-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-16);
+  max-width: 460px;
+  padding: var(--s-24);
+  background: var(--highlight);
+  color: var(--on-highlight);
+  border: var(--bw) solid var(--sticker-edge);
+  box-shadow: var(--off) var(--off) 0 0 var(--rule);
+  transform: rotate(-2deg);
+}
+.ob-card__top { display: flex; justify-content: space-between; align-items: baseline; }
+.ob-card__brand { font: 900 44px/.9 var(--font-display); font-synthesis: none; letter-spacing: 0; }
+.ob-card__kind { font: 600 var(--fs-label)/1 var(--font-label); letter-spacing: 0; }
+.ob-card__no {
+  padding-bottom: var(--s-12);
+  border-bottom: var(--bw) solid currentColor;
+  font: 800 72px/.85 var(--font-display);
+  font-synthesis: none;
+  letter-spacing: 0;
+}
+.ob-card__row { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: var(--s-12); align-items: start; }
+.ob-card__key { padding-top: 6px; font: 600 var(--fs-label)/1.3 var(--font-label); letter-spacing: 0; }
+.ob-card__vals { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-8); min-height: 30px; font-size: var(--fs-sm); font-weight: 700; }
+.ob-card__foot {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-8);
+  padding-top: var(--s-12);
+  border-top: var(--bw-thin) solid currentColor;
+  font: 600 var(--fs-label)/1.3 var(--font-mono);
+  word-spacing: var(--ws-mix);
+}
+.ob-g { --sticker-bg: var(--print-paper); --sticker-fg: var(--on-print-paper); box-shadow: none; }
+.ob-f { padding: 2px 8px; border: var(--bw-thin) solid currentColor; }
+.ob-card__empty { font: 500 var(--fs-xs)/1.4 var(--font-label); letter-spacing: 0; }
+
+/* 폼 값 → 카드 */
+.ob-g, .ob-r, .ob-f, .ob-card__empty { display: none; }
+.ob-form:has(input[name="genre"][value="folk"]:checked) .ob-g--folk,
+.ob-form:has(input[name="genre"][value="shoegaze"]:checked) .ob-g--shoegaze,
+.ob-form:has(input[name="genre"][value="punk"]:checked) .ob-g--punk,
+.ob-form:has(input[name="genre"][value="citypop"]:checked) .ob-g--citypop,
+.ob-form:has(input[name="genre"][value="jazz"]:checked) .ob-g--jazz,
+.ob-form:has(input[name="genre"][value="noise"]:checked) .ob-g--noise { display: inline-flex; }
+.ob-form:has(input[name="recv"][value="pickup"]:checked) .ob-r--pickup,
+.ob-form:has(input[name="recv"][value="ship"]:checked) .ob-r--ship,
+.ob-form:has(input[name="recv"][value="live"]:checked) .ob-r--live { display: inline; }
+.ob-form:has(input[name="follow"][value="bw"]:checked) .ob-f--bw,
+.ob-form:has(input[name="follow"][value="sand"]:checked) .ob-f--sand,
+.ob-form:has(input[name="follow"][value="three"]:checked) .ob-f--three,
+.ob-form:has(input[name="follow"][value="nap"]:checked) .ob-f--nap,
+.ob-form:has(input[name="follow"][value="gimbap"]:checked) .ob-f--gimbap,
+.ob-form:has(input[name="follow"][value="noise"]:checked) .ob-f--noise { display: inline-block; }
+.ob-form:not(:has(input[name="genre"]:checked)) .ob-card__empty--g,
+.ob-form:not(:has(input[name="recv"]:checked)) .ob-card__empty--r,
+.ob-form:not(:has(input[name="follow"]:checked)) .ob-card__empty--f { display: inline; }
+
+.ob-final__form { display: flex; flex-direction: column; gap: var(--s-24); }
+.ob-agree { display: grid; gap: var(--s-4); padding: var(--s-16) 0; border-block: var(--line-thin); }
+.ob-agree .check .field__req { font: 600 var(--fs-label)/1 var(--font-label); letter-spacing: 0; }
+
+/* ---- 반응형 -------------------------------------------------------- */
+@media (max-width: 1200px) {
+  .ob-artist { grid-template-columns: 56px minmax(0, 1fr) auto; }
+  .ob-artist__next { grid-column: 2; grid-row: 2; }
+  .ob-artist__cover { grid-row: 1 / span 2; align-self: start; }
+  .ob-follow { grid-column: 3; grid-row: 1 / span 2; }
+}
+@media (max-width: 1024px) {
+  .ob-sec { padding: var(--s-32) var(--s-32) var(--s-72); }
+  .ob-sec__head { margin-inline: calc(var(--s-32) * -1); padding-inline: var(--s-32); }
+  .ob-split { grid-template-columns: minmax(0, 1fr); }
+  .ob-crate__dividers { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 48px; }
+  .ob-div:nth-child(3n+1) { margin-left: 0; }
+  .ob-div { min-height: 180px; padding-bottom: var(--s-24); }
+  .ob-div:nth-child(n+4) { padding-bottom: 80px; min-height: 220px; }
+  .ob-final { grid-template-columns: minmax(0, 1fr); gap: var(--s-48); }
+}
+@media (max-width: 768px) {
+  .ob-index { padding-right: 0; }
+  .ob-index__title { margin: var(--s-8) 0 var(--s-16); }
+  .ob-index__skip { display: none; }
+  .ob-form :is(.ob-step--1, .ob-step--2, .ob-step--3, .ob-step--4) { margin-right: 0 !important; }
+  .ob-form:not(:has(#s1 input:checked)) .ob-step--1,
+  .ob-form:has(#s1 input:checked):not(:has(#s2 input[name="recv"]:checked)) .ob-step--2,
+  .ob-form:has(#s1 input:checked):has(#s2 input[name="recv"]:checked):not(:has(#s3 input:checked)) .ob-step--3,
+  .ob-form:has(#s1 input:checked):has(#s2 input[name="recv"]:checked):has(#s3 input:checked) .ob-step--4 { min-height: var(--tab-h-on); }
+  .ob-sec { padding: var(--s-24) var(--gutter) var(--s-48); }
+  .ob-sec__head { margin: 0 calc(var(--gutter) * -1) var(--s-32); padding-inline: var(--gutter); }
+  .ob-sec__tab { font-size: var(--fs-h3); padding-right: var(--s-16); }
+  .ob-sec__meta { display: none; }
+  .ob-crate__dividers { padding-inline: var(--s-8); }
+  .ob-recv__opts { grid-template-columns: minmax(0, 1fr); }
+  .ob-recv__opts > .choice + .choice { margin: calc(var(--bw) * -1) 0 0; }
+}
+@media (max-width: 480px) {
+  .ob-div { padding: var(--s-12) var(--s-8) var(--s-16); min-height: 150px; }
+  .ob-div:nth-child(n+4) { padding-bottom: 76px; min-height: 196px; }
+  .ob-div .choice__title { font-size: var(--fs-body); }
+  .ob-div__tab { min-width: 36px; height: 30px; padding: 0 var(--s-8); font-size: var(--fs-label); }
+  .ob-div:nth-child(3n+2) .ob-div__tab { left: 20%; }
+  .ob-div:nth-child(3n+3) .ob-div__tab { right: 8%; }
+  .ob-crate__front { padding: var(--s-12) var(--s-16); }
+  .ob-artist { grid-template-columns: 44px minmax(0, 1fr); gap: var(--s-8) var(--s-12); }
+  .ob-follow { grid-column: 2; grid-row: 3; justify-self: start; }
+  .ob-card { transform: rotate(-1deg); padding: var(--s-16); }
+  .ob-card__no { font-size: 56px; }
+  .ob-final__form .form-actions .btn { flex: 1 1 auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ob-div, .ob-follow { transition: none; }
+  .ob-follow:active { transform: none; }
+}
+
+/* ---- 푸터 (판판 지도) ---------------------------------------------- */
+

@@ -1,0 +1,200 @@
+/* kanban — 마커로 그은 세로 구역 + 테이프 이름표, 카드 = 포스트잇(색 = 유형)
+   드래그 시작 = 떼기(+3deg, 들림), 놓기 = 붙이기(back.out). 키보드: 카드 메뉴 "다음 칸으로 옮기기".
+   WIP 한도를 넘으면 칸 수에 빨간 동그라미. */
+
+.kanban {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(264px, 1fr);
+  gap: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding: 12px 0 var(--sp-5);
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: var(--gutter);   /* 첫 칸 테이프 이름표가 왼쪽 끝에 잘리지 않게 */
+}
+.kanban__col {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0 var(--sp-4);
+  scroll-snap-align: start;
+}
+/* 칸 사이 마커 세로선 */
+.kanban__col + .kanban__col::before {
+  content: "";
+  position: absolute;
+  left: -3px;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: var(--ink);
+  -webkit-mask: var(--mask-vrule) center / 100% 100% no-repeat;
+          mask: var(--mask-vrule) center / 100% 100% no-repeat;
+  pointer-events: none;
+}
+.kanban__head { display: flex; align-items: center; gap: var(--sp-3); min-height: 48px; margin-bottom: var(--sp-4); }
+.kanban__col:nth-child(even) .tape--label { --tape-tilt: 2deg; }
+.kanban__count {
+  position: relative;
+  display: inline-block;
+  color: var(--ink-soft);
+  font-family: var(--font-marker); letter-spacing: var(--ls-marker); word-spacing: var(--ws-marker);
+  font-weight: 700;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.kanban__wip { color: var(--ink-soft); font-size: var(--fs-ui-xs); }
+.kanban__col[data-over="true"] .kanban__wip { margin-left: 8px; }   /* 개수에 친 빨간 동그라미가 "한도 6"을 덮지 않게 */
+.kanban__grip .icon { stroke-width: 3.5; }   /* 더보기 점 — CSS 가 SVG 속성보다 우선하므로 여기서 굵힌다 */
+/* WIP 초과 */
+.kanban__col[data-over="true"] .kanban__count { color: var(--marker-red); }
+.kanban__col[data-over="true"] .kanban__count::after {
+  content: "";
+  position: absolute;
+  inset: -9px -14px -8px -12px;
+  background: var(--marker-red);
+  -webkit-mask: var(--mask-circle) center / 100% 100% no-repeat;
+          mask: var(--mask-circle) center / 100% 100% no-repeat;
+  transform: rotate(-5deg);
+}
+.kanban__over-memo { display: none; }
+.kanban__col[data-over="true"] .kanban__over-memo { display: block; margin: -8px 0 var(--sp-3); }
+
+.kanban__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  flex: 1 1 auto;
+  min-height: 120px;
+  padding: 6px 4px var(--sp-4);
+  border-radius: var(--r-wobble-c);
+  transition: background-color 120ms ease;
+}
+.kanban__list.is-over { background: color-mix(in srgb, var(--marker-blue) 8%, transparent); outline: 2px dashed var(--marker-blue); outline-offset: 2px; }
+
+/* 카드 = 포스트잇 */
+.kanban__card {
+  --card-bg: var(--postit-yellow);
+  position: relative;
+  padding: 18px 12px 12px 14px;
+  background-color: var(--card-bg);
+  background-image: linear-gradient(to bottom, var(--postit-glue) 0 14px, transparent 14px);
+  color: var(--on-postit);
+  border-radius: var(--r-postit);
+  box-shadow: var(--shadow-postit);
+  transform: rotate(var(--tilt, 0deg));
+  transition: transform var(--dur-peel) ease, box-shadow var(--dur-peel) ease;
+  cursor: grab;
+}
+.kanban__card:nth-child(4n + 1) { --tilt: -1.2deg; }
+.kanban__card:nth-child(4n + 2) { --tilt: .8deg; }
+.kanban__card:nth-child(4n + 3) { --tilt: -.4deg; }
+.kanban__card:nth-child(4n + 4) { --tilt: 1.3deg; }
+.kanban__card--pink { --card-bg: var(--postit-pink); }   /* 질문·이슈 */
+.kanban__card--mint { --card-bg: var(--postit-mint); }   /* 확정 */
+.kanban__card--blue { --card-bg: var(--postit-blue); }   /* 정보·참고 */
+.kanban__card:hover { box-shadow: var(--shadow-lift); }
+.kanban__card:focus-visible { outline: 3px solid var(--focus); outline-offset: 5px; }
+
+.kanban__card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-2); }
+.kanban__id { color: var(--on-postit-soft); font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.02em; }
+.kanban__title { margin-top: 2px; font-family: var(--font-marker); letter-spacing: var(--ls-marker); word-spacing: var(--ws-marker); font-weight: 700; font-size: 24px; line-height: 1.2; }
+.kanban__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: var(--sp-3); color: var(--on-postit-soft); font-size: var(--fs-ui-xs); font-weight: 500; }
+.kanban__meta .avatar { border-color: var(--on-postit); }
+.kanban__meta > span { display: inline-flex; align-items: center; gap: 3px; }
+.kanban__meta .icon { width: 14px; height: 14px; }
+.kanban__due--late { color: var(--on-postit-red); font-weight: 700; }
+/* 색 말고 글자로도: 질문 · 참고 · 확정 */
+.kanban__meta > .kanban__tag { padding: 0 6px; border: 1.5px dashed var(--on-postit-soft); border-radius: var(--r-wobble-s); color: var(--on-postit); font-size: var(--fs-ui-xs); font-weight: 600; line-height: 1.5; }
+
+/* 카드 손잡이(메뉴) — 누를 수 있는 것이라 하드 오프셋 */
+.kanban__grip {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: -12px -8px -8px 0;
+  flex: none;
+  color: var(--on-postit);
+  border-radius: var(--r-blob);
+}
+.kanban__grip::before {
+  content: "";
+  width: 30px;
+  height: 30px;
+  position: absolute;
+  border: 1.5px solid var(--on-postit);
+  border-radius: var(--r-blob);
+  background: var(--hover-on-postit);
+  box-shadow: 2px 2px 0 var(--on-postit);
+  transition: transform var(--dur-press) linear, box-shadow var(--dur-press) linear;
+}
+.kanban__grip .icon { position: relative; width: 16px; height: 16px; }
+.kanban__grip:active::before { transform: translate(2px, 2px); box-shadow: none; }
+.kanban__grip:focus-visible { outline: 3px solid var(--on-postit-red); outline-offset: -2px; }
+
+/* 떼기 / 붙이기 */
+.kanban__card.is-dragging,
+.kanban__card--lifted {
+  transform: rotate(calc(var(--tilt, 0deg) + 3deg)) translateY(-4px);
+  box-shadow: var(--shadow-lift);
+  cursor: grabbing;
+  z-index: 3;
+}
+.kanban__card.is-dragging { opacity: .85; }
+.kanban__card.is-dropped { animation: kk-stick var(--dur-stick) var(--ease-stick); }
+.kanban__card--done .kanban__title { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--on-postit-soft); }
+
+/* 포스트잇 붙이기 버튼 */
+.kanban__add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 48px;
+  margin-top: var(--sp-2);
+  border: var(--stroke) dashed var(--ink-soft);
+  border-radius: var(--r-wobble-c);
+  color: var(--ink-soft);
+  font-size: var(--fs-ui-s);
+  font-weight: 600;
+}
+.kanban__add:hover { color: var(--ink); border-color: var(--ink); background: var(--sheet); }
+
+/* 칸반 미니 — 칸마다 2장 + "남은 장 → 스프린트 보드" 손글씨 링크 (index 회고 벽) */
+.kanban--mini { grid-auto-columns: minmax(0, 1fr); overflow-x: visible; }
+.kanban--mini .kanban__col { padding: 0 var(--sp-3); }
+.kanban--mini .kanban__list { min-height: 0; }
+.kanban--mini .kanban__title { font-size: 22px; }
+.kanban--mini .kanban__name { white-space: nowrap; }
+.kanban--mini .kanban__head { gap: var(--sp-2); }
+.kanban--mini .kanban__wip { display: none; }   /* 미니에선 "7/6" 빨간 동그라미가 한도를 대신 말한다 */
+.kanban__more {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  margin-top: var(--sp-1);
+  color: var(--link);
+  font-family: var(--font-memo);
+  font-size: var(--fs-memo-s);
+  line-height: 1.1;
+  white-space: nowrap;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 4px;
+}
+.kanban__more:hover { color: var(--marker-blue-press); }
+
+@media (max-width: 640px) {
+  .kanban, .kanban--mini { grid-auto-columns: minmax(78vw, 1fr); overflow-x: auto; }
+  .kanban__col { padding: 0 var(--sp-3); }
+}
+
+/* 카드 메뉴가 열리면 그 카드·칸을 위로 — 옆 칸 포스트잇이 메뉴를 덮지 않게 */
+.kanban__col:has(.menu:not([hidden])) { position: relative; z-index: 6; }
+.kanban__card:has(.menu:not([hidden])) { z-index: 6; }

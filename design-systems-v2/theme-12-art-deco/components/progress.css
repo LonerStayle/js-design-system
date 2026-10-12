@@ -1,0 +1,159 @@
+/* progress — 좌석 점유 게이지
+   .meter          일반 선형(왼쪽에서), style="--v:96.4" (0–100)
+   .meter--mirror  중앙에서 양쪽으로 차오르는 대칭 바
+   .gauge          반원 선버스트 게이지(24갈래 광선이 값만큼 금으로 켜진다), style="--v:.964" (0–1)
+   .seatmap        대칭 객석 도식(412석). app.js 가 data-seatmap 으로 점을 그린다. */
+.meter { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.meter__top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); }
+.meter__label { font-family: var(--font-ui-ko); font-weight: 700; font-size: 14px; color: var(--ink); }
+.meter__value { font-family: var(--font-num); font-weight: 700; font-size: 18px; font-variant-numeric: lining-nums tabular-nums; color: var(--gold-text); }
+.meter__value small { font-size: 13px; color: var(--ink-faint); font-weight: 400; }
+.meter__track {
+  position: relative;
+  display: flex;
+  height: 12px;
+  padding: 2px;
+  border: 1px solid var(--gold-edge);
+  background: var(--paper-sunk);
+}
+.meter__fill {
+  width: calc(var(--v, 0) * 1%);
+  height: 100%;
+  background: var(--foil);
+  transform-origin: left center;
+  transition: width var(--dur-4) var(--ease-curtain);
+}
+.meter.is-revealing .meter__fill { animation: gn-spread-left var(--dur-4) var(--ease-curtain) both; }
+@keyframes gn-spread-left { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.meter--mirror .meter__track { justify-content: center; }
+.meter--mirror .meter__fill { transform-origin: center; }
+.meter--mirror.is-revealing .meter__fill { animation-name: gn-spread-center; }
+@keyframes gn-spread-center { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.meter--mirror .meter__track::after {       /* 중앙축 눈금 */
+  content: "";
+  position: absolute;
+  left: 50%; top: -5px; bottom: -5px;
+  width: 1px;
+  background: var(--ink);
+  opacity: .5;
+}
+.meter__foot { display: flex; justify-content: space-between; gap: var(--sp-3); font-family: var(--font-ui-ko); font-size: 12px; color: var(--ink-faint); }
+.meter--warn .meter__fill { background: var(--gold-edge); }
+.meter--danger .meter__fill { background: var(--danger); }
+.meter--indeterminate .meter__track { overflow: hidden; }   /* 오가는 금박이 트랙 밖(열 경계 · 거터)으로 새지 않게 — mirror 눈금은 그대로 */
+.meter--indeterminate .meter__fill { width: 30%; animation: gn-indet 1.6s var(--ease-curtain) infinite alternate; }
+@keyframes gn-indet { from { transform: translateX(-100%); } to { transform: translateX(333%); } }
+.meter--thin .meter__track { height: 8px; padding: 1px; }
+
+/* 반원 선버스트 게이지 */
+.gauge {
+  --v: 0;
+  --size: 280px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: var(--size);
+  max-width: 100%;
+  margin-inline: auto;
+  transition: --v var(--dur-5) var(--ease-gilt);
+}
+.gauge__dial {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+}
+.gauge__dial::before,
+.gauge__dial::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  -webkit-mask:
+    repeating-conic-gradient(from -90deg at 50% 100%, #000 0 6deg, transparent 6deg 7.5deg),
+    radial-gradient(circle farthest-side at 50% 100%, transparent 0 58%, #000 58.5% 99%, transparent 99.5%);
+  -webkit-mask-composite: source-in;
+  mask:
+    repeating-conic-gradient(from -90deg at 50% 100%, #000 0 6deg, transparent 6deg 7.5deg),
+    radial-gradient(circle farthest-side at 50% 100%, transparent 0 58%, #000 58.5% 99%, transparent 99.5%);
+  mask-composite: intersect;
+}
+.gauge__dial::before { background: var(--paper-sunk); box-shadow: inset 0 0 0 1px var(--gold-line); }
+.gauge__dial::after {
+  background: conic-gradient(from -90deg at 50% 100%, var(--foil-flat) 0 calc(var(--v) * 180deg), transparent calc(var(--v) * 180deg));
+}
+.gauge__readout {
+  position: absolute;
+  left: 50%; bottom: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.gauge__num { font-family: var(--font-num); font-weight: 700; font-size: calc(var(--size) * .15); line-height: 1; font-variant-numeric: lining-nums tabular-nums; letter-spacing: -.02em; }
+.gauge__of { font-family: var(--font-num); font-size: calc(var(--size) * .06); color: var(--ink-faint); }
+.gauge__label { margin-top: var(--sp-3); font-family: var(--font-ui-ko); font-weight: 700; font-size: 14px; color: var(--ink-muted); text-align: center; }
+.gauge__scale { display: flex; justify-content: space-between; width: 100%; margin-top: 4px; font-family: var(--font-num); font-size: 12px; color: var(--ink-faint); }
+.gauge--glow .gauge__num { text-shadow: var(--glow); color: var(--gold-text); }
+@property --v { syntax: "<number>"; inherits: true; initial-value: 0; }
+
+/* 대칭 객석 도식 */
+.seatmap {
+  --seat: 8px;
+  --seat-gap: 3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  max-width: 100%;
+}
+.seatmap__stage {
+  width: 62%;
+  min-width: 180px;
+  padding: 8px 0 7px;
+  text-align: center;
+  font-family: var(--font-ui-ko);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--on-foil);
+  background: var(--foil);
+  clip-path: polygon(0 100%, 4% 0, 96% 0, 100% 100%);
+}
+.seatmap__house { display: grid; grid-template-columns: auto auto auto; align-items: start; gap: 12px; }
+.seatmap__boxes { display: flex; flex-direction: column; gap: 10px; padding-top: 4px; }
+.seatmap__box { display: grid; grid-template-columns: repeat(2, var(--seat)); gap: var(--seat-gap); padding: 3px; border: 1px solid var(--gold-line); position: relative; }
+.seatmap__orch, .seatmap__balcony { display: flex; flex-direction: column; gap: var(--seat-gap); align-items: center; }
+.seatmap__row { display: flex; align-items: center; gap: var(--seat-gap); }
+.seatmap__row-label { width: 12px; font-family: var(--font-mono); font-size: 10px; line-height: 1; color: var(--ink-faint); text-align: center; }
+.seatmap__half { display: flex; gap: var(--seat-gap); }
+.seatmap__aisle { width: 10px; }
+.seatmap__rule { width: 100%; height: 1px; background: var(--gold-line); margin: 4px 0; }
+.seatmap__zone-name { font-family: var(--font-ui-ko); font-weight: 700; font-size: 11px; color: var(--ink-muted); margin-bottom: 2px; }
+.seat {
+  display: block;
+  width: var(--seat);
+  height: var(--seat);
+  background: var(--seat-sold);
+}
+.seat[data-s="open"] { background: var(--seat-open); box-shadow: inset 0 0 0 1px var(--seat-open-line); }
+.seat[data-s="mark"] { background: var(--seat-mark); transform: rotate(45deg) scale(1.25); position: relative; z-index: 1; }
+.seat[data-zone="RB"] { background: var(--foil-flat); }
+.seatmap__legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; font-family: var(--font-ui-ko); font-size: 12px; color: var(--ink-muted); }
+.seatmap__legend span { display: inline-flex; align-items: center; gap: 6px; }
+.seatmap__legend .seat { --seat: 9px; }
+.seatmap__summary { font-family: var(--font-ui-ko); font-size: 13px; color: var(--ink-muted); text-align: center; }
+.seatmap__summary b { font-family: var(--font-num); color: var(--ink); font-size: 15px; }
+/* 구역 고르기(온보딩) */
+.seatmap__zone { position: relative; border: 1px solid transparent; padding: 6px; transition: background-color var(--dur-2) var(--ease-out), border-color var(--dur-2) var(--ease-out); }
+button.seatmap__zone { cursor: pointer; }
+button.seatmap__zone:hover { background: var(--hover); border-color: var(--gold-line); }
+button.seatmap__zone[aria-pressed="true"] { border-color: var(--gold-edge); box-shadow: inset 0 0 0 2px var(--paper), inset 0 0 0 3px var(--gold-edge); background: var(--warn-tint); }
+@media (max-width: 560px) {
+  .seatmap { --seat: 6px; --seat-gap: 2px; }
+  .seatmap__house { gap: 6px; }
+  .seatmap__aisle { width: 6px; }
+}
+@media (max-width: 380px) {
+  .seatmap { --seat: 5px; }
+}

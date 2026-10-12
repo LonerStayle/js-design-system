@@ -1,0 +1,195 @@
+/* sidebar — 끄적 앱의 보드 목록
+   폴더 = 테이프 라벨, 보드 행 = 작은 로파이 썸네일 + 이름, 현재 위치 = 빨간 동그라미. 접힘 72px.
+   ≤1024px 에서는 왼쪽에서 나오는 오프캔버스([data-sidebar-toggle]). */
+
+.sidebar {
+  position: sticky;
+  top: 56px;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 56px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding: var(--sp-5) var(--sp-3) var(--sp-4) var(--sp-4);
+  background: var(--board);
+  scrollbar-width: thin;
+}
+.sidebar::after {   /* 오른쪽 손떨림 세로선 */
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  min-height: calc(100vh - 56px);
+  background: var(--ink);
+  -webkit-mask: var(--mask-vrule) center / 100% 100% no-repeat;
+          mask: var(--mask-vrule) center / 100% 100% no-repeat;
+  opacity: .9;
+  pointer-events: none;
+}
+
+.sidebar__section + .sidebar__section { margin-top: var(--sp-5); }
+.sidebar__nav { display: flex; flex-direction: column; gap: 2px; }
+
+.sidebar__link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 44px;
+  padding: 0 10px;
+  border-radius: var(--r-wobble-c);
+  color: var(--ink);
+  font-size: var(--fs-ui-s);
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.sidebar__link .icon { color: var(--ink-soft); }
+.sidebar__link:hover { background: var(--sheet-sunk); }
+.sidebar__link:hover .icon { color: var(--ink); }
+.sidebar__label { position: relative; display: inline-block; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sidebar__count { margin-left: auto; color: var(--ink-soft); font-family: var(--font-mono); font-size: 12px; }
+.sidebar__count--alert { color: var(--marker-red); font-weight: 600; }
+
+/* 현재 위치 = 라벨에 빨간 동그라미 */
+.sidebar__link[aria-current="page"] { font-weight: 700; }
+.sidebar__link[aria-current="page"] .icon { color: var(--ink); }
+.sidebar__link[aria-current="page"] .sidebar__label { overflow: visible; }
+.sidebar__link[aria-current="page"] .sidebar__label::after {
+  content: "";
+  position: absolute;
+  inset: -8px -12px -7px -10px;
+  background: var(--marker-red);
+  -webkit-mask: var(--mask-circle) center / 100% 100% no-repeat;
+          mask: var(--mask-circle) center / 100% 100% no-repeat;
+  transform: rotate(-3deg);
+  pointer-events: none;
+}
+
+/* 폴더 = 테이프 라벨 */
+.sidebar__folder {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-2) -4px;
+}
+.sidebar__folder .tape--label { font-size: 24px; min-height: 32px; padding: 2px 16px; }
+
+/* 보드 행 */
+.sidebar__board .sidebar__link { min-height: 48px; }
+.sidebar__thumb {
+  position: relative;
+  width: 36px;
+  height: 28px;
+  flex: none;
+  border: 1.5px solid var(--ink-soft);
+  border-radius: 3px 5px 4px 6px / 5px 3px 6px 4px;
+  background:
+    linear-gradient(var(--ink-soft), var(--ink-soft)) 5px 6px / 12px 2px no-repeat,
+    linear-gradient(var(--ink-faint), var(--ink-faint)) 5px 12px / 22px 2px no-repeat,
+    linear-gradient(var(--postit-yellow), var(--postit-yellow)) 20px 15px / 9px 8px no-repeat,
+    var(--sheet);
+}
+.sidebar__thumb--b { background:
+    linear-gradient(var(--postit-pink), var(--postit-pink)) 4px 5px / 9px 8px no-repeat,
+    linear-gradient(var(--postit-blue), var(--postit-blue)) 15px 7px / 9px 8px no-repeat,
+    linear-gradient(var(--ink-faint), var(--ink-faint)) 5px 18px / 22px 2px no-repeat,
+    var(--sheet); }
+.sidebar__thumb--c { background:
+    linear-gradient(var(--ink-soft), var(--ink-soft)) 4px 4px / 10px 18px no-repeat,
+    linear-gradient(var(--ink-faint), var(--ink-faint)) 17px 6px / 12px 2px no-repeat,
+    linear-gradient(var(--postit-mint), var(--postit-mint)) 17px 12px / 10px 9px no-repeat,
+    var(--sheet); }
+.sidebar__board-id { display: block; color: var(--ink-soft); font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.02em; line-height: 1.25; }
+/* 현재 보드: 두 줄 라벨(ID + 이름)을 가로지르지 않게 썸네일에 동그라미를 친다 */
+.sidebar__board .sidebar__link[aria-current="page"] .sidebar__label::after { content: none; }
+.sidebar__board .sidebar__link[aria-current="page"] .sidebar__thumb::after {
+  content: "";
+  position: absolute;
+  inset: -9px -10px -9px -9px;
+  background: var(--marker-red);
+  -webkit-mask: var(--mask-circle) center / 100% 100% no-repeat;
+          mask: var(--mask-circle) center / 100% 100% no-repeat;
+  transform: rotate(-6deg);
+  pointer-events: none;
+}
+.sidebar__empty { padding: var(--sp-3) var(--sp-3) var(--sp-4); }
+.sidebar__empty .empty__text { font-size: var(--fs-ui-xs); }
+.sidebar__board-name { display: block; overflow: hidden; text-overflow: ellipsis; line-height: 1.35; }
+.sidebar__board .sidebar__label { display: flex; flex-direction: column; }
+
+/* 아래 영역: 플랜·사용량 */
+.sidebar__foot { margin-top: auto; padding-top: var(--sp-5); }
+.sidebar__plan {
+  padding: var(--sp-3);
+  border: 1.5px dashed var(--ink-soft);
+  border-radius: var(--r-wobble-c);
+  font-size: var(--fs-ui-xs);
+  color: var(--ink-soft);
+}
+.sidebar__plan strong { color: var(--ink); }
+
+.sidebar__collapse { margin: var(--sp-3) 0 0 auto; }
+.sidebar__collapse .glyph { transition: transform 200ms ease; }
+
+/* 접힘 72px */
+.app[data-sidebar="collapsed"] .sidebar { padding-inline: 10px 14px; }
+/* 라벨은 화면에서만 숨기고 이름은 남긴다 */
+.app[data-sidebar="collapsed"] .sidebar__label,
+.app[data-sidebar="collapsed"] .sidebar__count {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.app[data-sidebar="collapsed"] .sidebar__folder,
+.app[data-sidebar="collapsed"] .sidebar__plan { display: none; }
+.app[data-sidebar="collapsed"] .sidebar__link { justify-content: center; padding: 0; }
+.app[data-sidebar="collapsed"] .sidebar__link[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  background: var(--marker-red);
+  -webkit-mask: var(--mask-ring) center / 100% 100% no-repeat;
+          mask: var(--mask-ring) center / 100% 100% no-repeat;
+}
+.app[data-sidebar="collapsed"] .sidebar__collapse { margin: var(--sp-3) auto 0; }
+.app[data-sidebar="collapsed"] .sidebar__collapse .glyph { transform: rotate(180deg); }
+
+.sidebar-scrim { display: none; }
+
+/* ≤1024 오프캔버스 */
+@media (max-width: 1024px) {
+  .sidebar {
+    position: fixed;
+    z-index: var(--z-overlay);
+    top: 0;
+    left: 0;
+    width: min(300px, 86vw);
+    height: 100%;
+    padding-top: var(--sp-5);
+    background: var(--board);
+    transform: translateX(-104%);
+    transition: transform var(--dur-drawer) var(--ease-slide), visibility 0s linear var(--dur-drawer);
+    visibility: hidden;
+    box-shadow: var(--shadow-paper);
+  }
+  .sidebar.is-open { transform: none; visibility: visible; transition: transform var(--dur-drawer) var(--ease-slide); }
+  .sidebar-scrim { position: fixed; inset: 0; z-index: calc(var(--z-overlay) - 1); background: var(--backdrop); }
+  .sidebar.is-open + .sidebar-scrim { display: block; }
+  .sidebar__collapse { display: none; }
+  .app[data-sidebar="collapsed"] .sidebar { padding: var(--sp-5) var(--sp-3) var(--sp-4) var(--sp-4); }
+  .app[data-sidebar="collapsed"] .sidebar__label,
+  .app[data-sidebar="collapsed"] .sidebar__count { position: relative; width: auto; height: auto; overflow: visible; clip: auto; }
+  .app[data-sidebar="collapsed"] .sidebar__link { justify-content: flex-start; padding: 0 10px; }
+  .app[data-sidebar="collapsed"] .sidebar__link[aria-current="page"]::after { display: none; }
+  .app[data-sidebar="collapsed"] .sidebar__folder { display: flex; }
+  .app[data-sidebar="collapsed"] .sidebar__plan { display: block; }
+}

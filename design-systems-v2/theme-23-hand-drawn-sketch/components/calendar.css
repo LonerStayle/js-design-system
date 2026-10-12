@@ -1,0 +1,151 @@
+/* calendar — 손으로 그린 월간 격자
+   칸마다 선이 조금씩 어긋나고, 오늘(10/14)은 빨간 동그라미, 일정은 칸 안의 포스트잇 조각. */
+
+.cal {
+  position: relative;
+  border: var(--stroke) solid var(--line);
+  border-radius: var(--r-wobble-b);
+  background: var(--sheet);
+  padding: var(--sp-4) var(--sp-4) var(--sp-3);
+}
+.cal::before {
+  content: "";
+  position: absolute;
+  inset: -3px 1px -1px -2px;
+  border: var(--stroke-ghost) solid var(--line);
+  border-radius: var(--r-wobble-a);
+  opacity: var(--ghost-stroke);
+  transform: rotate(-.3deg);
+  pointer-events: none;
+}
+.cal__head { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.cal__title { flex: 1 1 auto; font-family: var(--font-marker); letter-spacing: var(--ls-marker); word-spacing: var(--ws-marker); font-weight: 700; font-size: var(--fs-marker-3); line-height: 1.2; }
+.cal__title .memo { margin-left: var(--sp-2); color: var(--ink-soft); font-size: var(--fs-memo-s); }
+
+.cal__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.cal__dow {
+  padding: 4px 6px 8px;
+  color: var(--ink-soft);
+  font-size: var(--fs-ui-xs);
+  font-weight: 600;
+  text-align: left;
+}
+.cal__dow:first-child { color: var(--marker-red); }
+
+.cal__day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-height: 88px;
+  padding: 6px 6px 8px;
+  text-align: left;
+  color: var(--ink);
+  background: transparent;
+  font-family: var(--font-ui);
+}
+/* 손으로 그은 칸 선 — 칸마다 조금씩 어긋남 */
+.cal__day::before {
+  content: "";
+  position: absolute;
+  inset: -1px 0 0 -1px;
+  border-top: 1.5px solid var(--ink-soft);
+  border-left: 1.5px solid var(--ink-soft);
+  opacity: .55;
+  pointer-events: none;
+  transform: rotate(var(--cell-skew, 0deg));
+}
+.cal__day:nth-child(3n)::before { --cell-skew: .5deg; }
+.cal__day:nth-child(4n + 1)::before { --cell-skew: -.4deg; }
+.cal__day:nth-child(5n + 2)::before { --cell-skew: .25deg; }
+.cal__day:nth-child(7n + 1)::before { border-left-color: transparent; }
+
+button.cal__day { cursor: pointer; transition: background-color 120ms ease; }
+button.cal__day:hover { background: var(--hl-row-hover); }
+.cal__day:focus-visible { outline-offset: -4px; }
+
+.cal__num {
+  position: relative;
+  display: inline-block;
+  min-width: 1.6em;
+  font-family: var(--font-marker); letter-spacing: var(--ls-marker); word-spacing: var(--ws-marker);
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.cal__day--sun .cal__num { color: var(--marker-red); }
+.cal__day--muted { color: var(--ink-soft); }
+.cal__day--muted .cal__num { color: var(--ink-soft); font-weight: 400; }
+.cal__day--off { background-image: repeating-linear-gradient(-45deg, color-mix(in srgb, var(--hatch) 40%, transparent) 0 1px, transparent 1px 8px); }
+
+/* 오늘 = 빨간 동그라미 */
+.cal__day[aria-current="date"] .cal__num::after {
+  content: "";
+  position: absolute;
+  inset: -7px -9px -6px -9px;
+  background: var(--marker-red);
+  -webkit-mask: var(--mask-circle) center / 100% 100% no-repeat;
+          mask: var(--mask-circle) center / 100% 100% no-repeat;
+  transform: rotate(-6deg);
+}
+/* 선택 = 형광펜 */
+.cal__day[aria-pressed="true"],
+.cal__day[aria-selected="true"] { background: var(--hl-row); color: var(--on-hl-row); }
+.cal__day:disabled { color: var(--ink-soft); cursor: not-allowed; }
+
+/* 일정 = 포스트잇 조각 */
+.cal__event {
+  display: block;
+  width: 100%;
+  padding: 2px 6px;
+  background: var(--postit-yellow);
+  color: var(--on-postit);
+  border-radius: 2px 3px 8px 2px;
+  box-shadow: var(--shadow-edge);
+  font-size: var(--fs-ui-xs);
+  font-weight: 600;
+  line-height: 1.3;
+  transform: rotate(-1deg);
+  /* 잘라 말줄임하지 않고 두 줄까지 접는다 (한글 단어 단위) */
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+.cal__event:nth-of-type(even) { transform: rotate(.8deg); }
+.cal__event--pink { background: var(--postit-pink); }
+.cal__event--mint { background: var(--postit-mint); }
+.cal__event--blue { background: var(--postit-blue); }
+
+.cal__foot { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); margin-top: var(--sp-3); color: var(--ink-soft); font-size: var(--fs-ui-xs); }
+
+/* 작은 달력 (사이드·팝오버) */
+.cal--mini .cal__day { min-height: 44px; align-items: center; justify-content: center; padding: 4px; }
+.cal--mini .cal__num { font-size: 15px; text-align: center; }
+.cal--mini .cal__event { display: none; }
+.cal--mini .cal__day--has-event .cal__num::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  background: var(--marker-blue);
+  -webkit-mask: var(--mask-dot) center / contain no-repeat;
+          mask: var(--mask-dot) center / contain no-repeat;
+}
+
+@media (max-width: 640px) {
+  .cal { padding: var(--sp-3) var(--sp-2) var(--sp-2); }
+  .cal__day { min-height: 52px; padding: 4px 3px; }
+  .cal__num { font-size: 15px; }
+  .cal__event {
+    width: 8px;
+    height: 8px;
+    padding: 0;
+    font-size: 0;
+    border-radius: 1px;
+  }
+}

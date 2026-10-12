@@ -1,0 +1,87 @@
+/* kanban — 캠페인 보드. 열 머리 = 단계 색면 탭(아이디어 용지 → 시안 연어 → 검수 해바라기 → 게재 대기 시폼 → 게재 중 청록).
+   카드 = 작은 card + 창 프레임 아바타 + BR-### 모노. 끌어 놓기 + 키보드(Space 잡기 · ←→↑↓ 이동 · Space 놓기 · Esc 취소). */
+
+.jb-kanban {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(208px, 1fr);
+  gap: 14px;
+  align-items: start;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+}
+@media (max-width: 720px) { .jb-kanban { grid-auto-columns: 84%; scroll-snap-type: x mandatory; } .jb-kanban__col { scroll-snap-align: start; } }
+.jb-kanban__col { display: flex; flex-direction: column; min-width: 0; }
+.jb-kanban__head {
+  --stage-bg: var(--bg-raised);
+  --stage-fg: var(--paper-fg);
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  min-height: 48px;
+  padding: 8px 12px 6px 16px;
+  border: var(--bw-card) solid var(--paper-line);
+  border-bottom: 0;
+  border-radius: var(--r-s) var(--r-s) 0 0;
+  background: var(--stage-bg);
+  color: var(--stage-fg);
+}
+.jb-kanban__col[data-stage="idea"]   .jb-kanban__head { --stage-bg: var(--bg-raised);     --stage-fg: var(--paper-fg); }
+.jb-kanban__col[data-stage="draft"]  .jb-kanban__head { --stage-bg: var(--pastel-salmon); --stage-fg: var(--on-pastel); }
+.jb-kanban__col[data-stage="review"] .jb-kanban__head { --stage-bg: var(--sun);           --stage-fg: var(--on-sun); }
+.jb-kanban__col[data-stage="queued"] .jb-kanban__head { --stage-bg: var(--pastel-sea);    --stage-fg: var(--on-pastel); }
+.jb-kanban__col[data-stage="live"]   .jb-kanban__head { --stage-bg: var(--teal);          --stage-fg: var(--on-teal); }
+.jb-kanban__title { font-family: var(--font-display-ko); font-size: 19px; line-height: 1.2; }
+.jb-kanban__count {
+  display: inline-grid; place-items: center;
+  min-width: 28px; height: 26px; padding: 0 8px;
+  border-radius: var(--r-pill);
+  box-shadow: inset 0 0 0 2px currentColor;
+  font-family: var(--font-mono); font-size: 14px; font-weight: 700; line-height: 1; padding-top: 1px;
+}
+.jb-kanban__list {
+  display: flex; flex-direction: column; gap: 10px;
+  min-height: 140px;
+  margin: 0; padding: 10px;
+  list-style: none;
+  border: var(--bw-card) solid var(--paper-line);
+  border-radius: 0 0 var(--r-s) var(--r-s);
+  background: var(--bg-sunk);
+  transition: background-color var(--dur-hover) var(--ease-taxi);
+}
+.jb-kanban__list[data-drop-active] { background: var(--bg-select); outline: 2px dashed var(--teal); outline-offset: -6px; }
+.jb-kanban__card {
+  position: relative;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: var(--bw-card) solid var(--line);
+  border-radius: var(--r-s);
+  background: var(--bg-raised);
+  color: var(--fg);
+  cursor: grab;
+  transition: transform var(--dur-hover) var(--ease-taxi), border-color var(--dur-hover) var(--ease-taxi), opacity var(--dur-hover) var(--ease-taxi);
+}
+.jb-kanban__card:hover { border-color: var(--teal); }
+.jb-kanban__card:active { cursor: grabbing; }
+.jb-kanban__card.is-dragging { opacity: .45; }
+.jb-kanban__card.is-grabbed { transform: rotate(-2deg); border-color: var(--line); box-shadow: 0 0 0 4px var(--sun); }
+.jb-kanban__card[aria-disabled="true"] { cursor: default; border-style: dashed; color: var(--disabled-fg); }
+.jb-kanban__top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.jb-kanban__id { font-family: var(--font-mono); font-size: 13px; color: var(--fg-2); letter-spacing: .04em; }
+.jb-kanban__card-title { font-family: var(--font-ui-ko); font-size: 15px; font-weight: 700; line-height: 1.45; letter-spacing: 0; }
+.jb-kanban__meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 8px; min-width: 0; }
+.jb-kanban__who { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-family: var(--font-ui-ko); font-size: 13px; color: var(--fg-2); }
+.jb-kanban__due { font-family: var(--font-mono); font-size: 13px; color: var(--fg-2); }
+.jb-kanban__due--soon { color: var(--coral-text); font-weight: 700; }
+/* 열 끝 추가: 목록의 마지막 <li class="jb-kanban__add"> 안에 <button class="jb-kanban__add-btn">. (예전 <button class="jb-kanban__add">도 같은 모양) */
+.jb-kanban__add { display: block; }
+.jb-kanban__add-btn, button.jb-kanban__add {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; min-height: 44px;
+  border: 2px dashed var(--line-soft);
+  border-radius: var(--r-s);
+  color: var(--fg-2);
+  font-family: var(--font-ui-ko); font-size: 14px; font-weight: 500;
+}
+.jb-kanban__add-btn:hover, button.jb-kanban__add:hover { border-color: var(--line); color: var(--fg); }
+.jb-kanban__live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }

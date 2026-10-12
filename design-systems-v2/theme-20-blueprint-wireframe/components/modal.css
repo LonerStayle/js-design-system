@@ -1,0 +1,108 @@
+/* modal — 「상세도 확대」: 시트 프레임(이중선) + 아래 도면명 띠 + 오른쪽 위 닫기(44px)
+   배경은 --paper 88% 로 덮는다(블러 금지). 등장 = 트리거 위치에 콜아웃 원이 그려지고(app.js),
+   시트가 clip-path inset(0 0 100% 0) → inset(0) 으로 위에서 아래로 출력된다(260ms) */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: center;
+  padding: var(--space-6) var(--space-4);
+  overflow-y: auto;
+}
+.modal__scrim { position: fixed; inset: 0; background: var(--scrim); }
+.modal__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(var(--modal-w, 640px), 100%);
+  max-height: calc(100vh - 2 * var(--space-6));
+  border: var(--stroke-bold) solid var(--ink);
+  outline: var(--rule);
+  outline-offset: 5px;
+  background: var(--paper-sheet);
+  color: var(--ink);
+}
+.modal--sm { --modal-w: 460px; }
+.modal--lg { --modal-w: 880px; }
+.modal.is-opening .modal__panel { animation: sheet-print var(--dur-sheet) var(--ease-plot) both; }
+.modal.is-opening .modal__scrim { animation: fade-in var(--dur-tick) var(--ease-plot) both; }
+.modal.is-closing .modal__panel { animation: sheet-print var(--dur-tick) var(--ease-plot) reverse both; }
+.modal.is-closing .modal__scrim { opacity: 0; transition: opacity var(--dur-tick); }
+
+.modal__close { position: absolute; top: 4px; right: 4px; z-index: 2; }
+.modal__body {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-6) var(--space-6) var(--space-5);
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+}
+.modal__lead { font-size: var(--fs-body); line-height: var(--lh-body); }
+.modal__view {
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  border: var(--rule);
+  background: var(--paper);
+  color: var(--ink);
+}
+.modal__view svg { width: 100%; height: auto; max-height: 260px; }
+.modal__kv { display: grid; grid-template-columns: 7em minmax(0, 1fr); gap: 6px var(--space-4); font-size: var(--fs-small); }
+.modal__kv dt { color: var(--ink-2); }
+
+/* 아래 도면명 띠 — 콜아웃 원 + 제목(이중 밑줄) + 축척 */
+.modal__titleband {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-6) var(--space-4);
+}
+.modal__title { font-size: var(--fs-h3); font-weight: 600; line-height: var(--lh-head); letter-spacing: -0.01em; }
+.modal__titleband .vtitle__rule { padding-bottom: 5px; }
+.modal__foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  border-top: var(--rule-ink);
+  background: var(--paper-sunk);
+}
+.modal__foot .l-push { margin-right: auto; margin-left: 0; }
+
+/* 위험 확인 모달 — 위험 구역에서 띄운다. 제목만 레드라인, 구름은 쓰지 않는다(뷰포트 2개 제한) */
+.modal--danger .modal__panel { border-color: var(--redline); }
+.modal--danger .modal__title { color: var(--redline); }
+
+/* 트리거 위치에서 그려지는 콜아웃 원 (app.js 가 붙였다 뗀다) */
+.plot-callout {
+  position: fixed;
+  z-index: calc(var(--z-modal) + 1);
+  width: var(--callout);
+  height: var(--callout);
+  margin: calc(var(--callout) / -2) 0 0 calc(var(--callout) / -2);
+  pointer-events: none;
+  color: var(--ink);
+}
+.plot-callout circle, .plot-callout line { fill: none; stroke: currentColor; stroke-width: 1.2; stroke-dasharray: 1; stroke-dashoffset: 1; animation: plot var(--dur-base) var(--ease-plot) forwards; }
+.plot-callout line { animation-delay: 160ms; }
+
+/* 정적 견본(index D-503) — 흐름 안에 열린 상태로 */
+.modal--static { position: relative; inset: auto; z-index: auto; display: block; padding: 0; overflow: visible; }
+.modal--static .modal__scrim { display: none; }
+.modal--static .modal__panel { width: 100%; max-height: none; }
+
+@media (max-width: 599px) {
+  .modal { padding: var(--space-3); align-items: end; }
+  .modal__panel { max-height: calc(100vh - 2 * var(--space-3)); outline-offset: 3px; }
+  .modal__body { padding: var(--space-6) var(--space-4) var(--space-4); }
+  .modal__titleband { padding: var(--space-3) var(--space-4); }
+  .modal__foot { padding: var(--space-3) var(--space-4); }
+  .modal__foot > .btn { flex: 1; }
+  .modal__kv { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .modal__kv dd { margin-bottom: var(--space-2); }
+}

@@ -1,0 +1,71 @@
+/* motion — "떠오르고, 물러나고, 빛이 지나간다"
+   [data-rise]       위젯 등장: opacity 0 · scale .92 · translateY 16px → 1 (420ms ease-pop, --i × 60ms)
+   .play-sweep       빛 스윕 한 번 강제 재생 (시연용)
+   .recede-demo      후퇴 시연 판 (app.js [data-recede-demo])
+   감속 모션: 전부 최종 상태로 즉시 */
+/* 숨김은 기본값이 아니다: app.js 가 '처음에 화면 밖'인 요소에만 .is-pending 을 붙이고, 교차하면 .is-in 으로 바꾼다.
+   그래서 JS 실패·전체 페이지 캡처·인쇄·썸네일·앵커 점프에서도 내용이 사라지지 않는다(3초 뒤 남은 pending 은 전부 풀림) */
+.js-ready [data-rise] {
+  transition: opacity var(--dur-sheet) var(--ease-out), transform var(--dur-sheet) var(--ease-pop);
+  transition-delay: calc(var(--rise-i, var(--i, 0)) * var(--stagger)); /* --rise-i: app.js 가 한 번에 들어온 묶음 안 순번(최대 8)으로 다시 매김 */
+}
+.js-ready [data-rise].is-pending { opacity: 0; transform: translateY(16px) scale(.92); }
+@media print {
+  [data-rise], [data-rise].is-pending { opacity: 1 !important; transform: none !important; transition: none !important; }
+}
+
+.play-sweep::after { animation: sweep var(--dur-sweep) var(--ease-out) 1 !important; }
+
+.motion-stage {
+  position: relative;
+  display: grid; gap: 12px;
+  padding: 16px;
+  border-radius: var(--r-widget);
+  min-height: 200px;
+  overflow: hidden;
+}
+.motion-stage__cap { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); }
+.motion-stage__cap .btn { margin-left: auto; }
+.motion-note { display: none; font-size: 13px; color: var(--text-2); }
+
+.recede-demo { position: relative; display: grid; place-items: center; min-height: 160px; }
+.recede-demo__back { transition: transform var(--dur-sheet) var(--ease-sheet), filter var(--dur-sheet) var(--ease-sheet); }
+.recede-demo.is-on .recede-demo__back { transform: scale(.955) translateY(8px); filter: blur(3px) brightness(.9) saturate(.85); }
+.recede-demo__front {
+  position: absolute; z-index: 2;
+  opacity: 0; transform: scale(1.04);
+  transition: opacity var(--dur-close) var(--ease-sheet), transform var(--dur-close) var(--ease-sheet);
+}
+.recede-demo.is-on .recede-demo__front { opacity: 1; transform: none; transition-duration: var(--dur-sheet); }
+
+/* 이징 곡선 견본 — 정지 상태: 곡선 글리프 + 같은 시간 간격의 잔상 점 5개 + 도착한 공. 재생하면 잔상이 걷히고 공이 다시 달린다 */
+.ease-chip { display: grid; gap: 6px; padding: 12px; border-radius: 16px; background: var(--glass-sunken); }
+.ease-chip__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ease-chip__curve { width: 40px; height: 28px; flex-shrink: 0; overflow: visible; color: var(--primary); }
+.ease-chip__curve path { fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+.ease-chip__track { position: relative; height: 8px; margin-inline-end: 10px; border-radius: var(--r-pill); background: var(--track); }
+.ease-chip__track i {
+  position: absolute; top: 50%; left: calc((100% - 20px) * var(--p)); width: 20px; height: 20px; margin-top: -10px; border-radius: 50%;
+  background: var(--primary);
+  opacity: .14;
+  transition: opacity var(--dur-quick) var(--ease-out);
+}
+.ease-chip__track i:nth-child(2) { opacity: .2; }
+.ease-chip__track i:nth-child(3) { opacity: .27; }
+.ease-chip__track i:nth-child(4) { opacity: .34; }
+.ease-chip__track i:nth-child(5) { opacity: .42; }
+.ease-chip__ball {
+  position: absolute; top: 50%; left: calc(100% - 20px); width: 20px; height: 20px; margin-top: -10px; border-radius: 50%;
+  background: var(--tile-on); box-shadow: var(--shadow-z1), inset 0 0 0 1.5px var(--primary);
+}
+.is-playing .ease-chip__track i { opacity: 0; }
+.is-playing .ease-chip__ball { animation: ease-run 1.2s var(--curve, ease) 1 both; }
+@keyframes ease-run { from { left: 0; } to { left: calc(100% - 20px); } }
+.ease-chip__name { font-family: var(--font-mono); font-size: 12px; color: var(--text-2); letter-spacing: .02em; }
+
+@media (prefers-reduced-motion: reduce) {
+  .js-ready [data-rise], .js-ready [data-rise].is-pending { opacity: 1; transform: none; }
+  .motion-note { display: block; }
+  .recede-demo.is-on .recede-demo__back { transform: none; filter: brightness(.85); }
+  .recede-demo.is-on .recede-demo__front { transform: none; }
+}

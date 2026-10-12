@@ -1,0 +1,199 @@
+/* dashboard — 주조정실: 바둑판식 타일(겹침 없음) 위에 크기가 다른 창들.
+   PGM 송출 모니터(방송 창, 발광은 여기 하나) · 주문 오실로스코프 · 시청/콜/채팅 · 큐시트
+   · 상품별 매출 막대 · 주문접수.xls · 송출 자막 띠. semantic 토큰만 사용. */
+
+/* 도구 막대: 주소 표시줄 + 방송 진행 */
+.dash-toolbar { gap: var(--sp-2); flex-wrap: nowrap; padding: 4px 4px; }
+.dash-toolbar .addr { flex: 1 1 360px; min-width: 0; }
+.dash-onair { display: flex; align-items: center; gap: var(--sp-2); flex: none; padding-right: 4px; }
+.dash-onair__text { font-size: var(--fs-xs); font-weight: 700; white-space: nowrap; }
+.dash-onair__bar { width: 120px; height: 14px; padding: 2px; background: var(--paper); box-shadow: var(--bevel-in); }
+.dash-onair__bar > span { display: block; height: 100%; width: 40%; background: repeating-linear-gradient(90deg, var(--primary) 0 6px, transparent 6px 8px); }
+
+/* 바둑판: 12단, 창 사이 8px */
+.dash {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--sp-2);
+  align-items: start;
+  padding: var(--sp-2);
+}
+.dash__pgm { grid-column: 1 / span 5; align-self: stretch; }
+.dash__mid { grid-column: 6 / span 4; display: flex; flex-direction: column; gap: var(--sp-2); align-self: stretch; }
+.dash__mid > .dash__scope { flex: 1; }
+.dash__side { grid-column: 10 / span 3; display: flex; flex-direction: column; gap: var(--sp-2); align-self: stretch; }
+.dash__side > .dash-cue { flex: 1; }
+.dash__sales { grid-column: 1 / span 5; align-self: stretch; display: flex; flex-direction: column; }
+.dash__sales > .win__body { display: flex; flex-direction: column; }
+.dash__sales .sales { flex: 1; align-content: space-evenly; }
+.dash__orders { grid-column: 6 / span 7; align-self: stretch; }
+.dash__ticker { grid-column: 1 / -1; padding: 2px; background: var(--face); box-shadow: var(--bevel-in); }
+
+/* ① PGM 모니터 */
+.dash__pgm > .crt { margin: 2px 2px 0; }
+.dash__pgm .crt__name { font-size: clamp(22px, 2vw, 30px); }
+.dash-pgm__under {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-2);
+  padding: var(--sp-2) 2px 2px;
+}
+.dash-pgm__under .gauge { align-content: center; }
+.dash-pvw {
+  display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: var(--sp-2); align-items: center;
+  padding: var(--sp-2);
+  box-shadow: var(--bevel-well);
+}
+.dash-pvw__screen .crt__picture { aspect-ratio: 4 / 3; }
+.dash-pvw__text { display: grid; gap: 4px; justify-items: start; min-width: 0; }
+.dash-pvw__label { font-size: var(--fs-xs); font-weight: 700; color: var(--ink-muted); }
+.dash-pvw__name { font-size: var(--fs-sm); font-weight: 800; line-height: 1.4; }
+.dash-pvw__text .btn { margin-top: 2px; }
+
+/* ② 주문 오실로스코프 — 브라운관 프레임 안 계단 파형 */
+.scope { background: var(--osd-bg); flex: 1; justify-content: center; }
+.dash__scope > .win__body { display: flex; flex-direction: column; }
+.scope__svg { width: 100%; height: auto; display: block; position: relative; z-index: 1; padding: 6px 4px 0; }
+.scope__grid line { stroke: var(--osd-text); stroke-opacity: .14; stroke-width: 1; }
+.scope__axis { stroke: var(--osd-text); stroke-opacity: .5; stroke-width: 1; }
+.scope__cue line { stroke: var(--osd-ink-alt); stroke-width: 1; stroke-dasharray: 3 4; stroke-opacity: .8; }
+.scope__area { fill: var(--osd-ink-hot); fill-opacity: .28; }
+.scope__line { fill: none; stroke: var(--osd-ink-hot); stroke-width: 3; stroke-linejoin: miter; }
+.scope__now { fill: var(--osd-ink); fill-opacity: .16; }
+.scope__svg text { font-family: var(--font-osd); font-size: 17px; letter-spacing: .04em; }
+.scope__ylab text, .scope__xlab text { fill: var(--osd-text); fill-opacity: .8; }
+.scope__qlab text { fill: var(--osd-ink-alt); font-size: 15px; }
+.scope__peak { fill: var(--osd-text); }
+.scope__nowlab { fill: var(--osd-ink); font-size: 22px !important; }
+
+.scope-read { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; margin: 0; }
+.scope-read__cell { padding: 6px 8px 8px; box-shadow: var(--bevel-well); min-width: 0; }
+.scope-read__cell dt { font-size: var(--fs-xs); font-weight: 700; color: var(--ink-muted); line-height: 1.4; }
+.scope-read__cell dd { margin: 2px 0 0; font-size: var(--fs-sm); font-weight: 700; line-height: 1.3; }
+.scope-read__cell dd .t-osd { font-size: var(--fs-osd-m); }
+.scope-read__cell dd small { display: block; font-weight: 700; color: var(--ink-muted); margin-top: 2px; }
+.scope-read__cell--now { background: var(--paper); }
+.scope-read__cell--now dd .t-osd { color: var(--primary); }
+
+.scope-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: var(--fs-xs); font-weight: 700; color: var(--ink-muted); }
+.scope-legend__key { display: inline-block; width: 18px; height: 10px; vertical-align: middle; margin-left: 6px; }
+.scope-legend__key:first-child { margin-left: 0; }
+.scope-legend__key--line { background: var(--osd-bg); border-top: 3px solid var(--vapor-pink); }
+.scope-legend__key--cue { background: var(--osd-bg); background-image: repeating-linear-gradient(90deg, var(--vapor-mint) 0 1px, transparent 1px 4px); background-size: 4px 100%; background-repeat: no-repeat; background-position: center; }
+.scope-legend__key--now { background: var(--osd-bg); box-shadow: inset 0 0 0 10px var(--price); opacity: .7; }
+
+.scope-table table { width: 100%; font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
+.scope-table th { text-align: left; color: var(--ink-muted); font-weight: 700; padding: 2px 6px; border-bottom: var(--etch); }
+.scope-table td { padding: 3px 6px; }
+.scope-table td:nth-child(2n) { text-align: right; font-weight: 800; padding-right: 14px; }
+
+/* ③ 시청 · 콜 · 채팅 · 큐시트 */
+.stat__value--big { font-size: clamp(56px, 5.4vw, 84px); line-height: .85; color: var(--ink); }
+.dash-viewers .stat { padding-bottom: var(--sp-4); }
+.dash-viewers .stat__delta { color: var(--accent); }
+.dash-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-2); }
+.dash-pair .stat__value { font-size: var(--fs-osd-l); }
+.dash-cue .win__body { padding: 2px; display: flex; flex-direction: column; }
+.dash-cue .cue { flex: 1; align-content: start; }
+.dash-cue .cue--compact .cue__item { grid-template-columns: 72px minmax(0, 1fr); }
+.dash-cue .cue__tc { white-space: nowrap; }
+.dash-cue .cue__tc small { font-family: var(--font-body); font-size: 11px; font-weight: 800; letter-spacing: 0; }
+.dash-cue .cue__title { line-height: 1.4; }
+.dash-pgm__under { flex: 1; align-items: stretch; }
+.dash__pgm { display: flex; flex-direction: column; }
+
+/* ④ 상품별 매출 — 가로 막대 (색 + 무늬로 상태 구분) */
+.sales { list-style: none; margin: 0; padding: 4px; display: grid; gap: 2px; background: var(--paper); box-shadow: var(--bevel-in); }
+.sales__row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  grid-template-areas: "q name won" "q bar bar";
+  gap: 3px 10px; align-items: center;
+  padding: 5px 6px 6px 4px;
+}
+.sales__q {
+  grid-area: q; align-self: stretch;
+  display: grid; place-items: center;
+  background: var(--osd-bg); color: var(--osd-ink);
+  font-family: var(--font-osd); font-size: 20px; letter-spacing: .04em; line-height: 1;
+}
+.sales__name { grid-area: name; font-size: var(--fs-sm); font-weight: 700; line-height: 1.35; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sales__name small { font-weight: 700; color: var(--ink-muted); margin-left: 4px; }
+.sales__won { grid-area: won; font-size: var(--fs-sm); font-weight: 800; font-variant-numeric: tabular-nums; }
+.sales__bar { grid-area: bar; display: block; height: 14px; padding: 2px; background: var(--face); box-shadow: var(--bevel-well); }
+.sales__bar > span { display: block; height: 100%; width: var(--val); }
+.sales__row--done .sales__bar > span { background: var(--chart-3); }
+.sales__row--live .sales__bar > span { background: repeating-linear-gradient(90deg, var(--chart-1) 0 8px, transparent 8px 10px); }
+.sales__row--pre .sales__bar > span { background: repeating-linear-gradient(-45deg, var(--chart-2) 0 3px, transparent 3px 6px); box-shadow: inset 0 0 0 1px var(--chart-2); }
+.sales__row--live { background: var(--select-soft); box-shadow: inset 4px 0 0 var(--primary); }
+.sales__row--live .sales__q { color: var(--osd-ink-hot); }
+.sales__row--pre .sales__name, .sales__row--pre .sales__won { color: var(--ink-muted); }
+
+.sales-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; font-size: var(--fs-xs); font-weight: 700; color: var(--ink-muted); }
+.sales-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.sales-legend__key { display: inline-block; width: 22px; height: 10px; }
+.sales-legend__key--done { background: var(--chart-3); }
+.sales-legend__key--live { background: repeating-linear-gradient(90deg, var(--chart-1) 0 6px, transparent 6px 8px); }
+.sales-legend__key--pre { background: repeating-linear-gradient(-45deg, var(--chart-2) 0 2px, transparent 2px 4px); box-shadow: inset 0 0 0 1px var(--chart-2); }
+.sales-legend__scale { margin-left: auto; }
+
+.sales-goal { display: grid; gap: var(--sp-2); padding: var(--sp-3); box-shadow: var(--bevel-well); }
+.sales-goal__sum { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.sales-goal__label { font-size: var(--fs-sm); font-weight: 700; color: var(--ink-muted); }
+.sales-goal__sum .t-osd { font-size: var(--fs-osd-l); }
+
+/* ⑤ 주문 스프레드시트 */
+.dash__orders { display: flex; flex-direction: column; }
+.dash__orders > .win__body { flex: 1; }
+.dash__orders .sheet__table td { padding-block: 6px; }
+.dash__orders .sheet__table td.num { color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.dash__orders .tag { min-height: 20px; }
+.dash__orders .sheet { height: 100%; grid-template-rows: auto minmax(0, 1fr) auto; }
+.dash__orders .sheet__table tbody tr[aria-selected="true"] td { color: var(--on-select); }
+
+/* ⑥ 자막 띠 — 화면 안 상시 모션은 방송 화면 + 이 띠 하나 */
+
+/* 1024–1279: 모니터 + 오실로스코프 한 줄, 옆 기둥은 가로로 */
+@media (max-width: 1279px) {
+  .dash__pgm { grid-column: 1 / span 7; }
+  .dash__mid { grid-column: 8 / span 5; }
+  .dash__side { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); align-items: stretch; }
+  .dash__sales { grid-column: 1 / span 5; }
+  .dash__orders { grid-column: 6 / span 7; }
+}
+@media (max-width: 1023px) {
+  .dash { grid-template-columns: minmax(0, 1fr); }
+  .dash__pgm, .dash__mid, .dash__side, .dash__sales, .dash__orders, .dash__ticker { grid-column: 1 / -1; }
+}
+@media (max-width: 768px) {
+  .dash { padding: 0; gap: var(--sp-2); }
+  .dash-toolbar { flex-wrap: wrap; }
+  .dash-toolbar .toolbar__sep { display: none; }
+  .dash-toolbar .addr { flex-basis: 100%; }
+  .dash-onair { flex-wrap: wrap; }
+  .dash-onair__bar { display: none; }
+  .dash-pgm__under { grid-template-columns: minmax(0, 1fr); }
+  .dash-pvw { grid-template-columns: 96px minmax(0, 1fr); }
+  .dash-pvw__text .btn { width: 100%; }
+  .dash__side { grid-template-columns: minmax(0, 1fr); }
+  .scope-read { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .scope-read__cell--now { grid-column: 1 / -1; }
+  .sales__row { grid-template-columns: 44px minmax(0, 1fr) auto; }
+  .sales__name { white-space: normal; }
+  .sales__name small { display: block; margin-left: 0; }
+  .dash__side { display: flex; }
+  .dash__orders .sheet__table th, .dash__orders .sheet__table td { padding-inline: 6px; }
+  .sales-legend__scale { margin-left: 0; width: 100%; }
+}
+
+/* 상품명 자막: 「RW-99 …」가 하이픈에서 끊기지 않게 */
+.dash-nb { white-space: nowrap; }
+
+/* 주문접수.xls — 옆 매출 창 높이만큼 행 간격을 늘려 표 아래 빈 종이가 남지 않게 */
+@media (min-width: 1024px) {
+  .dash__orders > .win__body { display: flex; flex-direction: column; }
+  .dash__orders .sheet { flex: 1; height: auto; }
+  .dash__orders .sheet__scroll { display: flex; flex-direction: column; }
+  .dash__orders .sheet__table { flex: 1; }
+}
+
+/* 푸터 상태 표시줄의 반품률 칸 — 좁은 화면에서는 줄인다 */
+@media (max-width: 768px) { .dash-status-opt { display: none; } }

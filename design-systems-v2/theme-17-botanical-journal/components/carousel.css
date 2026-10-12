@@ -1,0 +1,117 @@
+/* carousel — 세밀화 도판 넘김: 대지가 한 장씩 옆으로 넘어간다
+   이전/다음 44px + "도판 3 / 8" + 넘겨보기(재생/멈춤). 자동 넘김은 기본 꺼짐 — 사용자가 재생을 눌러야만 넘어간다.
+   ←/→ 키, 도판 번호표(점) 클릭. 마크업은 COMPONENTS.md.
+   상태: 버튼 hover · focus-visible · :disabled(처음/끝) · [aria-pressed](재생 중) · 번호표 [aria-current] */
+
+.plates { position: relative; min-width: 0; }
+.plates__viewport { overflow: hidden; padding: 14px 6px 20px; margin: -14px -6px 0; }
+.plates__track {
+  display: flex;
+  transition: transform 420ms var(--ease-paper);
+  will-change: transform;
+}
+.plates__slide {
+  flex: 0 0 100%;
+  min-width: 0;
+  padding: 0 2px;
+}
+.plates__slide[aria-hidden="true"] { visibility: hidden; transition: visibility 0s linear 420ms; }
+.plates__slide[aria-hidden="false"] { visibility: visible; }
+
+/* 도판 한 장 = 대지 */
+.plate {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 64fr) minmax(0, 36fr);
+  align-items: stretch;
+  gap: var(--sp-5);
+  min-height: 520px;
+  padding: var(--sp-6);
+  background-color: var(--sheet);
+  background-image: var(--sheet-grain);
+  box-shadow: var(--shadow-sheet);
+}
+.plate__art { align-self: stretch; display: grid; place-items: center; min-height: 0; color: var(--flora-line); }
+.plate__art svg { width: 100%; height: auto; max-height: 440px; }
+.plate__no { position: absolute; left: var(--sp-6); top: var(--sp-5); font-family: var(--font-latin-sc); font-size: 13px; letter-spacing: var(--track-sc); color: var(--ink-3); }
+.plate__side { display: flex; flex-direction: column; gap: var(--sp-4); min-width: 0; }
+.plate__side > .plate__note { margin-top: auto; }
+/* 도판 오른쪽 위 여백 — 연필 치수선 + 채집 메모 한 줄 */
+.plate__margin { display: grid; gap: var(--sp-3); padding-top: var(--sp-5); }
+.plate__dim { display: flex; align-items: center; gap: var(--sp-3); }
+.plate__dim-k { flex: none; font-size: 11px; font-weight: 500; color: var(--ink-3); }
+.plate__dim .dimline { flex: 1; min-width: 0; }
+.plate__memo { font-size: 20px; line-height: 1.35; transform: rotate(-1.2deg); transform-origin: left center; }
+.plate__note { font-family: var(--font-record); font-size: 15px; line-height: 1.75; color: var(--ink-2); }
+
+.plates__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}
+.plates__btn {
+  display: inline-grid;
+  place-items: center;
+  width: var(--touch);
+  height: var(--touch);
+  border: 1px solid var(--ink);
+  background: var(--label);
+  color: var(--ink);
+  border-radius: var(--r-paper);
+  transition: background-color var(--dur-press) ease, transform var(--dur-press) var(--ease-paper);
+}
+.plates__btn:hover { background: var(--sap-tint); }
+.plates__btn:active { transform: translateY(1px); }
+.plates__btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.plates__btn:disabled { border-style: dashed; border-color: var(--rule); color: var(--ink-3); background: transparent; cursor: not-allowed; transform: none; }
+.plates__btn[aria-pressed="true"] { background: var(--sap); border-color: var(--sap); color: var(--on-sap); }
+.plates__btn .icon { width: 18px; height: 18px; }
+.plates__play .icon-pause { display: none; }
+.plates__play[aria-pressed="true"] .icon-play { display: none; }
+.plates__play[aria-pressed="true"] .icon-pause { display: block; }
+.plates__count {
+  min-width: 112px;
+  padding: 0 var(--sp-3);
+  text-align: center;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.plates__count b { font-family: var(--font-ui); font-variant-numeric: tabular-nums; letter-spacing: 0; font-weight: 400; font-size: 18px; color: var(--ink); }
+.plates__count .id { font-size: 14px; }
+
+.plates__index { display: flex; flex-wrap: wrap; gap: 4px; margin-left: auto; }
+.plates__dot {
+  display: inline-grid;
+  place-items: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 6px;
+  font-size: 12px;
+  color: var(--ink-2);
+  border-bottom: 2px solid transparent;
+}
+.plates__dot:hover { color: var(--ink); background: var(--sap-tint); }
+.plates__dot:focus-visible { outline: 2px solid var(--focus); outline-offset: 0; }
+.plates__dot[aria-current="true"] { color: var(--ink); font-weight: 700; border-bottom-color: var(--current); }
+
+@media (max-width: 900px) {
+  .plates__index { display: none; }
+  .plates__bar { justify-content: center; }
+}
+@media (max-width: 640px) {
+  .plate { grid-template-columns: minmax(0, 1fr); min-height: 0; padding: var(--sp-5) var(--sp-4) var(--sp-4); gap: var(--sp-3); }
+  .plate__art { min-height: 300px; }
+  .plate__art svg { max-height: 300px; }
+  .plate__no { left: var(--sp-4); top: var(--sp-3); }
+  /* 라벨은 그림 바로 아래 오른쪽으로 비켜 붙는다(잎·줄기를 가리지 않게), 설명 문장은 라벨 뒤로 내려간다 */
+  .plate__side .label { order: 1; margin: 4px 0 0 var(--sp-5); position: relative; z-index: 1; }
+  .plate__side .plate__note { order: 2; margin-top: 0; }
+  .plate__margin { order: 3; padding-top: 0; }
+  .plate__memo { font-size: 18px; }
+  .plates__count { min-width: 0; flex: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .plates__track { transition: none; }
+}
+.plate__bloom { margin-top: var(--sp-2); }

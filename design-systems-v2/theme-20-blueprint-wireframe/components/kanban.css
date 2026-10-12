@@ -1,0 +1,72 @@
+/* kanban — 「도면 작업 보드」
+   열 머리 = 상태명 + 개수 + WIP 한도 치수선(── 4 ──, 초과 시 레드라인)
+   카드 = 시트 번호(Mono 큰 글씨) + 도면명 + 담당 원형 이니셜 + 레드라인 개수 △
+   「수정 중」 카드는 구름 테두리(.cloud). 드래그 + 키보드 「열 이동」 메뉴(app.js) */
+.kb {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(260px, 1fr);
+  gap: 0;
+  min-width: 0;
+  border: var(--rule-ink);
+  background: var(--paper-sheet);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+.kb__col { display: flex; flex-direction: column; min-width: 0; min-height: 320px; }
+.kb__col + .kb__col { border-left: var(--rule); }
+.kb__head { padding: var(--space-3) var(--space-4) var(--space-2); border-bottom: var(--rule-ink); background: var(--paper-sunk); }
+.kb__title { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); font-size: var(--fs-body); font-weight: 600; }
+.kb__count { font-family: var(--type-mono); font-size: var(--fs-small); font-weight: 500; color: var(--ink-2); }
+.kb__wip { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: end; gap: var(--space-2); margin-top: 4px; }
+.kb__wip-label { font-size: 13px; color: var(--ink-2); line-height: 28px; }
+.kb__wip .dim { color: var(--ink-2); }
+.kb__col.is-over-wip .kb__wip .dim { color: var(--redline); }
+.kb__col.is-over-wip .kb__count { color: var(--redline); }
+
+.kb__list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-5) var(--space-4) var(--space-6);
+  min-height: 120px;
+  transition: background-color var(--dur-tick) var(--ease-plot);
+}
+.kb__list.is-over { background: var(--hatch-fill-soft); box-shadow: inset 0 0 0 1px var(--ink); }
+.kb__empty { display: grid; place-items: center; min-height: 88px; border: var(--stroke-fine) dashed var(--line-mid); font-size: var(--fs-small); color: var(--ink-2); }
+
+.kb-card {
+  position: relative;
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--rule-ink);
+  background: var(--paper-sheet);
+  color: var(--ink);
+  cursor: grab;
+  transition: box-shadow var(--dur-tick) var(--ease-plot), translate var(--dur-tick) var(--ease-plot);
+}
+.kb-card:hover { box-shadow: inset 0 0 0 1px var(--ink); }
+.kb-card:active { translate: 0 1px; }
+.kb-card:focus-visible { outline-offset: 4px; }
+.kb-card.is-dragging { opacity: .45; border-style: dashed; }
+.kb-card.is-moved { animation: kb-pin var(--dur-base) var(--ease-plot); }
+@keyframes kb-pin { from { box-shadow: inset 0 0 0 2px var(--ink); } to { box-shadow: inset 0 0 0 0 var(--ink); } }
+.kb-card__top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }
+.kb-card__no { font-family: var(--type-mono); font-size: 20px; font-weight: 500; line-height: 1.1; letter-spacing: -0.01em; }
+.kb-card__name { font-size: var(--fs-small); font-weight: 600; line-height: 1.45; }
+.kb-card__meta { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: var(--fs-small); color: var(--ink-2); }
+.kb-card__meta .mono { font-size: 12px; }
+.kb-card__who { display: inline-flex; align-items: center; gap: 6px; }
+.kb-card__issues { display: inline-flex; align-items: center; gap: 4px; font-family: var(--type-mono); font-size: 12px; color: var(--redline); }
+.kb-card__move { margin: -8px -8px 0 0; }
+.kb-card .cloud-ring { --cloud-out: 4px; }
+/* 「수정 중」 카드 — 구름은 카드 바깥 6px, △ 는 오른쪽 위 */
+.kb-card.cloud { --cloud-out: 6px; border-color: var(--redline); }
+.kb-card.cloud > .rev--pin { top: -22px; right: -12px; }
+
+@media (max-width: 599px) {
+  .kb { grid-auto-columns: 84%; scroll-snap-type: x mandatory; }
+  .kb__col { scroll-snap-align: start; }
+}

@@ -1,0 +1,106 @@
+/* ==========================================================================
+   calendar — 숫자 키패드
+   날짜 = 작은 키 · 선택(aria-pressed) = 파임 + 주황 2px 링 · 오늘(aria-current) = 앰버 점선 링
+   휴무(월요일, aria-disabled) = 각인만 · 예약 가능(.is-open) = 그린 LED 점 · 마감(.is-full) = 빨강 점 + 흐린 숫자
+   머리 = LCD 월 판독 + 이전/다음 아이콘 키
+   ========================================================================== */
+.cal { display: grid; gap: var(--sp-4); width: 100%; max-width: 420px; }
+.cal__head { display: flex; align-items: center; gap: var(--sp-3); }
+.cal__month { flex: 1; text-align: center; }
+.cal__month .lcd { display: inline-block; padding: 8px 16px; font-size: 18px; }
+.cal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  padding: 10px;
+  border-radius: var(--r-module);
+  box-shadow: var(--sh-pressed);
+}
+.cal__dow {
+  display: grid;
+  place-items: center;
+  height: 28px;
+  font-family: var(--font-ko);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-2);
+  text-shadow: var(--engrave);
+}
+.cal__day {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  min-height: 40px;
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--sh-raised-sm);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  transition: box-shadow var(--dur-spring) var(--ease-spring), transform var(--dur-spring) var(--ease-spring);
+}
+.cal__day:hover { box-shadow: var(--sh-raised); }
+.cal__day:active { box-shadow: var(--sh-pressed-sm); transform: translateY(1px); transition-duration: var(--dur-press); }
+/* 아래 작은 LED 자리 */
+.cal__day::after {
+  content: "";
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity var(--dur-led) ease-out;
+}
+.cal__day.is-open::after,
+.cal__day.has-event::after { opacity: 1; background: var(--led-green); box-shadow: var(--glow-green); }
+/* 마감 — 빨강 LED + 흐린 숫자 (색 말고 다른 단서) */
+.cal__day.is-full::after { opacity: 1; background: var(--led-red); box-shadow: var(--glow-red); }
+.cal__day.is-full { color: color-mix(in srgb, var(--ink) 50%, transparent); }
+/* 선택 — 파임 + 주황 2px 링 (LED 는 그 날의 예약 상태를 그대로 보여 준다) */
+.cal__day[aria-pressed="true"] { box-shadow: var(--sh-pressed), 0 0 0 2px var(--led-orange); transform: translateY(1px); }
+/* 오늘 — 앰버 점선 링 (선택·마감과 다른 색·다른 모양) */
+.cal__day[aria-current="date"]::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 12px;
+  border: 2px dotted var(--led-amber);
+  pointer-events: none;
+}
+/* 휴무 · 지난 날 — 솟지 않는 각인 */
+.cal__day[aria-disabled="true"],
+.cal__day:disabled {
+  box-shadow: none;
+  color: var(--ink-3);
+  cursor: not-allowed;
+  text-shadow: var(--engrave);
+  transform: none;
+}
+.cal__day--out { box-shadow: none; color: var(--ink-3); pointer-events: none; }
+.cal__legend { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); font-size: 13px; color: var(--ink-2); }
+.cal__legend > span { display: inline-flex; align-items: center; gap: 6px; }
+/* 범례 견본 키 */
+.cal__key { position: relative; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; font-family: var(--font-mono); font-size: 11px; box-shadow: var(--sh-raised-sm); color: var(--ink); }
+.cal__key--full { color: color-mix(in srgb, var(--ink) 50%, transparent); }
+.cal__key--pick { box-shadow: var(--sh-pressed-sm), 0 0 0 2px var(--led-orange); }
+.cal__key--today::before { content: ""; position: absolute; inset: -3px; border-radius: 9px; border: 2px dotted var(--led-amber); }
+.cal__readout { font-size: 14px; color: var(--ink-2); }
+@media (max-width: 600px) { .cal__day { min-height: 44px; } }
+@media (max-width: 400px) { .cal__grid { gap: 2px; padding: 4px; } .cal__day { min-height: 44px; min-width: 0; font-size: 14px; } }
+
+/* 로딩 — 예약 현황을 불러오는 동안 키패드 우물이 숨쉰다 (시머 금지) */
+.cal[aria-busy="true"] .cal__grid { animation: breathe 1.6s ease-in-out infinite; }
+.cal[aria-busy="true"] .cal__day { box-shadow: none; color: var(--ink-3); pointer-events: none; }
+/* 오류 — 날짜를 고르지 않고 제출: 키패드 둘레 빨강 + .cal__error 문구 */
+.cal.is-error .cal__grid,
+.cal[aria-invalid="true"] .cal__grid { box-shadow: var(--sh-pressed), 0 0 0 2px var(--led-red); }
+.cal__error { display: none; align-items: center; gap: var(--sp-2); font-size: 13px; font-weight: 500; color: var(--text-red); }
+.cal__error::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--led-red); box-shadow: var(--glow-red); }
+.cal.is-error .cal__error,
+.cal[aria-invalid="true"] .cal__error { display: flex; }
+@media (prefers-reduced-motion: reduce) { .cal[aria-busy="true"] .cal__grid { animation: none; } }

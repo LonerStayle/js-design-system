@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>정산 파이프라인 · ledgerline</title>
+<meta name="description" content="10월 경비 정산 파이프라인 — 영수증 접수부터 지급 완료까지 5단계 칸반.">
+<script>(function(){var d=document.documentElement,q=new URLSearchParams(location.search).get('theme'),t=(q==='dark'||q==='light')?q:null;if(!t){try{t=localStorage.getItem('ll-theme')}catch(e){}}if(t!=='dark'&&t!=='light'){t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}d.setAttribute('data-theme',t)})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="kanban.css">
+<script src="../app.js" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#main">본문으로 건너뛰기</a>
+<div class="app">
+<header class="navbar">
+  <button class="btn btn--ghost btn--icon navbar__menu" data-open="app-sidebar" aria-controls="app-sidebar" aria-expanded="false" aria-label="메뉴 열기"><span data-icon="menu"></span></button>
+  <a class="brand" href="../index.html"><span class="brand__mark" aria-hidden="true"></span><span class="brand__word"><b>ledger</b><span>line</span></span></a>
+  <span class="navbar__sep" aria-hidden="true"></span>
+  <button class="workspace" data-menu="ws-menu" aria-haspopup="menu" aria-expanded="false"><span class="workspace__logo" aria-hidden="true">한</span><span class="workspace__name" data-menu-label>㈜한결물산</span><span class="workspace__caret" aria-hidden="true"></span></button>
+  <div class="navbar__end">
+    <button class="command-trigger" data-command-open aria-label="검색 열기"><span data-icon="search"></span><span>문서번호·직원·가맹점 검색</span><kbd>⌘K</kbd></button>
+    <button class="btn btn--ghost btn--icon navbar__notify" data-popover="pop-notify" aria-controls="pop-notify" aria-expanded="false" aria-label="알림 7건"><span data-icon="bell"></span><span class="navbar__count">7</span></button>
+    <button class="btn btn--ghost btn--icon" data-theme-toggle data-tooltip="다크 모드" aria-label="테마 전환"><span data-icon="moon" data-show-theme="light"></span><span data-icon="sun" data-show-theme="dark"></span></button>
+    <button class="navbar__user" data-menu="user-menu" aria-haspopup="menu" aria-expanded="false" aria-label="김하늘 계정 메뉴"><span class="avatar" data-tone="1">하늘</span><span class="navbar__user-name">김하늘</span></button>
+  </div>
+</header>
+<aside class="sidebar" id="app-sidebar" aria-label="주 메뉴">
+  <div class="sidebar__head"><a class="brand" href="../index.html"><span class="brand__mark" aria-hidden="true"></span><span class="brand__word"><b>ledger</b><span>line</span></span></a><button class="btn btn--ghost btn--icon" data-close aria-label="메뉴 닫기"><span data-icon="close"></span></button></div>
+  <div class="sidebar__section app-ws"><button class="workspace" data-menu="ws-menu" aria-haspopup="menu" aria-expanded="false"><span class="workspace__logo" aria-hidden="true">한</span><span class="workspace__name">㈜한결물산</span><span class="workspace__caret" aria-hidden="true"></span></button></div>
+  <nav class="sidebar__section" aria-label="경비">
+    <ul class="sidebar__list">
+      <li><a class="sidebar__link" href="dashboard.html"><span data-icon="grid"></span><span class="sidebar__label">마감 현황</span></a></li>
+      <li><a class="sidebar__link" href="inbox.html"><span data-icon="inbox"></span><span class="sidebar__label">결재함</span><span class="sidebar__count sidebar__count--alert">12</span></a></li>
+      <li><a class="sidebar__link" href="kanban.html" aria-current="page"><span data-icon="columns"></span><span class="sidebar__label">정산 파이프라인</span><span class="sidebar__count">18</span></a></li>
+    </ul>
+  </nav>
+  <nav class="sidebar__section" aria-label="관리">
+    <p class="sidebar__heading">관리</p>
+    <ul class="sidebar__list">
+      <li><a class="sidebar__link" href="settings.html"><span data-icon="sliders"></span><span class="sidebar__label">결재 규칙</span></a></li>
+      <li><a class="sidebar__link" href="profile.html"><span data-icon="user"></span><span class="sidebar__label">내 정보 · 위임</span></a></li>
+      <li><a class="sidebar__link" href="onboarding.html"><span data-icon="building"></span><span class="sidebar__label">워크스페이스 개설</span></a></li>
+    </ul>
+  </nav>
+  <nav class="sidebar__section" aria-label="레저라인">
+    <p class="sidebar__heading">레저라인</p>
+    <ul class="sidebar__list">
+      <li><a class="sidebar__link" href="product.html"><span data-icon="card"></span><span class="sidebar__label">법인카드 자동 대사</span></a></li>
+      <li><a class="sidebar__link" href="pricing.html"><span data-icon="wallet"></span><span class="sidebar__label">요금 안내</span></a></li>
+      <li><a class="sidebar__link" href="../index.html"><span data-icon="doc"></span><span class="sidebar__label">UI 레퍼런스</span></a></li>
+    </ul>
+  </nav>
+  <p class="sidebar__foot">10월 마감 <strong>D-3</strong> · 10월 31일(토)</p>
+</aside>
+<main class="app__main board" id="main">
+  <header class="page-head">
+    <div class="page-head__title">
+      <nav class="crumbs" aria-label="경로"><ol class="crumbs__list"><li class="crumbs__item"><a class="crumbs__link" href="dashboard.html">㈜한결물산</a></li><li class="crumbs__item"><span aria-current="page">정산 파이프라인</span></li></ol></nav>
+      <h1>10월 정산 파이프라인</h1>
+      <p class="page-head__meta"><span>김하늘 담당 18건</span><span>다음 이체 11월 5일(목)</span><span>카드는 끌어서, 또는 Space로 옮깁니다</span></p>
+    </div>
+    <div class="page-head__actions">
+      <div class="seg" role="group" aria-label="담당 범위"><button class="seg__btn" aria-pressed="true">내 담당</button><button class="seg__btn" aria-pressed="false">경영지원팀 전체</button></div>
+      <button class="btn btn--ghost" data-popover="pop-help" aria-controls="pop-help" aria-expanded="false"><span data-icon="keyboard"></span>단축키</button>
+      <button class="btn btn--primary" data-busy="1100" data-toast="11월 5일 이체 파일을 만들었습니다" data-toast-text="지급 예정 3건 · ₩557,900 · 한결물산_이체_1105.txt" data-toast-kind="success"><span data-icon="download"></span>이체 파일 만들기</button>
+    </div>
+  </header>
+
+  <div class="alert alert--warning alert--banner" role="status" id="board-alert">
+    <span class="alert__icon" data-icon="alert"></span>
+    <div class="alert__body"><strong class="alert__title">영수증·서류가 빠진 카드 5장</strong><span class="alert__text">10월 31일(토) 24:00까지 첨부되지 않으면 11월 경비로 넘어가고 부서 예산도 11월에서 차감됩니다.</span><a class="alert__action" href="dashboard.html">마감 현황</a></div>
+    <button class="alert__close" data-dismiss aria-label="알림 닫기"><span data-icon="close"></span></button>
+  </div>
+
+  <div class="board__flow">
+    <div class="kanban kanban--bleed" id="board" aria-label="정산 파이프라인 5단계">
+    <section class="kanban__col" data-name="영수증 접수" aria-label="01 영수증 접수">
+      <div class="kanban__head"><h2 class="kanban__title"><span class="board__stage">01</span>영수증 접수</h2><span class="kanban__sum"></span><span class="kanban__count"></span><span class="kanban__note">카드 승인 후 영수증을 기다리는 건</span></div>
+      <div class="kanban__list">
+        <article class="kcard" data-amount="24500" data-name="카페 온새미 역삼점" data-state="warn" aria-label="EXP-2610-0431 카페 온새미 역삼점 ₩24,500">
+          <div class="kcard__top"><span class="kcard__code">EXP-2610-0431</span><span class="kcard__apv"><span class="apv-mini" aria-hidden="true"><i></i><i></i><i></i></span>0/3</span></div>
+          <p class="kcard__title">카페 온새미 역삼점</p>
+          <p class="kcard__meta"><span class="avatar" data-tone="1">채원</span>문채원 · 회의비</p>
+          <div class="kcard__badges"><span class="badge badge--sm badge--missing">영수증누락</span></div>
+          <div class="kcard__amount"><span>10.28</span><span class="amount">₩24,500</span></div>
+        </article>
+        <article class="kcard" data-amount="18700" data-name="한빛택시" data-state="warn" aria-label="EXP-2610-0429 한빛택시 ₩18,700">
+          <div class="kcard__top"><span class="kcard__code">EXP-2610-0429</span><span class="kcard__apv"><span class="apv-mini" aria-hidden="true"><i></i><i></i></span>0/2</span></div>
+          <p class="kcard__title">한빛택시</p>
+          <p class="kcard__meta"><span class="avatar" data-tone="1">민재</span>최민재 · 여비교통비</p>
+          <div class="kcard__badges"><span class="badge badge--sm badge--missing">영수증누락</span></div>
+          <div class="kcard__amount"><span>10.28</span><span class="amount">₩18,700</span></div>
+        </article>
+        <article class="kcard" data-amount="96300" data-name="새길주유소 판교" aria-label="EXP-2610-0426 새길주유소 판교 ₩96,300">
+          <div class="kcard__top"><span class="kcard__code">EXP-2610-0426</span><span class="kcard__apv"><span class="apv-mini" aria-hidden="true"><i></i><i></i><i></i></span>0/3</span></div>
+          <p class="kcard__title">새길주유소 판교</p>
+          <p class="kcard__meta"><span class="avatar" data-tone="3">가람</span>윤가람 · 차량유지비</p>
+          <div class="kcard__badges"><span class="badge badge--sm badge--info">영수증 자동 수집</span></div>
+          <div class="kcard__amount"><span>10.28</span><span class="amount">₩96,300</span></div>
+        </article>
+        <article class="kcard" data-amount="132000" data-name="늘봄도시락 판교점" data-state="warn" aria-label="EXP-2610-0420 늘봄도시락 판교점 ₩132,000">
+          <div class="kcard__top"><span class="kcard__code">EXP-2610-0420</span><span class="kcard__apv"><span class="apv-mini" aria-hidden="true"><i></i><i></i><i></i></span>0/3</span></div>
+          <p class="kcard__title">늘봄도시락 판교점</p>
+          <p class="kcard__meta"><span class="avatar" data-tone="2">하린</span>정하린 · 복리후생비</p>
+          <div class="kcard__badges"><span class="badge badge--sm badge--missing">영수증누락</span><span class="badge badge--sm badge--outline badge--plain">D-3</span></div>
+          <div class="kcard__amount"><span>10.27</span><span class="amount">₩132,000</span></div>
+        </article>
+        <p class="kanban__empty">이 단계에 있는 경비가 없습니다</p>
+      </div>
+    </section>
+    <section class="kanban__col" data-name="증빙 확인" aria-label="02 증빙 확인">
+      <div class="kanban__head"><h2 class="kanban__title"><span class="board__stage">02</span>증빙 확인</h2><span class="kanban__sum"></span><span class="kanban__count"></span><span class="kanban__note">경영지원팀이 계정과목·참석자를 대조</span></div>
+      <div class="kanban__list">
+        <article class="kcard" data-amount="1240000" data-name="바른인쇄 을지로" data-state="warn" aria-label="EXP-2610-0398 바른인쇄 을지로 ₩1,240,000">
+          <div class="kcard__top"><span class="kcard__code">EXP-2610-0398</span><span class="kcard__apv"><span class="apv-mini" aria-hidden="true"><i data-s="current"></i><i></i><i></i></span>0/3</span></div>
+          <p class="kcard__title">바른인쇄 을지로</p>
+          <p class="kcard__meta"><span class="avatar" data-tone="4">세린</span>오세린 · 도서인쇄비</p>
+          <div class="kcard__badges"><span class="badge badge--sm badge--missing">세금계산서 누락</span></div>
+          <div class="kcard__amount"><span>10.24</span><span class="amount">₩1,240,000</span></div>
+        </article>
+        <article class="kcard" data-amount="226000" data-name="사무나라 강남점" aria-label="EXP-2610-0417 사무나라 강남점 ₩226,000">
+          <div class="kcard__top"><span class="kcard__code">EXP-2610-0417</span><span class="kcard__apv"><span class="apv-mini" aria-hidden="true"><i data-s="current"></i><i></i><i></i></span>0/3</span></div>
+          <p class="kcard__title">사무나라 강남점</p>
+          <p class="kcard__meta"><span class="avatar" data-tone="3">지안</span>서지안 · 소모품비</p>
+          <div class="kcard__badges"><span class="badge badge--sm badge--info">자동 매칭 98%</span></div>
+          <div class="kcard__amount"><span>10.27</span><span class="amount">₩226,000</span></div>
+        </article>
+        <article class="kcard" data-amount="59800" data-name="KTX 서울→부산" aria-label="EXP-2610-0414 KTX 서울→부산 ₩59,800">
+          <div class="kcard__top"><span class="kcard__code">EXP-2610-0414</span><span class="kcard__apv"><span class="apv-mini" aria-hidden="true"><i data-s="current"></i><i></i></span>0/2</span></div>
+          <p class="kcard__title">KTX 서울→부산</p>
+          <p class="kcard__meta"><span class="avatar" data-tone="4">준호</span>배준호 · 여비교통비</p>
+          <div class="kcard__amount"><span>10.27</span><span class="amount">₩59,800</span></div>
+        </article>
+        <article class="kcard" data-amount="42000" data-name="카페 온새미 역삼점" aria-label="EXP-2610-0411 카페 온새미 역삼점 ₩42,000">
+          <div class="kcard__top"><span class="kcard__code">EXP-2610-0411</span><span class="kcard__apv"><span class="apv-mini" aria-hidden="true"><i data-s="current"></i><i></i></span>0/2</span></div>
+          <p class="kcard__title">카페 온새미 역삼점</p>
+          <p class="kcard__meta"><span class="avatar" data-tone="1">재현</span>임재현 · 회의비</p>
+          <div class="kcard__amount"><span>10.27</span><span class="amount">₩42,000</span></div>
+        </article>
+        <p class="kanban__empty">이 단계에 있는 경비가 없습니다</p>
+      </div>
+    </section>
+    <section class="kanban__col" data-name="결재 중" aria-label="03 결재 중">
+      <div class="kanban__head"><h2 class="kanban__title"><span class="board__stage">03</span>결재 중</h2><span class="kanban__sum"></span><span class="kanban__count"></span><span class="kanban__note">결재선 진행 · 가장 오래된 건 5일째</span></div>
+      <div class="kanban__list">
+        <article class="kcard" data-amount="186000" data-name="도담한정식 광화문" data-state="warn" aria-label="EXP-2610-0412 도담한정식 광화문 ₩186,000">
+          <div class="kcard__top"><span class="kcard__code">EXP-2610-0412</span><span class="kcard__apv"><span class="apv-mini" aria-hidden="true"><i data-s="done"></i><i data-s="current"></i><i></i></span>1/3</span></div>
+          <p class="kcard__title">도담한정식 광화문</p>
+          <p class="kcard__meta"><span class="avatar" data-tone="1">민재</span>최민재 · 접대비</p>
+          <div class="kcard__badges"><span class="badge badge--sm badge--missing">참석자 명단</span></div>
+          <div class="kcard__amount"><span>10.27</span><span class="amount">₩186,000</span></div>
+        </article>
+        <article class="kcard" data-amount="2039300" data-name="솔바람호텔 강릉" aria-label="EXP-2610-0366 솔바람호텔 강릉 ₩2,039,300">
+          <div class="kcard__top"><span class="kcard__code">EXP-2610-0366</span><span class="kcard__apv"><span class="apv-mini" aria-hidden="true"><i data-s="done"></i><i data-s="done"></i><i data-s="current"></i><i></i><i></i></span>2/5</span></div>
+          <p class="kcard__title">솔바람호텔 강릉</p>
+          <p class="kcard__meta"><span class="avatar" data-tone="2">도현</span>강도현 · 복리후생비</p>
+          <div class="kcard__badges"><span class="badge badge--sm badge--progress">대표 결재</span></div>
+          <div class="kcard__amount"><span>10.23</span><span class="amount">₩2,039,300</span></div>
+        </article>
+        <article class="kcard" data-amount="412000" data-name="도담한정식 광화문" aria-label="EXP-2610-0388 도담한정식 광화문 ₩412,000">
+          <div class="kcard__top"><span class="kcard__code">EXP-2610-0388</span><span class="kcard__apv"><span class="apv-mini" aria-hidden="true"><i data-s="done"></i><i data-s="done"></i><i data-s="current"></i><i></i></span>2/4</span></div>
+          <p class="kcard__title">도담한정식 광화문</p>
+          <p class="kcard__meta"><span class="avatar" data-tone="4">준호</span>배준호 · 복리후생비</p>
+          <div class="kcard__amount"><span>10.26</span><span class="amount">₩412,000</span></div>
+        </article>
+        <article class="kcard" data-amount="342000" data-name="사무나라 강남점" aria-label="EXP-2610-0407 사무나라 강남점 ₩342,000">
+          <div class="kcard__top"><span class="kcard__code">EXP-2610-0407</span><span class="kcard__apv"><span class="apv-mini" aria-hidden="true"><i data-s="done"></i><i data-s="done"></i><i data-s="current"></i><i></i></span>2/4</span></div>
+          <p class="kcard__title">사무나라 강남점</p>
+          <p class="kcard__meta"><span class="avatar" data-tone="3">가람</span>윤가람 · 소모품비</p>
+          <div class="kcard__amount"><span>10.28</span><span class="amount">₩342,000</span></div>
+        </article>
+        <p class="kanban__empty">이 단계에 있는 경비가 없습니다</p>
+      </div>
+    </section>
+    <section class="kanban__col kanban__col--payout" data-name="지급 예정" aria-label="04 지급 예정">
+      <div class="kanban__head"><h2 class="kanban__title"><span class="board__stage">04</span>지급 예정</h2><span class="kanban__sum"></span><span class="kanban__count"></span><span class="kanban__note"><span class="board__date">11.05</span>(목) 급여 계좌로 일괄 이체 <span class="board__due" aria-label="8일 남음">D-8</span></span></div>
+      <div class="kanban__list">
+        <article class="kcard" data-amount="87400" data-name="KTX 서울→동대구 왕복" aria-label="EXP-2610-0352 KTX 서울→동대구 왕복 ₩87,400">
+          <div class="kcard__top"><span class="kcard__code">EXP-2610-0352</span><span class="kcard__apv"><span class="apv-mini" aria-hidden="true"><i data-s="done"></i><i data-s="done"></i><i data-s="done"></i></span>3/3</span></div>
+          <p class="kcard__title">KTX 서울→동대구 왕복</p>
+          <p class="kcard__meta"><span class="avatar" data-tone="2">지호</span>한지호 · 여비교통비</p>
+          <div class="kcard__badges"><span class="badge badge--sm badge--approved">결재 완료</span></div>
+          <div class="kcard__amount"><span>10.21</span><span class="amount">₩87,400</span></div>
+        </article>
+        <article class="kcard" data-amount="58000" data-name="늘봄도시락 판교점" aria-label="EXP-2610-0347 늘봄도시락 판교점 ₩58,000">
+          <div class="kcard__top"><span class="kcard__code">EXP-2610-0347</span><span class="kcard__apv"><span class="apv-mini" aria-hidden="true"><i data-s="done"></i><i data-s="done"></i></span>2/2</span></div>
+          <p class="kcard__title">늘봄도시락 판교점</p>
+          <p class="kcard__meta"><span class="avatar" data-tone="1">채원</span>문채원 · 복리후생비</p>
+          <div class="kcard__badges"><span class="badge badge--sm badge--approved">결재 완료</span><span class="badge badge--sm badge--outline badge--plain">개인카드 환급</span></div>
+          <div class="kcard__amount"><span>10.20</span><span class="amount">₩58,000</span></div>
+        </article>
+        <article class="kcard" data-amount="412500" data-name="바른인쇄 을지로" aria-label="EXP-2610-0339 바른인쇄 을지로 ₩412,500">
+          <div class="kcard__top"><span class="kcard__code">EXP-2610-0339</span><span class="kcard__apv"><span class="apv-mini" aria-hidden="true"><i data-s="done"></i><i data-s="done"></i><i data-s="done"></i></span>3/3</span></div>
+          <p class="kcard__title">바른인쇄 을지로</p>
+          <p class="kcard__meta"><span class="avatar" data-tone="2">하린</span>정하린 · 도서인쇄비</p>
+          <div class="kcard__badges"><span class="badge badge--sm badge--approved">결재 완료</span></div>
+          <div class="kcard__amount"><span>10.19</span><span class="amount">₩412,500</span></div>
+        </article>
+        <p class="kanban__empty">이 단계에 있는 경비가 없습니다</p>
+      </div>
+    </section>
+    <section class="kanban__col kanban__col--paid" data-name="지급 완료" aria-label="05 지급 완료">
+      <div class="kanban__head"><h2 class="kanban__title"><span class="board__stage">05</span>지급 완료</h2><span class="kanban__sum"></span><span class="kanban__count"></span><span class="kanban__note">10월 25일 이체분</span></div>
+      <div class="kanban__list">
+        <article class="kcard" data-amount="96000" data-name="늘봄도시락 판교점" aria-label="EXP-2610-0301 늘봄도시락 판교점 ₩96,000">
+          <div class="kcard__top"><span class="kcard__code">EXP-2610-0301</span><span class="kcard__apv"><span class="apv-mini" aria-hidden="true"><i data-s="done"></i><i data-s="done"></i><i data-s="done"></i></span>3/3</span></div>
+          <p class="kcard__title">늘봄도시락 판교점</p>
+          <p class="kcard__meta"><span class="avatar" data-tone="2">도현</span>강도현 · 복리후생비</p>
+          <div class="kcard__badges"><span class="badge badge--sm badge--paid">지급완료</span></div>
+          <div class="kcard__amount"><span>10.25</span><span class="amount">₩96,000</span></div>
+        </article>
+        <article class="kcard" data-amount="31200" data-name="한빛택시" aria-label="EXP-2610-0296 한빛택시 ₩31,200">
+          <div class="kcard__top"><span class="kcard__code">EXP-2610-0296</span><span class="kcard__apv"><span class="apv-mini" aria-hidden="true"><i data-s="done"></i><i data-s="done"></i></span>2/2</span></div>
+          <p class="kcard__title">한빛택시</p>
+          <p class="kcard__meta"><span class="avatar" data-tone="3">지안</span>서지안 · 여비교통비</p>
+          <div class="kcard__badges"><span class="badge badge--sm badge--paid">지급완료</span></div>
+          <div class="kcard__amount"><span>10.25</span><span class="amount">₩31,200</span></div>
+        </article>
+        <article class="kcard" data-amount="184000" data-name="사무나라 강남점" aria-label="EXP-2610-0288 사무나라 강남점 ₩184,000">
+          <div class="kcard__top"><span class="kcard__code">EXP-2610-0288</span><span class="kcard__apv"><span class="apv-mini" aria-hidden="true"><i data-s="done"></i><i data-s="done"></i><i data-s="done"></i></span>3/3</span></div>
+          <p class="kcard__title">사무나라 강남점</p>
+          <p class="kcard__meta"><span class="avatar" data-tone="3">가람</span>윤가람 · 소모품비</p>
+          <div class="kcard__badges"><span class="badge badge--sm badge--paid">지급완료</span></div>
+          <div class="kcard__amount"><span>10.25</span><span class="amount">₩184,000</span></div>
+        </article>
+        <p class="kanban__empty">이 단계에 있는 경비가 없습니다</p>
+      </div>
+    </section>
+    </div>
+  </div>
+
+  <section class="board-log" aria-labelledby="log-t">
+    <div class="board-log__side">
+      <h2 class="board-log__title" id="log-t">오늘 옮긴 카드</h2>
+      <p class="board-log__text">단계를 옮기면 기안자와 다음 결재자에게 알림이 갑니다. 지급 예정으로 옮긴 건은 이체 파일을 만들 때까지 되돌릴 수 있습니다.</p>
+    </div>
+    <ol class="timeline board-log__list">
+      <li class="timeline__item"><span class="timeline__node timeline__node--submitted"></span>
+        <div class="timeline__content"><p class="timeline__title"><b>김하늘</b> <span class="mono timeline__role">EXP-2610-0417</span> 영수증 접수 → 증빙 확인</p><p class="timeline__body">사무나라 강남점 영수증이 자동 매칭되어 대조를 시작했습니다.</p></div>
+        <time class="timeline__time">14:05</time></li>
+      <li class="timeline__item"><span class="timeline__node timeline__node--system"></span>
+        <div class="timeline__content"><p class="timeline__title">시스템 <span class="mono timeline__role">EXP-2610-0352</span> 결재 중 → 지급 예정</p></div>
+        <time class="timeline__time">11:20</time></li>
+      <li class="timeline__item"><span class="timeline__node"><span class="stamp">하늘</span></span>
+        <div class="timeline__content"><p class="timeline__title"><b>김하늘</b> <span class="mono timeline__role">EXP-2610-0407</span> 증빙 확인 → 결재 중</p></div>
+        <time class="timeline__time">09:40</time></li>
+      <li class="timeline__item"><span class="timeline__node timeline__node--rejected"></span>
+        <div class="timeline__content"><p class="timeline__title"><b>김하늘</b> <span class="mono timeline__role">EXP-2610-0398</span> 증빙 확인에서 보류</p><p class="timeline__body">세금계산서가 빠졌습니다. 바른인쇄 을지로에 재발행을 요청했습니다.</p></div>
+        <time class="timeline__time">09:12</time></li>
+    </ol>
+  </section>
+</main>
+</div>
+
+<div class="menu" id="ws-menu" role="menu" hidden aria-label="워크스페이스" data-align="start">
+  <div class="menu__group" role="group" aria-label="워크스페이스 전환"><p class="menu__label">워크스페이스</p>
+    <button class="menu__item" role="menuitemradio" aria-checked="true" data-value="㈜한결물산"><span class="menu__item-label">㈜한결물산</span><span class="menu__item-meta">214명</span></button>
+    <button class="menu__item" role="menuitemradio" aria-checked="false" data-value="㈜새움테크"><span class="menu__item-label">㈜새움테크</span><span class="menu__item-meta">체험 중</span></button>
+  </div>
+  <div class="menu__group" role="group">
+    <a class="menu__item" role="menuitem" href="settings.html"><span data-icon="sliders"></span><span class="menu__item-label">결재 규칙 설정</span></a>
+    <a class="menu__item" role="menuitem" href="onboarding.html"><span data-icon="plus"></span><span class="menu__item-label">새 워크스페이스 개설</span></a>
+  </div>
+</div>
+
+<div class="menu" id="user-menu" role="menu" hidden aria-label="계정" data-align="end">
+  <div class="menu__group" role="group"><p class="menu__label">김하늘 · 경영지원팀</p>
+    <a class="menu__item" role="menuitem" href="profile.html"><span data-icon="user"></span><span class="menu__item-label">내 정보</span></a>
+    <a class="menu__item" role="menuitem" href="profile.html"><span data-icon="users"></span><span class="menu__item-label">결재 위임</span><span class="menu__item-meta">10.30–11.03</span></a>
+    <button class="menu__item" role="menuitem" data-theme-toggle><span data-icon="moon"></span><span class="menu__item-label">테마 전환</span></button>
+  </div>
+  <div class="menu__group" role="group">
+    <a class="menu__item" role="menuitem" href="../index.html"><span data-icon="logout"></span><span class="menu__item-label">로그아웃</span></a>
+  </div>
+</div>
+
+<div class="popover popover--wide" id="pop-notify" hidden role="dialog" aria-labelledby="pop-notify-t" data-align="end">
+  <div class="popover__head"><div class="popover__titles"><p class="popover__title" id="pop-notify-t">알림</p><p class="popover__sub">읽지 않음 7건</p></div>
+    <button class="btn btn--ghost btn--icon btn--sm" data-close aria-label="알림 닫기"><span data-icon="close"></span></button></div>
+  <ul class="popover__list">
+    <li><a class="list__row list__row--plain" href="inbox.html"><span class="list__main"><span class="list__title"><span>최민재 님이 지출결의서를 상신했습니다</span></span><span class="list__meta"><span class="mono">EXP-2610-0412</span><span>09:14</span></span></span><span class="list__amount">₩186,000</span></a></li>
+    <li><a class="list__row list__row--plain" href="kanban.html"><span class="list__main"><span class="list__title"><span>영수증 미제출 37건 — 마감 D-3</span></span><span class="list__meta"><span>직원 29명</span><span>09:00</span></span></span><span class="list__sub">독촉 필요</span></a></li>
+    <li><a class="list__row list__row--plain" href="dashboard.html"><span class="list__main"><span class="list__title"><span>마케팅팀 10월 예산 103% 사용</span></span><span class="list__meta"><span>초과 ₩930,000</span><span>어제 18:20</span></span></span><span class="list__sub">예산</span></a></li>
+    <li><a class="list__row list__row--plain" href="inbox.html"><span class="list__main"><span class="list__title"><span>박도윤 님이 EXP-2610-0352 결재를 마쳤습니다</span></span><span class="list__meta"><span>지급 예정 11.05</span><span>어제 11:20</span></span></span><span class="list__amount">₩87,400</span></a></li>
+  </ul>
+  <div class="popover__foot"><span>최근 7일</span><a href="inbox.html">결재함 열기</a></div>
+</div>
+
+<div class="command" id="command" hidden role="dialog" aria-modal="true" aria-label="문서 검색">
+  <div class="command__panel">
+    <div class="command__search"><span data-icon="search"></span><input class="command__input" autofocus placeholder="문서번호, 직원, 가맹점, 명령" aria-label="검색어"><kbd>Esc</kbd></div>
+    <div class="command__list">
+      <div class="command__group"><p class="command__group-label">최근 문서</p>
+        <a class="command__item" href="inbox.html" data-keywords="최민재 접대 도담"><span data-icon="doc"></span><span class="command__item-code">EXP-2610-0412</span><span class="command__item-label">도담한정식 광화문 · 최민재</span><span class="command__item-meta">₩186,000</span></a>
+        <a class="command__item" href="inbox.html" data-keywords="강도현 워크숍 숙박"><span data-icon="doc"></span><span class="command__item-code">EXP-2610-0366</span><span class="command__item-label">솔바람호텔 강릉 · 강도현</span><span class="command__item-meta">₩2,039,300</span></a>
+        <a class="command__item" href="404.html" data-keywords="보관 만료 9월"><span data-icon="doc"></span><span class="command__item-code">EXP-2603-0058</span><span class="command__item-label">보관 기간이 지난 3월 문서</span><span class="command__item-meta">만료</span></a>
+      </div>
+      <div class="command__group"><p class="command__group-label">이동</p>
+        <a class="command__item" href="dashboard.html" data-keywords="대시보드 마감 현황 dashboard"><span data-icon="grid"></span><span class="command__item-label">마감 현황</span></a>
+        <a class="command__item" href="inbox.html" data-keywords="결재함 inbox 받은 결재"><span data-icon="inbox"></span><span class="command__item-label">결재함</span><span class="command__item-meta">12</span></a>
+        <a class="command__item" href="kanban.html" data-keywords="칸반 파이프라인 kanban 정산"><span data-icon="columns"></span><span class="command__item-label">정산 파이프라인</span></a>
+        <a class="command__item" href="settings.html" data-keywords="설정 결재선 규칙 settings"><span data-icon="sliders"></span><span class="command__item-label">결재 규칙</span></a>
+        <a class="command__item" href="profile.html" data-keywords="프로필 위임 profile"><span data-icon="user"></span><span class="command__item-label">내 정보 · 위임</span></a>
+        <a class="command__item" href="../index.html" data-keywords="UI 레퍼런스 디자인 컴포넌트"><span data-icon="doc"></span><span class="command__item-label">UI 레퍼런스</span></a>
+      </div>
+      <div class="command__group"><p class="command__group-label">명령</p>
+        <button class="command__item" type="button" data-keywords="독촉 영수증 알림 remind" data-toast="영수증 독촉 알림을 보냈습니다" data-toast-text="미제출 37건 · 직원 29명 · 메일과 앱 알림" data-toast-kind="info"><span data-icon="send"></span><span class="command__item-label">영수증 미제출자에게 독촉 알림</span></button>
+        <button class="command__item" type="button" data-keywords="테마 다크 라이트 theme" data-theme-toggle><span data-icon="moon"></span><span class="command__item-label">라이트 / 다크 전환</span></button>
+      </div>
+      <p class="command__empty" hidden>‘<strong data-command-query></strong>’에 맞는 문서·직원이 없습니다.</p>
+    </div>
+    <div class="command__foot"><span><kbd>↑</kbd><kbd>↓</kbd> 이동</span><span><kbd>↵</kbd> 열기</span><span><kbd>Esc</kbd> 닫기</span></div>
+  </div>
+</div>
+
+<div class="popover" id="pop-help" hidden role="dialog" aria-labelledby="pop-help-t" data-align="end">
+  <div class="popover__head"><div class="popover__titles"><p class="popover__title" id="pop-help-t">키보드로 카드 옮기기</p><p class="popover__sub">마우스 없이 단계를 바꿉니다</p></div>
+    <button class="btn btn--ghost btn--icon btn--sm" data-close aria-label="닫기"><span data-icon="close"></span></button></div>
+  <div class="popover__body">
+    <dl class="kv board-keys">
+      <dt>카드 고르기</dt><dd><kbd>Tab</kbd> <kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd></dd>
+      <dt>집기 · 놓기</dt><dd><kbd>Space</kbd></dd>
+      <dt>단계 옮기기</dt><dd><kbd>←</kbd><kbd>→</kbd></dd>
+      <dt>순서 바꾸기</dt><dd><kbd>↑</kbd><kbd>↓</kbd></dd>
+      <dt>취소</dt><dd><kbd>Esc</kbd></dd>
+    </dl>
+  </div>
+</div>
+</body>
+</html>

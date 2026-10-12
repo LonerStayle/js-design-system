@@ -1,0 +1,126 @@
+/* kanban — 열 = 반죽 바닥색 세로 홈(열마다 다른 바닥색), 카드 = 흰 반죽 슬랩 + 담당자 반죽 점
+   드래그: 집으면 3° 기울고 scale 1.05, 받침 12px로 들림 → 놓으면 jelly 착지 + 받은 열 wiggle
+   키보드: 카드에서 Space/Enter로 집기 → ←/→ 열 이동 · ↑/↓ 순서 → Space/Enter 내려놓기 · Esc 취소
+   <div class="kanban" data-kanban aria-label="…">
+     <section class="kanban__col kanban__col--sky" data-col="기획"><header class="kanban__head"><h3 class="kanban__title">기획</h3><span class="badge badge--count kanban__count">3</span></header>
+       <ul class="kanban__list"><li class="kcard" tabindex="0" aria-roledescription="옮길 수 있는 카드">…</li></ul></section> … */
+
+.kanban {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(264px, 1fr);
+  gap: var(--sp-4);
+  overflow-x: auto;
+  padding: 8px 4px 20px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+}
+.kanban__col {
+  --col-bg: var(--floor-sky);
+  display: flex;
+  flex-direction: column;
+  min-height: 420px;
+  padding: 14px 12px 18px;
+  border-radius: var(--r-card);
+  background: var(--col-bg);
+  box-shadow: inset 0 5px 0 var(--well-top), inset 0 -3px 0 var(--well-bottom);
+  scroll-snap-align: start;
+  transition: background-color 200ms, box-shadow 200ms;
+}
+.kanban__col--sky { --col-bg: var(--floor-sky); }
+.kanban__col--mint { --col-bg: var(--floor-mint); }
+.kanban__col--butter { --col-bg: var(--floor-butter); }
+.kanban__col--peach { --col-bg: var(--floor-peach); }
+.kanban__col--well { --col-bg: var(--well); }
+.kanban__col.is-over { box-shadow: inset 0 5px 0 var(--well-top), inset 0 0 0 4px var(--blue-bright); }
+.kanban__col.is-wiggle { animation: wiggle 300ms var(--ease-out) 1; }
+
+.kanban__head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 2px 6px 14px;
+}
+.kanban__title { font-family: var(--font-hangul-bold); font-weight: 400; font-size: 19px; line-height: 1.3; color: var(--ink); }
+.kanban__list { display: flex; flex-direction: column; gap: 14px; flex: 1; min-height: 80px; padding-bottom: 6px; }
+
+.kcard {
+  --slab-base: var(--slab-md);
+  --slab-h: var(--slab-base);
+  --slab-color: var(--clay-deep);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px 14px;
+  border-radius: 22px;
+  background: var(--clay);
+  color: var(--ink);
+  box-shadow: var(--slab);
+  cursor: grab;
+  touch-action: manipulation;   /* 터치는 꾹 누른 뒤에만 집힌다(app.js) — 그 전에는 화면 스크롤 */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  translate: 0 0;
+  rotate: 0deg;
+  scale: 1;
+  transition: translate var(--dur-release) var(--ease-boing), box-shadow var(--dur-release) var(--ease-boing), rotate var(--dur-release) var(--ease-boing), scale var(--dur-release) var(--ease-boing);
+}
+.kcard:hover { --slab-h: calc(var(--slab-base) + 2px); translate: 0 -2px; }
+.kcard:focus-visible { outline: none; box-shadow: var(--slab), var(--focus); }
+.kcard.is-dragging,
+.kcard[aria-pressed="true"] {
+  --slab-h: var(--slab-xl);
+  rotate: 3deg;
+  scale: 1.05;
+  translate: 0 -8px;
+  cursor: grabbing;
+  z-index: 5;
+}
+.kcard.is-ghost { opacity: .35; }
+.kcard.is-floating { position: fixed; z-index: 990; pointer-events: none; margin: 0; }
+.kcard.is-landed { animation: jelly var(--dur-jelly) var(--ease-out) 1; }
+.kcard[aria-disabled="true"] { cursor: not-allowed; opacity: .6; }
+
+.kcard__top { display: flex; align-items: center; gap: 8px; }
+.kcard__id { font-family: var(--font-mono); font-size: 12px; color: var(--ink-muted); }
+.kcard__top .badge { margin-left: auto; }
+.kcard__title { font-family: var(--font-hangul-bold); font-weight: 400; font-size: 16px; line-height: 1.4; }
+.kcard__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; color: var(--ink-muted); }
+.kcard__who { display: inline-flex; align-items: center; gap: 6px; }
+.kcard__due { font-family: var(--font-display); font-variant-numeric: tabular-nums; }
+.kcard__due--late { color: var(--tomato-text); }
+
+.kanban__placeholder {
+  height: 72px;
+  border-radius: 22px;
+  outline: 3px dashed var(--ink-faint);
+  outline-offset: -3px;
+}
+.kanban__add {
+  margin-top: 12px;
+  min-height: 44px;
+  border-radius: var(--r-pill);
+  color: var(--ink-muted);
+  font-family: var(--font-hangul-bold);
+  font-size: 15px;
+  outline: 2px dashed var(--ink-faint);
+  outline-offset: -2px;
+  transition: background-color 140ms;
+}
+.kanban__add:hover { background: var(--hi); color: var(--ink); }
+.kanban__add:focus-visible { outline: none; box-shadow: var(--focus); }
+
+@media (max-width: 600px) {
+  .kanban { grid-auto-columns: minmax(82vw, 1fr); margin-inline: calc(var(--edge) * -1); padding-inline: var(--edge); }
+  .kanban__col { min-height: 320px; }
+}
+/* 좁은 컨테이너에 열 전부를 맞춘다(운영 레이아웃 ≥1200px). 그보다 좁으면 기본처럼 가로 스크롤 */
+@media (min-width: 1200px) {
+  .kanban--fit { grid-auto-columns: minmax(0, 1fr); gap: var(--sp-3); overflow-x: visible; }
+  .kanban--fit .kanban__col { padding-inline: 10px; }
+  .kanban--fit .kcard { padding: 12px 14px; }
+  .kanban--fit .kcard__title { font-size: 15px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kcard.is-dragging, .kcard[aria-pressed="true"] { rotate: 0deg; scale: 1; translate: 0 0; }
+}

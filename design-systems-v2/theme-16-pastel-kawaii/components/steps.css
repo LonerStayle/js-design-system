@@ -1,0 +1,92 @@
+/* steps — 도장 칸
+   단계마다 원 칸 · 완료 = 폭닥이 도장(체리 잉크, 찍힘 모션) · 현재 = 점선 원 + 손글씨 · 다음 = 옅은 점선 */
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(var(--steps, 4), minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: step;
+}
+.steps__item {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 8px;
+  padding: 0 6px;
+  text-align: center;
+  counter-increment: step;
+}
+.steps__item + .steps__item::before {      /* 칸 사이 점선 */
+  content: "";
+  position: absolute;
+  top: 31px;
+  right: calc(50% + 38px);
+  left: calc(-50% + 38px);
+  border-top: 3px dotted color-mix(in srgb, var(--ink-faint) 80%, transparent);
+}
+.steps__item.is-done + .steps__item::before { border-top: 3px solid var(--cherry-ink); border-top-style: dashed; }
+
+.steps__stamp {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  border: 2.5px dashed color-mix(in srgb, var(--ink-faint) 70%, transparent);
+  background: var(--paper-raised);
+  font-family: 'Mochiy Pop One', var(--font-num);
+  font-size: 18px;
+  color: var(--ink-faint);
+}
+.steps__stamp::before { content: counter(step); }
+
+/* 완료 — 도장 */
+.steps__item.is-done .steps__stamp {
+  border: 3px solid var(--cherry-ink);
+  background: color-mix(in srgb, var(--cherry) 10%, var(--paper-raised));
+  color: var(--cherry-ink);
+  rotate: -8deg;
+  box-shadow: inset 0 0 0 3px var(--paper-raised), inset 0 0 0 5px color-mix(in srgb, var(--cherry-ink) 60%, transparent);
+}
+.steps__item.is-done .steps__stamp::before { content: none; }
+.steps__item.is-done .steps__stamp .pk { --pk-size: 44px; }
+.steps__stamp .pk { display: none; }
+.steps__item.is-done .steps__stamp .pk { display: block; }
+.steps__item.is-done .steps__stamp .pk { --pk-wool: var(--cherry-ink); --pk-line: var(--cherry-ink); --pk-face: var(--paper-raised); --pk-ink: var(--cherry-ink); --pk-cheek: transparent; --pk-leg: var(--cherry-ink); --die-cut: transparent; opacity: .9; }
+.steps__item.is-done.is-new .steps__stamp { animation: pk-stamp 360ms var(--ease-stick) both; }
+
+/* 현재 */
+.steps__item[aria-current="step"] .steps__stamp {
+  border: 3px dashed var(--cherry);
+  color: var(--ink);
+  background: var(--wash-lemon);
+  animation: step-wait 2.4s ease-in-out 3;          /* 세 번 흔들고 멈춘다 — 상시 움직임(마키·숨쉬기 2개) 한도에 넣지 않기 위해 */
+}
+@keyframes step-wait { 0%, 100% { rotate: 0deg; } 50% { rotate: 12deg; } }
+
+.steps__title { font-family: var(--font-display-ko); font-weight: 700; font-size: 26px; line-height: 1; color: var(--ink); }
+.steps__item:not(.is-done):not([aria-current="step"]) .steps__title { color: var(--ink-soft); }
+.steps__sub { font-family: var(--font-hand); letter-spacing: var(--hand-tracking-sm); word-spacing: var(--hand-word); font-size: 17px; line-height: 1.25; color: var(--ink-soft); }
+.steps__item[aria-current="step"] .steps__sub { color: var(--cherry-ink); font-weight: 700; }
+.steps__item.is-error .steps__stamp { border: 3px solid var(--err); color: var(--err); background: var(--err-wash); }
+
+/* 세로 */
+.steps--vertical { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+.steps--vertical .steps__item { grid-template-columns: 64px minmax(0, 1fr); justify-items: start; text-align: left; column-gap: 16px; }
+.steps--vertical .steps__item > :not(.steps__stamp) { grid-column: 2; }
+.steps--vertical .steps__stamp { grid-row: 1 / span 2; }
+.steps--vertical .steps__item + .steps__item::before { top: -20px; bottom: auto; height: 20px; left: 31px; right: auto; border-top: 0; border-left: 3px dotted color-mix(in srgb, var(--ink-faint) 80%, transparent); }
+
+@media (max-width: 560px) {
+  .steps__stamp { width: 48px; height: 48px; font-size: 15px; }
+  .steps__item.is-done .steps__stamp .pk { --pk-size: 34px; }
+  .steps__item + .steps__item::before { top: 23px; right: calc(50% + 30px); left: calc(-50% + 30px); }
+  .steps__title { font-size: 21px; }
+  .steps__sub { display: none; }
+  .steps__item[aria-current="step"] .steps__sub { display: block; font-size: 15px; }
+}
+
+@media (prefers-reduced-motion: reduce) { .steps__item[aria-current="step"] .steps__stamp { animation: none; } }

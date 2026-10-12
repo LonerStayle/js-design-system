@@ -1,0 +1,293 @@
+/* ==========================================================================
+   pricing — 「구성 고르기」
+   머리 → 판독 열 4(sticky 영수증 + 추가 키) : 책상 위 배치 도면 + 입력 선택 키 8
+   구성 = 한 파인 베드 위 입력 선택 키 3개(data-exclusive) — 고른 구성의 기기만 책상 위에 솟는다
+   선택·케어 스위치에 따라 LCD 합계·내역·비교표 열이 :has()로 바뀐다.
+   모바일: 판독창이 띠 아래 sticky 계기 띠(합계 + 주문 키)
+   장면 CSS — 의미 토큰만 사용
+   ========================================================================== */
+
+/* ── 선택 상태에 따라 보이는 조각 ── */
+.price:has(#cfg-single[aria-pressed="true"]) [data-cfg]:not([data-cfg~="single"]),
+.price:has(#cfg-desk[aria-pressed="true"]) [data-cfg]:not([data-cfg~="desk"]),
+.price:has(#cfg-room[aria-pressed="true"]) [data-cfg]:not([data-cfg~="room"]) { display: none; }
+.price:has(#care-p:checked) [data-care="off"],
+.price:not(:has(#care-p:checked)) [data-care="on"] { display: none; }
+
+/* ── 머리 ── */
+.price__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sp-6) var(--sp-7);
+  align-items: end;
+  padding-top: var(--sp-6);
+  padding-bottom: var(--sp-7);
+}
+.price__head .t-h1 { margin-top: var(--sp-4); }
+.price__lede { margin-top: var(--sp-3); max-width: 52ch; color: var(--ink-2); }
+
+/* ── 판독 열 4 : 책상 배치 8 ── */
+.price__deck {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+  gap: var(--sp-7);
+  align-items: start;
+  padding-bottom: var(--sp-8);
+}
+/* 판독 열은 따라온다 (DIRECTION 9-10) — 영수증 + 추가 키가 한 열로 스크롤을 따라온다 */
+.price__readout { position: sticky; top: calc(var(--topbar-h) + 24px); display: grid; gap: var(--sp-5); min-width: 0; }
+.price__band { display: grid; gap: var(--sp-4); }
+.price__lcd { padding: var(--sp-5) var(--sp-5) var(--sp-4); }
+.price__total { margin: var(--sp-3) 0 var(--sp-2); font-size: 46px; line-height: 1.05; letter-spacing: .01em; }
+.price__lines { list-style: none; padding: 0; margin: var(--sp-3) 0 0; }
+.price__lines li {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  gap: var(--sp-3);
+  align-items: baseline;
+  padding: 7px 0;
+  font-size: 14px;
+  box-shadow: inset 0 1px 0 var(--lcd-rule);
+}
+.price__lines li > span:first-child { color: var(--lcd-dim); font-size: 12px; letter-spacing: .1em; }
+.price__lines li.lcd__green > span { color: var(--lcd-green); }
+.price__lines .ko { color: var(--lcd-text); font-size: 13px; }
+.price__lines li.lcd__green .ko { color: var(--lcd-green); }
+.price__warranty { margin-top: var(--sp-3); padding-top: var(--sp-3); box-shadow: inset 0 1px 0 var(--lcd-rule); font-size: 13px; color: var(--lcd-dim); }
+
+/* 추가 키 슬롯 — 면(0) 위에 홈으로 구획. 누르는 것은 스위치와 알림 키뿐 */
+.price__addons { display: grid; gap: 0; }
+.price__addons-t { display: flex; align-items: baseline; gap: var(--sp-2); padding-bottom: var(--sp-2); }
+.addon {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px var(--sp-3);
+  align-items: center;
+  padding: var(--sp-4) 0;
+  box-shadow: inset 0 1px 0 var(--lo-line), inset 0 2px 0 var(--hi-line);
+}
+.addon__switch { min-width: 0; }
+.addon__name { font-family: var(--font-ko); font-weight: 700; font-size: 16px; line-height: 1.4; color: var(--ink); }
+.addon__name .t-2, .addon__name .mono { font-weight: 400; font-size: 13px; margin-left: 4px; }
+.addon__price { font-size: 17px; color: var(--ink); }
+.addon__text { grid-column: 1 / -1; font-size: 14px; line-height: 1.6; color: var(--ink-2); }
+.addon--r1 { grid-template-columns: 44px minmax(0, 1fr); }
+.addon__knob {
+  grid-row: 1 / span 2;
+  align-self: start;
+  position: relative;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--knob-cap);
+  box-shadow: var(--sh-raised-sm);
+}
+.addon__knob::after {
+  content: ""; position: absolute; inset: 7px; border-radius: 50%;
+  background: var(--surface);
+  box-shadow: -1px -1px 3px var(--hi), 1px 1px 3px var(--lo), inset 0 -10px 0 -8px var(--ink-2);
+}
+.addon--r1 .addon__text { grid-column: 2; }
+.addon__row { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--sp-3); margin-top: var(--sp-2); }
+.addon__lcd { flex: 1 1 auto; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.addon__lcd .lcd__dim { margin-left: auto; }
+
+.price__controls { min-width: 0; }
+
+/* 책상 위 배치 도면 — 한 장의 책상(얕은 우물) 위에 같은 축척으로 선 기기들.
+   폭 기준(mm): 여백 60 · P2 160 · 간격 60 · M1 220 · 60 · P2 160 · 60 · S1 280 · 60 = 1120mm = 100cqw */
+.layout { margin: 0; }
+.layout__desk {
+  container-type: inline-size;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 5.36cqw;
+  padding: 4cqw 5.36cqw 0;
+  height: auto;
+  border-radius: var(--r-module);
+  box-shadow: var(--sh-pressed);
+}
+/* 책상 앞 모서리: 기기가 서는 선 + 레전드 자리 */
+.layout__desk::after {
+  content: "";
+  position: absolute;
+  left: 3cqw; right: 3cqw; bottom: 63px;
+  height: 3px; border-radius: 2px;
+  box-shadow: var(--sh-groove);
+}
+.layout__dev {
+  --dev: var(--finish-gr);
+  position: relative;
+  flex: none;
+  display: block;
+  margin-bottom: 66px;
+  border-radius: 1.6cqw;
+  background: var(--dev);
+  box-shadow: -1.2cqw -1.2cqw 2.6cqw var(--hi), 1.4cqw 1.4cqw 3cqw var(--lo), inset .25cqw .25cqw .4cqw var(--finish-gr-hi), inset -.3cqw -.3cqw .6cqw var(--finish-gr-lo);
+  transition: box-shadow var(--dur-spring) var(--ease-spring), background-color var(--dur-led) ease-out;
+}
+.layout__dev > b {
+  position: absolute; left: 50%; top: calc(100% + 16px); translate: -50% 0;
+  white-space: nowrap; font-size: 11px;
+}
+.layout__m1 { width: 19.64cqw; background: transparent; box-shadow: none; }
+.layout__m1 .m1mini { width: 100%; }
+.layout__p2 { width: 14.29cqw; height: 23.2cqw; display: grid; }
+.layout__s1 { width: 25cqw; height: 26.8cqw; display: grid; }
+/* P2 · S1 안쪽 드라이버·포트는 base.css 공용 축소판(.spkmini)이 그린다 */
+/* 각인 라벨 — 레전드 아래 한 줄 */
+.layout__note {
+  position: absolute; left: 50%; top: calc(100% + 34px); translate: -50% 0;
+  white-space: nowrap; font-style: normal; font-family: var(--font-ko); font-size: 12px; color: var(--ink-2);
+  text-shadow: var(--engrave);
+}
+.layout__dev > i, .layout__dev > .m1mini { transition: opacity var(--dur-spring) ease-out; }
+
+/* 고르지 않은 구성의 기기 = 책상 위 빈 자리(파인 발자국)만 남는다 */
+.price:has(#cfg-single[aria-pressed="true"]) .layout__dev:not([data-in~="single"]),
+.price:has(#cfg-desk[aria-pressed="true"]) .layout__dev:not([data-in~="desk"]),
+.price:has(#cfg-room[aria-pressed="true"]) .layout__dev:not([data-in~="room"]) { background: transparent; box-shadow: var(--sh-pressed-sm); }
+.price:has(#cfg-single[aria-pressed="true"]) .layout__dev:not([data-in~="single"]) > i,
+.price:has(#cfg-desk[aria-pressed="true"]) .layout__dev:not([data-in~="desk"]) > i,
+.price:has(#cfg-room[aria-pressed="true"]) .layout__dev:not([data-in~="room"]) > i { opacity: .35; }
+.price:has(#cfg-single[aria-pressed="true"]) .layout__dev:not([data-in~="single"]) > b,
+.price:has(#cfg-desk[aria-pressed="true"]) .layout__dev:not([data-in~="desk"]) > b,
+.price:has(#cfg-room[aria-pressed="true"]) .layout__dev:not([data-in~="room"]) > b { color: var(--ink-3); }
+
+.layout__scale { display: flex; flex-wrap: wrap; align-items: center; gap: 6px var(--sp-3); margin-top: var(--sp-3); font-size: 13px; color: var(--ink-2); }
+.layout__scale .mono { font-size: 12px; }
+.layout__rule { width: 56px; height: 9px; box-shadow: inset 0 -1px 0 var(--ink-2), inset 1px 0 0 var(--ink-2), inset -1px 0 0 var(--ink-2); }
+
+/* 구성 = 입력 선택 키 열 (한 파인 베드 위 키 셋, 하나만 눌린다) */
+.cfgkeys {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-3);
+  margin-top: var(--sp-5);
+  padding: var(--sp-2);
+  border-radius: calc(var(--r-key) + var(--sp-2));
+  box-shadow: var(--sh-pressed);
+}
+.cfgkey {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-height: 44px;
+  padding: var(--sp-4);
+  border-radius: var(--r-key);
+  background: var(--surface);
+  box-shadow: var(--sh-raised-sm);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow var(--dur-spring) var(--ease-spring), transform var(--dur-spring) var(--ease-spring);
+}
+.cfgkey:hover { box-shadow: var(--sh-raised); }
+.cfgkey:active { box-shadow: var(--sh-pressed-sm); transform: translateY(1px); transition-duration: var(--dur-press); }
+.cfgkey[aria-pressed="true"] { box-shadow: var(--sh-pressed); transform: translateY(1px); }
+.cfgkey[aria-pressed="true"] .led { background: var(--led-orange); box-shadow: var(--glow-orange); }
+.cfgkey:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.cfgkey__top { display: flex; align-items: center; gap: var(--sp-2); }
+.cfgkey__pick { margin-left: auto; font-family: var(--font-ko); font-size: 12px; font-weight: 500; color: var(--text-orange); }
+.cfgkey__name { margin-top: var(--sp-2); font-family: var(--font-ko); font-size: 19px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.3; }
+.cfgkey__price { font-size: 22px; line-height: 1.2; letter-spacing: .01em; }
+.cfgkey[aria-pressed="true"] .cfgkey__price { color: var(--text-orange); }
+.cfgkey__note { font-size: 13px; color: var(--ink-2); line-height: 1.5; }
+.cfgkey__note s { color: var(--ink-3); text-decoration-thickness: 1px; }
+.price__visit { display: flex; align-items: baseline; gap: 10px; margin-top: var(--sp-4); }
+.price__visit .led { flex: none; translate: 0 -1px; }
+
+/* ── 비교표 ── */
+.price__compare { padding-bottom: var(--sp-8); }
+.cmp { min-width: 680px; }
+.cmp thead th { font-size: 13px; color: var(--ink-2); }
+.cmp thead th[data-col] { min-width: 168px; }
+.cmp tbody th { font-weight: 600; font-size: 15px; }
+.cmp__sub { display: block; font-size: 12px; font-weight: 400; color: var(--ink-2); line-height: 1.4; }
+.cmp td.num { text-align: left; }
+.cmp th, .cmp td { transition: background-color var(--dur-led) ease-out; }
+.cmp .cmp__span { color: var(--ink-2); font-size: 14px; }
+.cmp__strong th, .cmp__strong td { font-size: 17px; color: var(--ink); }
+.cmp__strong td.num { font-size: 17px; }
+.cmp tbody tr:hover { background: transparent; }
+.price:has(#cfg-single[aria-pressed="true"]) .cmp [data-col="single"],
+.price:has(#cfg-desk[aria-pressed="true"]) .cmp [data-col="desk"],
+.price:has(#cfg-room[aria-pressed="true"]) .cmp [data-col="room"] { background: var(--surface-deep); }
+.price:has(#cfg-single[aria-pressed="true"]) .cmp thead [data-col="single"],
+.price:has(#cfg-desk[aria-pressed="true"]) .cmp thead [data-col="desk"],
+.price:has(#cfg-room[aria-pressed="true"]) .cmp thead [data-col="room"] { color: var(--ink); }
+.price:has(#cfg-single[aria-pressed="true"]) .cmp thead [data-col="single"] .legend,
+.price:has(#cfg-desk[aria-pressed="true"]) .cmp thead [data-col="desk"] .legend,
+.price:has(#cfg-room[aria-pressed="true"]) .cmp thead [data-col="room"] .legend { color: var(--text-orange); }
+
+/* ── 묻는 것 ── */
+.price__faq { padding-bottom: var(--sp-6); }
+.faq {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+  gap: var(--sp-7);
+  align-items: start;
+}
+.faq__side { display: grid; gap: var(--sp-4); position: sticky; top: calc(var(--topbar-h) + 24px); }
+.faq__side .mhead { margin-bottom: 0; }
+.faq__call { padding: var(--sp-4) var(--sp-5); }
+.faq__num { margin: var(--sp-2) 0 var(--sp-1); font-size: 34px; line-height: 1.1; }
+.faq__mail { font-size: 13px; color: var(--lcd-dim); }
+
+/* ── 반응형 ── */
+@media (max-width: 1180px) {
+  .price__deck { gap: var(--sp-5); }
+  .cfgkeys { grid-template-columns: minmax(0, 1fr); }
+  .cfgkey { grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; column-gap: var(--sp-3); }
+  .cfgkey__top { grid-column: 1; }
+  .cfgkey__name { grid-column: 2; margin-top: 0; font-size: 17px; }
+  .cfgkey__price { grid-column: 3; font-size: 18px; }
+  .cfgkey__note { grid-column: 2 / -1; }
+  .cfgkey__pick { margin-left: 0; }
+}
+@media (max-width: 960px) {
+  .price__head { grid-template-columns: minmax(0, 1fr); align-items: start; padding-bottom: var(--sp-6); }
+  .price__deck { grid-template-columns: minmax(0, 1fr); }
+  /* 판독 열이 풀린다: 영수증은 띠 아래 sticky 계기 띠, 추가 키는 배치도 아래로 */
+  .price__readout { display: contents; }
+  .price__band {
+    order: 0;
+    position: sticky;
+    top: var(--topbar-h);
+    z-index: 5;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
+    gap: var(--sp-3);
+    margin-inline: calc(var(--pad-page) * -1);
+    padding: var(--sp-3) var(--pad-page);
+    background: var(--surface);
+  }
+  .price__band::after { content: ""; position: absolute; left: var(--sp-4); right: var(--sp-4); bottom: 0; height: 3px; border-radius: 2px; box-shadow: var(--sh-groove); }
+  .price__controls { order: 1; }
+  .price__addons { order: 2; }
+  .price__lcd { padding: 8px 14px; display: grid; align-content: center; }
+  .price__lcd .lcd__row { font-size: 12px; }
+  .price__total { font-size: 26px; margin: 2px 0 0; }
+  .price__lines, .price__warranty { display: none; }
+  .price__order { width: auto; padding-inline: var(--sp-4); --key-h: 52px; }
+  .price__order-long { display: none; }
+  .faq { grid-template-columns: minmax(0, 1fr); gap: var(--sp-5); }
+  .faq__side { position: static; }
+}
+@media (max-width: 600px) {
+  .price__head { padding-top: var(--sp-5); }
+  .layout__desk::after { bottom: 50px; }
+  .layout__dev { margin-bottom: 53px; }
+  .layout__dev > b { top: calc(100% + 10px); font-size: 10px; letter-spacing: .08em; }
+  .layout__note { top: calc(100% + 28px); font-size: 11px; }
+  .cfgkey { padding: var(--sp-3) var(--sp-4); }
+  .faq__num { font-size: 28px; }
+}
+@media (max-width: 960px) {
+  /* 좁은 화면: 항목 열을 붙잡아 두고 구성 열만 가로로 민다 */
+  .cmp thead th:first-child,
+  .cmp tbody th { position: sticky; left: 0; z-index: 1; background: var(--surface); min-width: 140px; }
+}
+.faq__places { margin-top: var(--sp-1); }
+@media (max-width: 960px) { .faq__places { display: none; } }

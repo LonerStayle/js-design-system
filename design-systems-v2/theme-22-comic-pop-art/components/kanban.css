@@ -1,0 +1,97 @@
+/* kanban — 6열 = 제작 공정(콘티 → 밑그림 → 펜선 → 톤·채색 → 식자 → 교정 완료).
+   열 = 세로 컷(머리 캡션: 단계 이름 + 매수), 카드 = 작은 컷(원고 ID · 작품 · 작가 · 쪽수 · 진척 망점 바).
+   키보드: 카드 메뉴 「앞 공정으로 / 다음 공정으로」 */
+
+.kanban {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(156px, 1fr)); /* 앱 셸 1440(본문 약 1106px)에서도 가로 스크롤 없이 6열 */
+  gap: var(--gutter);
+  overflow-x: auto;
+  padding: 14px 2px var(--sp-3);
+  scroll-snap-type: x proximity;
+  overscroll-behavior-x: contain;
+}
+.kanban__col {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 360px;
+  background: var(--surface);
+  border: var(--line-w) solid var(--line);
+  scroll-snap-align: start;
+}
+.kanban__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin: -14px 0 0 calc(var(--line-w) * -1);
+  padding: 0 var(--sp-3) 0 0;
+}
+.kanban__head .caption { display: inline-flex; align-items: center; gap: 6px; }
+.kanban__count { font-family: var(--font-mono); font-size: 12px; font-weight: 700; }
+.kanban__head--draft .caption { background: var(--balloon); border-style: dashed; border-color: var(--draft); }
+.kanban__head--pen .caption { background: var(--slab-ink); color: var(--on-slab); }
+.kanban__head--tone .caption { background: var(--info); }
+.kanban__head--letter .caption { background: var(--caption); }
+.kanban__head--done .caption { background: var(--balloon); }
+.kanban__head--conti .caption { background: var(--balloon); }
+.kanban__list { flex: 1 1 auto; display: flex; flex-direction: column; gap: 10px; padding: var(--sp-3); }
+.kanban__col.is-over .kanban__list {
+  background-image:
+    radial-gradient(circle, var(--dot-hover) var(--dot-20), transparent calc(var(--dot-20) + .5px)),
+    radial-gradient(circle, var(--dot-hover) var(--dot-20), transparent calc(var(--dot-20) + .5px));
+  background-size: var(--dot-pitch) var(--dot-pitch);
+  background-position: 0 0, calc(var(--dot-pitch) / 2) calc(var(--dot-pitch) / 2);
+}
+.kanban__empty {
+  display: grid;
+  place-items: center;
+  min-height: 88px;
+  border: 2px dashed var(--draft);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.kanban__card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px 12px;
+  background: var(--surface-raised);
+  color: var(--text);
+  border: var(--line-w) solid var(--line);
+  cursor: grab;
+  touch-action: pan-y;
+}
+.kanban__card:hover {
+  background-image:
+    radial-gradient(circle, var(--dot-hover) var(--dot-10), transparent calc(var(--dot-10) + .5px)),
+    radial-gradient(circle, var(--dot-hover) var(--dot-10), transparent calc(var(--dot-10) + .5px));
+  background-size: var(--dot-pitch) var(--dot-pitch);
+  background-position: 0 0, calc(var(--dot-pitch) / 2) calc(var(--dot-pitch) / 2);
+}
+.kanban__card.is-dragging { opacity: .55; border-style: dashed; cursor: grabbing; }
+.kanban__card.is-dropped { animation: kw-drop var(--dur-pop) var(--ease-pop); }
+@keyframes kw-drop { 0% { transform: scale(.9) rotate(-2deg); } 100% { transform: none; } }
+.kanban__card[aria-selected="true"] { border-width: var(--line-w-heavy); padding: 9px 11px 11px; }
+.kanban__card.is-late { border-color: var(--line); }
+.kanban__top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.kanban__id { font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: 0; color: var(--text-muted); }
+.kanban__title { font-weight: 800; font-size: 15px; line-height: 1.35; }
+.kanban__meta { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 13px; color: var(--text-muted); }
+.kanban__meta .t-mono { font-size: 11px; }
+/* 지연 별 버스트: 오른쪽 아래로 튀어나온다 — 오른쪽 위 ⋯ 메뉴 버튼을 덮지 않게 */
+.kanban__late { position: absolute; bottom: -16px; right: -12px; z-index: 1; }
+.kanban__card:has(.kanban__late) { padding-bottom: 34px; }
+.kanban__menu { margin-right: -8px; }
+.kanban__menu > .menu__trigger { width: 36px; height: 36px; min-height: 36px; border-width: 2px; }
+.kanban__menu > .menu__trigger::after { content: ""; position: absolute; inset: -4px; } /* 터치 44px */
+
+@media (max-width: 719px) {
+  .kanban { grid-template-columns: repeat(6, minmax(78vw, 1fr)); }
+  .kanban__col { min-height: 280px; }
+}

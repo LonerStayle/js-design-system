@@ -1,0 +1,373 @@
+/* ==========================================================================
+   form — 라벨 위, 입력은 하단 2px 잉크 룰만(밑줄 필드).
+   포커스 = 룰 레드 + 2px outline. 오류 = 레드 글자 + 정사각 아이콘.
+   체크박스·라디오 = 정사각(라디오도 '정사각 안 채움 정사각'). 토글 = 직사각 2칸 스위치.
+   ========================================================================== */
+
+/* ---- 필드 묶음 ----------------------------------------------------------- */
+.fields { display: flex; flex-direction: column; gap: var(--s-4); }
+.fields--row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--s-4) var(--gutter); }
+.fieldset { display: flex; flex-direction: column; gap: var(--s-2); }
+.fieldset__legend {
+  display: block;
+  width: 100%;
+  padding-top: var(--s-1);
+  margin-bottom: var(--s-1);
+  border-top: var(--line-block) solid var(--rule);
+  font-size: var(--fs-body);
+  line-height: var(--lh-small);
+  font-weight: var(--fw-bold);
+}
+.fieldset__legend + * { margin-top: 0; }
+
+.field { display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; }
+.field__label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-1);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  font-weight: var(--fw-bold);
+  color: var(--fg);
+}
+.field__req { color: var(--fg-muted); font-weight: var(--fw-bold); } /* 필수 표시는 회색 — 레드는 오류일 때만 */
+.field__opt { color: var(--fg-muted); font-weight: var(--fw-regular); font-size: var(--fs-caption); }
+.field__hint { font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--fg-muted); }
+.field__error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-1);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  font-weight: var(--fw-medium);
+  color: var(--danger-fg);
+}
+.field__error::before {
+  content: "";
+  flex: none;
+  inline-size: 12px;
+  block-size: 12px;
+  margin-top: 6px;
+  background: var(--accent);
+}
+.field__error[hidden] { display: none; }
+
+/* ---- 밑줄 입력 ----------------------------------------------------------- */
+.input {
+  display: block;
+  width: 100%;
+  min-height: var(--ctl-md);
+  padding: var(--s-1) 0;
+  border: 0;
+  border-bottom: var(--line-block) solid var(--rule);
+  background: transparent;
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: var(--fs-lead);
+  line-height: var(--lh-small);
+  font-variant-numeric: tabular-nums;
+  appearance: none;
+  transition: border-color var(--dur-1) var(--ease-linear), background-color var(--dur-1) var(--ease-linear);
+}
+.input::placeholder { color: var(--fg-placeholder); opacity: 1; }
+/* 레드 판: 4.5:1을 지키는 글자색이 흰색뿐이라 placeholder 는 색 대신 굵기로 구분한다(값 = 굵게, 안내 = 보통) */
+.plate--red .input,
+.on-red .input { font-weight: var(--fw-bold); }
+.plate--red .input::placeholder,
+.on-red .input::placeholder { font-weight: var(--fw-regular); }
+.input:hover { background: var(--surface-2); }
+.input:focus { outline: none; }
+.input:focus-visible,
+.input:focus {
+  border-bottom-color: var(--accent);
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.input[aria-invalid="true"] { border-bottom-color: var(--danger-fg); color: var(--fg); }
+.input[aria-invalid="true"]:focus { outline-color: var(--danger-fg); }
+.input[disabled],
+.input[readonly] { color: var(--disabled-fg); border-bottom-style: dotted; border-bottom-color: var(--disabled-rule); background: transparent; cursor: not-allowed; }
+.input[readonly] { color: var(--fg); cursor: default; border-bottom-style: solid; border-bottom-width: 1px; }
+.input--lg { font-family: var(--font-display); font-size: var(--fs-h4); line-height: var(--lh-h4); min-height: var(--ctl-lg); font-weight: var(--fw-medium); }
+.input--sm { min-height: var(--ctl-sm); font-size: var(--fs-body); }
+.input--num { text-align: right; }
+
+textarea.input {
+  min-height: calc(var(--s-6) * 3);
+  padding: var(--s-1) var(--s-2);
+  border: 1px solid var(--rule);
+  border-bottom-width: var(--line-block);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  resize: vertical;
+}
+
+/* 아이콘 붙은 입력(검색) */
+.input-wrap { position: relative; display: flex; align-items: center; }
+.input-wrap > .icon { position: absolute; left: 0; pointer-events: none; color: var(--fg-muted); }
+.input-wrap > .input { padding-left: var(--s-4); }
+.input-wrap > .kbd { position: absolute; right: 0; }
+
+/* 셀렉트: 밑줄 + 정사각 꺾쇠 */
+.select { position: relative; display: block; }
+.select > select.input { padding-right: var(--s-4); cursor: pointer; }
+.select::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  inline-size: 10px;
+  block-size: 10px;
+  margin-top: -8px;
+  border-right: 2px solid var(--fg);
+  border-bottom: 2px solid var(--fg);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+.select:has(select[disabled])::after { border-color: var(--disabled-fg); }
+
+/* ---- 체크박스 · 라디오 (정사각) ----------------------------------------- */
+.check,
+.radio {
+  position: relative;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+  min-height: var(--touch);
+  padding: 10px 0;
+  cursor: pointer;
+  font-size: var(--fs-body);
+  line-height: var(--lh-small);
+}
+.check__input,
+.radio__input {
+  position: absolute;
+  left: 0; top: 0;
+  inline-size: var(--touch);
+  block-size: var(--touch);
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+.check__box,
+.radio__box {
+  pointer-events: none;
+  position: relative;
+  flex: none;
+  inline-size: 20px;
+  block-size: 20px;
+  margin-top: 2px;
+  border: var(--line-block) solid var(--rule);
+  background: transparent;
+  transition: background-color var(--dur-1) var(--ease-linear), border-color var(--dur-1) var(--ease-linear);
+}
+.check__label,
+.radio__label { min-width: 0; }
+.check__sub,
+.radio__sub { display: block; font-size: var(--fs-small); color: var(--fg-muted); }
+
+.check:hover .check__box,
+.radio:hover .radio__box { background: var(--surface-2); }
+.check__input:checked + .check__box { background: var(--fg); border-color: var(--fg); }
+.check__input:checked + .check__box::after {
+  content: "";
+  position: absolute;
+  left: 5px; top: 1px;
+  inline-size: 6px;
+  block-size: 11px;
+  border-right: 2px solid var(--bg);
+  border-bottom: 2px solid var(--bg);
+  transform: rotate(45deg);
+}
+.check__input:indeterminate + .check__box { background: var(--fg); border-color: var(--fg); }
+.check__input:indeterminate + .check__box::after {
+  content: "";
+  position: absolute;
+  left: 3px; right: 3px; top: 7px;
+  height: 2px;
+  background: var(--bg);
+}
+.radio__input:checked + .radio__box::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  background: var(--accent);
+}
+.check__input:focus-visible + .check__box,
+.radio__input:focus-visible + .radio__box { outline: 2px solid var(--focus); outline-offset: 2px; }
+.check__input[aria-invalid="true"] + .check__box { border-color: var(--danger-fg); }
+.check:has(:disabled),
+.radio:has(:disabled) { color: var(--disabled-fg); cursor: not-allowed; }
+.check__input:disabled + .check__box,
+.radio__input:disabled + .radio__box { border-color: var(--disabled-rule); background: var(--disabled-fill); }
+
+/* ---- 선택 타일(정사각 체크 타일: 관심 시리즈·좌석 등급) ----------------- */
+.choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: var(--s-2); }
+.choice {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--s-2);
+  min-height: var(--module);
+  padding: var(--s-2);
+  border: 1px solid var(--rule);
+  cursor: pointer;
+  transition: background-color var(--dur-1) var(--ease-linear);
+}
+.choice > input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: inherit; }
+.choice__title { font-size: var(--fs-body); line-height: var(--lh-small); font-weight: var(--fw-bold); padding-right: var(--s-4); }
+.choice__meta { font-size: var(--fs-small); line-height: var(--lh-small); color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+.choice__price { font-family: var(--font-display); font-size: var(--fs-h4); line-height: var(--lh-h4); font-weight: var(--fw-black); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.choice::after {
+  content: "";
+  position: absolute;
+  right: var(--s-2);
+  top: var(--s-2);
+  inline-size: 16px;
+  block-size: 16px;
+  border: var(--line-block) solid var(--rule);
+}
+.choice:hover { background: var(--surface-2); }
+.choice:has(input:checked) { box-shadow: inset 0 0 0 1px var(--rule); }
+.choice:has(input:checked)::after { background: var(--accent); border-color: var(--accent); }
+.choice:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
+.choice:has(input:disabled) { color: var(--disabled-fg); border-color: var(--disabled-rule); cursor: not-allowed; background: transparent; }
+.choice:has(input:disabled)::after { border-color: var(--disabled-rule); }
+/* 3개 묶음: 균등 4/4/4 금지 — 고른 칸이 5단, 나머지 4/3 (1200px 이상, 칸이 가격을 다 담을 때만) */
+@media (min-width: 1200px) {
+  /* :where()로 명시도를 .choices 하나로 낮춘다 — 장면 CSS가 폭에 맞춰 덮어쓸 수 있게 */
+  .choices:where(:has(> .choice:nth-child(3):last-child)) { grid-template-columns: minmax(0, 5fr) minmax(0, 4fr) minmax(0, 3fr); }
+  .choices:where(:has(> .choice:nth-child(3):last-child):has(> .choice:nth-child(2) input:checked)) { grid-template-columns: minmax(0, 4fr) minmax(0, 5fr) minmax(0, 3fr); }
+  .choices:where(:has(> .choice:nth-child(3):last-child input:checked)) { grid-template-columns: minmax(0, 4fr) minmax(0, 3fr) minmax(0, 5fr); }
+}
+/* 1199px 이하(태블릿 8단·모바일 4단): 한 줄 한 등급 — 왼쪽 제목+메타, 오른쪽 가격 */
+@media (max-width: 1199.98px) {
+  .choices { grid-template-columns: minmax(0, 1fr); }
+  .choice {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 4px var(--s-2);
+    min-height: var(--touch);
+    padding-right: var(--s-6);
+  }
+  .choice__title { grid-column: 1; grid-row: 1; padding-right: 0; }
+  .choice__meta { grid-column: 1; grid-row: 2; }
+  .choice__price { grid-column: 2; grid-row: 1 / span 2; align-self: center; text-align: right; }
+}
+.choice__title,
+.choice__price { white-space: nowrap; }
+.choice:has(input:disabled) .choice__meta { color: var(--disabled-fg); }
+
+/* ---- 토글: 직사각 2칸 스위치 [끔|켬] ------------------------------------ */
+.switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: var(--touch);
+  cursor: pointer;
+  font-size: var(--fs-body);
+  line-height: var(--lh-small);
+}
+.switch__input { position: absolute; left: 0; top: 0; width: 88px; height: 100%; margin: 0; opacity: 0; cursor: inherit; }
+.switch__track {
+  pointer-events: none;
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  flex: none;
+  inline-size: 80px;
+  block-size: var(--sq-md);
+  border: 1px solid var(--rule);
+  font-size: var(--fs-caption);
+  line-height: 1;
+  font-weight: var(--fw-bold);
+}
+.switch__track > span {
+  display: grid;
+  place-items: center;
+  transition: background-color var(--dur-1) var(--ease-linear), color var(--dur-1) var(--ease-linear);
+}
+.switch__track > span:first-child { background: var(--surface-2); color: var(--fg); }
+.switch__track > span:last-child { color: var(--fg-muted); }
+.switch__input:checked + .switch__track > span:first-child { background: transparent; color: var(--fg-muted); }
+/* 켬 = 먹 면(레드는 포커스·현재 위치에만 — 상태 표시 페인트로 쓰지 않는다) */
+.switch__input:checked + .switch__track > span:last-child { background: var(--fg); color: var(--bg); }
+.switch:hover .switch__track { box-shadow: inset 0 0 0 1px var(--rule); }
+.switch__input:focus-visible + .switch__track { outline: 2px solid var(--focus); outline-offset: 2px; }
+.switch:has(:disabled) { color: var(--disabled-fg); cursor: not-allowed; }
+.switch__input:disabled + .switch__track { border-color: var(--disabled-rule); }
+.switch__input:disabled + .switch__track > span { background: var(--disabled-fill); color: var(--disabled-fg); }
+.switch__label { min-width: 0; }
+
+/* ---- 세그먼트(radiogroup) ----------------------------------------------- */
+.seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  border: 1px solid var(--rule);
+}
+.seg__opt { position: relative; display: inline-flex; }
+.seg__opt + .seg__opt { border-left: 1px solid var(--rule); }
+.seg__opt > input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.seg__opt > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-height: var(--touch);
+  padding: 0 var(--s-3);
+  font-size: var(--fs-body);
+  line-height: var(--lh-small);
+  font-weight: var(--fw-bold);
+  transition: background-color var(--dur-1) var(--ease-linear), color var(--dur-1) var(--ease-linear);
+}
+.seg__opt:hover > span { background: var(--surface-2); }
+.seg__opt > input:checked + span { background: var(--select-bg, var(--fg)); color: var(--select-fg, var(--bg)); box-shadow: inset 0 0 0 1px var(--select-bd, var(--fg)); }
+.seg__opt > input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 2px; position: relative; z-index: 1; }
+.seg__opt > input:disabled + span { color: var(--disabled-fg); cursor: not-allowed; background: transparent; }
+
+/* ---- 수량 스텝퍼 ---------------------------------------------------------- */
+.qty {
+  display: inline-grid;
+  grid-template-columns: var(--touch) var(--s-8) var(--touch);
+  border: 1px solid var(--rule);
+}
+.qty__btn {
+  display: grid;
+  place-items: center;
+  block-size: var(--touch);
+  color: var(--fg);
+  transition: background-color var(--dur-1) var(--ease-linear), color var(--dur-1) var(--ease-linear);
+}
+.qty__btn:hover { background: var(--fg); color: var(--bg); }
+.qty__btn[disabled] { color: var(--disabled-fg); background: transparent; cursor: not-allowed; }
+.qty__btn:focus-visible { outline-offset: -2px; }
+.qty__val {
+  width: 100%;
+  border: 0;
+  border-left: 1px solid var(--rule);
+  border-right: 1px solid var(--rule);
+  background: transparent;
+  padding: 0 var(--s-1);
+  text-align: right;
+  font-family: var(--font-display);
+  font-size: var(--fs-lead);
+  font-weight: var(--fw-bold);
+  font-variant-numeric: tabular-nums;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.qty__val::-webkit-inner-spin-button,
+.qty__val::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.qty__val:focus-visible { outline-offset: -2px; }
+
+/* 폼 하단 동작 줄 */
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--rule);
+}

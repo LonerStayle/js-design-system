@@ -1,0 +1,90 @@
+/* sidebar — 232px, canvas 배경, 섹션 머리 12px, 항목 36px, 섹션 사이 괘선, 카운트 우측 tnum.
+   ≤1024px: 좌측 오프캔버스 (data-state="open" 으로 열림, app.js overlay). */
+
+.sidebar {
+  position: sticky; top: var(--topbar-h);
+  display: flex; flex-direction: column;
+  width: var(--sidebar-w); height: calc(100vh - var(--topbar-h));
+  overflow-y: auto; overscroll-behavior: contain;
+  background: var(--canvas); border-right: 1px solid var(--line);
+  padding: var(--sp-2) 0 var(--sp-4);
+}
+.app:has(> .marquee) > .sidebar { top: calc(var(--topbar-h) + 32px); height: calc(100vh - var(--topbar-h) - 32px); }
+
+.sidebar__head { display: none; }
+.sidebar__section { padding: var(--sp-2) var(--sp-2) var(--sp-3); }
+.sidebar__section + .sidebar__section { border-top: 1px solid var(--line); padding-top: var(--sp-3); }
+.sidebar__heading {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 var(--sp-2) var(--sp-1); height: 24px;
+  font-size: var(--fs-caption); font-weight: var(--fw-medium); color: var(--text-3); letter-spacing: var(--ls-caption);
+}
+.sidebar__list { display: flex; flex-direction: column; gap: 1px; }
+.sidebar__link {
+  position: relative; display: flex; align-items: center; gap: 10px;
+  height: 36px; padding: 0 var(--sp-2); border-radius: var(--r-control);
+  font-size: var(--fs-body); color: var(--text-2); text-decoration: none;
+  transition: background-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
+}
+.sidebar__link > .icon { color: var(--text-3); }
+.sidebar__link:hover { background: var(--surface-sunken); color: var(--text); }
+.sidebar__link:focus-visible { outline-offset: -2px; }
+.sidebar__label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar__count {
+  font-size: var(--fs-caption); font-variant-numeric: tabular-nums; color: var(--text-3); font-weight: var(--fw-medium);
+}
+.sidebar__count--alert { color: var(--danger); font-weight: var(--fw-semi); }
+.sidebar__link[aria-current="page"], .sidebar__link[aria-current="true"], .sidebar__link[aria-current="location"] {
+  background: var(--surface); color: var(--text); font-weight: var(--fw-semi);
+  box-shadow: inset 2px 0 0 var(--ink), 0 0 0 1px var(--line);
+  border-radius: 0 var(--r-control) var(--r-control) 0;
+}
+.sidebar__link[aria-current="page"] > .icon, .sidebar__link[aria-current="true"] > .icon, .sidebar__link[aria-current="location"] > .icon { color: var(--text); }
+.sidebar__link[aria-disabled="true"] { color: var(--text-3); pointer-events: none; }
+.sidebar__link--sub { padding-left: 34px; height: 32px; font-size: var(--fs-data); }
+
+.sidebar__foot {
+  margin-top: auto; padding: var(--sp-3) var(--sp-4) 0; border-top: 1px solid var(--line);
+  font-size: var(--fs-caption); color: var(--text-3); line-height: var(--lh-caption);
+}
+.sidebar__foot strong { color: var(--text-2); font-weight: var(--fw-medium); font-variant-numeric: tabular-nums; }
+
+/* 워크스페이스 전환(사이드바 머리) — ≤480 에서만 보인다(상단바에서 빠지는 자리).
+   숨어 있을 때 다음 섹션에 괘선이 생기지 않게 인접 규칙을 되돌린다. */
+.app-ws { display: none; }
+.sidebar__section.app-ws + .sidebar__section { border-top: 0; padding-top: var(--sp-2); }
+@media (max-width: 480px) {
+  .app-ws { display: block; }
+  .sidebar__section.app-ws + .sidebar__section { border-top: 1px solid var(--line); padding-top: var(--sp-3); }
+}
+
+/* 서브 내비 변형 (settings 좌측 등): 배경 없이 본문 안에 */
+.sidebar--inline { position: static; width: auto; height: auto; background: transparent; border-right: 0; padding: 0; }
+.sidebar--inline .sidebar__section { padding: 0; }
+
+@media (max-width: 1024px) {
+  .sidebar:not(.sidebar--inline) {
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: var(--z-sidebar);
+    width: min(300px, 86vw); height: 100%;
+    background: var(--surface-raised); border-right: 1px solid var(--overlay-border);
+    transform: translateX(-100%); visibility: hidden;
+    transition: transform var(--dur-3) var(--ease-out), visibility 0s linear var(--dur-3);
+  }
+  .sidebar:not(.sidebar--inline)[data-state="open"] {
+    transform: none; visibility: visible;
+    transition: transform var(--dur-3) var(--ease-out), visibility 0s;
+  }
+  .app:has(> .marquee) > .sidebar { top: 0; height: 100%; }
+  .sidebar__head {
+    display: flex; align-items: center; justify-content: space-between;
+    height: var(--topbar-h); padding: 0 var(--sp-2) 0 var(--sp-4); border-bottom: 1px solid var(--line); flex: none;
+  }
+  .sidebar__link { height: var(--tap-min); }
+}
+
+/* 오프캔버스 딤 (app.js 가 생성) */
+.ll-scrim {
+  position: fixed; inset: 0; z-index: calc(var(--z-sidebar) - 1);
+  background: var(--scrim); opacity: 0; transition: opacity var(--dur-3) var(--ease-out);
+}
+.ll-scrim[data-state="open"] { opacity: 1; }

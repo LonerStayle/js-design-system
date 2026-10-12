@@ -1,0 +1,164 @@
+/* ==========================================================================
+   kanban — 포스터 제작 보드. 컬럼 사이 1px 세로 룰(박스 없음).
+   컬럼 헤더 = 단계명 + 거대 카운트(크롭 숫자 축소판 96px).
+   카드 = 포스터 썸네일 + "No.41 · PR-041-C", 키보드 이동("다음 단계로" + 메뉴).
+   ========================================================================== */
+
+.kanban {
+  --kb-col: minmax(256px, 1fr);
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--kb-col);
+  overflow-x: auto;
+  border-top: var(--line-block) solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-soft) transparent;
+}
+.kanban__col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-left: 1px solid var(--rule-soft);
+}
+.kanban__col:first-child { border-left: 0; }
+.kanban__head {
+  position: relative;
+  overflow: clip;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: var(--module);
+  padding: var(--s-2) var(--s-2) 0;
+  border-bottom: 1px solid var(--rule);
+}
+.kanban__col:first-child .kanban__head,
+.kanban__col:first-child .kanban__list { padding-left: 0; }
+.kanban__name {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-size: var(--fs-body);
+  line-height: var(--lh-small);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0;
+}
+.kanban__limit { display: block; font-size: var(--fs-caption); line-height: var(--lh-caption); font-weight: var(--fw-medium); color: var(--fg-muted); }
+.kanban__count {
+  position: absolute;
+  right: -.04em;
+  bottom: -.2em;
+  font-family: var(--font-display);
+  font-size: 96px;
+  line-height: .8;
+  font-weight: var(--fw-black);
+  letter-spacing: -.06em;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+}
+.kanban__col--over .kanban__count { color: var(--accent-text); }
+.kanban__col--done .kanban__count { color: var(--fg-muted); }
+
+.kanban__list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0 var(--s-2);
+  list-style: none;
+  min-height: calc(var(--module) * 2);
+}
+.kanban__list.is-over { background: var(--surface-2); }
+
+.kanban__card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: var(--s-2);
+  padding: var(--s-2) 0;
+  border-bottom: 1px solid var(--rule-soft);
+  background: var(--bg);
+  color: var(--fg);
+  transition: background-color var(--dur-1) var(--ease-linear);
+}
+.kanban__thumb { width: 56px; }
+.kanban__thumb.poster { --p-title: 18cqw; }
+.kanban__main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.kanban__code {
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  font-weight: var(--fw-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-muted);
+}
+.kanban__title { margin: 0; font-size: var(--fs-body); line-height: var(--lh-small); font-weight: var(--fw-bold); letter-spacing: 0; }
+.kanban__meta { font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+/* 좁은 열(약 190px)에서도 '다음 단계로'와 ⋯ 메뉴가 한 줄 — 메뉴가 아랫줄로 떨어져 고아가 되지 않게 */
+.kanban__actions { display: flex; flex-wrap: nowrap; align-items: center; gap: 0 var(--s-1); margin-top: 4px; min-width: 0; }
+.kanban__actions .kanban__next { min-width: 0; }
+.kanban__next {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--touch);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-bold);
+  color: var(--fg);
+  background: linear-gradient(currentColor, currentColor) left calc(100% - 10px) / 100% 1px no-repeat;
+  transition: color var(--dur-1) var(--ease-linear);
+}
+.kanban__next:hover { color: var(--link); }
+.kanban__next[disabled] { color: var(--disabled-fg); cursor: not-allowed; background-image: none; }
+.kanban__actions .menu { margin-left: auto; }
+
+/* 상태 */
+.kanban__card:hover { background: var(--surface-2); }
+.kanban__card:focus-within { background: var(--surface-2); }
+.kanban__card[draggable="true"] { cursor: grab; }
+.kanban__card.is-dragging { opacity: .4; }
+.kanban__card.is-moved::before,
+.kanban__card[aria-current="true"]::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: -1px;
+  height: var(--line-block);
+  background: var(--accent);
+  transform-origin: left center;
+  animation: kb-rule var(--dur-3) var(--ease-rule);
+}
+.kanban__card--blocked .kanban__code::after { content: " · 보류"; color: var(--danger-fg); }
+.kanban__empty {
+  padding: var(--s-2) 0;
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  color: var(--fg-muted);
+}
+
+@keyframes kb-rule { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* 가로 넘침 힌트(app.js 가 .has-more-end 를 붙임) */
+.kanban-wrap { position: relative; }
+.kanban-wrap.has-more-end::after {
+  content: "";
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: var(--s-6);
+  pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--bg));
+}
+
+@media (max-width: 767.98px) {
+  /* 한 칼럼 = 컨테이너 폭 − 48px: 다음 칼럼이 의도된 48px 만 보이고, 오른쪽 15%는 페이드 */
+  .kanban { --kb-col: calc(100% - var(--s-6)); scroll-snap-type: x mandatory; scroll-padding-left: 0; }
+  /* 열은 제 내용 높이만큼만 — 띠 높이는 app.js 가 지금 보이는 열에 맞춘다(짧은 열 아래 빈 꼬리 없음) */
+  .kanban { align-items: start; overflow-y: hidden; transition: height var(--dur-2) var(--ease-rule); }
+  .kanban__list { min-height: var(--module); }
+  .kanban__col { scroll-snap-align: start; }
+  .kanban-wrap.has-more-end::after { content: none; }
+  .kanban-wrap .kanban {
+    -webkit-mask-image: linear-gradient(to right, var(--fg) 85%, transparent);
+    mask-image: linear-gradient(to right, var(--fg) 85%, transparent);
+  }
+  .kanban-wrap:not(.has-more-end) .kanban { -webkit-mask-image: none; mask-image: none; }
+}

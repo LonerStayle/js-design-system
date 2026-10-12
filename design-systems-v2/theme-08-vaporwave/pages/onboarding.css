@@ -1,0 +1,230 @@
+/* onboarding — 되감기 회원 설치 마법사
+   구도: 최대화 앱 창 = InstallShield 전체 화면 설치 배경(타이틀 바 그라디언트를 세로로 확대한 면)
+   + 왼쪽 위 거대 설치 제목 + 가운데 마법사 대화상자 + 그 뒤로 겹친 '다음 방송' 미리보기 창.
+   단계 전환은 JS 없이 :target (다음 > / < 뒤로 = 앵커). 기본은 3단계 '관심 카테고리'.
+   단계가 갈수록 왼쪽 배너의 해가 지평선으로 내려간다(--sun-y).
+   semantic 토큰만 사용 */
+
+/* 설치 배경 ------------------------------------------------------------------- */
+.ob {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  align-content: start;
+  gap: var(--sp-3);
+  padding: var(--sp-4) calc(var(--grid) * 2) var(--sp-6);
+  background: linear-gradient(180deg, var(--title-a) 0%, var(--title-b) 100%);
+  color: var(--title-ink);
+  box-shadow: var(--bevel-in);
+}
+/* 대제목과 가타카나 부제를 한 줄(기준선 정렬)로 — 최대화 창이 900 높이 안에서 상태 표시줄까지 끝나게 */
+.ob__brand { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px var(--sp-6); }
+.ob__title {
+  font-family: var(--font-display);
+  font-size: clamp(44px, 4.6vw, 68px);
+  line-height: .95;
+  letter-spacing: -0.02em;
+  color: var(--title-ink);
+  text-shadow: 4px 4px 0 var(--bevel-edge);
+}
+.ob__sub {
+  font-family: var(--font-system);
+  font-size: var(--fs-lg);
+  letter-spacing: .08em;
+  color: var(--title-ink);
+  text-shadow: 2px 2px 0 var(--bevel-edge);
+}
+
+.ob__scene {
+  display: grid;
+  grid-template-columns: minmax(0, 880px) minmax(300px, 380px);
+  align-items: start;
+}
+.ob-wiz { position: relative; z-index: var(--z-win-active); }
+.ob-bill { margin: calc(var(--grid) * 3) 0 0 calc(var(--grid) * -1); }
+.ob-bill > .win__bar { padding-left: calc(var(--grid) + 6px); }
+.ob-bill .crt__caption { padding-left: calc(var(--grid) + 14px); }
+.ob-bill .crt__osd--tl { left: calc(4% + var(--grid)); }
+.ob-bill__screen { margin: 2px 2px 0; }
+.ob-bill__screen .crt__name { font-size: 26px; }
+.ob-bill__body { display: grid; gap: var(--sp-2); padding-left: calc(var(--grid) + var(--sp-3)); }
+.ob-bill__item { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: var(--fs-sm); font-weight: 700; }
+
+/* 마법사 도움말 풍선 — 타이틀 바 ? 버튼 아래 */
+.ob-wiz__help { position: absolute; right: 6px; top: calc(var(--bar-h) + 3px); z-index: var(--z-float); }
+.ob-wiz__help .balloon { top: 4px; }
+.ob-bal-text { display: block; }
+
+/* 단계 페이지 (:target) ------------------------------------------------------- */
+.ob-page { display: none; }
+.ob-page:target,
+.ob-wiz__pages:not(:has(.ob-page:target)) .ob-page--default {
+  display: grid;
+  grid-template-columns: 196px minmax(0, 1fr);
+  grid-template-areas: "side main" "foot foot";
+  scroll-margin-top: 100vh;
+}
+.ob-page__side {
+  grid-area: side;
+  display: grid; align-content: start; gap: var(--sp-2);
+  padding: var(--sp-3) 0 var(--sp-3) var(--sp-3);
+}
+.ob-page__main {
+  grid-area: main;
+  display: grid; align-content: start; gap: var(--sp-3);
+  min-height: 456px;
+  padding: var(--sp-4) var(--sp-6) var(--sp-4) var(--sp-6);
+  min-width: 0;
+}
+.ob-page__foot {
+  grid-area: foot;
+  border-top: var(--etch);
+  box-shadow: inset 0 1px 0 var(--bevel-hi);
+  padding-top: var(--sp-3);
+}
+
+/* 왼쪽 노을 배너 — 단계마다 해가 지평선으로 */
+.ob-banner .crt__picture { aspect-ratio: 1; }
+.ob-banner .crt__sun { width: 64%; bottom: var(--sun-y, 30%); }
+.ob-banner .crt__floor { height: 22%; }
+.ob-banner__setup {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-size: var(--fs-osd-s);
+  line-height: 1;
+  letter-spacing: 0;
+}
+.ob-steps .steps__item { padding: 5px 6px; }
+
+.ob-h { color: var(--ink); }
+.ob-copy { font-size: var(--fs-base); line-height: 1.75; max-width: 54ch; }
+.ob-legal { margin-top: auto; padding-top: var(--sp-6); }
+
+/* 2 회원 정보 */
+.ob-form .field { grid-template-columns: 104px minmax(0, 1fr); }
+
+/* 3 관심 카테고리 — 체크 타일 + CSS 카운터로 고른 개수 */
+.ob-cats {
+  counter-reset: picked;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-2);
+}
+.ob-cat {
+  position: relative;
+  display: grid;
+  grid-template-columns: 14px 40px minmax(0, 1fr);
+  gap: 10px; align-items: center;
+  min-height: 64px;
+  padding: 8px 10px;
+  background: var(--paper);
+  box-shadow: var(--bevel-in);
+  cursor: pointer;
+}
+.ob-cat__box { margin: 0; }
+.ob-cat:hover { background: var(--select-soft); }
+.ob-cat:has(:checked) { counter-increment: picked; background: var(--paper); box-shadow: var(--bevel-in), inset 0 0 0 3px var(--select-edge); }
+.ob-cat:has(:checked) .ob-cat__name { color: var(--ink); }
+.ob-cat:has(:checked) .ob-cat__ico { box-shadow: var(--bevel-pressed); color: var(--select-edge); }
+.ob-cat:has(:focus-visible) { outline: 1px dotted var(--ink); outline-offset: -5px; box-shadow: var(--bevel-in), var(--focus-ring); }
+.ob-cat__ico {
+  width: 40px; height: 40px;
+  display: grid; place-items: center;
+  background: var(--face); color: var(--ink);
+  box-shadow: var(--bevel-out);
+}
+.ob-cat__px { width: 32px; height: 32px; shape-rendering: crispEdges; }
+.ob-cat__text { display: grid; gap: 1px; min-width: 0; }
+.ob-cat__name { font-weight: 800; font-size: var(--fs-sm); line-height: 1.4; }
+.ob-cat__name .tag__code { margin-right: 2px; }
+.ob-cat__ex { font-size: var(--fs-xs); color: var(--ink-muted); line-height: 1.45; }
+.ob-cat__rec {
+  justify-self: start;
+  margin-top: 3px;
+  padding: 0 6px;
+  background: var(--price); color: var(--on-price);
+  font-size: 11px; font-weight: 800; line-height: 1.6;
+}
+.ob-picked {
+  align-self: center;
+  padding: 6px 10px;
+  box-shadow: var(--bevel-well);
+  font-size: var(--fs-sm); font-weight: 800;
+}
+.ob-picked::before { content: counter(picked) "개 골랐어요"; }
+
+/* 4 알림 */
+.ob-notify { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 280px); gap: var(--sp-4); align-items: start; }
+.ob-notify__form { display: grid; gap: var(--sp-3); }
+.ob-notify__preview { display: grid; gap: var(--sp-3); justify-items: start; padding-top: 10px; }
+.ob-notify__preview .toasts--static { padding-bottom: 14px; }
+
+/* 5 설치 */
+.ob-summary { display: grid; gap: 4px; }
+.ob-summary__label { font-size: var(--fs-sm); font-weight: 700; }
+.ob-summary .ob-summary__box {
+  display: grid; gap: 2px;
+  margin: 0;
+  padding: var(--sp-3);
+  background: var(--paper);
+  box-shadow: var(--bevel-in);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+}
+.ob-summary__box li { display: grid; grid-template-columns: 7.5em minmax(0, 1fr); gap: 12px; }
+.ob-summary__box li > :first-child { color: var(--ink-muted); font-weight: 700; }
+.ob-copybox {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--sp-4); align-items: center;
+  padding: var(--sp-3);
+  box-shadow: var(--bevel-well);
+}
+.ob-copybox .reel { width: 72px; }
+
+/* 반응형 --------------------------------------------------------------------- */
+@media (max-width: 1240px) {
+  .ob__scene { grid-template-columns: minmax(0, 1fr); }
+  .ob-bill { margin: calc(var(--grid) * -1) 0 0 var(--grid); max-width: 520px; }
+  .ob-bill > .win__bar { padding-left: 6px; }
+}
+@media (max-width: 900px) {
+  .ob { padding: var(--sp-6) var(--sp-4) var(--sp-6); }
+  .ob-notify { grid-template-columns: minmax(0, 1fr); }
+}
+/* 넓은 데스크톱: 최대화 창 높이를 바탕(작업 표시줄 위)에 맞춰 고정, 설치 배경이 남는 높이를 채운다 */
+@media (min-width: 1241px) and (min-height: 860px) {
+  .maximized > .win { height: calc(100svh - var(--taskbar-h) - var(--sp-6) * 2); }
+  .maximized > .win > .ob { flex: 1; min-height: 0; overflow: auto; }
+}
+@media (max-width: 768px) {
+  .ob { padding: var(--sp-4) var(--sp-2) var(--sp-4); gap: var(--sp-4); }
+  .ob__brand { display: grid; gap: 6px; }
+  .ob__sub { font-size: var(--fs-sm); }
+  .ob-page:target,
+  .ob-wiz__pages:not(:has(.ob-page:target)) .ob-page--default {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "side" "main" "foot";
+  }
+  .ob-page__side {
+    grid-template-columns: 88px minmax(0, 1fr);
+    align-items: center;
+    padding: var(--sp-2) var(--sp-2) 0;
+  }
+  .ob-banner .crt__picture { aspect-ratio: 1; }
+  .ob-banner__setup { display: none; }
+  .ob-banner .crt__osd--bl { display: none; }
+  .ob-steps { min-width: 0; align-self: start; }
+  .ob-steps .steps__item { padding: 3px 6px; font-size: var(--fs-sm); }
+  .ob-steps .steps__sub { display: none; }
+  .ob-page__side { align-items: start; }
+  .ob-page__main { min-height: 0; padding: var(--sp-3); }
+  .ob-page__foot { padding-inline: var(--sp-2); }
+  .ob-page__foot .btn-row { flex-wrap: nowrap; }
+  .ob-form .field { grid-template-columns: minmax(0, 1fr); }
+  .ob-cats { grid-template-columns: minmax(0, 1fr); }
+  .ob-cat { min-height: 56px; }
+  .ob-copybox { grid-template-columns: minmax(0, 1fr); }
+  .ob-bill { margin: 0; max-width: none; }
+  .ob-summary__box li { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .ob-bill .crt__caption, .ob-bill__body { padding-left: 14px; }
+  .ob-bill .crt__osd--tl { left: 4%; }
+}

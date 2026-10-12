@@ -1,0 +1,233 @@
+/* card — 컷. 머리 캡션 박스(선택) + 본문 + 꼬리. 둥근 모서리 · 그림자 없음.
+   크기 S/M/L는 지면 그리드 행 수(.rows-N)로 정한다. 위계 = 컷 크기 + 먹선 굵기 */
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background-color: var(--surface);
+  color: var(--text);
+  border: var(--line-w) solid var(--line);
+  border-radius: 0;
+}
+.card__cap { align-self: flex-start; margin: calc(var(--line-w) * -1) 0 0 calc(var(--line-w) * -1); }
+.card__body { flex: 1 1 auto; display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-5); min-width: 0; }
+.card__cap + .card__body { padding-top: var(--sp-4); }
+.card__title { font-family: var(--font-display-ko); font-size: var(--fs-h3); line-height: 1.1; letter-spacing: var(--track-ko-display); }
+.card__title--plain { font-family: var(--font-body); font-weight: 800; font-size: 18px; line-height: 1.4; letter-spacing: 0; }
+.card__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: var(--fs-small); color: var(--text-muted); }
+.card__meta .t-mono { color: var(--text); }
+.card__text { font-size: 15px; line-height: 1.7; }
+.card__stat { font-family: var(--font-mast); font-size: var(--fs-stat); line-height: .9; letter-spacing: var(--track-mast); }
+.card__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-5);
+  border-top: var(--line-w) solid var(--line);
+}
+.card__art {
+  position: relative;
+  min-height: 140px;
+  border-bottom: var(--line-w) solid var(--line);
+  overflow: hidden;
+}
+.card__no { position: absolute; top: 4px; right: 7px; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); line-height: 1; }
+
+/* 크기 (지면 밖에서 쓸 때의 최소 높이) */
+.card--s { min-height: calc(var(--row) * 2); }
+.card--m { min-height: calc(var(--row) * 3 + var(--gutter) * 2); }
+.card--l { min-height: calc(var(--row) * 5 + var(--gutter) * 4); border-width: var(--line-w-heavy); }
+.card--l .card__title { font-size: var(--fs-h2); line-height: 1; }
+
+/* 면 */
+.card--pulp { background-color: var(--surface-pulp); }
+.card--caption { background-color: var(--caption); }
+.card--accent { background-color: var(--accent); }
+.card--info { background-color: var(--info); }
+/* 글자 문맥은 base.css 잉크 문맥(.ctx-paper / .ctx-accent) 목록이 맡는다 */
+
+/* 상호작용: 링크 카드 */
+a.card, button.card, .card--link { text-decoration: none; cursor: pointer; text-align: left; transition: transform var(--dur-pop) var(--ease-pop); }
+a.card:hover, button.card:hover, .card--link:hover {
+  background-image:
+    radial-gradient(circle, var(--dot-hover) var(--dot-10), transparent calc(var(--dot-10) + .5px)),
+    radial-gradient(circle, var(--dot-hover) var(--dot-10), transparent calc(var(--dot-10) + .5px));
+  background-size: var(--dot-pitch) var(--dot-pitch);
+  background-position: 0 0, calc(var(--dot-pitch) / 2) calc(var(--dot-pitch) / 2);
+}
+a.card:active, button.card:active, .card--link:active { transform: scale(.985); }
+a.card:hover .card__title, .card--link:hover .card__title { text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 4px; }
+
+/* 선택: 먹선 4px + 노랑 캡션 탭 */
+.card.is-selected, .card[aria-selected="true"], .card[aria-current="page"], .card[aria-pressed="true"] { border-width: var(--line-w-heavy); }
+.card.is-selected::after, .card[aria-selected="true"]::after, .card[aria-current="page"]::after, .card[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  top: calc(var(--line-w-heavy) * -1 - 12px);
+  right: 18px;
+  width: 44px;
+  height: 12px;
+  background: var(--caption);
+  border: var(--line-w) solid var(--line);
+  border-bottom: 0;
+}
+/* 비활성: 밑그림 */
+.card.is-draft, .card[aria-disabled="true"] {
+  border-style: dashed;
+  border-color: var(--draft);
+  background: var(--surface);
+  color: var(--text-muted);
+}
+.card.is-draft .card__foot, .card[aria-disabled="true"] .card__foot { border-top-style: dashed; border-top-color: var(--draft); }
+/* 오류 컷: 빨강 먹선 대신 외침 딱지 */
+.card.is-error { border-color: var(--accent); }
+/* 불러오는 중 */
+.card[aria-busy="true"] .card__body { opacity: .45; }
+
+/* 카드 묶음(지면 밖) */
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--gutter); }
+
+/* ==========================================================================
+   차례 미니 컷 (.nx) — "다음 화에 계속" 목차. index p.11 · 404 목차 전용.
+   링크 하나 = 그 페이지의 대표 구도를 줄인 미니 컷 + 이름 + 한 줄 예고. 아이콘 카드 그리드 금지.
+   크기가 위계: 스플래시 1(span-6 rows-4) + 중간 2(span-6 rows-2) + 작은 6(span-2 rows-2), 행 72px · dense.
+   ========================================================================== */
+.nx { grid-auto-rows: var(--row); }
+.nx__cut {
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px 12px 12px;
+  color: var(--text);
+  text-decoration: none;
+  overflow: hidden;
+}
+.nx__cut:hover .nx__name { text-decoration: underline 3px; text-underline-offset: 4px; }
+.nx__cut:hover .nx__art { transform: rotate(-1deg) scale(1.02); }
+.nx__name { font-weight: 800; font-size: 16px; line-height: 1.3; }
+.nx__teaser { font-size: 13px; line-height: 1.45; color: var(--text-muted); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
+.nx__art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  margin: -10px -12px 6px;
+  border-bottom: var(--line-w) solid var(--line);
+  overflow: hidden;
+  transition: transform var(--dur-pop) var(--ease-pop);
+}
+/* 중간: 미니 컷 왼쪽 · 글자 오른쪽 */
+.nx__cut--mid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); grid-template-rows: 1fr auto auto 1fr; column-gap: 16px; padding: 0 16px 0 0; }
+.nx__cut--mid .nx__art { grid-row: 1 / -1; margin: 0; border-bottom: 0; border-right: var(--line-w) solid var(--line); }
+.nx__cut--mid .nx__name { grid-row: 2; font-size: 20px; }
+.nx__cut--mid .nx__teaser { grid-row: 3; -webkit-line-clamp: 2; font-size: 14px; }
+/* 스플래시 */
+.nx__cut--splash { padding: 14px 18px 16px; border-width: var(--line-w-heavy); }
+.nx__cut--splash .nx__art { margin: -14px -18px 10px; border-bottom-width: var(--line-w-heavy); }
+.nx__cut--splash .nx__name { font-family: var(--font-display-ko); font-weight: 400; font-size: var(--fs-h3); line-height: 1.1; }
+.nx__cut--splash .nx__teaser { font-size: 15px; -webkit-line-clamp: 2; }
+.nx__cut--rest { border-style: dashed; }
+
+/* ---- 미니 구도 ----------------------------------------------------------- */
+/* 마감 상황판: 빨강 망점 위 D-6 레터링 + 외침 */
+.nx-art--due { background-color: var(--surface); }
+.nx-art--due::before {
+  content: ""; position: absolute; inset: 0;
+  background-image:
+    radial-gradient(circle, var(--accent) var(--dot-20), transparent calc(var(--dot-20) + .5px)),
+    radial-gradient(circle, var(--accent) var(--dot-20), transparent calc(var(--dot-20) + .5px));
+  background-size: var(--dot-pitch) var(--dot-pitch);
+  background-position: 0 0, calc(var(--dot-pitch) / 2) calc(var(--dot-pitch) / 2);
+}
+.nx-due__d {
+  position: relative;
+  font-family: var(--font-mast); font-size: clamp(88px, 10vw, 150px); line-height: .85; letter-spacing: var(--track-mast);
+  color: var(--caption); -webkit-text-stroke: 4px var(--sfx-stroke); paint-order: stroke fill;
+  text-shadow: 7px 7px 0 var(--sfx-stroke);
+  transform: rotate(-6deg);
+}
+.nx-due__shout { position: absolute; right: 12px; top: 12px; max-width: 46%; font-size: 13px; padding: 14px 18px 16px; --spike: 8px; transform: rotate(3deg); }
+/* 표지(별책부록 첫 쪽) */
+.nx-art--cover { background: var(--cover); }
+.nx-cover__mast { position: relative; z-index: 1; font-family: var(--font-mast); font-size: clamp(72px, 9vw, 132px); line-height: .85; color: var(--mast); -webkit-text-stroke: 4px var(--line); paint-order: stroke fill; text-shadow: 6px 6px 0 var(--line); transform: rotate(-5deg); }
+/* 보름달은 마스트헤드 뒤(z-index 0), 오른쪽 위 모서리 — 글자와 겹쳐도 가리지 않는다 */
+.nx-cover__moon { position: absolute; z-index: 0; right: 5%; top: 7%; width: 64px; height: 64px; border-radius: 50%; background: var(--cover-moon); border: var(--line-w) solid var(--line); }
+/* 원고 공정판: 6열 먹선 + 카드 */
+.nx-art--board { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); place-items: stretch; background: var(--surface); }
+.nx-board__col { display: flex; flex-direction: column; gap: 5px; padding: 8px 5px; border-right: 2px solid var(--line); }
+.nx-board__col:last-child { border-right: 0; }
+.nx-board__col::before { content: ""; height: 7px; background: var(--caption); border: 2px solid var(--line); }
+.nx-board__col i { display: block; height: 16px; background: var(--balloon); border: 2px solid var(--line); }
+.nx-board__col i.is-late { background: var(--accent); }
+/* 단행본: 기울어진 표지 */
+.nx-art--book { background-color: var(--surface-pulp); }
+.nx-book {
+  position: relative;
+  display: grid; grid-template-rows: auto 1fr auto; justify-items: start;
+  height: 84%; width: auto; aspect-ratio: 3 / 4;
+  padding: 6px 8px;
+  background: var(--accent); color: var(--on-accent);
+  border: var(--line-w) solid var(--line);
+  box-shadow: 6px 6px 0 var(--line);
+  transform: rotate(-6deg);
+}
+.nx-book__mast { font-family: var(--font-mast); font-size: 15px; line-height: 1; color: var(--mast); white-space: nowrap; }
+.nx-book__no { align-self: center; font-family: var(--font-mast); font-size: 36px; line-height: 1; color: var(--caption); -webkit-text-stroke: 2px var(--line); paint-order: stroke fill; }
+.nx-book__band { width: calc(100% + 16px); margin: 0 -8px -6px; padding: 2px 6px; background: var(--caption); color: var(--on-caption); font-size: 10px; font-weight: 800; white-space: nowrap; overflow: hidden; }
+/* 엽서 */
+.nx-art--card { background: var(--surface); }
+.nx-post { position: relative; width: 74%; height: 62%; background-color: var(--postcard); border: 2px solid var(--line); transform: rotate(3deg);
+  background-image: linear-gradient(var(--line), var(--line)), linear-gradient(var(--line), var(--line)), linear-gradient(var(--line), var(--line));
+  background-size: 52% 2px, 44% 2px, 30% 2px; background-repeat: no-repeat; background-position: 10px 40%, 10px 60%, 10px 80%; }
+.nx-post::after { content: ""; position: absolute; right: 6px; top: 6px; width: 18px; height: 22px; border: 2px dashed var(--line); background: var(--accent); }
+/* 설정: 망점 강도 세 칸 */
+.nx-art--dots { grid-template-columns: repeat(3, 1fr); place-items: stretch; gap: 6px; padding: 10px; background: var(--surface); }
+.nx-dot { align-self: stretch; border: 2px solid var(--line); background-color: var(--balloon);
+  background-image: radial-gradient(circle, var(--accent) var(--r), transparent calc(var(--r) + .5px)), radial-gradient(circle, var(--accent) var(--r), transparent calc(var(--r) + .5px));
+  --p: var(--dot-pitch);
+  background-size: var(--p) var(--p); background-position: 0 0, calc(var(--p) / 2) calc(var(--p) / 2); }
+.nx-dot--10 { --r: var(--dot-10); } .nx-dot--20 { --r: var(--dot-20); } .nx-dot--40 { --r: var(--dot-40); --p: var(--dot-pitch-40); }
+/* 구독 시작: 4컷 */
+.nx-art--four { grid-template-columns: repeat(4, 1fr); grid-template-rows: 1fr; place-items: stretch; gap: 4px; padding: 10px 8px; background: var(--surface); }
+.nx-art--four span { display: grid; place-items: center; border: 2px solid var(--line); background: var(--balloon); color: var(--on-balloon); font-family: var(--font-mast); font-size: 18px; line-height: 1; }
+.nx-art--four span:last-child { background: var(--caption); color: var(--on-caption); }
+/* 요금: 별 버스트 */
+.nx-art--price { background-color: var(--surface); }
+.nx-art--price .burst { font-family: var(--font-mono); font-size: 12px; min-width: 96px; min-height: 76px; padding: 18px; }
+/* 작가: 인기투표 1위 도장 */
+.nx-art--vote { background: var(--surface); }
+.nx-vote { display: grid; place-items: center; width: 70px; height: 70px; border-radius: 50%; border: var(--line-w) solid var(--accent); color: var(--danger-text); font-weight: 800; font-size: 13px; line-height: 1.1; text-align: center; transform: rotate(-12deg); outline: 2px solid var(--accent); outline-offset: -8px; }
+.nx-vote b { display: block; font-family: var(--font-mast); font-size: 28px; font-weight: 400; }
+/* 휴재: 집중선 */
+.nx-art--rest { background: var(--surface); }
+.nx-art--rest::before { content: ""; position: absolute; inset: -30%; background-image: repeating-conic-gradient(from 0deg at 50% 50%, var(--line) 0 1.4deg, transparent 1.4deg 7deg); }
+.nx-rest__word { position: relative; padding: 4px 10px; background: var(--balloon); color: var(--on-balloon); border: var(--line-w) solid var(--line); font-weight: 800; font-size: 15px; }
+[data-theme="dark"] .nx-art--rest::before { background-image: repeating-conic-gradient(from 0deg at 50% 50%, var(--bg-dot) 0 1.4deg, transparent 1.4deg 7deg); }
+
+/* 다음 화 예고 한 줄 */
+.nx-next { margin-top: var(--gutter); }
+
+@media (max-width: 719px) {
+  .nx.panels { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: auto; }
+  .nx.panels > .nx__cut { grid-column: auto !important; }
+  .nx.panels > .nx__cut--splash, .nx.panels > .nx__cut--mid { grid-column: 1 / -1 !important; }
+  .nx__cut { min-height: 150px; }
+  .nx__art { min-height: 76px; }
+  .nx__cut--splash .nx__art { min-height: 170px; }
+  .nx__cut--mid { min-height: 120px; }
+  .nx__cut--mid .nx__art { min-height: 0; }
+  /* 좁은 썸네일: D-6은 컷 폭 70% 이하, 외침 풍선은 숨김(숫자를 덮지 않게) */
+  .nx-due__d { font-size: clamp(52px, 16vw, 64px); -webkit-text-stroke-width: 3px; text-shadow: 4px 4px 0 var(--sfx-stroke); }
+  .nx__cut--splash .nx-due__d { font-size: 96px; }
+  .nx-due__shout { display: none; }
+}
+@media (max-width: 480px) {
+  .nx-cover__moon { width: 40px; height: 40px; top: 6%; right: 4%; }
+  .nx-cover__mast { font-size: clamp(56px, 17vw, 72px); -webkit-text-stroke-width: 3px; text-shadow: 4px 4px 0 var(--line); }
+}

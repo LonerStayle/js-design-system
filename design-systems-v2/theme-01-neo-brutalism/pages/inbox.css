@@ -1,0 +1,249 @@
+/* ==========================================================================
+   inbox — 문의함 (매입 · 예매 · 주문 · 아티스트)
+   구도: 칸막이 폴더 열 | 영수증형 문의 목록 | 읽기 칸 — 세 칸이 규칙선을 공유하는 한 판.
+        목록 행은 탭(role="tab"), 읽기 칸은 탭 패널 → app.js [data-tabs]가 전환.
+   semantic 토큰만 사용
+   ========================================================================== */
+
+.inbox {
+  display: grid;
+  grid-template-columns: minmax(232px, 2.4fr) minmax(0, 4fr) minmax(0, 5.6fr);
+  gap: var(--bw);
+  background: var(--rule);
+  border-block: var(--line);
+  margin-top: calc(var(--bw) * -1);
+}
+.inbox > * { min-width: 0; background: var(--surface); }
+
+/* ---- 폴더 열: 세로 크레이트 칸막이 ------------------------------------- */
+/* 세 칸은 grid stretch로 바닥선이 같다. 폴더 열 = [sticky 칸막이 묶음 | 바닥의 잉크 전단],
+   목록 열 = [검색 · 13행 · 더 보기 | 남는 높이를 채우는 옐로 전단] (5절 10) */
+.inbox { align-items: stretch; }
+.inbox__folders { position: relative; z-index: var(--z-raise); display: flex; flex-direction: column; padding: var(--s-32) 0 0 var(--gutter); }
+.inbox__pinbox { flex: 1 0 auto; padding-bottom: var(--s-48); } /* sticky의 이동 범위: 전단 위에서 멈춘다 */
+.inbox__pin { position: sticky; top: var(--sticky-top); display: grid; gap: var(--s-32); }
+.inbox__title { display: grid; gap: var(--s-8); padding-right: var(--gutter); }
+.inbox__title h1 { margin: 0; }
+
+/* 답장 약속 — 잉크 전단, 큰 숫자 */
+.inbox__promise {
+  margin-left: calc(var(--gutter) * -1);
+  padding: var(--s-24) var(--gutter) var(--s-32);
+  background: var(--slab-ink);
+  color: var(--on-slab-ink);
+  border-top: var(--bw) solid var(--slab-edge);
+}
+.inbox__promise-tag { margin: 0 0 var(--s-16); }
+.inbox__promise-list { display: grid; margin: 0; }
+.inbox__promise-list > div { display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: baseline; gap: var(--s-8); padding: var(--s-8) 0; border-top: var(--bw-thin) solid var(--on-slab-ink); }
+.inbox__promise-list dt { font: 700 var(--fs-sm)/1 var(--font-label); }
+.inbox__promise-list dd { margin: 0; font-size: var(--fs-xs); font-weight: 700; line-height: 1.3; }
+.inbox__promise-list b { display: inline-block; margin-right: 4px; font-size: var(--fs-d3); line-height: .9; color: var(--highlight); }
+.inbox__promise-foot { margin: var(--s-16) 0 0; font-size: var(--fs-xs); line-height: 1.6; }
+
+/* ---- 목록 열 ----------------------------------------------------------- */
+.inbox__list { display: flex; flex-direction: column; padding-top: var(--s-32); }
+.inbox__search { padding: 0 var(--gutter) 0 calc(var(--gutter) + var(--rise)); }
+.inbox__count {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-12);
+  margin-top: var(--s-24);
+  padding: 0 var(--gutter) var(--s-8) calc(var(--gutter) + var(--rise));
+}
+.inbox__rows { border-bottom: var(--line); }
+.inbox__rows .receipt__row {
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  align-items: start;
+  min-height: 72px;
+  padding: var(--s-12) var(--gutter) var(--s-12) calc(var(--gutter) + var(--rise));
+}
+.inbox__rows .receipt__no { padding-top: 4px; }
+.inbox__rows .receipt__amt { font-size: var(--fs-sm); }
+.inbox__rows .receipt__row:focus-visible { outline-offset: calc(var(--bw) * -3); }
+/* 읽고 있는 행: 옐로 + 오른쪽 규칙선까지 칸막이처럼 이어짐 */
+.inbox__rows .receipt__row[aria-selected="true"] { position: relative; background: var(--highlight); color: var(--on-highlight); } /* list.css의 :hover가 선택 상태를 덮어써서 여기서 우선 */
+.inbox__more { padding: var(--s-24) var(--gutter) var(--s-32) calc(var(--gutter) + var(--rise)); }
+
+/* 오늘 답장 마감 + 매입 견적 기준표 — 옐로 전단, 목록 열 바닥까지 */
+.inbox__due {
+  flex: 1 0 auto;
+  display: grid;
+  align-content: start;
+  gap: var(--s-24);
+  padding: var(--s-24) var(--gutter) var(--s-32) calc(var(--gutter) + var(--rise));
+  background: var(--highlight);
+  color: var(--on-highlight);
+  border-top: var(--line);
+}
+.inbox__due .t-label { margin: 0; }
+.inbox__due-head { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "tag tag" "n list"; gap: var(--s-8) var(--s-24); align-items: start; }
+.inbox__due-head > .t-label { grid-area: tag; }
+.inbox__due-n { grid-area: n; margin: 0; font: 700 var(--fs-h3)/1 var(--font-label); }
+.inbox__due-n b { font-size: clamp(72px, 7vw, 112px); line-height: .8; margin-right: 2px; }
+.inbox__due-list { grid-area: list; display: grid; margin: 0; padding: 0; list-style: none; font-size: var(--fs-sm); font-weight: 500; line-height: 1.5; }
+.inbox__due-list li { padding: 6px 0; border-top: var(--bw-thin) solid var(--sticker-edge); }
+.inbox__due-list span { display: block; font: 600 var(--fs-label)/1.3 var(--font-mono); word-spacing: var(--ws-mix); }
+.inbox__rate { width: 100%; border-collapse: collapse; border: var(--bw) solid var(--sticker-edge); background: var(--surface); color: var(--fg); font-size: var(--fs-xs); }
+.inbox__rate caption { padding-bottom: var(--s-8); text-align: left; color: var(--on-highlight); }
+.inbox__rate th, .inbox__rate td { padding: 6px var(--s-12); border-top: var(--bw-thin) solid var(--rule); text-align: left; }
+.inbox__rate tr:first-child > * { border-top: 0; }
+.inbox__rate th { width: 56px; font: 600 var(--fs-label)/1.3 var(--font-mono); }
+.inbox__rate td:nth-child(2) { width: 56px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ---- 읽기 칸 ------------------------------------------------------------ */
+.inbox__read { min-height: 100%; }
+.msg { display: grid; gap: var(--s-32); padding: var(--s-32) var(--gutter) var(--s-72); align-content: start; }
+.msg:focus-visible { outline-offset: calc(var(--bw) * -3); }
+.msg__back { display: none; }
+
+.msg__head { display: grid; gap: var(--s-16); padding-bottom: var(--s-24); border-bottom: var(--line); }
+.msg__tags { --cluster: var(--s-8); }
+.msg__title {
+  margin: 0;
+  font-size: var(--fs-h1);
+  font-weight: 700;
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-head);
+  max-width: 24em;
+}
+.msg__who { display: flex; flex-wrap: wrap; gap: 0; margin: 0; border: var(--line-thin); }
+.msg__who > div { display: grid; gap: 2px; padding: var(--s-8) var(--s-16); flex: 1 1 auto; min-width: 0; }
+.msg__who > div + div { border-left: var(--line-thin); }
+.msg__who dt { font: 600 var(--fs-label)/1.4 var(--font-label); color: var(--fg-muted); letter-spacing: 0; }
+.msg__who dd { margin: 0; font-size: var(--fs-sm); font-weight: 700; }
+.msg__who .t-muted { font-weight: 500; }
+
+.msg__assign {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  margin: -4px 0 -4px -8px;
+  padding: 0 8px;
+  border: var(--bw-thin) solid transparent;
+  background: transparent;
+  font-weight: 700;
+}
+.msg__assign::before { content: ""; position: absolute; inset: -6px 0; }
+.msg__assign { position: relative; }
+.msg__assign:hover { border-color: var(--rule); background: var(--highlight); color: var(--on-highlight); }
+.msg__assign svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: square; }
+
+.msg__body { display: grid; gap: var(--s-12); font-size: var(--fs-body); }
+
+/* 첨부 사진: 손님이 휴대폰으로 찍은 실물 사진 자리 — 앨범 아트가 아니라 회색 면 위 물건 윤곽 6장 */
+.msg__photos {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--bw);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: var(--line);
+  background: var(--rule);
+}
+.msg__photos li { display: grid; background: var(--surface); }
+.msg__cap { padding: 6px 8px; border-top: var(--line-thin); font-size: 11px; line-height: 1.4; color: var(--fg-muted); }
+.photo {
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+  overflow: hidden;
+  container-type: inline-size;
+  isolation: isolate;
+  background: var(--surface-2);
+}
+.photo::before, .photo::after { content: ""; position: absolute; z-index: -1; }
+.photo__no { position: absolute; left: 6px; top: 6px; padding: 1px 4px; background: var(--surface); font: 600 10px/1.3 var(--font-mono); color: var(--fg-muted); word-spacing: var(--ws-mix); }
+/* 묶음: 재킷 세 장이 비껴 겹침 */
+.photo--stack::before { left: 14%; top: 30%; width: 52%; aspect-ratio: 1; background: var(--surface); border: var(--bw-thin) solid var(--fg-muted); box-shadow: 8cqw -8cqw 0 0 var(--skeleton-alt), 16cqw -16cqw 0 0 var(--fg-muted); }
+/* 꽂힌 판 등 8장 */
+.photo--spines::before { left: 12%; top: 16%; bottom: 16%; width: 5cqw; background: var(--fg-muted); box-shadow: 10cqw 0 0 var(--fg), 20cqw 0 0 var(--fg-muted), 30cqw 0 0 var(--fg-muted), 40cqw 0 0 var(--fg), 50cqw 0 0 var(--fg-muted), 60cqw 0 0 var(--fg-muted), 70cqw 0 0 var(--fg); }
+/* 재킷 모서리 닳음: 오른쪽 위가 사선으로 해진 재킷 + 표시 사각 */
+.photo--corner::before { inset: 14% 10% -10% -10%; background: var(--fg-muted); clip-path: polygon(0 0, 76% 0, 100% 24%, 100% 100%, 0 100%); }
+.photo--corner::after { right: 4%; top: 6%; width: 34%; aspect-ratio: 1; border: var(--bw) solid var(--accent); z-index: 0; }
+/* 라벨 클로즈업: 판과 레드 라벨 */
+.photo--label::before { width: 150%; aspect-ratio: 1; left: -10%; top: -20%; border-radius: var(--radius-round); background: var(--record); }
+.photo--label::after { width: 60%; aspect-ratio: 1; left: 20%; top: 18%; border-radius: var(--radius-round); background: var(--record-label); box-shadow: 0 0 0 max(2px, 1.5cqw) var(--record-groove); }
+/* 판 표면 잔기스 */
+.photo--scratch { background: var(--record); }
+.photo--scratch::before { left: 18%; top: 40%; width: 46%; height: 2px; background: var(--code-muted); transform: rotate(-18deg); box-shadow: 6cqw 10cqw 0 var(--record-groove), -4cqw 18cqw 0 var(--record-groove), 10cqw -12cqw 0 var(--record-groove); }
+/* 42장 쌓은 모습: 눕힌 판이 어긋나게 쌓임 */
+.photo--pile::before { left: 14%; bottom: 12%; width: 70%; height: 6cqw; background: var(--fg-muted); box-shadow: 4cqw -8cqw 0 var(--fg), -3cqw -16cqw 0 var(--fg-muted), 5cqw -24cqw 0 var(--fg), 0 -32cqw 0 var(--fg-muted), 6cqw -40cqw 0 var(--fg), -2cqw -48cqw 0 var(--fg-muted); }
+
+/* 직원 메모: 옐로 면 + 붙은 스티커 (고객에게 안 보이는 칸) */
+.msg__note {
+  display: grid;
+  gap: var(--s-8);
+  max-width: 52ch;
+  padding: var(--s-16) var(--s-24) var(--s-16) var(--s-16);
+  border: var(--line);
+  background: var(--surface-2);
+}
+.msg__note p:last-of-type { font-size: var(--fs-sm); line-height: 1.7; }
+
+.msg__quote { display: grid; gap: var(--s-12); }
+
+.msg__fact { padding: var(--s-16); border: var(--line); }
+.msg__stock { position: relative; display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: var(--s-24); align-items: center; }
+.msg__stock-cover { border: var(--line); }
+
+.msg__reply { display: grid; gap: var(--s-16); padding-top: var(--s-24); border-top: var(--line); }
+.msg__reply-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-12); }
+.msg__tpl { min-width: 220px; }
+.msg__reply .textarea { min-height: 148px; }
+
+/* ---- 공통 푸터 (모든 화면 링크) ----------------------------------------- */
+
+/* ---- 반응형 ------------------------------------------------------------- */
+@media (max-width: 1180px) {
+  .inbox { grid-template-columns: minmax(200px, 2fr) minmax(0, 4fr) minmax(0, 5fr); }
+  .msg__photos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .inbox__rows .receipt__row { grid-template-columns: minmax(0, 1fr) auto; }
+  .inbox__rows .receipt__no { grid-column: 1 / -1; padding-top: 0; }
+}
+@media (max-width: 900px) {
+  .inbox { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+  .inbox__folders { grid-column: 1 / -1; padding: var(--s-24) var(--gutter) 0; }
+  .inbox__pin { position: static; grid-template-columns: auto minmax(0, 1fr); align-items: end; gap: var(--s-16) var(--s-32); }
+  .inbox__promise { display: none; }
+  .inbox__pinbox { padding-bottom: 0; }
+  .inbox__title { padding-right: 0; padding-bottom: var(--s-16); }
+  /* 폴더를 가로 칸막이 띠로 */
+  .inbox .side { flex-direction: row; gap: var(--s-16); padding: 0; border-right: 0; overflow-x: auto; scrollbar-width: none; }
+  .inbox .side__group { flex-direction: row; align-items: flex-end; }
+  .inbox .side__label { display: none; }
+  .inbox .side__item { grid-template-columns: auto auto auto; flex: none; min-height: var(--tab-h); border: var(--line); border-bottom: 0; white-space: nowrap; }
+  .inbox .side__item[aria-current="page"] { margin-right: 0; min-height: var(--tab-h-on); }
+  .inbox__search, .inbox__count, .inbox__more, .inbox__rows .receipt__row { padding-left: var(--gutter); }
+}
+@media (max-width: 768px) {
+  .inbox { grid-template-columns: minmax(0, 1fr); }
+  .inbox__pin { grid-template-columns: minmax(0, 1fr); gap: var(--s-8); }
+  .inbox__title { padding-bottom: 0; }
+  .inbox .side__item .side__count { display: none; }
+  .inbox__list { padding-top: var(--s-24); }
+  .msg { padding-top: var(--s-24); padding-bottom: var(--s-48); gap: var(--s-24); }
+  .msg__back {
+    display: inline-flex;
+    align-items: center;
+    justify-self: start;
+    min-height: 44px;
+    font: 600 var(--fs-label)/1 var(--font-mono);
+    color: var(--link);
+  }
+  .msg__back::before { content: "↑"; margin-right: 6px; }
+  .msg__title { font-size: var(--fs-h2); }
+  .msg__who > div { flex-basis: 50%; }
+  .msg__who > div + div { border-left: 0; }
+  .msg__who > div:nth-child(2) { border-left: var(--line-thin); }
+  .msg__who > div:nth-child(3) { border-top: var(--line-thin); flex-basis: 100%; }
+}
+@media (max-width: 480px) {
+  .inbox__folder-nav { --side-cols: 3; }
+  .inbox .side__item { flex: 1; grid-template-columns: auto minmax(0, 1fr); white-space: normal; border-bottom: var(--line); }
+  .msg__stock { grid-template-columns: 88px minmax(0, 1fr); gap: var(--s-16); }
+  .msg__tpl { min-width: 0; width: 100%; }
+  .msg__note { padding-right: var(--s-16); }
+}

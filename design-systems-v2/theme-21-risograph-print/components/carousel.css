@@ -1,0 +1,173 @@
+/* carousel — 「포스터 넘기기」 한 장씩 큰 포스터 · 이전/다음 44px 사각
+   위치 표시 = 망점 점(현재 = 두 판 겹친 점)
+   + 포스터 아트 .poster (겹판 포스터 №28–31 · 판별 켜고 끄기) */
+.carousel { position: relative; display: flex; flex-direction: column; gap: var(--sp-4); min-width: 0; }
+.carousel__viewport { overflow: hidden; touch-action: pan-y; }
+.carousel__track { display: flex; transition: translate var(--dur-pass) var(--ease-feed); }
+.carousel__slide { flex: 0 0 100%; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
+.carousel__slide[aria-hidden="true"] { visibility: hidden; transition: visibility 0s linear var(--dur-pass); }
+.carousel__caption { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px var(--sp-3); font-family: var(--font-ko); }
+.carousel__caption strong { font-size: 17px; font-weight: 700; }
+.carousel__caption span { font-size: 13px; color: var(--ink-muted); }
+.carousel__caption .mono { font-size: 12px; color: var(--ink); }
+.carousel__controls { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+.carousel__btns { display: flex; gap: 6px; }
+.carousel__dots { display: flex; gap: 0; }
+.carousel__dot { position: relative; isolation: isolate; display: grid; place-items: center; width: var(--hit); height: var(--hit); cursor: pointer; }
+.carousel__dot::before {
+  content: "";
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  color: var(--ink-muted);
+  background: radial-gradient(circle, currentColor 1.1px, transparent 1.6px) 0 0 / 3.5px 3.5px;
+}
+.carousel__dot:hover::before { color: var(--ink-blue); }
+.carousel__dot[aria-current="true"]::before { background: var(--ink-pink); }
+.carousel__dot[aria-current="true"]::after {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 14px; height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: var(--ink-blue);
+  translate: 4px 3px;
+  mix-blend-mode: var(--blend);
+}
+.carousel__dot:focus-visible { outline-offset: -6px; box-shadow: none; }
+.carousel__count { font-family: var(--font-mono); font-variation-settings: "wdth" 87.5; font-size: 13px; font-weight: 500; }
+@media (prefers-reduced-motion: reduce) { .carousel__track { transition: none; } }
+
+/* ───────────────── 포스터 아트 ─────────────────
+   <div class="poster poster--n31" role="img" aria-label="…">
+     <span class="poster__plate poster__plate--b"></span>
+     <span class="poster__plate poster__plate--p"></span>
+     <span class="poster__plate poster__plate--y"></span>
+     <span class="poster__no">№31</span>
+   </div>
+   판 하나 = 잉크 하나. 판끼리 multiply(밤 screen)로 겹치고, 각 판은 잉크 결 마스크를 쓴다. */
+.poster {
+  position: relative;
+  isolation: isolate;
+  aspect-ratio: 297 / 420;
+  width: 100%;
+  overflow: hidden;
+  background: var(--paper-sheet);
+  color: var(--ink);
+}
+.poster__plate {
+  position: absolute;
+  inset: 0;
+  mix-blend-mode: var(--blend);
+  -webkit-mask-image: var(--grain);
+  mask-image: var(--grain);
+  -webkit-mask-size: 260px;
+  mask-size: 260px;
+  transition: opacity var(--dur-stamp), translate var(--dur-stamp) var(--ease-stamp);
+}
+.poster__plate.is-off { opacity: 0; }
+.poster__plate--p { translate: 1.5% -0.8%; }
+.poster__plate--y { translate: -1% 1%; }
+.poster.is-registered .poster__plate { translate: 0 0; }
+/* № 는 Martian Mono 에 글리프가 없어 ₩ 처럼 보인다 → 본문 글꼴(Noto Sans KR 의 №) + 고정폭 숫자 */
+.poster__no {
+  position: absolute;
+  left: 6%; bottom: 3.5%;
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  z-index: 2;
+}
+.poster__title {
+  position: absolute;
+  left: 6%; right: 6%; top: 5%;
+  font-family: var(--font-display-ko);
+  font-size: clamp(18px, 6vw, 40px);
+  line-height: 1;
+  color: var(--ink);
+  z-index: 2;
+  mix-blend-mode: var(--blend);
+}
+/* 품절 — 먹 40% 망점이 덮인다 */
+.poster.is-soldout::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  color: var(--ink);
+  background: var(--dot-40);
+  opacity: .55;
+}
+
+/* №31 「밤의 인쇄골목」 P+B+Y — 셔터 내린 골목, 3층 작업실 창문만 핑크 */
+.poster--n31 .poster__plate--b {
+  background:
+    /* 3층 창문 자리(블루 판에서 빼낸 구멍) */
+    linear-gradient(var(--paper-sheet), var(--paper-sheet)) 76% 36% / 15% 9% no-repeat,
+    /* 셔터 줄 */
+    repeating-linear-gradient(0deg, transparent 0 7px, var(--paper-sheet) 7px 9px) 8% 92% / 24% 14% no-repeat,
+    /* 왼쪽 건물 · 오른쪽 건물 · 바닥 */
+    linear-gradient(var(--ink-blue), var(--ink-blue)) 0 100% / 38% 70% no-repeat,
+    linear-gradient(var(--ink-blue), var(--ink-blue)) 100% 100% / 44% 80% no-repeat,
+    linear-gradient(var(--ink-blue), var(--ink-blue)) 0 100% / 100% 9% no-repeat,
+    /* 밤하늘 망점 */
+    radial-gradient(circle, var(--ink-blue) 1.2px, transparent 1.7px) 0 0 / 6px 6px;
+}
+.poster--n31 .poster__plate--p {
+  background:
+    linear-gradient(var(--ink-pink), var(--ink-pink)) 76% 36% / 16% 10% no-repeat,
+    radial-gradient(ellipse 34% 20% at 76% 40%, var(--ink-pink) 0 30%, transparent 31%),
+    radial-gradient(circle, var(--ink-pink) 1.6px, transparent 2.1px) 60% 52% / 6px 6px;
+  -webkit-mask-image: var(--grain), radial-gradient(ellipse 40% 26% at 74% 40%, #000 60%, transparent 62%);
+  mask-image: var(--grain), radial-gradient(ellipse 40% 26% at 74% 40%, #000 60%, transparent 62%);
+  -webkit-mask-size: 260px, 100% 100%;
+  mask-size: 260px, 100% 100%;
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+.poster--n31 .poster__plate--y {
+  background:
+    conic-gradient(from 166deg at 47% 52%, var(--ink-yellow) 0 28deg, transparent 0) 0 0 / 100% 100% no-repeat,
+    radial-gradient(circle at 47% 51%, var(--ink-yellow) 0 2.4%, transparent 2.6%),
+    linear-gradient(var(--ink-yellow), var(--ink-yellow)) 47% 30% / 0.9% 22% no-repeat;
+}
+
+/* №28 「드럼 교체하는 날」 P+T — 드럼 원통과 잉크 줄 */
+.poster--n28 .poster__plate--t {
+  background:
+    radial-gradient(circle at 50% 44%, var(--ink-teal) 0 30%, transparent 30.4%),
+    linear-gradient(var(--ink-teal), var(--ink-teal)) 0 100% / 100% 18% no-repeat,
+    radial-gradient(circle, var(--ink-teal) 1.4px, transparent 1.9px) 0 0 / 6px 6px;
+  -webkit-mask-image: var(--grain);
+  mask-image: var(--grain);
+}
+.poster--n28 .poster__plate--p {
+  background:
+    radial-gradient(circle at 50% 44%, var(--ink-pink) 0 12%, transparent 12.4%),
+    repeating-linear-gradient(90deg, var(--ink-pink) 0 6%, transparent 6% 12%) 0 70% / 100% 12% no-repeat,
+    linear-gradient(var(--ink-pink), var(--ink-pink)) 86% 12% / 8% 30% no-repeat;
+}
+
+/* №29 「종이 산」 B+Y — 종이 더미 산과 옐로 해 */
+.poster--n29 .poster__plate--y {
+  background:
+    radial-gradient(circle at 70% 28%, var(--ink-yellow) 0 17%, transparent 17.4%),
+    linear-gradient(var(--ink-yellow), var(--ink-yellow)) 0 100% / 100% 40% no-repeat;
+}
+.poster--n29 .poster__plate--b {
+  background:
+    conic-gradient(from 150deg at 30% 38%, var(--ink-blue) 0 60deg, transparent 0),
+    conic-gradient(from 145deg at 66% 50%, var(--ink-blue) 0 70deg, transparent 0),
+    repeating-linear-gradient(0deg, transparent 0 10px, var(--ink-blue) 10px 12px) 0 100% / 100% 30% no-repeat;
+}
+
+/* №30 「장터 가는 길」 P+B+Y — 큰 해와 길, 밭 줄무늬 */
+.poster--n30 .poster__plate--p { background: radial-gradient(circle at 50% 34%, var(--ink-pink) 0 26%, transparent 26.4%); }
+.poster--n30 .poster__plate--y { background: conic-gradient(from 160deg at 50% 52%, var(--ink-yellow) 0 40deg, transparent 0); }
+.poster--n30 .poster__plate--b {
+  background:
+    repeating-linear-gradient(0deg, transparent 0 14px, var(--ink-blue) 14px 22px) 0 100% / 100% 48% no-repeat,
+    radial-gradient(circle, var(--ink-blue) 1.2px, transparent 1.7px) 0 0 / 6px 6px;
+}

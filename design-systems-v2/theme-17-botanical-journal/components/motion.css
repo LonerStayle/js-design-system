@@ -1,0 +1,116 @@
+/* motion — "펜은 천천히, 손은 정확하게"
+   draw(세밀화 드로잉 1600ms) · tape(테이프 붙이기 160ms) · stamp(도장 찍기 180ms + 번짐 120ms)
+   lift(대지 들기 200ms) · settle(글라신 내려앉기 240ms) · press(120ms) · sway(매달린 라벨 4s)
+   전역 스크롤 페이드 리빌 · 패럴랙스 금지. 키프레임 이름은 모두 dmh- 로 시작한다.
+
+   드로잉: <svg class="flora" data-draw …> — app.js가 각 선에 pathLength="1"과 지연(--d)을 주고
+   화면에 들어오면 .is-drawn 을 붙인다. 다시 그리기: [data-replay="draw"][data-target="id"]
+   도장: DMH.stamp(el) 또는 [data-replay="stamp"] · 테이프: [data-replay="tape"] */
+
+/* ---- 키프레임 -------------------------------------------------------------- */
+@keyframes dmh-settle { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes dmh-settle-sm { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes dmh-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dmh-fade-out { to { opacity: 0; transform: translateY(-4px); } }
+@keyframes dmh-tape { from { scale: 0 1; opacity: .4; } to { scale: 1 1; opacity: 1; } }
+@keyframes dmh-stamp {
+  0% { transform: rotate(-18deg) scale(1.25); opacity: 0; }
+  100% { transform: rotate(-12deg) scale(1); opacity: .9; }
+}
+@keyframes dmh-bleed { from { filter: none; } to { filter: drop-shadow(0 0 .6px currentColor); } }
+@keyframes dmh-shrink { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@keyframes dmh-hatch { from { background-position: 0 0; } to { background-position: 34px 0; } }
+@keyframes dmh-bolt { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes dmh-checker-fill {
+  0% { clip-path: inset(0 100% 0 0); }
+  85%, 100% { clip-path: inset(0 0 0 0); }
+}
+@keyframes dmh-pencil { from { background-position: 0 0; } to { background-position: -40px 0; } }
+@keyframes dmh-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes dmh-sway { from { transform: rotate(-1.5deg); } to { transform: rotate(1.5deg); } }
+
+/* ---- draw 세밀화 드로잉 ---------------------------------------------------- */
+.flora.is-armed path,
+.flora.is-armed line,
+.flora.is-armed polyline,
+.flora.is-armed circle:not(.dot),
+.flora.is-armed ellipse {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.flora.is-armed .petal, .flora.is-armed .dot { fill-opacity: 0; }
+.flora.is-drawn path,
+.flora.is-drawn line,
+.flora.is-drawn polyline,
+.flora.is-drawn circle:not(.dot),
+.flora.is-drawn ellipse {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset var(--dur-draw) var(--ease-paper) var(--d, 0ms);
+}
+.flora.is-drawn .petal, .flora.is-drawn .dot {
+  fill-opacity: 1;
+  transition: fill-opacity 600ms ease calc(var(--d, 0ms) + 900ms);
+}
+
+/* ---- stamp 도장 찍기 ------------------------------------------------------- */
+.stamp.is-stamping {
+  animation:
+    dmh-stamp var(--dur-stamp) var(--ease-stamp) both,
+    dmh-bleed 120ms ease var(--dur-stamp) both;
+}
+
+/* ---- tape 테이프 붙이기 ---------------------------------------------------- */
+.tape.is-taping { animation: dmh-tape var(--dur-tape) var(--ease-paper) both; }
+
+/* ---- lift 대지 들기 · press ------------------------------------------------ */
+.lift { transition: transform var(--dur-lift) var(--ease-paper), box-shadow var(--dur-lift) var(--ease-paper); }
+.lift:hover { transform: translateY(-2px); box-shadow: var(--shadow-sheet-lift); }
+.press:active { transform: translateY(1px); transition: transform var(--dur-press) var(--ease-paper); }
+
+/* ---- sway 매달린 라벨 (화면당 1개) ----------------------------------------- */
+.sway {
+  transform-origin: 50% 0;
+  animation: dmh-sway var(--dur-sway) ease-in-out infinite alternate;
+}
+.sway:hover, .sway:focus-within { animation-play-state: paused; }
+
+/* ---- 모션 시연 칸 ---------------------------------------------------------- */
+.motion-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
+.motion-tile {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: var(--sp-2);
+  min-height: 168px;
+  padding: var(--sp-3);
+  background: var(--label);
+  border: 1px solid var(--hairline);
+}
+.motion-tile__stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 96px;
+  overflow: hidden;
+}
+.motion-tile__name { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-2); font-size: 13px; font-weight: 500; }
+.motion-tile__name .id { font-size: 11px; color: var(--ink-3); }
+.motion-tile .btn { justify-self: start; }
+.motion-swatch { width: 64px; height: 84px; background: var(--sheet); box-shadow: var(--shadow-sheet); }
+@media (max-width: 640px) { .motion-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .motion-tile { min-height: 150px; } }
+
+/* ---- 모션 줄임 -------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .flora.is-armed path, .flora.is-armed line, .flora.is-armed polyline, .flora.is-armed circle, .flora.is-armed ellipse { stroke-dasharray: none; stroke-dashoffset: 0; }
+  .flora.is-armed .petal, .flora.is-armed .dot { fill-opacity: 1; }
+  .sway { animation: none !important; transform: none; }
+  .lift:hover, .specimen:hover, .kcard:hover, a.card:hover { transform: none !important; }
+  .modal__sheet, .cmd__box, .drawer__panel { transform: none !important; transition: opacity 120ms ease !important; }
+  .drawer__panel { opacity: 0; }
+  .drawer.is-open .drawer__panel, .drawer--static .drawer__panel { opacity: 1; }
+  .modal__glassine, .cmd__glassine, .drawer__glassine { transition: opacity 120ms ease !important; }
+  .plates__track { transition: none !important; }
+}
+
+/* 시연용 재생 클래스 */
+.is-settling { animation: dmh-settle var(--dur-settle) var(--ease-paper) both; }
+.is-lifted { transform: translateY(-2px); box-shadow: var(--shadow-sheet-lift); transition: transform var(--dur-lift) var(--ease-paper), box-shadow var(--dur-lift) var(--ease-paper); }

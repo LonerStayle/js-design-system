@@ -1,0 +1,341 @@
+/* dashboard — 백도윤의 작업대, 2026년 8월 27일 (목) 10:40
+   구도: 머리줄(사람 · 시각) → 공정 띠 + 수장고 계기 → 오늘 손볼 대지(큰 대지) + 일정 열 → 채집 선 차트 + 지역 폴더 → 입고 띠
+   장면 전용 레이아웃만. 색은 semantic 토큰만 쓴다. */
+
+.dash { display: flex; flex-direction: column; gap: var(--sp-7); }
+
+/* ---- 머리줄 ------------------------------------------------------------- */
+.dash-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-4) var(--sp-6);
+  padding-bottom: var(--sp-4);
+  border-bottom: 1px solid var(--rule);
+}
+.dash-head__who { display: flex; align-items: center; gap: var(--sp-4); }
+.dash-head__title { font-size: var(--t-h1); }
+.dash-head__role { margin-top: 2px; font-size: var(--t-small); color: var(--ink-2); }
+.dash-head__now { text-align: right; }
+.dash-head__clock { font-size: 15px; font-weight: 500; }
+.dash-head__clock :is(.id, .fig) { font-size: 18px; }
+.dash-head__weather { font-size: var(--t-small); color: var(--ink-2); }
+.dash-head__weather .id { font-size: 13px; }
+
+/* ---- 행 공통: 칸 높이를 맞춘다(빈 공백 금지) ------------------------------- */
+.dash-row {
+  display: grid;
+  gap: var(--sp-7) var(--grid-gutter);
+  align-items: stretch;
+}
+.dash-row > .panel > .sheet,
+.dash-side > .panel:last-child > .sheet { flex: 1; }
+.dash-row--flow { grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr); }
+.dash-row--today { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+.dash-row--charts { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+
+/* ---- 공정 띠 ------------------------------------------------------------- */
+.flow__sheet { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-4) var(--sp-4) var(--sp-3); }
+.flow__list {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+.flow__step { position: relative; display: flex; min-width: 0; }
+.flow__step + .flow__step { border-left: 1px solid var(--hairline); }
+/* 공정 사이 화살표 — 괘선 위에 얹힌 작은 쪽지 */
+.flow__step + .flow__step::before {
+  content: "→";
+  position: absolute;
+  left: 0;
+  top: 46px;
+  z-index: 1;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  background: var(--sheet);
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1;
+}
+.flow__cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: var(--sp-3) var(--sp-4) var(--sp-3);
+  color: var(--ink);
+  text-decoration: none;
+  transition: background-color var(--dur-press) ease;
+}
+.flow__cell:hover { background: var(--sap-tint); color: var(--ink); }
+.flow__cell:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.flow__name { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; white-space: nowrap; }
+.flow__sym { width: 14px; text-align: center; color: var(--ink-2); font-weight: 400; }
+.flow__sym--warn { color: var(--warn); }
+.flow__sym--ok { color: var(--ok); }
+.flow__n { display: flex; align-items: baseline; }
+.flow__big {
+  font-family: var(--font-figure);
+  font-weight: 700;
+  font-size: 56px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: lining-nums;
+}
+.flow__cell--peak .flow__big { color: var(--warn); }
+.flow__bar {
+  position: relative;
+  height: 14px;
+  margin-top: auto;
+  background:
+    repeating-linear-gradient(90deg, var(--ink-3) 0 1px, transparent 1px calc(100% / 20)) 0 100% / calc(100% - 1px) 6px no-repeat,
+    repeating-linear-gradient(90deg, var(--ink) 0 1px, transparent 1px calc(100% / 4)) 0 100% / calc(100% - 1px) 10px no-repeat,
+    linear-gradient(var(--ink), var(--ink)) 0 100% / 100% 1px no-repeat;
+  box-shadow: inset -1px 0 0 var(--ink);
+}
+.flow__bar::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--v);
+  height: 6px;
+  background: var(--sap);
+}
+.flow__cell--peak .flow__bar::before { background: var(--warn); }
+.flow__note { font-size: 12px; line-height: 1.45; color: var(--ink-2); min-height: 2.9em; }
+.flow__scale {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: 6px var(--sp-4) 0;
+  border-top: 1px solid var(--hairline);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.flow__scale .id { font-size: 11px; }
+
+/* ---- 수장고 환경 계기 ---------------------------------------------------- */
+.climate__sheet { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4) var(--sp-5); align-content: start; padding: var(--sp-5); }
+.meter { display: grid; gap: 4px; min-width: 0; }
+.meter__name { font-size: 12px; font-weight: 500; color: var(--ink-3); }
+.meter__val { display: flex; align-items: baseline; gap: 2px; }
+.meter__big {
+  font-family: var(--font-figure);
+  font-weight: 700;
+  font-size: 44px;
+  line-height: 1;
+  font-variant-numeric: lining-nums;
+}
+.meter__scale {
+  position: relative;
+  height: 16px;
+  margin-top: 4px;
+  background:
+    repeating-linear-gradient(90deg, var(--ink-3) 0 1px, transparent 1px calc(100% / 16)) 0 100% / calc(100% - 1px) 5px no-repeat,
+    repeating-linear-gradient(90deg, var(--ink) 0 1px, transparent 1px calc(100% / 4)) 0 100% / calc(100% - 1px) 9px no-repeat,
+    linear-gradient(var(--ink), var(--ink)) 0 100% / 100% 1px no-repeat;
+  box-shadow: inset -1px 0 0 var(--ink);
+}
+/* 목표 범위 = 옅은 녹 띠, 바늘 = 잉크 세로선 + 삼각 */
+.meter__target {
+  position: absolute;
+  left: calc(var(--target) - 6%);
+  width: 12%;
+  top: 0;
+  height: 6px;
+  background: var(--sap-tint);
+  box-shadow: inset 0 0 0 1px var(--sap);
+}
+.meter__needle {
+  position: absolute;
+  left: var(--pos);
+  top: -6px;
+  width: 2px;
+  height: 22px;
+  margin-left: -1px;
+  background: var(--stamp);
+}
+.meter__needle::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: -2px;
+  border: 5px solid transparent;
+  border-top-color: var(--stamp);
+}
+.meter__ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-3); }
+.meter__ends .id { font-size: 11px; }
+.climate__dryers { grid-column: 1 / -1; border-top: 1px solid var(--ink); }
+.climate__dryers li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px var(--sp-3);
+  min-height: 36px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 13px;
+}
+.climate__dryers li:last-child { border-bottom: 0; }
+.climate__k { width: 72px; flex: none; font-weight: 500; color: var(--ink-2); }
+.climate__dryers .id { font-size: 13px; }
+.climate__dryers .is-warn .id { color: var(--warn); }
+.climate__dryers .badge { margin-left: auto; }
+
+/* ---- 오늘 손볼 대지 ------------------------------------------------------ */
+.today { gap: 0; }
+.today__sheet { display: flex; flex-direction: column; gap: var(--sp-5); padding: var(--sp-5) var(--sp-6) var(--sp-6); }
+.today__steps { padding-bottom: var(--sp-4); border-bottom: 1px solid var(--hairline); }
+.today__body { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: var(--sp-6); align-items: stretch; flex: 1; }
+.today__plate { position: relative; display: flex; flex-direction: column; align-items: center; padding-top: 34px; }
+.today__plate .flora { width: 250px; height: 500px; }
+.today__barcode { position: absolute; left: 0; top: 0; }
+.today__side { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.today__state { margin-bottom: var(--sp-2); }
+.today__name {
+  font-family: var(--font-name);
+  font-weight: 400;
+  font-size: 56px;
+  line-height: 1.05;
+  letter-spacing: var(--track-specimen);
+}
+.today__binomial { font-family: var(--font-latin); font-style: italic; font-size: 26px; line-height: 1.2; }
+.today__binomial .auth { font-style: normal; font-size: 15px; color: var(--ink-2); }
+.today__record { margin-top: var(--sp-2); font-family: var(--font-record); font-size: 15px; line-height: 1.75; color: var(--ink); }
+.today__pencil { margin-top: var(--sp-1); }
+.today__label { margin-top: auto; }
+/* 시트 푸터 — 버튼 줄은 대지 안, 위에 1px 선 */
+.today__actions { padding-top: var(--sp-4); border-top: 1px solid var(--hairline); }
+
+/* 오른쪽 열: 일정 · 건조 */
+.dash-side { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
+.plan { padding: var(--sp-5) var(--sp-5) var(--sp-5) var(--sp-4); }
+.plan__list { --date-w: 56px; }
+.plan__list .history__date { font-size: 15px; }
+.plan__now .history__title { color: var(--current); }
+.dry__sheet { display: flex; flex-direction: column; justify-content: space-between; gap: var(--sp-5); }
+.dry__digit { padding-top: var(--sp-4); border-top: 1px solid var(--ink); }
+.gauge__name :is(.id, .fig) { font-size: 12px; color: var(--ink-3); margin-left: 4px; }
+
+/* ---- 2026년 채집 선 차트 ------------------------------------------------- */
+.season__sheet { display: flex; flex-direction: column; gap: var(--sp-4); }
+.season__totals { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-2) var(--sp-6); padding-bottom: var(--sp-3); border-bottom: 1px solid var(--hairline); }
+.season__totals p { display: flex; align-items: baseline; }
+.season__big {
+  font-family: var(--font-figure);
+  font-weight: 700;
+  font-size: 48px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: lining-nums;
+}
+.season__big--sm { font-size: 36px; color: var(--ink-2); }
+.season__span { margin-left: auto; font-size: 12px; color: var(--ink-3); }
+.season__chart { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: var(--sp-2); }
+.season__svg { width: 100%; height: auto; }
+.season__grid path { fill: none; stroke-width: 1; }
+.season__axis text { fill: var(--ink-3); font-family: var(--font-ui); font-size: 12px; }
+.season__vals text { fill: var(--ink); font-family: var(--font-num); font-size: 14px; }
+.season__area { opacity: .9; }
+.season__line { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.season__line--part { stroke-dasharray: 2 6; }
+.season__pts circle { stroke-width: 2; }
+.season__cap { font-size: 13px; color: var(--ink-2); }
+
+/* ---- 지역 폴더 막대 ------------------------------------------------------ */
+.regions__sheet { display: flex; flex-direction: column; gap: var(--sp-4); }
+.regions__total { display: flex; align-items: baseline; padding-bottom: var(--sp-3); border-bottom: 1px solid var(--hairline); }
+.regions__list { flex: 1; display: flex; flex-direction: column; justify-content: space-around; gap: var(--sp-3); }
+.regions__row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 96px;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.regions__name { font-size: 14px; font-weight: 700; white-space: nowrap; }
+.regions__bar {
+  position: relative;
+  height: 26px;
+  border-bottom: 1px solid var(--ink);
+}
+/* 폴더 탭처럼 오른쪽 위 모서리를 사선으로 자른 면 */
+.regions__bar::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: max(var(--v), 10px);
+  background: var(--c);
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);
+}
+.regions__val { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.25; }
+.regions__val :is(.id, .fig) { font-size: 15px; }
+.regions__val small { font-size: 12px; color: var(--ink-3); }
+.regions__foot { padding-top: var(--sp-3); border-top: 1px solid var(--hairline); font-size: 13px; color: var(--ink-2); }
+.regions__foot .id { font-size: 13px; color: var(--ink); }
+
+.dash__marquee { margin-top: calc(var(--sp-3) * -1); }
+
+/* ---- 반응형 -------------------------------------------------------------- */
+@media (max-width: 1200px) {
+  .dash-row--flow { grid-template-columns: minmax(0, 1fr); }
+  .climate__sheet { grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(0, 1.4fr); }
+  .climate__dryers { grid-column: auto; border-top: 0; border-left: 1px solid var(--ink); padding-left: var(--sp-4); }
+}
+@media (max-width: 1100px) {
+  .dash-row--today { grid-template-columns: minmax(0, 1fr); }
+  .dash-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-6) var(--grid-gutter); }
+  .dash-row--charts { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .flow__list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .flow__step:nth-child(4) { border-left: 0; }
+  .flow__step:nth-child(n+4) { border-top: 1px solid var(--hairline); }
+  .flow__step:nth-child(4)::before { display: none; }
+  .climate__sheet { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .climate__dryers { grid-column: 1 / -1; border-left: 0; padding-left: 0; border-top: 1px solid var(--ink); }
+  .dash-side { display: flex; }
+  .today__body { grid-template-columns: minmax(0, 1fr); }
+  .today__plate .flora { width: 200px; height: 400px; }
+}
+@media (max-width: 640px) {
+  .dash { gap: var(--sp-6); }
+  .dash-head { align-items: flex-start; }
+  .dash-head__title { font-size: 30px; }
+  .dash-head__now { text-align: left; }
+  .flow__sheet { padding: var(--sp-2) 0 var(--sp-3); }
+  .flow__cell { padding: var(--sp-3) 10px; }
+  .flow__big { font-size: 44px; }
+  .flow__note { font-size: 11px; }
+  .flow__step + .flow__step::before { top: 40px; }
+  .flow__scale { padding-inline: 10px; }
+  .climate__sheet { padding: var(--sp-4); gap: var(--sp-4); }
+  .meter__big { font-size: 36px; }
+  .today__sheet { padding: var(--sp-4) var(--sp-4) var(--sp-5); }
+  .today__steps .steps__name { font-size: 12px; }
+  .today__name { font-size: 44px; }
+  .today__binomial { font-size: 22px; }
+  .today__plate { margin-bottom: calc(var(--sp-2) * -1); }
+  .season__totals { gap: var(--sp-2) var(--sp-4); }
+  .season__big { font-size: 40px; }
+  .season__big--sm { font-size: 30px; }
+  .season__span { margin-left: 0; width: 100%; }
+  .regions__row { grid-template-columns: 56px minmax(0, 1fr) 76px; gap: var(--sp-2); }
+  .dash__marquee { margin-top: 0; }
+}
+
+/* 공정 칸 안의 실제 표본 썸네일(그 단계에 있는 대표 표본) */
+.flow__flora { display: flex; gap: 2px; margin-top: auto; padding-bottom: 4px; }
+.flow__flora .flora { width: 34px; height: 34px; --sw: 1.1; --sw-vein: .7; }
+.flow__flora + .flow__bar { margin-top: 0; }
+.flow__step:last-child .flow__flora .flora { opacity: .55; }
+@media (max-width: 640px) {
+  .flow__flora .flora { width: 28px; height: 28px; }
+  .season__axis text { font-size: 22px; }
+  .season__vals text { font-size: 24px; }
+}

@@ -1,0 +1,77 @@
+/* kanban — 열 = 정산 단계, 열 머리 2px 잉크 괘선 + 건수·합계 tnum, 카드 = 원장 행(테두리 없음, 행 사이 1px 괘선).
+   드래그 중 = 점선 자리표시 + 그림자. 키보드: Space 집기 → ←→ 열 이동 / ↑↓ 순서 → Space 놓기, Esc 취소. */
+
+.kanban {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(264px, 1fr);
+  gap: var(--sp-4); overflow-x: auto; padding-bottom: var(--sp-3);
+  scroll-snap-type: x proximity;
+}
+.kanban__col { display: flex; flex-direction: column; min-width: 0; scroll-snap-align: start; }
+.kanban__head {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; row-gap: 2px; align-items: baseline;
+  padding: var(--sp-2) 0 var(--sp-3); border-top: 2px solid var(--rule-head);
+}
+.kanban__title { font-size: var(--fs-data); font-weight: var(--fw-semi); display: flex; align-items: center; gap: var(--sp-2); }
+.kanban__count { font-size: var(--fs-caption); color: var(--text-3); font-variant-numeric: tabular-nums; font-weight: var(--fw-medium); }
+.kanban__sum { font-size: var(--fs-data); font-weight: var(--fw-semi); font-variant-numeric: tabular-nums; text-align: right; }
+.kanban__note { grid-column: 1 / -1; font-size: var(--fs-caption); color: var(--text-3); }
+.kanban__list {
+  display: flex; flex-direction: column; flex: 1;
+  min-height: 120px; border-top: 1px solid var(--line-strong);
+  transition: background-color var(--dur-2) var(--ease-out);
+}
+/* 드래그 대상 열: 이때만 면이 생긴다 */
+.kanban__list.is-over { background: var(--primary-tint); box-shadow: inset 0 0 0 1px var(--primary); }
+.kanban__add {
+  display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 var(--sp-2); margin-top: var(--sp-1);
+  border-radius: var(--r-control); color: var(--text-3); font-size: var(--fs-data);
+}
+.kanban__add:hover { background: var(--surface-sunken); color: var(--text); }
+
+/* 카드 = 원장 행. 상자 테두리는 hover · focus · 집기(is-grabbed) 상태에서만 나타난다. */
+.kcard {
+  position: relative; display: flex; flex-direction: column; gap: 4px;
+  padding: var(--sp-3) var(--sp-2) var(--sp-2);
+  background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0;
+  cursor: grab; user-select: none; touch-action: manipulation;
+  transition: box-shadow var(--dur-1) var(--ease-out), background-color var(--dur-1) var(--ease-out);
+}
+.kcard:hover { box-shadow: inset 0 0 0 1px var(--line-strong); border-radius: var(--r-control); }
+.kcard:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; border-radius: var(--r-control); }
+.kcard__top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.kcard__code { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--text-3); }
+.kcard__apv { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--text-3); white-space: nowrap; }
+.kcard__title { font-size: var(--fs-data); font-weight: var(--fw-medium); line-height: 1.4; }
+.kcard__meta { display: flex; align-items: center; gap: 6px; font-size: var(--fs-caption); color: var(--text-3); }
+.kcard__meta .avatar { width: 18px; height: 18px; font-size: 9px; }
+.kcard__badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.kcard__amount {
+  display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-2);
+  margin-top: 2px; font-size: var(--fs-caption); color: var(--text-3); font-variant-numeric: tabular-nums;
+}
+.kcard__amount .amount { font-size: var(--fs-body); font-weight: var(--fw-semi); color: var(--text); text-align: right; }
+
+.kcard.is-dragging { opacity: .4; }
+.kcard.is-grabbed {
+  z-index: 2; background: var(--surface-raised); border-radius: var(--r-control);
+  box-shadow: 0 0 0 1px var(--primary), var(--shadow-drag);
+  transform: translateY(-2px); cursor: grabbing;
+}
+/* 경고는 배지 글자로만 말한다 (좌측 색 막대 없음) */
+.kcard[aria-disabled="true"] { cursor: default; color: var(--text-2); }
+.kcard[aria-disabled="true"]:hover { box-shadow: none; }
+.kanban__placeholder {
+  height: var(--ph-h, 96px); margin-block: 4px; border: 1px dashed var(--line-control); border-radius: var(--r-control); background: var(--surface-sunken);
+}
+.kanban__empty {
+  display: grid; place-items: center; min-height: 80px; padding: var(--sp-3);
+  border-bottom: 1px dashed var(--line);
+  font-size: var(--fs-caption); color: var(--text-3); text-align: center;
+}
+.kanban__list:has(.kcard) .kanban__empty { display: none; }
+
+/* ≤768: 열 하나가 84% 폭으로 가로 스냅. 페이지 거터까지 번지게 하려면 .kanban--bleed 를 더한다. */
+@media (max-width: 768px) {
+  .kanban { grid-auto-columns: 84%; scroll-snap-type: x mandatory; scroll-padding-inline: var(--kanban-pad, 0px); padding-inline: var(--kanban-pad, 0px); }
+  .kanban--bleed { --kanban-pad: var(--gutter); margin-inline: calc(-1 * var(--gutter)); }
+}

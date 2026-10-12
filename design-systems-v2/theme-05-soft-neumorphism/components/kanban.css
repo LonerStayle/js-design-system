@@ -1,0 +1,115 @@
+/* ==========================================================================
+   kanban — 파인 트랙 위 키캡
+   열 = well 트랙 · 카드 = raised 키캡(우선순위 LED) · 드래그 중 raised-lg
+   app.js [data-kanban]: 끌어 놓기 + 키보드(Space 잡기 → ←/→ 열 이동 → Space 놓기), 열 개수 갱신
+   ========================================================================== */
+.kanban {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(264px, 1fr);
+  gap: var(--sp-4);
+  overflow-x: auto;
+  padding: 4px 4px var(--sp-4);
+  margin: -4px;
+  scrollbar-width: thin;
+  align-items: start;            /* 열 높이 = 내용만큼. 가장 긴 열에 맞춰 빈 우물을 늘이지 않는다 */
+}
+.kanban__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+  padding: var(--sp-3);
+  border-radius: var(--r-module);
+  box-shadow: var(--sh-pressed);
+  transition: box-shadow var(--dur-press) var(--ease-press);
+}
+.kanban__col.is-over { box-shadow: var(--sh-well-deep); }
+.kanban__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 6px 6px 4px;
+}
+.kanban__title { font-family: var(--font-ko); font-size: 15px; font-weight: 700; flex: 1; min-width: 0; }
+.kanban__col.is-over .kanban__head .led { background: var(--led-orange); box-shadow: var(--glow-orange); }
+.kanban__list { display: grid; gap: var(--sp-3); align-content: start; }
+.kanban__list:empty { display: none; }
+.kanban__card {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px 14px 16px;
+  border-radius: var(--r-key);
+  background: var(--surface);
+  box-shadow: var(--sh-raised-sm);
+  cursor: grab;
+  touch-action: manipulation;
+  transition: box-shadow var(--dur-spring) var(--ease-spring), transform var(--dur-spring) var(--ease-spring), opacity var(--dur-led) ease-out;
+}
+.kanban__card:hover { box-shadow: var(--sh-raised); }
+.kanban__card:active { cursor: grabbing; }
+.kanban__card.is-dragging { box-shadow: var(--sh-raised-lg); transform: scale(1.02); }
+.kanban__card.is-ghost { opacity: .35; box-shadow: var(--sh-groove); }
+.kanban__card[aria-grabbed="true"],
+.kanban__card.is-grabbed { box-shadow: var(--sh-raised-lg), 0 0 0 2px var(--focus); }
+.kanban__card-top { display: flex; align-items: center; gap: var(--sp-2); }
+.kanban__id { font-family: var(--font-mono); font-size: 13px; color: var(--ink-2); letter-spacing: .04em; }
+.kanban__card-top .led { margin-left: auto; }
+.kanban__name { font-size: 15px; font-weight: 600; line-height: 1.45; color: var(--ink); }
+.kanban__meta { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 13px; color: var(--ink-2); }
+.kanban__meta .mono { font-size: 12px; }
+.kanban__who {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  box-shadow: var(--sh-pressed-sm);
+  font-family: var(--font-ko);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+.kanban__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.kanban__add {
+  min-height: 44px;
+  border-radius: var(--r-key);
+  color: var(--ink-2);
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: var(--sh-groove);
+}
+.kanban__add:hover { box-shadow: var(--sh-pressed-sm); color: var(--ink); }
+.kanban__empty { padding: 20px 8px; text-align: center; font-size: 13px; color: var(--ink-2); border-radius: var(--r-key); box-shadow: var(--sh-groove); }
+.kanban__card.is-locked { cursor: not-allowed; box-shadow: var(--sh-groove); color: var(--ink-3); }
+
+/* 열 끝을 닫는 드롭 우물 — 카드 한 장 높이의 파인 자리. 끌고 있을 때만 깊어지고 글자가 진해진다 */
+.kanban__drop {
+  display: grid;
+  place-items: center;
+  min-height: 112px;
+  padding: var(--sp-3);
+  border-radius: var(--r-key);
+  box-shadow: var(--sh-pressed-sm);
+  font-family: var(--font-ko);
+  font-size: 13px;
+  color: var(--ink-2);
+  text-align: center;
+  transition: box-shadow var(--dur-press) var(--ease-press), color var(--dur-press) var(--ease-press);
+}
+.kanban__col.is-over .kanban__drop { box-shadow: var(--sh-pressed); color: var(--ink); }
+
+/* 오류 카드 — 부품 수급 실패 등: 우선순위 LED 자리에 빨강 + 메타 빨강 */
+.kanban__card.is-error .kanban__card-top .led { background: var(--led-red); box-shadow: var(--glow-red); }
+.kanban__card.is-error .kanban__meta { color: var(--text-red); }
+/* 저장 중 — 놓은 직후 서버 반영 대기 */
+.kanban__card[aria-busy="true"] { cursor: progress; }
+.kanban__card[aria-busy="true"] .kanban__card-top .led { background: var(--led-amber); box-shadow: var(--glow-amber); animation: kb-busy .8s steps(1) infinite; }
+@keyframes kb-busy { 50% { opacity: .25; } }   /* 잔광 — 정지 화면에서도 꺼짐으로 읽히지 않게 */
+/* 선택(키보드로 잡지 않은 상태에서 보기 선택) */
+.kanban__card[aria-pressed="true"],
+.kanban__card.is-selected { box-shadow: var(--sh-pressed); }

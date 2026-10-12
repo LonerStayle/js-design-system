@@ -1,0 +1,274 @@
+/* ==========================================================================
+   onboarding — 「M1 처음 켜기」
+   왼쪽 5: 로터리 셀렉터 면판 — 큰 다이얼(01–04 위치 눈금 + LED) · STEP LCD · 세로 LED 체인
+   오른쪽 7: 현재 단계의 조작부(패널) + 이전 / 다음 키
+   아래: 막혔을 때 — 홈으로 가른 4칸 띠
+   다이얼 지시선은 app.js [data-wizard] 가 --i 를 바꿔 돌린다. 위치 LED는 :has()로 단계 상태를 읽는다.
+   장면 CSS — 의미 토큰만 사용
+   ========================================================================== */
+
+.onb__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-4) var(--sp-6);
+  flex-wrap: wrap;
+  padding-top: var(--sp-6);
+  padding-bottom: var(--sp-6);
+}
+.onb__kicker { display: flex; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-3); }
+.onb__dev { gap: 10px; padding: 8px 14px; font-size: 13px; }
+
+.onb__deck {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: var(--sp-7);
+  align-items: start;
+  padding-bottom: var(--sp-8);
+}
+
+/* ── 로터리 셀렉터 면판 ── */
+.onb__plate {
+  position: sticky;
+  top: calc(var(--topbar-h) + var(--sp-5));
+  padding: var(--sp-6);
+}
+.onb__steps { flex-direction: column; align-items: stretch; gap: var(--sp-5); }
+.onb__steps .onb__dial {
+  width: 240px;
+  height: 240px;
+  margin: 52px auto 44px;
+}
+.onb__steps .onb__dial::before { inset: 30px; box-shadow: var(--sh-raised-lg); }
+.onb__steps .onb__dial::after {
+  width: 6px;
+  height: 28px;
+  margin: -84px 0 0 -3px;
+  border-radius: 3px;
+  transform-origin: 3px 84px;
+}
+/* 위치 눈금 01–04 (−135° · −45° · 45° · 135°) */
+.dial__pos {
+  --a: 0deg;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1;
+  color: var(--ink-2);
+  transform: translate(-50%, -50%) rotate(var(--a)) translateY(-150px) rotate(calc(var(--a) * -1));
+  transition: color var(--dur-led) ease-out;
+}
+.dial__pos i {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--sh-pressed-sm);
+  transition: background-color var(--dur-led) ease-out, box-shadow var(--dur-led) ease-out;
+}
+.dial__pos--1 { --a: -135deg; }
+.dial__pos--2 { --a: -45deg; }
+.dial__pos--3 { --a: 45deg; }
+.dial__pos--4 { --a: 135deg; }
+.onb__deck:has(.steps__item:nth-child(1).is-done) .dial__pos--1 i,
+.onb__deck:has(.steps__item:nth-child(2).is-done) .dial__pos--2 i,
+.onb__deck:has(.steps__item:nth-child(3).is-done) .dial__pos--3 i { background: var(--led-green); box-shadow: var(--glow-green); }
+.onb__deck:has(.steps__item:nth-child(1)[aria-current="step"]) .dial__pos--1 i,
+.onb__deck:has(.steps__item:nth-child(2)[aria-current="step"]) .dial__pos--2 i,
+.onb__deck:has(.steps__item:nth-child(3)[aria-current="step"]) .dial__pos--3 i,
+.onb__deck:has(.steps__item:nth-child(4)[aria-current="step"]) .dial__pos--4 i { background: var(--led-orange); box-shadow: var(--glow-orange); }
+.onb__deck:has(.steps__item:nth-child(1)[aria-current="step"]) .dial__pos--1,
+.onb__deck:has(.steps__item:nth-child(2)[aria-current="step"]) .dial__pos--2,
+.onb__deck:has(.steps__item:nth-child(3)[aria-current="step"]) .dial__pos--3,
+.onb__deck:has(.steps__item:nth-child(4)[aria-current="step"]) .dial__pos--4 { color: var(--text-orange); }
+
+.onb__lcd { padding: 10px 16px; font-size: 20px; }
+
+/* 세로 LED 체인 */
+.onb__steps .steps__list { grid-auto-flow: row; gap: var(--sp-4); }
+.onb__steps .steps__item {
+  grid-template-columns: 30px minmax(0, 1fr);
+  column-gap: var(--sp-2);
+  row-gap: 2px;
+  padding: 0 0 0 26px;
+}
+.onb__steps .steps__item::before {
+  top: 18px;
+  bottom: calc(var(--sp-4) * -1 + 2px);
+  left: 4px;
+  right: auto;
+  width: 2px;
+  height: auto;
+  box-shadow: inset 1px 0 0 var(--lo-line), inset -1px 0 0 var(--hi-line);
+}
+.onb__steps .steps__led { top: 6px; }
+.onb__steps .steps__num { padding-top: 2px; }
+.onb__steps .steps__note { grid-column: 2; }
+
+/* ── 단계 패널 ── */
+.onb__stage { min-width: 0; display: grid; gap: var(--sp-5); }
+.onb__panel { display: grid; gap: var(--sp-4); align-content: start; min-height: 600px; }
+.onb__step { margin-bottom: -4px; }
+.onb__lede { color: var(--ink-2); max-width: 60ch; }
+
+.onb__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  padding-top: var(--sp-5);
+  box-shadow: inset 0 1px 0 var(--lo-line), inset 0 2px 0 var(--hi-line);
+}
+.onb__nav [data-step-go="+1"],
+.onb__nav [data-step-finish] { margin-left: auto; }
+
+/* 1. 뒷면 단자 축소 그림 */
+.rearmini {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--sp-7);
+  flex-wrap: wrap;
+  padding: var(--sp-5) var(--sp-6);
+  border-radius: var(--r-module);
+  box-shadow: var(--sh-pressed);
+}
+.rearmini__grp { display: grid; justify-items: start; gap: 10px; }
+.rearmini__grp b { font-family: var(--font-legend); font-weight: 600; font-size: 11px; letter-spacing: .14em; color: var(--ink-2); }
+.rearmini__grp > span { display: flex; gap: 14px; }
+.rearmini__grp i {
+  position: relative;
+  display: block;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--sh-raised-sm);
+}
+.rearmini__grp i::after { content: ""; position: absolute; inset: 10px; border-radius: 50%; background: var(--lcd-bg); }
+.rearmini__grp i.is-red::after { background: var(--led-red); }
+.rearmini__grp b:last-child { word-spacing: 18px; }
+.rearmini__ac em { display: block; width: 46px; height: 30px; border-radius: 6px 6px 12px 12px; background: var(--lcd-bg); box-shadow: var(--sh-lip); }
+.rearmini__ac b:last-child { word-spacing: 0; }
+.onb__checks { list-style: none; padding: 0; margin: 0; display: grid; gap: 2px; }
+
+/* 2. 네트워크 */
+.onb__wifi .list__item--link[aria-pressed="true"] { box-shadow: var(--sh-pressed); }
+.onb__wifi .list__item--link[aria-pressed="true"] .list__lead .led { background: var(--led-orange); box-shadow: var(--glow-orange); }
+.onb__wifi .list__item--link[aria-pressed="true"] + .list__item { box-shadow: none; }
+.onb__wifi .list__lead { gap: var(--sp-3); }
+.onb__pw { max-width: 440px; }
+
+/* 3. 룸 튜닝 */
+.tune {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--sp-5);
+  padding: var(--sp-5);
+  border-radius: var(--r-well);
+  box-shadow: var(--sh-pressed-sm);
+}
+.tune__read { display: grid; gap: var(--sp-4); align-content: start; }
+.tune__lcd { padding: var(--sp-4) var(--sp-5); }
+.tune__big { margin: var(--sp-2) 0; font-size: 64px; line-height: 1; }
+.tune__sub { font-size: 13px; color: var(--lcd-dim); }
+.tune__ctl { display: grid; gap: var(--sp-5); align-content: start; justify-items: stretch; }
+.tune__seat { justify-items: start; text-align: left; }
+.tune__seat .keyrow .key { gap: 8px; }
+.tune__done { width: 6px; height: 6px; }
+.tune__seats {
+  position: relative;
+  height: 132px;
+  border-radius: var(--r-well);
+  box-shadow: var(--sh-pressed-sm);
+}
+.tune__spk, .tune__m1 { position: absolute; top: 16px; background: var(--surface); box-shadow: -2px -2px 4px var(--hi), 2px 2px 5px var(--lo); }
+.tune__spk { width: 16px; height: 28px; border-radius: 4px; }
+.tune__spk:first-child { left: calc(50% - 64px); }
+.tune__spk:nth-child(3) { left: calc(50% + 48px); }
+.tune__m1 { left: calc(50% - 13px); width: 26px; height: 26px; border-radius: 6px; }
+.tune__dot {
+  position: absolute;
+  bottom: 22px;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--sh-pressed-sm);
+}
+.tune__dot--1 { left: 50%; bottom: 30px; background: var(--led-green); box-shadow: var(--glow-green); }
+.tune__dot--2 { left: 28%; background: var(--led-orange); box-shadow: var(--glow-orange); }
+.tune__dot--3 { left: 72%; }
+.tune__dot--2::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--led-orange);
+  opacity: .5;
+}
+.tune__play { --key-h: 56px; }
+
+/* 4. 계정 */
+.onb__form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-4) var(--sp-5); }
+.onb__wide { grid-column: 1 / -1; }
+
+/* ── 막혔을 때 ── */
+.help {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  box-shadow: inset 0 1px 0 var(--lo-line), inset 0 2px 0 var(--hi-line);
+}
+.help > * { padding: var(--sp-5); min-width: 0; }
+.help > * + * { box-shadow: inset 1px 0 0 var(--lo-line), inset 2px 0 0 var(--hi-line); }
+.help__lead { display: grid; gap: var(--sp-2); align-content: start; }
+.help__item { display: grid; gap: var(--sp-2); align-content: start; }
+.help__q { font-family: var(--font-ko); font-size: 16px; font-weight: 700; line-height: 1.45; }
+.help__a { font-size: 14px; color: var(--ink-2); line-height: 1.7; }
+
+/* ── 반응형 ── */
+@media (max-width: 1100px) {
+  .onb__deck { grid-template-columns: minmax(0, 4fr) minmax(0, 6fr); gap: var(--sp-6); }
+  .tune { grid-template-columns: minmax(0, 1fr); }
+  .help { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .help > :nth-child(3) { box-shadow: inset 0 1px 0 var(--lo-line), inset 0 2px 0 var(--hi-line); }
+  .help > :nth-child(4) { box-shadow: inset 1px 0 0 var(--lo-line), inset 2px 0 0 var(--hi-line), inset 0 1px 0 var(--lo-line), inset 0 2px 0 var(--hi-line); }
+}
+@media (max-width: 960px) {
+  .onb__deck { grid-template-columns: minmax(0, 1fr); padding-bottom: var(--sp-7); }
+  .onb__plate { position: static; }
+  .onb__panel { min-height: 0; }
+}
+@media (max-width: 720px) {
+  .onb__plate { padding: var(--sp-4) var(--sp-4) var(--sp-5); }
+  .onb__steps { flex-direction: row; flex-wrap: wrap; align-items: center; gap: var(--sp-4); }
+  .onb__steps .onb__dial { width: 128px; height: 128px; margin: 36px 30px 30px 26px; }
+  .onb__steps .onb__dial::before { inset: 16px; }
+  .onb__steps .onb__dial::after { width: 4px; height: 16px; margin: -44px 0 0 -2px; transform-origin: 2px 44px; }
+  .dial__pos { font-size: 11px; gap: 3px; transform: translate(-50%, -50%) rotate(var(--a)) translateY(-84px) rotate(calc(var(--a) * -1)); }
+  .dial__pos i { width: 6px; height: 6px; }
+  .onb__steps .steps__list { flex: 1 1 140px; gap: var(--sp-3); }
+  .onb__steps .steps__note { display: none; }
+  .onb__steps .steps__item { grid-template-columns: 24px minmax(0, 1fr); padding-left: 20px; }
+  .onb__steps .steps__item::before { bottom: calc(var(--sp-3) * -1 + 2px); }
+  .onb__lcd { order: 3; flex: 1 1 100%; font-size: 17px; }
+  .rearmini { gap: var(--sp-5); padding: var(--sp-4); }
+  .rearmini__grp > span { gap: 10px; }
+  .rearmini__grp i { width: 26px; height: 26px; }
+  .rearmini__grp i::after { inset: 8px; }
+  .rearmini__grp b:last-child { word-spacing: 12px; }
+  .tune { padding: var(--sp-4); }
+  .tune__big { font-size: 48px; }
+  .onb__form { grid-template-columns: minmax(0, 1fr); }
+  .help { grid-template-columns: minmax(0, 1fr); }
+  .help > * + *, .help > :nth-child(4) { box-shadow: inset 0 1px 0 var(--lo-line), inset 0 2px 0 var(--hi-line); }
+  .help > * { padding: var(--sp-4); }
+  .onb__nav .key--quiet { order: 3; flex-basis: 100%; }
+}
+/* Orbit 의 라틴 M 은 Ⅲ 처럼 읽혀서 모델명만 각인 서체로 */

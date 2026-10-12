@@ -1,0 +1,85 @@
+/* steps — 「발행 절차」: 가로 통심선(일점쇄선) 위 원형 그리드 기호(1 2 3 …)
+   완료 = 잉크 면 원 · 현재 = 2px 잉크 원(구름·△ 없음) · 미완 = 파선 원
+   ol.steps > li.steps__item[data-state="done|current|todo"] (current 에 aria-current="step") */
+.steps {
+  --node: 36px;
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  counter-reset: step;
+  min-width: 0;
+}
+.steps__item { position: relative; display: grid; justify-items: start; gap: var(--space-2); padding-right: var(--space-3); min-width: 0; counter-increment: step; }
+/* 통심선: 노드 중심을 잇는 일점쇄선 */
+.steps__item::before {
+  content: "";
+  position: absolute;
+  top: calc(var(--node) / 2);
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: repeating-linear-gradient(to right, var(--line-mid) 0 18px, transparent 18px 22px, var(--line-mid) 22px 24px, transparent 24px 28px);
+}
+.steps__item:last-child::before { right: auto; width: calc(var(--node) / 2); }
+.steps__item[data-state="done"]::before { background: var(--ink); height: 2px; margin-top: -.5px; }
+.steps__node {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: var(--node);
+  height: var(--node);
+  border: var(--stroke-fine) dashed var(--line-control);
+  border-radius: var(--radius-round);
+  background: var(--paper-sheet);
+  font-family: var(--type-mono);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--ink-2);
+  transition: background-color var(--dur-base) var(--ease-plot), color var(--dur-base) var(--ease-plot);
+}
+.steps__node::before { content: counter(step); }
+.steps__item[data-state="done"] .steps__node { border: var(--rule-ink); background: var(--ink); color: var(--on-ink); }
+.steps__item[data-state="current"] .steps__node { border: var(--stroke-bold) solid var(--ink); color: var(--ink); }
+.steps__label { font-size: var(--fs-small); font-weight: 600; line-height: 1.4; color: var(--ink); }
+.steps__item[data-state="todo"] .steps__label { color: var(--ink-2); font-weight: 500; }
+.steps__meta { font-size: var(--fs-small); color: var(--ink-2); line-height: 1.4; }
+.steps__meta .mono { font-size: 12px; }
+.steps__item[data-state="error"] .steps__node { border: var(--stroke-bold) solid var(--redline); color: var(--redline); }
+.steps__item[data-state="error"] .steps__label { color: var(--redline); }
+
+/* 단계 버튼형(온보딩에서 이전 단계로 돌아가기) */
+.steps__btn { display: grid; justify-items: start; gap: var(--space-2); text-align: left; min-height: var(--touch); }
+.steps__btn:hover .steps__node { box-shadow: 0 0 0 3px var(--paper-sheet), 0 0 0 4px var(--ink); }
+.steps__btn:focus-visible { outline-offset: 4px; }
+.steps__btn:disabled { cursor: default; }
+.steps__btn:disabled:hover .steps__node { box-shadow: none; }
+
+/* 세로형(모바일 기본 · .steps--v) */
+.steps--v { grid-auto-flow: row; grid-auto-rows: auto; gap: 0; }
+.steps--v .steps__item { grid-template-columns: var(--node) minmax(0, 1fr); column-gap: var(--space-3); row-gap: 0; padding: 0 0 var(--space-4); }
+.steps--v .steps__item::before { top: 0; bottom: 0; left: calc(var(--node) / 2); right: auto; width: 1px; height: auto; background: repeating-linear-gradient(to bottom, var(--line-mid) 0 18px, transparent 18px 22px, var(--line-mid) 22px 24px, transparent 24px 28px); }
+.steps--v .steps__item[data-state="done"]::before { width: 2px; margin-left: -.5px; margin-top: 0; background: var(--ink); }
+.steps--v .steps__item:last-child::before { display: none; }
+.steps--v .steps__node { grid-row: 1 / span 2; }
+.steps--v .steps__label { padding-top: 7px; }
+.steps--v .steps__btn { grid-template-columns: var(--node) minmax(0, 1fr); column-gap: var(--space-3); }
+@media (max-width: 599px) {
+  .steps:not(.steps--keep) { grid-auto-flow: row; grid-auto-rows: auto; }
+  .steps:not(.steps--keep) .steps__item { grid-template-columns: var(--node) minmax(0, 1fr); column-gap: var(--space-3); row-gap: 0; padding: 0 0 var(--space-4); }
+  .steps:not(.steps--keep) .steps__item::before { top: 0; bottom: 0; left: calc(var(--node) / 2); right: auto; width: 1px; height: auto; background: repeating-linear-gradient(to bottom, var(--line-mid) 0 18px, transparent 18px 22px, var(--line-mid) 22px 24px, transparent 24px 28px); }
+  .steps:not(.steps--keep) .steps__item[data-state="done"]::before { width: 2px; margin-left: -.5px; margin-top: 0; background: var(--ink); }
+  .steps:not(.steps--keep) .steps__item:last-child::before { display: none; }
+  .steps:not(.steps--keep) .steps__node { grid-row: 1 / span 2; }
+  .steps:not(.steps--keep) .steps__label { padding-top: 7px; }
+}
+
+/* 버튼형 단계의 세로 배치 */
+.steps--v .steps__item > .steps__btn { grid-column: 1 / -1; grid-template-columns: var(--node) minmax(0, 1fr); column-gap: var(--space-3); row-gap: 0; }
+.steps--v .steps__btn .steps__node { grid-row: 1 / span 2; }
+@media (max-width: 599px) {
+  .steps:not(.steps--keep) .steps__item > .steps__btn { grid-column: 1 / -1; grid-template-columns: var(--node) minmax(0, 1fr); column-gap: var(--space-3); row-gap: 0; }
+  .steps:not(.steps--keep) .steps__btn .steps__node { grid-row: 1 / span 2; }
+  .steps:not(.steps--keep) .steps__btn .steps__label { padding-top: 7px; }
+}

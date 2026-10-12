@@ -1,0 +1,143 @@
+/* command — ⌘K = 「편집장 호출」. 스플래시 컷 모달 + 맨 위 입력은 외침 풍선 모양.
+   결과는 role="listbox" / "option". .cmdk--static = 열린 상태 정적 견본 */
+
+.cmdk {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  justify-items: center;
+  align-items: start;
+  padding: 10vh var(--sp-4) var(--sp-4);
+}
+.cmdk__scrim {
+  position: absolute;
+  inset: 0;
+  background-color: transparent;
+  background-image:
+    radial-gradient(circle, var(--scrim-dot) var(--dot-40), transparent calc(var(--dot-40) + .5px)),
+    radial-gradient(circle, var(--scrim-dot) var(--dot-40), transparent calc(var(--dot-40) + .5px));
+  background-size: var(--dot-pitch-40) var(--dot-pitch-40);
+  background-position: 0 0, calc(var(--dot-pitch-40) / 2) calc(var(--dot-pitch-40) / 2);
+}
+.cmdk__panel {
+  position: relative;
+  width: min(640px, 100%);
+  max-height: 78vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-raised);
+  color: var(--text);
+  border: var(--line-w-heavy) solid var(--line);
+  transform-origin: 50% 0;
+}
+.cmdk.is-open .cmdk__panel { animation: kw-splash var(--dur-splash) var(--ease-pop); }
+.cmdk__cap { align-self: flex-start; margin: calc(var(--line-w-heavy) * -1) 0 0 calc(var(--line-w-heavy) * -1); display: inline-flex; align-items: center; gap: var(--sp-2); }
+.cmdk__cap kbd { border-color: var(--on-caption); }
+
+/* 외침 풍선 입력 */
+.cmdk__shout {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin: var(--sp-4) var(--sp-4) var(--sp-2);
+  --spike: 12px;
+  padding: 24px 34px 26px;
+  isolation: isolate;
+  color: var(--on-balloon);
+}
+.cmdk__shout::before, .cmdk__shout::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  clip-path: polygon(0 0, 8% var(--spike), 16% 2px, 25% var(--spike), 34% 0, 43% calc(var(--spike) - 1px), 52% 1px, 61% var(--spike), 70% 0, 79% calc(var(--spike) - 1px), 88% 2px, calc(100% - var(--spike) - 2px) calc(var(--spike) + 2px), 100% 6px, calc(100% - var(--spike)) 34%, 100% 50%, calc(100% - var(--spike) + 1px) 66%, 100% 92%, calc(100% - var(--spike) - 6px) calc(100% - var(--spike) + 2px), 88% 100%, 78% calc(100% - var(--spike) + 1px), 67% 100%, 57% calc(100% - var(--spike)), 46% 100%, 36% calc(100% - var(--spike) + 1px), 25% calc(100% - 1px), 15% calc(100% - var(--spike)), 5% 100%, var(--spike) calc(100% - var(--spike) - 4px), 0 72%, var(--spike) 56%, 1px 40%, calc(var(--spike) - 1px) 26%);
+}
+.cmdk__shout::before { inset: 0; background: var(--balloon-line); }
+.cmdk__shout::after { inset: 5px 7px; background: var(--balloon); }
+.cmdk__shout:focus-within::after { background: var(--caption); }
+.cmdk__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: var(--hit);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: var(--on-balloon);
+  font-weight: 800;
+  font-size: 18px;
+}
+.cmdk__input::placeholder { color: var(--text-muted); opacity: 1; }
+.cmdk__input:focus-visible { outline: none; box-shadow: none; }
+
+.cmdk__list { flex: 1 1 auto; overflow-y: auto; padding: var(--sp-2) var(--sp-4) var(--sp-3); overscroll-behavior: contain; }
+.cmdk__group {
+  margin: var(--sp-3) 0 var(--sp-2);
+  font-size: var(--fs-tiny);
+  font-weight: 800;
+  color: var(--text-muted);
+}
+.cmdk__group:first-child { margin-top: var(--sp-1); }
+.cmdk__item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: var(--hit);
+  padding: 6px 10px;
+  border: var(--line-w) solid transparent;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.35;
+  cursor: pointer;
+}
+.cmdk__item + .cmdk__item { margin-top: 4px; }
+.cmdk__item .icon { color: var(--text-muted); }
+.cmdk__id { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--text-muted); flex: none; min-width: 6.5em; letter-spacing: 0; }
+.cmdk__label { flex: 1 1 auto; min-width: 0; }
+.cmdk__hint { flex: none; font-size: var(--fs-tiny); color: var(--text-muted); }
+.cmdk__item[aria-selected="true"] {
+  background: var(--caption);
+  color: var(--on-caption);
+  border-color: var(--line);
+}
+.cmdk__item[aria-selected="true"] .cmdk__id, .cmdk__item[aria-selected="true"] .cmdk__hint, .cmdk__item[aria-selected="true"] .icon { color: var(--on-caption); }
+.cmdk__item[aria-disabled="true"] { color: var(--text-muted); border-style: dashed; border-color: var(--draft); cursor: not-allowed; }
+.cmdk__empty { padding: var(--sp-5) var(--sp-4); }
+.cmdk__foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  border-top: var(--line-w) solid var(--line);
+  font-size: var(--fs-tiny);
+  color: var(--text-muted);
+}
+.cmdk__foot kbd { margin-right: 4px; }
+
+/* 정적 견본 */
+.cmdk--static { position: relative; inset: auto; z-index: auto; padding: 0; display: block; }
+.cmdk--static .cmdk__panel { width: 100%; max-height: none; animation: none; }
+
+@keyframes kw-splash {
+  0% { transform: scale(.6); }
+  60% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+@media (max-width: 719px) {
+  .cmdk { padding: var(--sp-4) var(--sp-3); }
+  .cmdk__shout { padding: 18px 28px 20px; margin-inline: var(--sp-2); }
+  .cmdk__hint { display: none; }
+  /* 좁은 폭: 원고 행은 2단 — 위 = ID(모노) + 공정 배지, 아래 = 작품명 전체 폭 한 줄 */
+  .cmdk__id { min-width: 0; font-size: 11px; }
+  .cmdk__item:has(> .cmdk__id) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "id tag" "label label";
+    gap: 2px var(--sp-2);
+    padding: 7px 10px 8px;
+  }
+  .cmdk__item:has(> .cmdk__id) > .cmdk__id { grid-area: id; }
+  .cmdk__item:has(> .cmdk__id) > .badge { grid-area: tag; justify-self: end; }
+  .cmdk__item:has(> .cmdk__id) > .cmdk__label { grid-area: label; }
+  .cmdk__label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}

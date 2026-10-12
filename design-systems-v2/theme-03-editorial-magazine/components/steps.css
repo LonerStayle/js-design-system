@@ -1,0 +1,92 @@
+/* steps — 「인쇄 일정」: 기획 → 취재 → 원고 → 교정 → 조판 → 인쇄 넘김, 단계 아래 날짜.
+   완료 = 먹 3px 윗선 + 체크, 현재 = 먹 반전 칸 + D-day, 예정 = 헤어라인. 모바일은 세로. */
+
+.steps {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 3px;
+  margin: 0; padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+.steps__item {
+  position: relative;
+  display: flex; flex-direction: column; gap: 4px;
+  min-width: 0;
+  padding: 12px 12px 12px 0;
+  border-top: var(--w-hair) solid var(--rule-strong);
+  color: var(--text);
+}
+.steps__no {
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: .06em;
+  color: var(--text-2);
+  font-feature-settings: "tnum" 1, "halt" 1;
+}
+.steps__label { font: 700 16px/1.3 var(--font-ui); font-feature-settings: "halt" 1; }
+.steps__date { font: 400 13px/1.4 var(--font-ui); color: var(--text-2); font-feature-settings: "tnum" 1, "halt" 1; }
+.steps__flag {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 3px 6px;
+  font: 500 11px/1 var(--font-mono); font-feature-settings: "halt" 1;
+  letter-spacing: .04em;
+  background: var(--spot-fill); color: var(--on-spot-fill);
+}
+.steps__item--done { border-top: var(--w-heavy) solid var(--rule-strong); padding-top: 10px; }
+.steps__item--done .steps__no::after { content: " ✓"; color: var(--text); font-family: var(--font-ui); font-weight: 700; }
+.steps__item[aria-current="step"] {
+  border-top: var(--w-heavy) solid var(--spot);
+  padding: 10px 12px 12px;
+  background: var(--invert-bg);
+  color: var(--invert-fg);
+}
+.steps__item[aria-current="step"] .steps__no,
+.steps__item[aria-current="step"] .steps__date { color: var(--invert-fg); }
+.steps__item--todo .steps__label { color: var(--text-2); font-weight: 600; }
+.steps__item--late { border-top-color: var(--warning); }
+.steps__item--late .steps__date { color: var(--warning); font-weight: 600; }
+a.steps__item:hover .steps__label, button.steps__item:hover .steps__label { text-decoration: underline 2px var(--spot); text-underline-offset: 4px; }
+
+/* 쪽 진행형 (온보딩 p.01 / 03) */
+.steps--pages .steps__item { padding: 10px 10px 10px 0; }
+.steps--pages .steps__item[aria-current="step"] { padding-left: 10px; }   /* 먹 반전 칸 안에서 글자가 왼끝에 붙지 않게 */
+.steps--pages .steps__label { font-size: 14px; }
+/* 현재 단계(먹 반전 칸) 바로 뒤 단계가 반전 블록에 틈 없이 붙지 않게 */
+@media (min-width: 768px) {
+  .steps__item[aria-current="step"] + .steps__item { padding-left: 12px; }
+  .steps--pages .steps__item[aria-current="step"] + .steps__item { padding-left: 10px; }
+}
+.steps__count { font: 500 13px/1 var(--font-mono); letter-spacing: .04em; font-feature-settings: "tnum" 1, "halt" 1; color: var(--text-2); }
+.steps__count b { color: var(--text); font-weight: 500; }
+
+@media (max-width: 767px) {
+  .steps { grid-auto-flow: row; grid-auto-columns: auto; gap: 0; }
+  .steps__item {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 2px 10px;
+    padding: 12px 10px;
+    border-top: var(--w-hair) solid var(--rule);
+  }
+  .steps__item--done { border-top: var(--w-hair) solid var(--rule); padding: 12px 10px; }
+  .steps__item[aria-current="step"] { padding: 12px 10px; border-top: 0; box-shadow: inset 3px 0 0 var(--spot); }
+  .steps__date { grid-column: 2; }
+  .steps__flag { grid-column: 3; grid-row: 1; margin: 0; }
+  .steps--pages { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 3px; }
+  .steps--pages .steps__item { display: flex; border-top: var(--w-heavy) solid var(--rule); padding: 8px 0 0; box-shadow: none; background: none; color: var(--text); }
+  .steps--pages .steps__item--done { border-top-color: var(--rule-strong); }
+  .steps--pages .steps__item[aria-current="step"] { border-top-color: var(--spot); }
+  .steps--pages .steps__item[aria-current="step"] .steps__no { color: var(--text); }   /* 주홍 면(.scope-cover) 안에서도 보이게 — 현재 칸 표시는 위 주홍 룰이 맡는다 */
+  .steps--pages .steps__label { font-size: 13px; }
+}
+
+/* 상태 보강 — 멈춤(오류: 인쇄소 회신 대기 등) · 눌림 */
+.steps__item--error { border-top-color: var(--danger); }
+.steps__item--error .steps__label,
+.steps__item--error .steps__date { color: var(--danger); }
+.steps__item--error .steps__no::after { content: " !"; color: var(--danger); font-family: var(--font-ui); font-weight: 700; }
+a.steps__item:active .steps__label, button.steps__item:active .steps__label { color: var(--spot-text); }
+a.steps__item:focus-visible, button.steps__item:focus-visible { outline-offset: -2px; }

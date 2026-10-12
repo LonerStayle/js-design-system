@@ -1,0 +1,122 @@
+/* kanban — 「마감 보드」 6열: 기획 · 취재 · 원고 · 교정 · 조판 · 인쇄 넘김
+   카드 = 기사 ID + 제목 + 쪽 범위 + 필자. 마감 임박은 황토 사각. 드래그 중 = 먹 반전.
+   키보드 대안: 카드의 "단계 이동" 버튼 → 메뉴. */
+
+.board {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(232px, 1fr);
+  gap: 0;
+  overflow-x: auto;
+  border-top: var(--w-heavy) solid var(--rule-strong);
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+.board.is-scrollable:not(.at-end) {
+  -webkit-mask-image: linear-gradient(90deg, var(--text) calc(100% - 56px), transparent);
+  mask-image: linear-gradient(90deg, var(--text) calc(100% - 56px), transparent);
+}
+.board__col {
+  display: flex; flex-direction: column;
+  min-width: 0;
+  padding: 0 12px 16px;
+  border-left: var(--w-hair) solid var(--rule);
+  scroll-snap-align: start;
+  transition: background-color var(--dur-fast) ease;
+}
+.board__col:first-child { border-left: 0; padding-left: 0; }
+.board__col.is-over { background: var(--surface); box-shadow: inset 0 3px 0 var(--spot); }
+.board__head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  padding: 12px 0 10px;
+  margin-bottom: 10px;
+  border-bottom: var(--w-hair) solid var(--rule-strong);
+}
+.board__title { font: 700 16px/1.3 var(--font-ui); font-feature-settings: "halt" 1; }
+.board__no { font: 500 11px/1 var(--font-mono); font-feature-settings: "halt" 1; color: var(--text-2); margin-right: 6px; letter-spacing: .04em; }
+.board__count { font: 500 12px/1 var(--font-ui); letter-spacing: 0; color: var(--text-2); font-feature-settings: "tnum" 1, "halt" 1; }   /* "2건" — 한글이 섞여 고딕 */
+.board__list { display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 80px; margin: 0; padding: 0; list-style: none; }
+.board__card {
+  position: relative;
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 10px 12px 10px;
+  background: var(--layer);
+  border: var(--w-hair) solid var(--rule-strong);
+  cursor: grab;
+  transition: background-color var(--dur-fast) ease;
+}
+.board__card:hover { background: var(--hover-wash); }
+.board__card:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.board__card.is-dragging,
+.board__card[aria-grabbed="true"] {
+  background: var(--invert-bg); color: var(--invert-fg);
+  border-color: var(--invert-bg);
+  cursor: grabbing;
+}
+.board__card.is-dragging .board__id,
+.board__card.is-dragging .board__meta { color: var(--invert-fg); }
+.board__card.is-ghost { opacity: .35; border-style: dashed; }
+.board__id {
+  display: flex; justify-content: space-between; gap: 8px;
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: .03em;
+  color: var(--text-2);
+  font-feature-settings: "lnum" 1, "tnum" 1, "halt" 1;
+}
+.board__card-title { font: 700 15px/1.4 var(--font-ui); font-feature-settings: "halt" 1; letter-spacing: -0.005em; }
+.board__meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px; font: 400 13px/1.35 var(--font-ui); font-feature-settings: "halt" 1; color: var(--text-2); }
+.board__due { display: inline-flex; align-items: center; gap: 6px; font: 600 12px/1.3 var(--font-ui); font-feature-settings: "halt" 1; color: var(--warning); }
+.board__due::before { content: ""; width: 6px; height: 6px; background: var(--warning); flex: none; }
+.board__card--due { box-shadow: inset 3px 0 0 var(--warning); }
+.board__card--done .board__card-title { color: var(--text-2); }
+.board__move {
+  align-self: flex-start;
+  min-height: 32px;
+  padding: 0 8px;
+  margin: 2px 0 0 -8px;
+  font: 500 12px/1 var(--font-ui); font-feature-settings: "halt" 1;
+  color: var(--text-2);
+  position: relative;
+}
+.board__move::after { content: ""; position: absolute; inset: -6px 0; }
+.board__move:hover { color: var(--text); background: var(--surface); }
+.board__card.is-dragging .board__move { color: var(--invert-fg); }
+.board__empty {
+  padding: 18px 10px;
+  border: 1px dashed var(--rule);
+  font: 400 13px/1.5 var(--font-ui); font-feature-settings: "halt" 1;
+  color: var(--text-2);
+  text-align: left;
+}
+.board__add { margin-top: 10px; }
+.board--mini { grid-auto-columns: minmax(180px, 1fr); }
+@media (max-width: 767px) {
+  /* 미니 보드는 좁은 화면에서 가로로 잘리지 않게 열 머리 + 카드를 세로로 쌓는다(마감 보드 페이지와 같은 처리) */
+  .board--mini { display: block; overflow: visible; border-top: 0; -webkit-mask-image: none; mask-image: none; }
+  .board--mini .board__col { padding: 0 0 var(--sp-4); border-left: 0; border-top: var(--w-heavy) solid var(--rule-strong); }
+  .board--mini .board__col:first-child { padding-left: 0; }
+  .board--mini .board__list { min-height: 0; }
+}
+@media (max-width: 767px) {
+  .board { grid-auto-columns: minmax(78vw, 1fr); }
+}
+
+@media (max-width: 767px), (pointer: coarse) {   /* 터치: 단계 이동 44px */
+  .board__move { min-height: var(--tap); margin-top: 0; }
+  .board__move::after { inset: 0; }
+}
+
+/* 상태 보강 — 눌림 · 잠긴 카드(인쇄 넘김 뒤 이동 불가) · 놓을 수 없는 열 · 옮기는 중 */
+.board__card:active { background: var(--surface-2); }
+.board__card[aria-disabled="true"] {
+  cursor: not-allowed;
+  border-style: dashed;
+  border-color: var(--text-3);
+  background: transparent;
+}
+.board__card[aria-disabled="true"] .board__card-title { color: var(--text-2); }
+.board__col.is-blocked { box-shadow: inset 0 3px 0 var(--danger); }
+.board__col.is-blocked .board__list { outline: 1px dashed var(--danger); outline-offset: -1px; }
+.board__card[aria-busy="true"] { cursor: progress; border-style: dashed; }
+.board__move:active { background: var(--surface-2); }
+.board__move:focus-visible { outline-offset: -2px; }

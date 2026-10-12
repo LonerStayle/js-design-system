@@ -1,0 +1,155 @@
+/* kanban — 포스트잇 보드
+   열 = 색 다른 포스트잇 묶음 머리(테이프) · 카드 = 정사각 포스트잇(상단 접착부 진한 띠)
+   드래그 중 +4° 들림 · 놓으면 붙이기 · 키보드: Space 집기 → ←→↑↓ 이동 → Space 놓기 */
+
+.kanban {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(250px, 1fr);
+  gap: 24px;
+  overflow-x: auto;
+  padding: 20px 4px 24px;
+  scroll-snap-type: x proximity;
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent);
+}
+.kanban.is-end { -webkit-mask-image: none; mask-image: none; }
+
+.kanban__col {
+  --kc: var(--st-lemon);
+  --kt: var(--tape-lemon);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  scroll-snap-align: start;
+}
+.kanban__col:nth-child(5n+2) { --kc: var(--st-strawberry); --kt: var(--tape-strawberry); }
+.kanban__col:nth-child(5n+3) { --kc: var(--st-sky); --kt: var(--tape-sky); }
+.kanban__col:nth-child(5n+4) { --kc: var(--st-mint); --kt: var(--tape-mint); }
+.kanban__col:nth-child(5n+5) { --kc: var(--st-lavender); --kt: var(--tape-lavender); }
+
+.kanban__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: var(--tape-h-wide);
+  padding: 2px 18px 0;
+  background-color: color-mix(in srgb, var(--kt) var(--tape-alpha), transparent);
+  background-image: repeating-linear-gradient(-45deg, color-mix(in srgb, var(--kc) 75%, transparent) 0 6px, transparent 6px 12px);
+  clip-path: var(--zigzag);
+  --tooth: 7px;
+  mix-blend-mode: var(--tape-blend);
+  rotate: calc(-1deg * var(--tilt-k));
+}
+.kanban__col:nth-child(even) .kanban__head { rotate: calc(1.5deg * var(--tilt-k)); }
+.kanban__title { font-family: var(--font-hand); letter-spacing: var(--hand-tracking); word-spacing: var(--hand-word); font-weight: 700; font-size: 22px; line-height: 1.2; color: var(--on-tape); }
+.kanban__count { font-family: 'Mochiy Pop One', var(--font-num); font-size: 13px; color: var(--on-tape); }
+
+.kanban__list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 160px;
+  padding: 12px 8px 20px;
+  border-radius: 8px;
+  transition: background-color var(--dur-peel), box-shadow var(--dur-peel);
+}
+.kanban__list.is-over {
+  background: color-mix(in srgb, var(--kc) 22%, transparent);
+  box-shadow: inset 0 0 0 2px var(--kc);
+  outline: 2px dashed var(--ink-soft);
+  outline-offset: -8px;
+}
+
+/* 포스트잇 */
+.postit {
+  --pf: var(--kc, var(--st-lemon));
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 150px;
+  padding: 26px 16px 14px;
+  background: var(--pf);
+  color: var(--on-sticker);
+  border-radius: 1px 1px 3px 14px / 1px 1px 3px 6px;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--shadow-c) 40%, transparent), 0 12px 16px -12px var(--shadow-c);
+  rotate: calc(var(--tilt, 0deg) * var(--tilt-k));
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  transition: rotate var(--dur-peel) var(--ease-peel), translate var(--dur-peel) var(--ease-peel), box-shadow var(--dur-peel);
+}
+.postit::before {               /* 상단 접착부 — 진한 띠 */
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 18px;
+  background: color-mix(in srgb, var(--pf) 82%, var(--ink));
+  opacity: .32;
+}
+.kanban__list > .postit:nth-child(4n+1) { --tilt: -2deg; }
+.kanban__list > .postit:nth-child(4n+2) { --tilt: 1.5deg; }
+.kanban__list > .postit:nth-child(4n+3) { --tilt: -1deg; }
+.kanban__list > .postit:nth-child(4n+4) { --tilt: 2.5deg; }
+.postit--strawberry { --pf: var(--st-strawberry); }
+.postit--mint { --pf: var(--st-mint); }
+.postit--lemon { --pf: var(--st-lemon); }
+.postit--sky { --pf: var(--st-sky); }
+.postit--lavender { --pf: var(--st-lavender); }
+.postit--peach { --pf: var(--st-peach); }
+
+.postit__id { font-family: var(--font-mono); font-size: 12px; opacity: .85; }
+.postit__title { font-family: var(--font-display-ko); font-weight: 700; font-size: 28px; line-height: 1; }
+.postit__title .num { font-size: .6em; }
+.postit__note { font-size: 14px; line-height: 1.55; }
+.postit__foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 6px; }
+.postit__due { font-family: var(--font-hand); letter-spacing: var(--hand-tracking-sm); word-spacing: var(--hand-word); font-weight: 700; font-size: 18px; }
+.postit__due--late { text-decoration: underline wavy var(--cherry-ink) 2px; text-underline-offset: 4px; }
+.postit .avatar { --av: 32px; border-width: 2px; }
+.postit .badge { --bdf: var(--paper-raised); --bdfg: var(--ink); }
+
+@media (hover: hover) {
+  .postit:hover { translate: 0 -3px; box-shadow: 0 1px 0 color-mix(in srgb, var(--shadow-c) 40%, transparent), 0 18px 20px -12px var(--shadow-c); }
+}
+.postit:focus-visible { outline: 3px dashed var(--focus); outline-offset: 4px; border-radius: 4px; }
+
+/* 들림(드래그 중 / 키보드로 집음) */
+.postit.is-dragging,
+.postit[aria-pressed="true"],
+.postit.is-lifted {
+  rotate: 4deg;
+  translate: 0 -8px;
+  scale: 1.03;
+  cursor: grabbing;
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--shadow-c) 30%, transparent), 0 30px 34px -16px var(--shadow-c);
+  z-index: 5;
+}
+.postit.is-dragging { opacity: .9; }
+.postit.is-ghost { opacity: .25; }
+.postit.is-dropped { animation: pk-stick var(--dur-stick) var(--ease-stick); }
+.postit[aria-disabled="true"] { cursor: not-allowed; opacity: .6; }
+
+.kanban__add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 52px;
+  border: 2px dashed color-mix(in srgb, var(--ink-faint) 70%, transparent);
+  border-radius: 6px;
+  font-family: var(--font-hand); letter-spacing: var(--hand-tracking-sm); word-spacing: var(--hand-word);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--ink-soft);
+  transition: background-color var(--dur-peel), color var(--dur-peel);
+}
+.kanban__add:hover { background: var(--marker-soft); color: var(--ink); }
+
+.kanban__live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+@media (max-width: 480px) {
+  .kanban { grid-auto-columns: 82%; gap: 16px; }
+}

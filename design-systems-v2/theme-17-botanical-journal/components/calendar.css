@@ -1,0 +1,123 @@
+/* calendar — 채집 달력: 월 그리드 괘선
+   오늘 = aria-current="date" (녹 사각, 밤에는 작업등) · 선택 = aria-pressed="true" · 행사일 = 지역색 점 + 툴팁
+   휴관(일·월) = .is-closed 사선 해치 · 달 밖 = .is-out · 지난날 = .is-past · 비활성 = disabled
+   ←→↑↓ 로 날짜 이동, Enter/Space 선택(app.js). 마크업은 COMPONENTS.md. */
+
+.cal { min-width: 0; }
+.cal__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+.cal__title { font-family: var(--font-name); font-size: 24px; font-weight: 400; line-height: 1.2; }
+.cal__title :is(.id, .fig) { font-family: var(--font-figure); font-variant-numeric: lining-nums; font-size: 24px; }
+.cal__nav { display: flex; gap: 4px; }
+.cal__grid { width: 100%; table-layout: fixed; border-top: 1px solid var(--ink); }
+.cal__grid th {
+  padding: 8px 0 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-2);
+  text-align: center;
+  border-bottom: 1px solid var(--ink);
+}
+.cal__grid th:first-child { color: var(--stamp); }
+.cal__grid td {
+  position: relative;
+  height: 52px;
+  padding: 0;
+  text-align: center;
+  vertical-align: top;
+  border-bottom: 1px solid var(--hairline);
+  border-right: 1px solid var(--hairline);
+}
+.cal__grid td:last-child { border-right: 0; }
+.cal__grid .tip-wrap { display: block; width: 100%; height: 100%; }
+.cal__day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 3px;
+  width: 100%;
+  height: 100%;
+  min-height: var(--touch);
+  padding-top: 7px;
+  font-family: var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color var(--dur-press) ease;
+}
+.cal__day:hover { background: var(--sap-tint); }
+.cal__day:focus-visible { outline: 2px solid var(--focus); outline-offset: -3px; }
+.cal__day.is-sun { color: var(--stamp); }
+.cal__day.is-out, td.is-out { color: var(--ink-3); cursor: default; }
+.cal__day.is-past { color: var(--ink-2); }
+/* 휴관: 사선 해치 */
+.cal__day.is-closed {
+  background: repeating-linear-gradient(135deg, transparent 0 5px, var(--hairline) 5px 6px);
+  color: var(--ink-2);
+}
+.cal__day.is-closed:hover { background: repeating-linear-gradient(135deg, var(--sap-tint) 0 5px, var(--hairline) 5px 6px); }
+/* 오늘 */
+.cal__day[aria-current="date"] {
+  color: var(--current-on);
+  background: var(--current);
+  font-weight: 700;
+}
+.cal__day[aria-current="date"]::after {
+  content: "오늘";
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 500;
+}
+/* 선택 */
+.cal__day[aria-pressed="true"] {
+  box-shadow: inset 0 0 0 2px var(--ink);
+  background: var(--label);
+}
+.cal__day[aria-current="date"][aria-pressed="true"] { background: var(--current); box-shadow: inset 0 0 0 2px var(--current), inset 0 0 0 4px var(--sheet); }
+.cal__day:disabled { color: var(--ink-3); cursor: not-allowed; background: none; text-decoration: line-through; }
+/* 행사 점 */
+.cal__dots { display: flex; gap: 3px; }
+.cal__dot {
+  --dot-c: var(--region-gangwon);
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-round);
+  background: var(--dot-c);
+}
+.cal__dot--warn { --dot-c: var(--warn); }
+.cal__dot--info { --dot-c: var(--info); }
+.cal__dot--stamp { --dot-c: var(--stamp); }
+.cal__dot--violet { --dot-c: var(--violet); }
+.cal__day[aria-current="date"] .cal__dot { box-shadow: 0 0 0 1.5px var(--current-on); }
+.cal__grid .tip { font-family: var(--font-ui); }
+.cal__grid td:nth-child(-n+2) .tip { left: 0; transform: none; }
+.cal__grid td:nth-child(-n+2) .tip::after { left: 18px; }
+.cal__grid td:nth-child(n+6) .tip { left: auto; right: 0; transform: none; }
+.cal__grid td:nth-child(n+6) .tip::after { left: auto; right: 18px; transform: translate(50%, 5px) rotate(225deg); }
+
+.cal__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-4);
+  margin-top: var(--sp-3);
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.cal__legend span { display: inline-flex; align-items: center; gap: 6px; }
+.cal__legend .swatch-closed { width: 14px; height: 14px; border: 1px solid var(--hairline); background: repeating-linear-gradient(135deg, transparent 0 3px, var(--rule) 3px 4px); }
+.cal__legend .swatch-today { width: 14px; height: 14px; background: var(--current); }
+
+/* 행사 목록 (달력 아래) */
+.cal__events { margin-top: var(--sp-3); border-top: 1px solid var(--ink); }
+.cal__event { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: var(--sp-3); padding: 9px 0; border-bottom: 1px solid var(--hairline); font-size: 14px; }
+.cal__event .id { font-size: 13px; }
+
+@media (max-width: 640px) {
+  .cal__grid td { height: 46px; }
+  .cal__day { font-size: 14px; padding-top: 6px; }
+  .cal__day[aria-current="date"]::after { display: none; }
+}

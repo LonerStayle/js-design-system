@@ -1,0 +1,307 @@
+/* ==========================================================================
+   dashboard — "주원네 집" 홈 보드
+   방 레일 + 12열 위젯 보드(실내·펫캠·조명 / 전기·달력·가족 / 공조·가전) → 방별 기기 + 오늘 집 기록(겹침)
+   의미 토큰만 사용
+   ========================================================================== */
+
+.dash { display: grid; gap: 28px; padding-bottom: 8px; }
+
+/* ── 머리: 집 이름 + 장면 4개 ─────────────────────────────────── */
+.dash-head {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 20px 32px;
+  flex-wrap: wrap;
+  padding: 8px 0 0 4px;
+}
+.dash-head__id { display: grid; gap: 6px; min-width: 0; }
+.dash-head__id .t-title { color: var(--text); }
+.dash-head__meta { font-size: 14px; color: var(--text); font-weight: 500; }
+.dash-head__state { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text); font-weight: 600; }
+.dash-head__state .badge--online,
+.dash-head__state .badge--offline { background: var(--glass-2); }
+
+.dash-scenes {
+  display: grid;
+  grid-template-columns: repeat(4, 172px);
+  grid-auto-rows: 64px;
+  gap: 12px;
+}
+
+/* ── 위젯 보드: 레일 옆 본문(≥1000px)에서도 12열 유지 ─────────── */
+@container (min-width: 1000px) {
+  .app__main .dash-board.board { --cols: 12; }
+}
+.dash-board { position: relative; }
+/* z1 보드 바탕 — 텍스트 없는 맑은 판(.40). 위젯(z2 .72) 사이 틈과 둘레로 장면이 비쳐 두 층이 갈린다 */
+.dash-board-wrap { position: relative; isolation: isolate; }
+.dash-board-wrap::before,
+.dash-board-wrap::after {
+  content: ""; position: absolute; inset: -14px; z-index: -1;
+  border-radius: var(--r-sheet);
+  pointer-events: none;
+}
+.dash-board-wrap::before {
+  background: var(--sheen-top), var(--glass-1-bare);
+  -webkit-backdrop-filter: blur(var(--blur-1)) saturate(180%);
+  backdrop-filter: blur(var(--blur-1)) saturate(180%);
+  box-shadow: var(--sheen), var(--rim-outer), var(--shadow-z1);
+}
+.dash-board-wrap::after {
+  padding: var(--rim-w, 1.5px);
+  background: var(--rim);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+@media (max-width: 767px) {
+  .dash-board-wrap::before, .dash-board-wrap::after { inset: -8px; border-radius: 32px; }
+}
+
+/* 실내 환경 */
+.dash-env { align-items: center; gap: 2px; }
+.dash-env .widget__head { align-self: stretch; }
+.dash-env .gauge { margin: 2px auto 0; }
+.dash-env__stats {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-self: stretch;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--hairline);
+  text-align: center;
+}
+.dash-env__stats > div { display: grid; gap: 0; min-width: 0; }
+.dash-env__stats > div + div { border-left: 1px solid var(--hairline); }
+.dash-env__stats dt { order: 2; font-family: var(--font-ko); font-size: 11.5px; font-weight: 600; color: var(--text-2); }
+.dash-env__stats dd { order: 1; font-family: var(--font-sans); font-size: 18px; font-weight: 300; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--text); }
+.dash-env__stats dd span { margin-left: 2px; font-size: 11px; font-weight: 500; letter-spacing: 0; color: var(--text-2); }
+
+/* 펫캠 — 카메라 화면을 CSS 로 그린다 (거실 · 통창 · 소파 · 콩이) */
+.dash-cam { padding: 0; justify-content: space-between; }
+.dash-cam__view {
+  --wall: color-mix(in srgb, var(--glass-solid) 86%, var(--lamp));
+  --floor: color-mix(in srgb, var(--skyline) 34%, var(--glass-solid));
+  --sofa: color-mix(in srgb, var(--skyline) 72%, var(--glass-solid));
+  --fur: var(--tile-on);
+  position: absolute; inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  background: linear-gradient(180deg, var(--wall) 0 64%, var(--floor) 64% 100%);
+}
+.dash-cam__view::after {
+  content: ""; position: absolute; inset: 0;
+  box-shadow: inset 0 0 90px -20px var(--glass-ink);
+  pointer-events: none;
+}
+.dash-cam__window {
+  position: absolute; left: 6%; top: 9%; width: 52%; height: 52%;
+  overflow: hidden;
+  border-radius: 6px;
+  background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 42%, var(--sky-low) 72%, var(--horizon) 100%);
+  box-shadow: 0 0 0 5px var(--glass-solid), 0 0 0 6px var(--hairline-strong);
+}
+.dash-cam__window::before {           /* 창틀 중간 문살 */
+  content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 5px; margin-left: -2.5px;
+  background: var(--glass-solid); z-index: 2;
+}
+.dash-cam__sun {
+  position: absolute; left: 22%; top: 58%;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--sun);
+  box-shadow: 0 0 22px 6px var(--sun-glow);
+}
+[data-theme="dark"] .dash-cam__sun { left: 74%; top: 18%; width: 12px; height: 12px; }
+.dash-cam__city {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 34%;
+  background:
+    linear-gradient(var(--skyline), var(--skyline)) 4% 100% / 9% 70% no-repeat,
+    linear-gradient(var(--skyline), var(--skyline)) 15% 100% / 7% 95% no-repeat,
+    linear-gradient(var(--skyline), var(--skyline)) 26% 100% / 11% 55% no-repeat,
+    linear-gradient(var(--skyline), var(--skyline)) 41% 100% / 6% 85% no-repeat,
+    linear-gradient(var(--skyline), var(--skyline)) 56% 100% / 10% 62% no-repeat,
+    linear-gradient(var(--skyline), var(--skyline)) 70% 100% / 8% 100% no-repeat,
+    linear-gradient(var(--skyline), var(--skyline)) 83% 100% / 12% 48% no-repeat,
+    linear-gradient(var(--skyline), var(--skyline)) 97% 100% / 7% 76% no-repeat;
+  opacity: .85;
+}
+.dash-cam__wall {                     /* 걸레받이 */
+  position: absolute; left: 0; right: 0; top: 63%; height: 1.5%;
+  background: var(--hairline-strong);
+}
+.dash-cam__lamp {
+  position: absolute; right: 9%; top: 18%; width: 3px; height: 50%;
+  background: var(--sofa);
+}
+.dash-cam__shade {
+  position: absolute; left: 50%; top: -6px; translate: -50% 0;
+  width: 34px; height: 24px;
+  border-radius: 16px 16px 4px 4px;
+  background: var(--lamp);
+  box-shadow: var(--lamp-glow), 0 0 46px 14px var(--lamp-soft);
+}
+.dash-cam__sofa {
+  position: absolute; right: 16%; top: 44%; width: 40%; height: 26%;
+  border-radius: 14px 14px 6px 6px;
+  background: var(--sofa);
+  display: flex; gap: 6%; padding: 4% 7% 0;
+}
+.dash-cam__cushion { flex: 1; height: 46%; border-radius: 8px; background: color-mix(in srgb, var(--sofa) 72%, var(--glass-solid)); }
+.dash-cam__rug {
+  position: absolute; left: 22%; right: 12%; bottom: 7%; height: 20%;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--lamp) 28%, var(--glass-solid));
+  opacity: .9;
+}
+/* 콩이 (비숑) */
+.dash-cam__dog { position: absolute; left: 39%; bottom: 13%; width: 70px; height: 56px; }
+.dash-cam__body { position: absolute; left: 14px; bottom: 0; width: 50px; height: 30px; border-radius: 50% 50% 40% 40%; background: var(--fur); box-shadow: inset -6px -4px 0 color-mix(in srgb, var(--fur) 86%, var(--skyline)); }
+.dash-cam__head { position: absolute; left: 0; top: 2px; width: 34px; height: 32px; border-radius: 50%; background: var(--fur); z-index: 2;
+  box-shadow: inset -4px -3px 0 color-mix(in srgb, var(--fur) 88%, var(--skyline));
+  background-image:
+    radial-gradient(circle at 34% 48%, var(--tile-on-text) 0 2.4px, transparent 2.8px),
+    radial-gradient(circle at 62% 48%, var(--tile-on-text) 0 2.4px, transparent 2.8px),
+    radial-gradient(circle at 48% 66%, var(--tile-on-text) 0 3px, transparent 3.4px);
+}
+.dash-cam__ear { position: absolute; left: -4px; top: 10px; width: 14px; height: 20px; border-radius: 50%; background: color-mix(in srgb, var(--fur) 90%, var(--skyline)); z-index: 1; }
+.dash-cam__ear--r { left: 24px; }
+.dash-cam__tail { position: absolute; right: 0; top: 12px; width: 16px; height: 16px; border-radius: 50%; background: var(--fur); }
+.dash-cam__box {
+  position: absolute; left: calc(39% - 12px); bottom: calc(13% - 8px);
+  width: 96px; height: 78px;
+  border: 1.5px dashed var(--lamp);
+  border-radius: 8px;
+}
+.dash-cam__box span {
+  position: absolute; left: -1.5px; top: -24px;
+  padding: 2px 8px; border-radius: 6px;
+  font-family: var(--font-ko); font-size: 11px; font-weight: 700; white-space: nowrap;
+  background: var(--lamp); color: var(--tile-on-lamp);
+}
+.dash-cam__top, .dash-cam__bottom {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 12px;
+}
+.dash-cam__chip, .dash-cam__cap, .dash-cam__stamp {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: var(--r-pill);
+  background: var(--glass-ink); color: var(--on-glass-ink);
+  -webkit-backdrop-filter: blur(var(--blur-1)); backdrop-filter: blur(var(--blur-1));
+  font-family: var(--font-ko); font-size: 12.5px; font-weight: 600;
+}
+.dash-cam__cap { display: grid; gap: 0; padding: 8px 14px; border-radius: 16px; }
+.dash-cam__cap strong { font-size: 14px; font-weight: 700; }
+.dash-cam__cap span { font-size: 12px; font-weight: 500; color: var(--on-glass-ink-2); font-variant-numeric: tabular-nums; }
+.dash-cam__stamp { font-family: var(--font-mono); font-weight: 400; font-size: 11.5px; letter-spacing: .02em; align-self: flex-end; }
+
+/* 조명 위젯 — 세로 슬라이더 2 + 토글 3 */
+.dash-lights { gap: 10px; }
+.dash-lights__count { font-size: 12.5px; font-weight: 600; color: var(--lamp-ink); font-variant-numeric: tabular-nums; }
+.dash-lights__body {
+  flex: 1; min-height: 0;
+  display: grid;
+  grid-template-columns: 64px 64px minmax(0, 1fr);
+  gap: 10px;
+}
+.dash-lights__slider { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 6px; min-height: 0; }
+.dash-lights__slider .vslider { min-height: 0; border-radius: 22px; }
+.dash-lights__name { text-align: center; font-family: var(--font-ko); font-size: 12px; font-weight: 600; color: var(--text-2); }
+.dash-lights__tiles { display: grid; grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 8px; min-width: 0; }
+.dash-lights__tiles .tile { padding: 6px; gap: 8px; min-height: 0; }
+.dash-lights__tiles .tile__glyph { width: 36px; height: 36px; }
+.dash-lights__tiles .tile__glyph [data-icon] { width: 19px; height: 19px; }
+
+/* 전기 */
+.dash-energy { gap: 8px; }
+.dash-energy__nums { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-top: auto; }
+.dash-energy__nums .widget__value { margin-top: 0; }
+.dash-energy__today { display: grid; justify-items: end; font-size: 12px; font-weight: 600; color: var(--text-2); font-family: var(--font-ko); }
+.dash-energy__today .tnum { font-family: var(--font-sans); font-size: 26px; font-weight: 300; letter-spacing: -.02em; color: var(--text); line-height: 1.1; }
+.dash-energy__unit { font-size: 13px; font-weight: 500; margin-left: 2px; color: var(--text-2); }
+
+/* 달력 + 다가오는 일정 */
+.dash-cal__inner { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); gap: 14px; height: 100%; }
+.dash-cal .cal { padding: 4px; }
+.dash-agenda {
+  list-style: none; padding: 0 0 0 14px; margin: 0;
+  display: flex; flex-direction: column; justify-content: space-between; gap: 4px;
+  border-left: 1px solid var(--hairline);
+}
+.dash-agenda li { display: grid; gap: 0; line-height: 1.35; }
+.dash-agenda time { font-family: var(--font-sans); font-size: 12px; font-weight: 600; color: var(--primary); font-variant-numeric: tabular-nums; }
+.dash-agenda span { font-family: var(--font-ko); font-size: 12.5px; font-weight: 500; color: var(--text); }
+.dash-agenda .is-due time { color: var(--danger); }
+
+/* 가족 */
+.dash-family { gap: 8px; }
+.dash-family__home { font-size: 12.5px; font-weight: 600; color: var(--success); }
+.dash-family__list { list-style: none; padding: 0; margin: auto 0 0; display: grid; gap: 2px; }
+.dash-family__list li {
+  display: flex; align-items: center; gap: 10px;
+  min-height: 46px; padding: 4px 4px 4px 0;
+}
+.dash-family__list li + li { border-top: 1px solid var(--hairline); }
+.dash-family__who { display: grid; min-width: 0; flex: 1; line-height: 1.35; }
+.dash-family__who strong { font-family: var(--font-ko); font-size: 14px; font-weight: 700; }
+.dash-family__who span { font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash-family__where {
+  flex-shrink: 0;
+  padding: 3px 10px; border-radius: var(--r-pill);
+  font-family: var(--font-ko); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
+  background: var(--lamp-soft); color: var(--lamp-ink);
+}
+.dash-family__where.is-home { background: var(--success-soft); color: var(--success); }
+
+/* ── 방별 기기 + 오늘 집 기록 (겹침) ─────────────────────────── */
+.dash-split {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: 16px;
+  align-items: start;
+}
+.dash-label { margin: 0 0 12px 6px; color: var(--text); }
+.dash-rooms .acc { gap: 10px; }
+.dash-more .list__title { font-weight: 600; color: var(--primary); }
+.dash-rooms .empty { margin: 0; }
+
+.dash-log {
+  display: grid; gap: 14px;
+  padding: 18px 16px 18px;
+  border-radius: var(--r-sheet);
+  margin-top: 30px;
+}
+.dash-log__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-left: 6px; }
+.dash-log__head .group-label { color: var(--text); }
+.dash-log .tl__text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash-log__meter { padding: 14px 16px; border-radius: 24px; background: var(--glass-sunken); }
+
+/* ── 반응형 ───────────────────────────────────────────────────── */
+@container (max-width: 999px) {
+  .dash-split { grid-template-columns: minmax(0, 1fr); }
+  .dash-log.overlap { translate: 0 0; margin-top: 0; }
+}
+/* 레일 옆 본문이 560–767px(뷰포트 ≈768–1100)일 때 공용 규칙은 4열 76px 로 줄어 보드 오른쪽 절반이
+   빈 하늘로 남는다 → 이 폭에서는 8열을 유지하고 셀을 컨테이너에 꽉 맞춘다 */
+@container (min-width: 560px) and (max-width: 767px) {
+  .app__main .dash-board.board { --cols: 8 !important; --gap: 12px; --cell: calc((100cqi - 7 * var(--gap)) / 8); }
+  .app__main .dash-board > .cell { grid-column: span min(var(--c, 1), 8); grid-row: span var(--r, 1); }
+  .app__main .dash-board > .dash-energy { grid-row: span 3; }   /* 셀 합 84 → 88 = 8열 × 11행, 마지막 줄 빈칸 0 */
+}
+@container (max-width: 559px) {
+  .dash-board .dash-env,
+  .dash-board .dash-lights,
+  .dash-board .dash-cam { --c: 4 !important; }
+}
+@media (max-width: 1199px) {
+  .dash-scenes { grid-template-columns: repeat(4, minmax(0, 150px)); }
+}
+@media (max-width: 767px) {
+  .dash { gap: 20px; }
+  .dash-head { padding-left: 2px; }
+  .dash-scenes { width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 60px; gap: 10px; }
+  .dash-log { padding: 14px 12px; border-radius: 32px; }
+  .dash-log .tl__text { white-space: normal; }
+}
+
+/* ── 말줄임 대신 줄바꿈: 상태·ID 줄이 잘리지 않게(팩트 값이 '…'로 사라지지 않도록) ── */
+.dash .tile__state { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.3; text-wrap: balance; }
+.dash-family__who span { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.4; }
+.dash-rooms .list__sub { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.45; }

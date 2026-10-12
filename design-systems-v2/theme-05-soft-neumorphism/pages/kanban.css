@@ -1,0 +1,204 @@
+/* ==========================================================================
+   pages/kanban.css — 「AS 수리 보드」 남궁현 · 오세린 · 강시우의 17건
+   구도: 머리(제목 · 작업자 | 판독 LCD + 랙 점유 표시등) → 증상 띠 → 풀폭 5열 파인 트랙 → 부품표 7 : 작업 기록 5
+   semantic 토큰만 사용
+   ========================================================================== */
+.shop { padding-top: var(--sp-6); }
+
+/* ── 머리: 보드 위 가로 띠 한 줄 (제목 · 작업자 · 짧은 판독) ── */
+.shop-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-3) var(--sp-6);
+  margin-bottom: var(--sp-5);
+}
+.shop-head__crew { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-5); font-size: var(--fs-sm); }
+.shop-crew { display: inline-flex; align-items: center; gap: var(--sp-2); font-weight: 600; }
+.shop-crew .t-2 { font-weight: 400; }
+.shop-head__read { margin-left: auto; }
+.shop-head__v { color: var(--ink); font-size: 15px; }
+
+/* ── 5단 공정 LED 레벨 미터 — 보드의 머리. 열과 같은 폭으로 줄 서고, 누르면 그 열로 간다 ── */
+.shop-deck { position: relative; margin-top: var(--sp-5); }
+.stage { margin-bottom: var(--sp-3); }
+.stage__keys {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(248px, 1fr));
+  gap: var(--sp-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.stage__key {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  grid-template-areas: "led name n" "leds leds leds";
+  align-items: center;
+  gap: 10px var(--sp-2);
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 16px 14px;
+  border-radius: var(--r-key);
+  background: var(--surface);
+  box-shadow: var(--sh-raised-sm);
+  text-align: left;
+  transition: box-shadow var(--dur-spring) var(--ease-spring), transform var(--dur-spring) var(--ease-spring);
+}
+.stage__key:hover { box-shadow: var(--sh-raised); }
+.stage__key:active { box-shadow: var(--sh-pressed-sm); transform: translateY(1px); transition-duration: var(--dur-press); }
+.stage__key > .led { grid-area: led; }
+.stage__name { grid-area: name; font-family: var(--font-ko); font-size: 15px; font-weight: 700; color: var(--ink); min-width: 0; }
+.stage__n { grid-area: n; font-size: 22px; line-height: 1; color: var(--ink); }
+.stage__leds {
+  grid-area: leds;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+  padding: 5px;
+  border-radius: 8px;
+  background: var(--well-floor);
+  box-shadow: var(--sh-pressed-sm);
+}
+.stage__leds i { height: 8px; border-radius: 2px; background: var(--surface); box-shadow: var(--sh-pressed-sm); transition: background-color var(--dur-led) ease-out, box-shadow var(--dur-led) ease-out; }
+.stage__key--amber .stage__leds i.is-on, .stage__key--amber > .led { background: var(--led-amber); box-shadow: var(--glow-amber); }
+.stage__key--red .stage__leds i.is-on, .stage__key--red > .led { background: var(--led-red); box-shadow: var(--glow-red); }
+.stage__key--orange .stage__leds i.is-on, .stage__key--orange > .led { background: var(--led-orange); box-shadow: var(--glow-orange); }
+.stage__key--green .stage__leds i.is-on, .stage__key--green > .led { background: var(--led-green); box-shadow: var(--glow-green); }
+/* 열 머리는 바로 위 미터 키가 대신한다 — 보드 안 머리는 화면에서 감추고 읽기 프로그램에만 남긴다 */
+.shop-board .kanban__head { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.stage__dots { display: none; }
+
+/* ── 증상 띠 ── */
+.shop-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3) var(--sp-5);
+  padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--sp-5);
+  border-radius: var(--r-module);
+  box-shadow: var(--sh-pressed-sm);
+}
+.shop-bar__sym { flex: 1 1 auto; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3); min-width: 0; }
+.shop-bar__pri { display: flex; gap: var(--sp-3); font-size: 13px; color: var(--ink-2); }
+.shop-bar__pri > span { display: inline-flex; align-items: center; gap: 6px; }
+.shop-hint { margin: var(--sp-3) 0 var(--sp-4); padding-left: 4px; }
+
+/* ── 보드 ── */
+.shop-board { border-radius: var(--r-module); }
+/* 그리드 자식이 트랙 폭(5열 × 248px)에 밀려 부모를 넓히지 않게 — 넘침은 .kanban 안에서만 스크롤 */
+.shop > *, .shop-deck, .shop-board, .kanban-wrap { min-width: 0; max-width: 100%; }
+/* 숨긴 열 머리(position:absolute)가 스크롤 상자 밖 문서를 기준으로 서서 문서 폭을 늘리지 않게 가둔다 */
+.shop-board .kanban, .shop-board .kanban__col { position: relative; }
+.shop-board .kanban { grid-auto-columns: minmax(248px, 1fr); }
+.shop-col .kanban__head { flex-wrap: wrap; }
+.shop-col__legend { font-size: 10px; }
+.kanban__note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  box-shadow: var(--sh-pressed-sm);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.kanban__card.is-locked .kanban__note { color: var(--ink-2); }
+.kanban__card.is-locked .kanban__name { color: var(--ink-2); }
+/* 부품 대기 열은 트랙을 한 단 더 깊게 — 멈춰 있는 칸 */
+.shop-col--parts { box-shadow: var(--sh-well-deep); background: var(--surface-deep); }
+
+/* ── 아래: 부품표 7 · 작업 기록 5 ── */
+.shop-lower {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: var(--sp-5);
+  align-items: start;
+  margin-top: var(--sp-7);
+}
+.shop-left { display: grid; gap: var(--sp-6); min-width: 0; }
+.shop-left > .module--cut-t { padding-inline: 0; padding-bottom: 0; }
+.shop-ship__list .list__value { font-family: var(--font-mono); font-size: 14px; white-space: nowrap; }
+.shop-ship__list .list__value small { display: inline; margin-left: 2px; }
+@media (max-width: 600px) { .shop-ship__list .list__value small { display: block; margin-left: 0; } }
+.shop-ship__list .list__sub .mono { font-size: 12px; }
+.shop-parts .table { min-width: 520px; }
+.shop-parts .table tbody th { font-size: 14px; }
+.shop-parts .table .mono { font-size: 13px; }
+.shop-log .timeline { padding-top: var(--sp-2); }
+
+/* ── 반응형 ── */
+
+@media (max-width: 960px) {
+  .shop-lower { grid-template-columns: minmax(0, 1fr); margin-top: var(--sp-6); }
+}
+
+@media (max-width: 600px) {
+  .shop { padding-top: var(--sp-5); }
+  .shop-bar { padding: var(--sp-3); }
+  .shop-bar .key--orange { flex: 1 1 100%; }
+}
+.shop-log__who { font-weight: 400; font-size: 14px; margin-left: 4px; }
+.shop-parts .table td.mono, .shop-parts .table tbody th, .shop-parts .table td { white-space: nowrap; }
+
+/* 드롭 우물: 카드가 있는 열에서는 얕은 홈으로 줄였다가, 카드를 끌거나 잡았을 때만 카드 한 장 높이로 펼친다 */
+.kanban__col:has(.kanban__card) .kanban__drop { min-height: 52px; padding-block: var(--sp-2); }
+.kanban:has(.kanban__card.is-ghost, .kanban__card.is-dragging, .kanban__card.is-grabbed) .kanban__drop,
+.kanban__col.is-over .kanban__drop { min-height: 112px; }
+
+/* ── 좁은 화면: 미터가 위에 붙는 열 키가 되고, 트랙은 한 열씩 걸리며(스냅) 오른쪽 끝이 흐려진다 ── */
+@media (max-width: 1400px) {
+  .stage__keys { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--sp-2); }
+  .stage__key { padding: 10px 12px 12px; }
+}
+@media (max-width: 960px) {
+  .shop-head__read { margin-left: 0; width: 100%; }
+}
+@media (max-width: 600px) {
+  .stage {
+    position: sticky;
+    top: calc(var(--topbar-h) + 6px);
+    z-index: 5;
+    margin-inline: -6px;
+    padding: 6px;
+    border-radius: var(--r-module);
+    background: var(--surface);
+    box-shadow: var(--sh-raised-sm);
+  }
+  .stage__keys { gap: 4px; }
+  .stage__key {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "n" "name";
+    justify-items: center;
+    gap: 2px;
+    min-height: 52px;
+    padding: 6px 2px;
+    text-align: center;
+    box-shadow: none;
+  }
+  .stage__key > .led, .stage__leds { display: none; }
+  .stage__name { font-size: 12px; font-weight: 500; line-height: 1.25; color: var(--ink-2); }
+  .stage__n { font-size: 17px; }
+  .stage__key[aria-current="true"] { box-shadow: var(--sh-pressed-sm); }
+  .stage__key[aria-current="true"] .stage__name { color: var(--ink); font-weight: 700; }
+  .stage__key[aria-current="true"] .stage__n { color: var(--text-orange); }
+
+  .shop-board .kanban {
+    grid-auto-columns: calc(100% - 48px);
+    gap: var(--sp-3);
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 4px;
+    overscroll-behavior-x: contain;
+  }
+  .shop-board .kanban__col { scroll-snap-align: start; }
+  .shop-board.is-clipped .kanban {
+    -webkit-mask: linear-gradient(90deg, var(--mask) calc(100% - 44px), transparent);
+    mask: linear-gradient(90deg, var(--mask) calc(100% - 44px), transparent);
+  }
+  .shop-board.has-scroll-hint::after { display: none; }
+  .stage__dots { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: var(--sp-2); }
+  .stage__dots .led { width: 7px; height: 7px; }
+  .stage__dots .led.is-on { background: var(--led-orange); box-shadow: var(--glow-orange); }
+  .stage__pos { font-size: 12px; color: var(--ink-2); margin-left: 6px; }
+}

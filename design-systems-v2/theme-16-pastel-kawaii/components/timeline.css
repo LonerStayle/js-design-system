@@ -1,0 +1,172 @@
+/* timeline — 하루 타임테이블
+   왼쪽 시각 열(손글씨 숫자) · 일정 = 시간 칸에 붙인 테이프 조각(높이 = 소요 시간)
+   일정 위치: style="--start:1.5; --dur:2" (시작 시각부터 몇 시간 뒤 · 몇 시간) · 겹치면 --lane:1 */
+
+.tt {
+  --hour-h: 64px;
+  --hours: 8;
+  position: relative;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  min-width: 0;
+}
+.tt__hours { display: grid; grid-auto-rows: var(--hour-h); }
+.tt__hour {
+  padding-right: 10px;
+  text-align: right;
+  font-family: var(--font-hand); letter-spacing: var(--hand-tracking-sm); word-spacing: var(--hand-word);
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--ink-soft);
+  translate: 0 -8px;
+}
+.tt__lane {
+  position: relative;
+  height: calc(var(--hour-h) * var(--hours));
+  border-left: 2px solid var(--grid-line-strong);
+  background-image: repeating-linear-gradient(transparent 0 calc(var(--hour-h) - 2px), color-mix(in srgb, var(--grid-line-strong) 90%, transparent) calc(var(--hour-h) - 2px) var(--hour-h));
+  background-position: 0 -0px;
+}
+.tt__lane::before {                 /* 30분 점선 */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(transparent 0 calc(var(--hour-h) / 2 - 1px), color-mix(in srgb, var(--grid-line) 100%, transparent) calc(var(--hour-h) / 2 - 1px) calc(var(--hour-h) / 2));
+  pointer-events: none;
+}
+
+.tt__ev {
+  --tb: var(--tape-mint);
+  --ti: var(--st-mint);
+  --lanes: 1;
+  position: absolute;
+  top: calc(var(--start, 0) * var(--hour-h) + 3px);
+  height: calc(var(--dur, 1) * var(--hour-h) - 6px);
+  left: calc(10px + (100% - 20px) / var(--lanes) * var(--lane, 0));
+  width: calc((100% - 20px) / var(--lanes) - 8px);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 2px;
+  padding: 8px 18px;
+  overflow: hidden;
+  color: var(--on-tape);
+  background-color: color-mix(in srgb, var(--tb) var(--tape-alpha), transparent);
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--ti) 85%, transparent) 1.5px, transparent 1.5px),
+    linear-gradient(90deg, color-mix(in srgb, var(--ti) 85%, transparent) 1.5px, transparent 1.5px);
+  background-size: 8px 8px;
+  --tooth: 6px;
+  clip-path: var(--zigzag);
+  mix-blend-mode: var(--tape-blend);
+  rotate: calc(var(--tilt, -.8deg) * var(--tilt-k));
+}
+.tt__ev:nth-of-type(even) { --tilt: .8deg; }
+.tt__ev--gingham {
+  --tb: var(--tape-strawberry); --ti: var(--st-strawberry);
+  background-image:
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--ti) 55%, transparent) 0 6px, transparent 6px 12px),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--ti) 55%, transparent) 0 6px, transparent 6px 12px);
+  background-size: auto;
+}
+.tt__ev--stripe {
+  --tb: var(--tape-lemon); --ti: var(--st-lemon);
+  background-image: repeating-linear-gradient(-45deg, var(--ti) 0 6px, transparent 6px 12px);
+  background-size: auto;
+}
+.tt__ev--dot {
+  --tb: var(--tape-lavender); --ti: var(--st-lavender);
+  background-image: radial-gradient(circle, var(--ti) 2.4px, transparent 2.9px);
+  background-size: 11px 11px;
+}
+.tt__ev--sky { --tb: var(--tape-sky); --ti: var(--st-sky); }
+.tt__title { font-family: var(--font-display-ko); font-weight: 700; font-size: 24px; line-height: 1; }
+.tt__title .num { font-size: .6em; }
+.tt__time { font-family: var(--font-num); font-weight: 700; font-size: 12px; white-space: nowrap; color: var(--on-tape-soft); }
+.tt__who { font-family: var(--font-hand); letter-spacing: var(--hand-tracking-sm); word-spacing: var(--hand-word); font-size: 16px; line-height: 1.2; color: var(--on-tape-soft); }
+.tt__ev--short .tt__who { display: none; }
+.tt__ev--short { flex-direction: row; align-items: center; gap: 8px; padding-block: 2px; }
+.tt__ev--short .tt__title { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tt__ev--short .tt__time { flex: none; }
+button.tt__ev, a.tt__ev { text-align: left; text-decoration: none; cursor: pointer; }
+button.tt__ev:hover, a.tt__ev:hover { translate: 0 -2px; }
+button.tt__ev:focus-visible, a.tt__ev:focus-visible { outline: none; box-shadow: inset 0 0 0 3px var(--cherry); }
+/* 끝난 일정 = 취소선만 (opacity를 내리면 밤 테이프 위 보조 글자가 4.5:1 아래로 떨어진다) */
+.tt__ev.is-done .tt__title { text-decoration: line-through wavy color-mix(in srgb, var(--cherry) 55%, transparent) 1px; text-decoration-skip-ink: none; }
+
+/* 지금 선 */
+.tt__now {
+  position: absolute;
+  left: -8px; right: 0;
+  top: calc(var(--at, 0) * var(--hour-h));
+  height: 0;
+  border-top: 2px solid var(--cherry);
+  z-index: 2;
+  pointer-events: none;
+}
+.tt__now::before {
+  content: "";
+  position: absolute;
+  left: -6px; top: -8px;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--cherry);
+  border: 2px solid var(--die-cut);
+}
+.tt__now-label {
+  position: absolute;
+  right: 6px; top: -30px;
+  padding: 2px 10px 0;
+  font-family: var(--font-hand); letter-spacing: var(--hand-tracking-sm); word-spacing: var(--hand-word);
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--on-cherry);
+  background: var(--cherry);
+  border: 2px solid var(--die-cut);
+  border-radius: 10px 12px 10px 14px;
+  rotate: 3deg;
+}
+
+@media (max-width: 480px) {
+  .tt { --hour-h: 64px; grid-template-columns: 52px minmax(0, 1fr); }
+  .tt__hour { font-size: 17px; padding-right: 6px; }
+  .tt__ev { padding: 6px 12px; }
+  .tt__title { font-size: 21px; }
+  /* 30분짜리 짧은 조각: 한 줄 · 말줄임 */
+  .tt__ev--short { padding-block: 2px; }
+  .tt__ev--short .tt__title { font-size: 17px; }
+  /* 두 줄로 나뉜 칸은 폭이 좁다 → 담당자 줄을 빼고 제목을 한 단계 줄인다 */
+  .tt__ev[style*="--lanes:2"] .tt__who { display: none; }
+  .tt__ev[style*="--lanes:2"]:not(.tt__ev--short) .tt__title { font-size: 19px; }
+}
+
+/* ---- 기록형 타임라인 (입점 일정 · 처리 이력) ------------------------ */
+.timeline { list-style: none; margin: 0; padding: 0 0 0 28px; position: relative; }
+.timeline::before {                   /* 연결선 = 세로 테이프 */
+  content: "";
+  position: absolute;
+  left: 7px; top: 8px; bottom: 8px;
+  width: 12px;
+  background-color: color-mix(in srgb, var(--tape-lemon) var(--tape-alpha), transparent);
+  background-image: repeating-linear-gradient(45deg, color-mix(in srgb, var(--st-lemon) 80%, transparent) 0 5px, transparent 5px 10px);
+  mix-blend-mode: var(--tape-blend);
+}
+.timeline__item { position: relative; padding: 0 0 22px 22px; }
+.timeline__item:last-child { padding-bottom: 0; }
+.timeline__dot {
+  position: absolute;
+  left: -27px; top: 2px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--paper-raised);
+  border: 2.5px solid var(--die-cut);
+  box-shadow: inset 0 0 0 2px var(--ink-faint), 0 2px 4px -2px var(--shadow-c);
+}
+.timeline__item.is-done .timeline__dot { background: var(--st-mint); box-shadow: 0 2px 4px -2px var(--shadow-c); }
+.timeline__item.is-now .timeline__dot { background: var(--cherry); box-shadow: 0 0 0 4px color-mix(in srgb, var(--cherry) 25%, transparent); }
+.timeline__item.is-next .timeline__dot { border-style: dashed; border-color: var(--ink-faint); background: transparent; box-shadow: none; }
+.timeline__date { font-family: var(--font-hand); letter-spacing: var(--hand-tracking-sm); word-spacing: var(--hand-word); font-weight: 700; font-size: 19px; line-height: 1.2; color: var(--cherry-ink); }
+.timeline__title { font-family: var(--font-display-ko); font-weight: 700; font-size: 28px; line-height: 1; margin-top: 2px; }
+.timeline__title .num { font-size: .6em; }
+.timeline__text { margin-top: 4px; font-size: var(--t-small); line-height: 1.65; color: var(--ink-soft); }

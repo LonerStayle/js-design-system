@@ -1,0 +1,68 @@
+/* motion — 모션 문법 4종(와이프·드롭·flip·마퀴) 키프레임 + 등장 연출 + 실연 판.
+   금지: bounce·회전·지터·hover 이동·그림자 커짐·패럴랙스·연속 패턴 배경 애니메이션 */
+
+/* ---- 키프레임 (컴포넌트 전체가 공유) ---- */
+@keyframes wipe-in { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes drop-down { from { transform: translateY(-100vh); } to { transform: translateY(0); } }
+@keyframes drop-down-short { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes slide-in-right { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes rise-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes blink { 0% { opacity: 1; } 100% { opacity: .25; } }
+
+/* ---- 등장: 띠·줄이 왼쪽에서 오른쪽으로 칠해진다 (IntersectionObserver, 띠당 한 번) ----
+   html.js 일 때만 숨김 → JS가 꺼져도 내용이 보인다. 줄마다 --i × 70ms 지연 */
+html.js [data-reveal]:not(.is-in) { clip-path: inset(0 100% 0 0); }
+html.js [data-reveal].is-in { clip-path: inset(0 0 0 0); transition: clip-path var(--dur-band) var(--ease-band); transition-delay: calc(var(--i, 0) * var(--stagger)); }
+
+/* ---- 카운트업 숫자 (dashboard 주인공 숫자 한 번) ---- */
+[data-count] { font-variant-numeric: tabular-nums; }
+
+/* ---- 실연 판 (index 운영실 장) ---- */
+.motion { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; background: var(--surface); color: var(--text); }
+.motion__cell { display: flex; flex-direction: column; min-width: 0; }
+.motion__cell + .motion__cell { border-left: var(--seam) solid var(--rule); }
+.motion__stage { position: relative; height: 180px; overflow: hidden; background: var(--surface-sunk); }
+.motion__info { flex: 1; display: flex; flex-direction: column; gap: 6px; padding: var(--sp-4); }
+.motion__name { font-family: var(--font-display-ko); font-size: 22px; font-weight: 900; line-height: 1.1; letter-spacing: var(--track-ko); margin: 0; }
+.motion__spec { font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--text-muted); letter-spacing: 0; }
+.motion__text { font-size: var(--fs-sm); color: var(--text-muted); line-height: 1.6; }
+.motion__info .btn { margin-top: auto; align-self: flex-start; }
+
+/* 견본들 */
+.motion__wipe { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; }
+.motion__wipe > span { display: block; padding: 4px 16px; font-family: var(--font-display); font-weight: 900; line-height: 1; letter-spacing: var(--track-ko); }
+.motion__wipe > span:nth-child(1) { background: var(--headliner); color: var(--on-headliner); font-size: 44px; }
+.motion__wipe > span:nth-child(2) { background: var(--stage-pink); color: var(--on-pink); font-size: 28px; }
+.motion__wipe > span:nth-child(3) { background: var(--stage-lime); color: var(--on-lime); font-size: 18px; }
+.motion__drop { position: absolute; left: 0; right: 0; top: 48px; padding: 14px 16px; background: var(--fill-yellow); color: var(--on-yellow); font-weight: 900; font-size: 18px; }
+.motion__flip { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.motion__flip .btn { min-width: 160px; }
+.motion__ticker { position: absolute; left: 0; right: 0; top: 50%; margin-top: -24px; }
+
+.motion__cell.is-playing .motion__wipe > span { animation: wipe-in var(--dur-band) var(--ease-band) both; }
+.motion__cell.is-playing .motion__wipe > span:nth-child(2) { animation-delay: var(--stagger); }
+.motion__cell.is-playing .motion__wipe > span:nth-child(3) { animation-delay: calc(var(--stagger) * 2); }
+.motion__cell.is-playing .motion__drop { animation: drop-down var(--dur-drop) var(--ease-drop) both; }
+.motion__cell.is-playing .motion__flip .btn { background: var(--btn-hbg); color: var(--btn-hfg); }
+.motion__note { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; padding: var(--sp-3) var(--sp-4); border-top: var(--seam) solid var(--rule); font-size: var(--fs-sm); }
+.motion__note::before { content: ""; width: 12px; height: 12px; flex: none; background: var(--notice); }
+
+@media (max-width: 1024px) {
+  .motion { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .motion__cell:nth-child(3) { border-left: 0; }
+  .motion__cell:nth-child(n+3) { border-top: var(--seam) solid var(--rule); }
+}
+@media (max-width: 640px) {
+  .motion { grid-template-columns: minmax(0, 1fr); }
+  .motion__cell + .motion__cell { border-left: 0; border-top: var(--seam) solid var(--rule); }
+}
+
+/* ---- prefers-reduced-motion: 와이프·드롭·카운트업·마퀴를 끄고 최종 상태 즉시. flip(색 교체)은 유지 ---- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+  html.js [data-reveal]:not(.is-in) { clip-path: none; }
+  html.js [data-reveal].is-in { transition: none; }
+  .btn, .wb, .tabs__tab, .menu__item, .list__row { transition-property: background-color, color; }
+}

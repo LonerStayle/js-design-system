@@ -1,0 +1,186 @@
+/* ==========================================================================
+   settings — "결재 규칙"
+   구도: 좌 서브내비(sticky, 3단 폭) | 본문 조항(§ 행잉 번호).
+   본문 폭은 조항마다 다르다: 결재선·계정과목 = 전폭, 예외·알림 = 720 측정폭.
+   ========================================================================== */
+
+.st-layout {
+  display: grid; grid-template-columns: 216px minmax(0, 1fr); align-items: start;
+}
+
+/* ── 서브 내비 ───────────────────────────────────────────────────────── */
+.st-nav {
+  position: sticky; top: calc(var(--topbar-h) + 1px);
+  max-height: calc(100vh - var(--topbar-h));
+  overflow-y: auto;
+  padding: var(--sp-5) var(--sp-3) var(--sp-5) var(--sp-4);
+  border-right: 1px solid var(--line);
+  align-self: stretch;
+}
+.st-nav .sidebar__section + .sidebar__section { margin-top: var(--sp-3); padding-top: var(--sp-3); }
+.st-nav .sidebar__heading { padding-left: var(--sp-2); }
+.st-nav__locked { color: var(--text-3); cursor: not-allowed; }
+.st-nav__locked:hover { background: transparent; color: var(--text-3); }
+.st-nav__locked > .icon:last-child { margin-left: auto; }
+.st-nav__danger, .st-nav__danger > .icon { color: var(--danger); }
+.st-nav__danger:hover { background: var(--danger-tint); color: var(--danger); }
+.st-nav__note {
+  display: flex; gap: 6px; margin-top: var(--sp-5); padding: 0 var(--sp-2);
+  font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--text-3);
+}
+.st-nav__note .icon { margin-top: 1px; }
+
+/* ── 본문 ────────────────────────────────────────────────────────────── */
+.st-body {
+  min-width: 0;
+  padding: var(--sp-5) var(--sp-6) var(--sp-8) calc(var(--sp-6) + var(--sp-7));
+  display: flex; flex-direction: column; gap: var(--sp-7);
+}
+.st-alert { max-width: var(--measure-wide); }
+
+.st-sec { max-width: var(--measure-text); scroll-margin-top: calc(var(--topbar-h) + var(--sp-4)); }
+#rules, .st-sec--wide { max-width: var(--measure-wide); }
+.st-sec > .sec-head { padding-bottom: var(--sp-2); }
+/* 행잉 번호 거터 안에서 제목이 본문 좌측선과 맞도록 gap 만큼 더 내어 단다 */
+.st-sec__aside { margin-left: auto; font-size: var(--fs-caption); color: var(--text-3); align-self: center; }
+.st-sec__link { margin-left: auto; font-size: var(--fs-data); align-self: center; }
+.st-sec__btn { margin-left: auto; align-self: center; gap: 6px; }
+.st-lead { font-size: var(--fs-body); line-height: 1.7; color: var(--text-2); margin-bottom: var(--sp-5); }
+
+/* ── §1 결재 구간 원장 ───────────────────────────────────────────────── */
+.st-sim { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3); margin-bottom: var(--sp-4); }
+.st-sim__label { font-size: var(--fs-caption); font-weight: var(--fw-medium); color: var(--text-3); }
+
+.st-rules { border-top: 2px solid var(--rule-head); counter-reset: tier; }
+.st-rule {
+  position: relative;
+  display: grid; grid-template-columns: 188px auto minmax(0, 1fr) 32px; align-items: center; column-gap: var(--sp-5);
+  padding: var(--sp-4) var(--sp-3) var(--sp-4) var(--sp-4);
+  border-bottom: 1px solid var(--line);
+  transition: background-color var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out);
+}
+.st-rule__range { display: flex; flex-direction: column; gap: 2px; }
+.st-rule__no { font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--text-3); letter-spacing: 0; }
+.st-rule__amount { font-size: var(--fs-body); color: var(--text-2); }
+.st-rule__amount .amount { font-size: var(--fs-h2); line-height: var(--lh-h2); letter-spacing: var(--ls-h2); font-weight: var(--fw-semi); color: var(--text); margin-right: 2px; }
+.st-rule__count { font-size: var(--fs-caption); color: var(--text-3); font-variant-numeric: tabular-nums; }
+.st-rule__desc { display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-data); line-height: 1.55; color: var(--text-2); min-width: 0; }
+.st-rule__desc b { color: var(--text); font-weight: var(--fw-semi); font-size: var(--fs-body); }
+.st-rule__edit { align-self: start; }
+.st-rule__match {
+  display: none; position: absolute; top: -1px; right: 0;
+  padding: 2px 8px; background: var(--primary-fill); color: var(--on-primary-fill);
+  font-size: var(--fs-micro); font-weight: var(--fw-semi); letter-spacing: var(--ls-micro);
+}
+
+/* 예시 금액 → 해당 구간 강조 (seg 의 aria-pressed 를 읽는다) */
+#rules:has(.seg__btn[data-value="t1"][aria-pressed="true"]) .st-rule[data-tier="t1"],
+#rules:has(.seg__btn[data-value="t2"][aria-pressed="true"]) .st-rule[data-tier="t2"],
+#rules:has(.seg__btn[data-value="t3"][aria-pressed="true"]) .st-rule[data-tier="t3"] {
+  background: var(--primary-tint); box-shadow: inset 2px 0 0 var(--primary);
+}
+#rules:has(.seg__btn[data-value="t1"][aria-pressed="true"]) .st-rule[data-tier="t1"] .st-rule__match,
+#rules:has(.seg__btn[data-value="t2"][aria-pressed="true"]) .st-rule[data-tier="t2"] .st-rule__match,
+#rules:has(.seg__btn[data-value="t3"][aria-pressed="true"]) .st-rule[data-tier="t3"] .st-rule__match { display: block; }
+/* 강조 행 안의 결재란 빈 칸도 tint 위에서 보이도록 */
+.st-rule .apv__box { background: var(--surface); }
+
+.st-add { margin-top: var(--sp-4); gap: 6px; }
+
+/* ── §2 예외 규칙 ────────────────────────────────────────────────────── */
+.st-acc .acc__panel p { font-size: var(--fs-data); line-height: 1.7; color: var(--text-2); }
+.st-acc .acc__panel b { color: var(--text); font-weight: var(--fw-semi); }
+.st-exc-apv { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--sp-2) var(--sp-4); margin-top: var(--sp-3); }
+.st-exc-apv__note { font-size: var(--fs-caption); color: var(--text-3); padding-bottom: 20px; }
+
+/* ── §3 계정과목 표 ──────────────────────────────────────────────────── */
+.st-acc-table .table__main { font-weight: var(--fw-medium); }
+.st-acc-table .table__main .sub { display: none; }
+.st-rate { display: inline-flex; align-items: center; gap: var(--sp-2); font-variant-numeric: tabular-nums; font-size: var(--fs-data); }
+.st-rate__bar {
+  position: relative; width: 64px; height: 4px; background: var(--surface-sunken); box-shadow: inset 0 0 0 1px var(--line);
+}
+.st-rate__bar::before { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--v); background: var(--ink); }
+/* 80% 기준선 */
+.st-rate__bar::after { content: ""; position: absolute; top: -3px; bottom: -3px; left: 80%; width: 1px; background: var(--text-3); }
+.st-rate--low { color: var(--warning); font-weight: var(--fw-semi); }
+.st-rate--low .st-rate__bar::before { background: var(--warning); }
+.st-note .badge { margin-right: var(--sp-2); vertical-align: 1px; }
+.st-note {
+  margin-top: var(--sp-3); font-size: var(--fs-data); line-height: 1.6; color: var(--text-2); max-width: 80ch;
+}
+
+/* ── §4 알림 ─────────────────────────────────────────────────────────── */
+.st-notify .list__row { padding-inline: 0; cursor: pointer; }
+.st-notify .list__row:hover { background: transparent; }
+.st-notify .list__row:hover .list__title { color: var(--primary); }
+.st-notify .switch { gap: var(--sp-2); }
+
+/* ── §5 감사 로그 ───────────────────────────────────────────────────── */
+.st-timeline { border-top: 2px solid var(--rule-head); padding-top: var(--sp-4); }
+.st-timeline .timeline__body .mono { font-size: var(--fs-caption); }
+
+/* ── §6 위험 영역: 붉은 머리줄 + 괘선 행 ──────────────────────────────── */
+.st-danger .sec-head h2 { color: var(--danger); }
+.st-danger__rows { border-top: 2px solid var(--danger); }
+.st-danger__row {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3) var(--sp-5);
+  padding: var(--sp-4) 0; border-bottom: 1px solid var(--line);
+}
+.st-danger__title { font-size: var(--fs-body); font-weight: var(--fw-semi); color: var(--text); }
+.st-danger__text { margin-top: 2px; font-size: var(--fs-data); line-height: 1.6; color: var(--text-2); }
+.st-danger__row .btn { flex: none; }
+
+/* ── 반응형 ──────────────────────────────────────────────────────────── */
+@media (max-width: 1280px) {
+  .st-rule { grid-template-columns: 168px auto minmax(0, 1fr) 32px; column-gap: var(--sp-4); }
+}
+@media (max-width: 1024px) {
+  .st-layout { grid-template-columns: minmax(0, 1fr); }
+  /* 서브내비 → 상단 가로 스트립(컨테이너 안 스크롤) */
+  .st-nav {
+    position: sticky; top: var(--topbar-h); z-index: var(--z-sticky);
+    max-height: none; overflow: visible; padding: 0; border-right: 0; border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .st-nav .sidebar { overflow-x: auto; scrollbar-width: none; }
+  .st-nav .sidebar::-webkit-scrollbar { display: none; }
+  .st-nav .sidebar,
+  .st-nav .sidebar__section, .st-nav .sidebar__list { display: flex; flex-direction: row; align-items: center; flex-wrap: nowrap; }
+  .st-nav .sidebar__section { padding: 0; }
+  .st-nav .sidebar__section + .sidebar__section { margin: 0; padding: 0; border-top: 0; }
+  .st-nav .sidebar__heading, .st-nav__locked, .st-nav__note, .st-nav .sidebar__link--sub, .st-nav .sidebar__link > .icon:first-child { display: none; }
+  .st-nav .sidebar__list { gap: 0; padding-inline: var(--gutter); }
+  .st-nav li:has(.st-nav__locked) { display: none; }
+  .st-nav .sidebar__link {
+    height: var(--tap-min); padding: 0 var(--sp-3); border-radius: 0; white-space: nowrap; gap: 6px;
+    background: transparent; box-shadow: none;
+  }
+  .st-nav .sidebar__link[aria-current] { background: transparent; box-shadow: inset 0 -2px 0 var(--ink); border-radius: 0; }
+  .st-nav .sidebar__label { overflow: visible; }
+  .st-body { padding: var(--sp-5) var(--gutter) var(--sp-7); }
+  .st-rule { grid-template-columns: 168px minmax(0, 1fr) 32px; row-gap: var(--sp-3); }
+  .st-rule__apv { grid-column: 2; grid-row: 1; }
+  .st-rule__desc { grid-column: 1 / 3; grid-row: 2; }
+  .st-rule__edit { grid-column: 3; grid-row: 1; }
+}
+@media (max-width: 640px) {
+  .st-body { gap: var(--sp-6); }
+  .st-rule { grid-template-columns: minmax(0, 1fr) 32px; padding: var(--sp-4) var(--sp-3); }
+  .st-rule__range { grid-column: 1; grid-row: 1; }
+  .st-rule__apv { grid-column: 1 / -1; grid-row: 2; }
+  .st-rule__desc { grid-column: 1 / -1; grid-row: 3; }
+  .st-rule__edit { grid-column: 2; grid-row: 1; }
+  .st-rule__match { top: auto; bottom: -1px; }
+  .st-sim .seg { width: 100%; }
+  .st-sim .seg__btn { flex: 1; }
+  .st-sec__aside { margin-left: 0; width: 100%; }
+  .st-sec > .sec-head { flex-wrap: wrap; row-gap: 4px; }
+  .st-acc-table .table__main .sub { display: block; }
+  .st-acc-table { --cell-edge: var(--gutter); }
+  #accounts .table-wrap { margin-inline: calc(-1 * var(--gutter)); width: calc(100% + 2 * var(--gutter)); }
+  .st-danger__row { flex-direction: column; align-items: stretch; }
+  .st-exc-apv__note { padding-bottom: 0; }
+}
+
+/* 사이드바 머리 워크스페이스 전환: 상단바에서 숨겨지는 ≤480 에서만 */

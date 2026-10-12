@@ -1,0 +1,59 @@
+/* motion — 「드럼이 돌고, 판이 찍힌다」
+   리빌 = 2도 인쇄 순서: ① 1번 판 위→아래 와이프 ② 60ms 뒤 2번 판이 --mis-3 에서 와이프되며 --mis-2 로 자리
+   ③ 글자는 와이프 없이 마지막에 opacity 0→1 120ms. IntersectionObserver 1회. no-JS·reduced-motion = 최종 상태
+   마크업: <div class="print" data-print> <span class="print__plate print__plate--1 …"></span> <span class="print__plate print__plate--2 …"></span> <div class="print__text">…</div></div> */
+.print { position: relative; isolation: isolate; }
+.print__plate { position: absolute; z-index: -1; pointer-events: none; }
+.print__plate--2 { mix-blend-mode: var(--blend); translate: var(--mis-2x) var(--mis-2y); }
+
+/* JS 가 있을 때만 대기 상태로 숨긴다 */
+.js [data-print]:not(.is-printed) .print__plate--1 { clip-path: inset(0 0 100% 0); }
+.js [data-print]:not(.is-printed) .print__plate--2 { clip-path: inset(0 0 100% 0); translate: var(--mis-3x) var(--mis-3y); }
+.js [data-print]:not(.is-printed) .print__text { opacity: 0; }
+.js [data-print].is-printing .print__plate--1 { animation: wipe-down var(--dur-pass) var(--ease-feed) both; }
+.js [data-print].is-printing .print__plate--2 { animation: wipe-down var(--dur-pass) var(--ease-feed) var(--stagger) both, settle var(--dur-stamp) var(--ease-stamp) calc(var(--dur-pass) + var(--stagger)) both; }
+.js [data-print].is-printing .print__text { animation: ink-dry var(--dur-text) linear calc(var(--dur-pass) + var(--stagger) * 2) both; }
+
+/* 목록 스태거 리빌: [data-print-list] 의 자식들이 60ms 간격으로 찍힘 */
+.js [data-print-list]:not(.is-printed) > * { clip-path: inset(0 0 100% 0); }
+.js [data-print-list].is-printing > * { animation: wipe-down var(--dur-pass) var(--ease-feed) both; animation-delay: calc(var(--i, 0) * var(--stagger)); }
+
+@keyframes wipe-down { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes settle { from { translate: var(--mis-3x) var(--mis-3y); } to { translate: var(--mis-2x) var(--mis-2y); } }
+@keyframes ink-dry { from { opacity: 0; } to { opacity: 1; } }
+@keyframes stamp-press {
+  0% { scale: 1.12; opacity: 0; }
+  60% { scale: .97; opacity: 1; }
+  100% { scale: 1; opacity: 1; }
+}
+.stamp-in { animation: stamp-press var(--dur-stamp) var(--ease-stamp) both; }
+
+/* 판 찍힘 견본 — "다시 찍기" 로 재생 */
+.motion-demo { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-4); }
+.motion-demo__cell { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-4); background: var(--paper-sheet); min-width: 0; }
+.motion-demo__stage { position: relative; isolation: isolate; height: 120px; display: grid; place-items: center; overflow: hidden; }
+.motion-demo__name { font-family: var(--font-ko); font-size: 14px; font-weight: 700; }
+.motion-demo__spec { font-size: 12px; color: var(--ink-muted); }
+.motion-demo__spec .mono { font-size: 11px; color: var(--ink); }
+/* 견본 1: 2도 와이프 */
+.motion-demo__sq { position: absolute; width: 64px; height: 64px; }
+.motion-demo__sq--1 { background: var(--ink-pink); translate: -10px -6px; }
+.motion-demo__sq--2 { background: var(--ink-blue); translate: 12px 8px; mix-blend-mode: var(--blend); }
+.motion-demo.is-playing .motion-demo__sq--1 { animation: wipe-down var(--dur-pass) var(--ease-feed) both; }
+.motion-demo.is-playing .motion-demo__sq--2 { animation: wipe-down var(--dur-pass) var(--ease-feed) var(--stagger) both; }
+/* 견본 2: 판 슬립(어긋남 1.5 → 3 → 0) */
+.motion-demo__word { position: relative; font-family: var(--font-display-ko); font-size: 64px; line-height: 1; color: var(--ink-blue); }
+.motion-demo__word::before { content: attr(data-plate) / ""; position: absolute; inset: 0; color: var(--ink-pink); mix-blend-mode: var(--blend); translate: var(--mis-1x) var(--mis-1y); }
+.motion-demo.is-playing .motion-demo__word::before { animation: slip-demo 1100ms var(--ease-stamp) both; }
+@keyframes slip-demo { 0% { translate: var(--mis-1x) var(--mis-1y); } 35% { translate: var(--mis-3x) var(--mis-3y); } 70% { translate: 0 0; } 100% { translate: var(--mis-1x) var(--mis-1y); } }
+/* 견본 3: 도장 찍힘 */
+.motion-demo.is-playing .motion-demo__stamp { animation: stamp-press var(--dur-stamp) var(--ease-stamp) both; }
+@media (max-width: 719px) { .motion-demo { grid-template-columns: minmax(0, 1fr); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .js [data-print]:not(.is-printed) .print__plate--1,
+  .js [data-print]:not(.is-printed) .print__plate--2,
+  .js [data-print-list]:not(.is-printed) > * { clip-path: none; }
+  .js [data-print]:not(.is-printed) .print__plate--2 { translate: var(--mis-2x) var(--mis-2y); }
+  .js [data-print]:not(.is-printed) .print__text { opacity: 1; }
+}

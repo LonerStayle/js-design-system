@@ -1,0 +1,94 @@
+/* kanban — 정비 작업 지시판. 열 = 랙 베이(업라이트로 구분), 열 머리 = 작은 랙 라벨,
+   카드 = 정비 꼬리표(WO 번호 · 장비 · 담당 · 마감). 사용 금지 장비는 빨강 꼬리표 */
+
+.kanban {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(272px, 1fr);
+  gap: var(--grid-gutter);
+  overflow-x: auto; overscroll-behavior-x: contain;
+  padding: 0 var(--sp-3) var(--sp-4);
+  scroll-snap-type: x proximity;
+}
+.kanban__col {
+  position: relative;
+  display: flex; flex-direction: column; min-width: 0;
+  scroll-snap-align: start;
+}
+/* 베이 사이 업라이트 */
+.kanban__col + .kanban__col::before {
+  content: ""; position: absolute; top: 0; bottom: 0;
+  left: calc(-1 * (var(--grid-gutter) / 2) - var(--upright-w) / 2);
+  width: var(--upright-w); background: var(--edge);
+  -webkit-mask: var(--u-rails) 0 0 / 100% 100% no-repeat, var(--u-bars) 0 0 / 100% 12px repeat-y;
+  mask: var(--u-rails) 0 0 / 100% 100% no-repeat, var(--u-bars) 0 0 / 100% 12px repeat-y;
+}
+.kanban__head { margin-bottom: var(--sp-4); }
+.kanban__head .rack-label { grid-template-columns: auto minmax(0, 1fr) auto; }
+.kanban__head .rack-label__meta { flex-direction: row; align-items: center; gap: 4px; }
+.kanban__list {
+  flex: 1; display: flex; flex-direction: column; gap: var(--sp-4);
+  min-height: 160px; padding: var(--sp-2) var(--sp-2) var(--sp-4) 0;
+  border-bottom: calc(var(--beam-h) + var(--bw)) solid var(--orange);
+  transition: background-color var(--t-snap) linear;
+}
+.kanban__list.is-over { background: var(--yellow-tint); outline: var(--bw) dashed var(--edge); outline-offset: -2px; }
+.kanban__list.is-denied { background: var(--hazard); outline: var(--bw) solid var(--red-text); }
+.kanban__list.is-denied > * { opacity: .4; }
+.kanban__deny-note {
+  display: none; align-self: flex-start;
+  padding: 4px 8px; background: var(--red); color: var(--on-red);
+  font-size: 13px; font-weight: 700; border: var(--bw) solid var(--edge-on-color);
+}
+.kanban__list.is-denied .kanban__deny-note { display: block; opacity: 1; }
+
+/* 정비 꼬리표 카드 */
+.kcard {
+  --tf-c: var(--chamfer-m);
+  --tf-hole-y: 26px;
+  --tf-shadow: var(--drop-sm);
+  display: block;
+  padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--tf-pad);
+  color: var(--ink);
+  cursor: grab;
+  transition: transform var(--t-snap) var(--ease-snap);
+}
+.kcard:hover { --tf-shadow: var(--drop-hard); transform: translate(-1px, -1px); }
+.kcard:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; box-shadow: none; }
+.kcard:active { cursor: grabbing; }
+.kcard.is-dragging { opacity: .5; --tf-shadow: none; }
+.kcard.is-grabbed { transform: translate(-2px, -2px) rotate(-1.5deg); --tf-shadow: drop-shadow(6px 6px 0 var(--shadow-ink)); --tf-edge: var(--yellow); --tf-bw: 4px; }
+.kcard__top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.kcard__wo { font-family: var(--ff-mono); font-size: 13px; font-weight: 600; letter-spacing: .02em; }
+.kcard__title { margin: 6px 0 2px; font-size: 15px; font-weight: 700; line-height: 1.4; }
+.kcard__asset { font-family: var(--ff-mono); font-size: 12px; color: var(--ink-2); }
+.kcard__foot {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); flex-wrap: wrap;
+  margin-top: var(--sp-2); padding-top: var(--sp-2);
+  border-top: var(--bw-hair) solid var(--line-mid);
+  font-size: 13px;
+}
+.kcard__who { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
+.kcard__who i {
+  display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px;
+  background: var(--ink); color: var(--surface); font-style: normal; font-size: 11px; font-weight: 700;
+}
+.kcard__due { font-family: var(--ff-body); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; } /* 요일(한글)이 섞이므로 모노 대신 본문 서체 */
+.kcard__due--late { color: var(--red-text); font-weight: 700; }
+
+.kcard--ban { --tf-face: var(--red); --tf-edge: var(--edge-on-color); --tf-ring: var(--edge-on-color); color: var(--on-red); }
+.kcard--ban :is(.kcard__asset, .kcard__due) { color: inherit; }
+.kcard--ban .kcard__foot { border-top-color: currentColor; }
+.kcard--ban .kcard__who i { background: var(--on-red); color: var(--red); }
+.kcard--check { --tf-face: var(--yellow); --tf-edge: var(--edge-on-color); --tf-ring: var(--edge-on-color); color: var(--on-yellow); }
+.kcard--check :is(.kcard__asset, .kcard__due) { color: inherit; }
+.kcard--check .kcard__foot { border-top-color: var(--on-yellow); }
+.kcard--done { --tf-face: var(--surface-2); --tf-shadow: none; color: var(--ink-2); }
+
+.kanban__add {
+  display: flex; align-items: center; justify-content: center; gap: var(--sp-2);
+  min-height: 44px; border: var(--bw) dashed var(--line-mid); color: var(--muted); font-size: 14px; font-weight: 700;
+}
+.kanban__add:hover { border-color: var(--edge); color: var(--ink); background: var(--surface); }
+
+@media (max-width: 640px) {
+  .kanban { grid-auto-columns: minmax(260px, 86%); }
+}

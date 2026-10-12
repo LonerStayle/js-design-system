@@ -1,0 +1,195 @@
+/* ==========================================================================
+   pricing — 「방울 충전 · 이용권」
+   구도: 내 박스(왼쪽) + 본문. 본문 위는 하늘·물 장면 판에 크기가 다른 방울 4개(30 < 100 < 300 < 1,000)가
+   수면 위에 떠 있고, 아래는 촘촘한 포털 박스(이용권 표 · 방울 쓰는 곳 · FAQ · 결제 내역 · 고객센터).
+   선택 요약과 확인 창 문구는 :has() 로 고른 방울에 맞춰 바뀐다(장면 스크립트 없음).
+   semantic 토큰만 사용.
+   ========================================================================== */
+#main { display: grid; gap: var(--sp-4); }
+
+/* 오늘 충전 확인 띠 */
+.pr-done { align-items: center; }
+.pr-done > .orb { margin-top: 0; }
+.pr-done__link { flex: none; min-height: 44px; }
+
+/* ── 방울 충전 장면 판 ───────────────────────────────────────────── */
+.pr-charge {
+  position: relative; isolation: isolate; overflow: hidden;
+  border-radius: var(--r-box);
+  border: 1px solid var(--rim);
+  box-shadow: var(--shadow-box);
+  background:
+    var(--scene-stars) center top / 520px 160px repeat-x,
+    linear-gradient(180deg, var(--sky-zenith) 0%, var(--sky-mid) 46%, var(--sky-horizon) 78%);
+}
+/* 수면: 판 아래쪽 물 띠 + 반사광 줄 */
+.pr-charge::after {
+  content: ""; position: absolute; z-index: -1; left: 0; right: 0; bottom: 76px; height: 120px; pointer-events: none;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 14px, color-mix(in srgb, var(--bubble-shine) 30%, transparent) 14px 15px),
+    linear-gradient(180deg, color-mix(in srgb, var(--water) 70%, var(--sky-horizon)) 0%, var(--water) 100%);
+  border-top: 2px solid var(--bubble-rim);
+}
+.pr-charge__head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap;
+  padding: var(--sp-5) var(--sp-5) 0;
+}
+.pr-charge__title {
+  font-family: var(--font-jua); font-size: var(--fs-h1); line-height: var(--lh-h1); letter-spacing: -0.01em;
+  color: var(--on-scene-strong); text-shadow: var(--scene-ts);
+}
+.pr-charge__lede { margin-top: 4px; font-weight: 800; color: var(--on-scene-strong); text-shadow: var(--scene-ts); }
+.pr-charge__wallet {
+  display: inline-flex; align-items: center; gap: 10px; padding: 4px 4px 4px 6px;
+  border-radius: var(--r-pill); background: var(--surface-raised); border: 1px solid var(--rim); box-shadow: var(--shadow-pop);
+  font-size: var(--fs-portal); color: var(--text-muted);
+}
+.pr-charge__wallet b { margin-left: 6px; font-family: var(--font-display); font-weight: 400; font-size: 22px; color: var(--text); font-variant-numeric: tabular-nums; }
+
+/* 방울 4개 — 수면 위 한 줄, 크기 = 담는 양 */
+.pr-pool {
+  display: flex; align-items: flex-end; justify-content: space-around; gap: var(--sp-4);
+  margin: 0; border: 0; padding: var(--sp-5) var(--sp-5) 28px;
+  min-height: 330px;
+}
+.pr-drop {
+  --d: 120px;
+  position: relative; display: grid; justify-items: center; gap: 10px; cursor: pointer;
+  animation: drop-bob 5.5s ease-in-out infinite alternate;
+}
+.pr-drop--30 { --d: 112px; animation-delay: -1s; }
+.pr-drop--100 { --d: 144px; animation-delay: -3s; }
+.pr-drop--300 { --d: 178px; animation-delay: -2s; }
+.pr-drop--1000 { --d: 222px; animation-delay: -4s; }
+.pr-drop input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; }
+.pr-drop__ball {
+  position: relative; width: var(--d); aspect-ratio: 1; border-radius: var(--r-orb);
+  display: grid; place-content: center; justify-items: center; gap: 2px;
+  color: var(--text);
+  border: 2px solid var(--bubble-rim);
+  background:
+    radial-gradient(34% 22% at 34% 22%, var(--bubble-shine), transparent 74%),
+    radial-gradient(60% 30% at 50% 96%, color-mix(in srgb, var(--water) 45%, transparent), transparent 80%),
+    radial-gradient(circle at 50% 52%, color-mix(in srgb, var(--surface-raised) 90%, transparent) 0 56%, color-mix(in srgb, var(--surface-raised) 62%, transparent) 100%);
+  box-shadow:
+    inset 0 -10px 22px color-mix(in srgb, var(--water) 30%, transparent),
+    0 12px 26px var(--gel-drop);
+  transition: transform var(--dur-release) var(--ease-spring), box-shadow var(--dur-ui), border-color var(--dur-ui);
+}
+.pr-drop__n { font-family: var(--font-display); font-weight: 400; font-size: calc(var(--d) * .27); line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.pr-drop__u { font-family: var(--font-jua); font-size: 15px; color: var(--text-muted); }
+.pr-drop__bonus {
+  --orb: calc(var(--d) * .3);
+  position: absolute; right: -4%; top: -4%; min-width: 40px; min-height: 40px;
+  font-family: var(--font-body); font-weight: 800; font-size: 13px;
+}
+.pr-drop__pick { position: absolute; left: 8%; top: 8%; opacity: 0; transform: scale(.4); transition: opacity var(--dur-ui), transform var(--dur-pop) var(--ease-spring); font-family: var(--font-body); font-weight: 800; font-size: 12px; }
+.pr-drop__price {
+  display: inline-flex; align-items: center; min-height: 32px; padding: 0 14px; border-radius: var(--r-pill);
+  background: var(--surface-raised); border: 1px solid var(--rim); box-shadow: 0 2px 6px var(--gel-drop);
+  font-weight: 800; font-size: var(--fs-portal); color: var(--text); font-variant-numeric: tabular-nums;
+}
+.pr-drop:hover .pr-drop__ball { transform: translateY(-4px); }
+.pr-drop:active .pr-drop__ball { transform: scale(1.05, .93); transition-duration: var(--dur-press); }
+.pr-drop:has(input:checked) .pr-drop__ball {
+  transform: translateY(-10px) scale(1.04);
+  border: 3px solid var(--gel-sky-bottom);
+  box-shadow:
+    inset 0 -10px 22px color-mix(in srgb, var(--water) 30%, transparent),
+    0 0 0 6px color-mix(in srgb, var(--gel-sky-top) 40%, transparent),
+    0 18px 30px var(--gel-drop-hover);
+}
+.pr-drop:has(input:checked) .pr-drop__pick { opacity: 1; transform: none; }
+.pr-drop:has(input:checked) .pr-drop__price {
+  color: var(--gel-sky-ink); text-shadow: var(--gel-sky-ts);
+  background: var(--gloss-cap-ink) 50% 1px / 88% 42% no-repeat, linear-gradient(180deg, var(--gel-sky-top), var(--gel-sky-bottom));
+  border-color: var(--gel-sky-bottom);
+}
+.pr-drop:has(input:focus-visible) .pr-drop__ball { box-shadow: var(--focus); }
+
+/* 선택 요약 띠 */
+.pr-sum {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap;
+  min-height: 76px; padding: 12px var(--sp-5);
+  background: var(--surface-head);
+  border-top: 2px solid var(--gel-sky-bottom);
+}
+.pr-sum__v { display: none; align-items: baseline; gap: 6px 14px; flex-wrap: wrap; }
+.pr-charge:has(#amt-30:checked) .pr-sum__v--30,
+.pr-charge:has(#amt-100:checked) .pr-sum__v--100,
+.pr-charge:has(#amt-300:checked) .pr-sum__v--300,
+.pr-charge:has(#amt-1000:checked) .pr-sum__v--1000 { display: flex; }
+.pr-sum__v b { font-family: var(--font-jua); font-weight: 400; font-size: 20px; }
+.pr-sum__v span { font-family: var(--font-display); font-size: 26px; font-variant-numeric: tabular-nums; color: var(--success-ink); }
+.pr-sum__v small { color: var(--text-muted); font-size: var(--fs-portal); }
+
+/* 확인 창 문구 */
+.pr-dlg__v { display: none; }
+body:has(#amt-30:checked) .pr-dlg__v--30,
+body:has(#amt-100:checked) .pr-dlg__v--100,
+body:has(#amt-300:checked) .pr-dlg__v--300,
+body:has(#amt-1000:checked) .pr-dlg__v--1000 { display: block; }
+.pr-pay { margin-top: 8px; }
+
+/* ── 이용권 ──────────────────────────────────────────────────────── */
+.pr-plans { display: flex; flex-direction: column; }
+.pr-plans__body { flex: 1; display: grid; align-content: start; gap: var(--sp-3); }
+.pr-plans__bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2) var(--sp-4); flex-wrap: wrap; }
+.pr-plans__bar .seg .badge { height: 20px; font-size: 11.5px; }
+.pr-plans .tabs__panel { padding: 0; }
+.pr-plans .tbl-wrap { border-radius: var(--r-input); border: 1px solid var(--rim); }
+.pr-tbl td { padding-block: 10px; }
+.pr-tbl td:nth-child(3) { color: var(--text-muted); }
+.pr-plan { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-jua); font-weight: 400; font-size: 17px; white-space: nowrap; }
+.tbl tbody tr.pr-tbl__mine td { background: var(--tint-success); }
+.tbl tbody tr.pr-tbl__mine td:first-child { box-shadow: inset 4px 0 0 var(--gel-lime-bottom); }
+.pr-tbl b { font-weight: 800; }
+
+.pr-spend { display: flex; flex-direction: column; }
+.pr-spend .plist__num { color: var(--amber-ink); }
+
+/* ── 결제 내역 · 고객센터 ─────────────────────────────────────────── */
+.pr-next { opacity: .78; }
+.pr-next .tline__node { border-style: dashed; }
+.pr-total { font-family: var(--font-display); font-weight: 400; font-size: 18px; color: var(--text); font-variant-numeric: tabular-nums; }
+.pr-help__body { display: flex; align-items: center; gap: var(--sp-3) var(--sp-5); flex-wrap: wrap; }
+.pr-help__today { flex: 1; min-width: 260px; }
+.pr-month { display: flex; flex-direction: column; }
+.pr-month > .box__body { flex: 1; display: flex; }
+.pr-month .tline { flex: 1; align-content: stretch; }
+.pr-spend .plist { flex: 1; display: flex; flex-direction: column; }
+.pr-spend .plist > li { flex: 1; display: flex; }
+.pr-spend .plist__row { flex: 1; }
+/* 아래 띠: 자주 묻는 질문 · 10월 결제 · 고객센터를 포털 전폭으로 */
+.pr-lower { grid-column: 1 / -1; display: grid; gap: var(--sp-4); min-width: 0; }
+@media (min-width: 1100px) {
+  .portal--2 > .sidebar { position: sticky; top: var(--sp-4); align-self: start; }
+}
+.pr-help__tel { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; font-size: var(--fs-portal); font-weight: 700; }
+.pr-help__tel small { display: block; font-weight: 400; color: var(--text-subtle); }
+.pr-help__lcd { font-size: 24px; line-height: 1; padding: 10px 14px; font-variant-numeric: tabular-nums; }
+.pr-help__today { display: flex; gap: 8px; align-items: baseline; padding: 10px 12px; border-radius: var(--r-input); background: var(--tint-warn); border: 1px solid var(--line); font-size: var(--fs-portal); }
+.pr-help__today .orb { flex: none; transform: translateY(2px); }
+
+/* ── 반응형 ───────────────────────────────────────────────────────── */
+@media (max-width: 1099px) {
+  .pr-drop--30 { --d: 100px; } .pr-drop--100 { --d: 126px; } .pr-drop--300 { --d: 154px; } .pr-drop--1000 { --d: 190px; }
+}
+@media (max-width: 760px) {
+  .pr-charge__head { padding: var(--sp-4) var(--sp-4) 0; }
+  .pr-charge__wallet { order: -1; }
+  .pr-pool {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; justify-items: center;
+    gap: var(--sp-5) var(--sp-3); padding: var(--sp-5) var(--sp-3) 24px; min-height: 0;
+  }
+  .pr-drop--30 { --d: 96px; } .pr-drop--100 { --d: 116px; } .pr-drop--300 { --d: 132px; } .pr-drop--1000 { --d: 150px; }
+  .pr-charge::after { bottom: 0; height: 52%; }
+  .pr-sum { position: relative; padding: 12px var(--sp-4); }
+  .pr-sum .btn { width: 100%; }
+  .pr-sum__v span { font-size: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pr-drop { animation: none; }
+}
+.pr-help .box__meta { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 760px) { .pr-help .box__meta { display: none; } }

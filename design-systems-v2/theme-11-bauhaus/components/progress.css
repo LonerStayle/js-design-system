@@ -1,0 +1,71 @@
+/* progress — 16px 막대 채움(파랑) + 오른쪽 모노 %. 원형 진행 = 파랑 원 호.
+   와플(24칸, 칸 = 수강생 1명) · 불릿(목표선) 변형. 진입 시 1회 bar-fill. */
+.progress { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px var(--s-3); }
+.progress__label { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: var(--s-3); font-size: 14px; font-weight: 700; }
+.progress__label .muted { font-weight: 500; }
+.progress__track {
+  position: relative; height: 20px;
+  border: var(--w-line) solid var(--line);
+  background: var(--surface);
+  overflow: hidden;
+}
+.progress__fill {
+  height: 100%; width: var(--val, 0%);
+  background: var(--accent-blue);
+  transform-origin: 0 50%;
+}
+.progress__value { font-family: var(--font-mono); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 4ch; text-align: right; }
+.progress--warn .progress__fill { background: var(--accent-yellow); box-shadow: inset -2px 0 0 var(--on-yellow); }
+.progress--danger .progress__fill { background: var(--accent-red); }
+.progress--ink .progress__fill { background: linear-gradient(var(--bar-edge) 0 0) top / 100% var(--w-line) no-repeat, var(--bar); }
+.progress--thin .progress__track { height: 10px; border-width: 1px; }
+/* 진행률 모름 — 막대 토막이 4칸씩 끊어 이동 */
+.progress[aria-busy="true"] .progress__fill { width: 25%; animation: progress-step 1.2s steps(4) infinite; }
+@keyframes progress-step { from { transform: translateX(-100%); } to { transform: translateX(400%); } }
+
+/* bar-fill: JS가 [data-fill]에 .is-armed → 진입 시 .is-in */
+[data-fill].is-armed :is(.progress__fill, .bullet__bar) { transform: scaleX(0); }
+[data-fill].is-armed.is-in :is(.progress__fill, .bullet__bar) { transform: scaleX(1); transition: transform var(--dur-4) var(--ease-out); }
+
+/* 원형 진행 — SVG: <svg class="ring" viewBox="0 0 120 120"><circle class="ring__track" …><circle class="ring__value" pathLength="100" …></svg> */
+.ring-wrap { position: relative; display: inline-grid; place-items: center; width: var(--ring, 140px); aspect-ratio: 1; }
+.ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring__track { fill: none; stroke: var(--surface-sunken); stroke-width: 14; }
+.ring__value { fill: none; stroke: var(--accent-blue); stroke-width: 14; stroke-dasharray: var(--val, 0) 100; stroke-linecap: butt; }
+.ring__label { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; line-height: 1.1; }
+.ring__num { font-family: var(--font-mono); font-weight: 700; font-size: calc(var(--ring, 140px) * .2); }
+.ring__sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+/* 와플 — 칸 = 1명. ● 제출 · □ 미제출 · ▲ 늦음 */
+.waffle { display: grid; grid-template-columns: repeat(var(--cols-w, 8), minmax(0, 1fr)); border: var(--w-line) solid var(--line); }
+.waffle__cell {
+  position: relative; aspect-ratio: 1; min-width: 0;
+  display: grid; place-items: center;
+  outline: var(--w-hair) solid var(--hairline); outline-offset: -0.5px;
+  background: var(--surface);
+}
+.waffle__cell::before { content: ""; width: 56%; aspect-ratio: 1; }
+.waffle__cell--done::before { border-radius: 50%; background: var(--accent-blue); outline: var(--w-line) solid var(--shape-ring); }
+.waffle__cell--miss::before { border: var(--w-line) solid var(--line); width: 46%; }
+.waffle__cell--late::before { width: 56%; background: var(--tri-edge); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.waffle__cell--late::after { content: ""; position: absolute; width: 56%; aspect-ratio: 1; background: var(--accent-yellow); clip-path: polygon(50% 18%, 88% 92%, 12% 92%); }
+.waffle__cell--stop::before { background: var(--accent-red); width: 46%; outline: var(--w-line) solid var(--shape-ring); }
+.waffle__id { position: absolute; left: 4px; top: 2px; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); line-height: 1.2; }
+.waffle-legend { display: flex; flex-wrap: wrap; gap: 6px var(--s-5); font-size: 13px; }
+.waffle-legend > span { display: inline-flex; align-items: center; gap: 8px; }
+.waffle-legend .mono { font-weight: 700; }
+
+/* 불릿 — 막대 = 값, 빨강 세로선 = 목표 */
+.bullet-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) 52px; align-items: center; gap: var(--s-3); min-height: 36px; }
+.bullet-row__name { font-size: 14px; font-weight: 700; }
+.bullet-row__val { font-family: var(--font-mono); font-size: 14px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+.bullet { position: relative; height: 24px; background: var(--surface-sunken); }
+.bullet__bar { position: absolute; left: 0; top: 4px; height: var(--w-bar); width: var(--val, 0%); background: var(--bar); transform-origin: 0 50%; }
+.bullet__target { position: absolute; top: -4px; bottom: -4px; left: var(--target, 80%); width: var(--w-line); background: var(--accent-red); }
+.bullet--hot .bullet__bar { background: var(--accent-blue); }
+
+/* 밤의 구성실 — 목표 미달 막대가 밤 벽(#201F1C)에 묻히지 않게.
+   트랙은 비우고 1px 작도선으로 테두리만, 채움은 흐린 분필 면. 파랑(목표 초과)은 그대로. */
+[data-theme="dark"] .bullet { background: transparent; outline: 1px solid var(--hairline); outline-offset: -1px; }
+[data-theme="dark"] .bullet:not(.bullet--hot) .bullet__bar { background: var(--text-muted); }
+[data-theme="dark"] .progress--ink .progress__fill { background: var(--text-muted); }

@@ -1,0 +1,175 @@
+/* 404 — 김 서린 창. 거대한 "404"는 유리 뒤(창밖 장면 쪽)에 있고, 서리 낀 유리(blur 18px)가 그 앞을 덮는다.
+   포인터 위치에 좌상→우하로 18° 기운 타원(가로:세로 1.6:1.1, 가장자리 페더 ≈22px)으로 김을 닦아 숫자가 드러난다
+   (app.js [data-wipe] → --mx/--my, 정적 크기 --wk-static). 정적 상태는 '0' 전체 + 양쪽 '4'의 안쪽 1/3 이 닦인 자국.
+   터치·감속 모션에서는 이 정적 상태가 기본값. 의미 토큰만 사용. */
+
+.lost {
+  --mx: 59%;
+  --my: 50%;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: end;
+  min-height: max(560px, calc(100svh - var(--statusbar-h) - var(--dock-h) - 112px));
+  margin: 20px var(--gutter) 24px;
+  border-radius: var(--r-sheet);
+  overflow: hidden;
+  isolation: isolate;
+}
+/* 창틀: 두꺼운 유리 프레임 + 윗변 반사 */
+.lost::after {
+  content: ""; position: absolute; inset: 0; z-index: 3;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 10px var(--glass-2), inset 0 0 0 11px var(--hairline), var(--sheen);
+  pointer-events: none;
+}
+
+/* 유리 뒤: 거대한 얇은 숫자 */
+.lost__pane { position: absolute; inset: 0; z-index: 0; display: grid; place-items: center end; padding: 0 6% 4% 0; }
+.lost__num {
+  font-family: var(--font-sans);
+  font-size: clamp(200px, 32vw, 470px); line-height: .8;
+  font-weight: 200; letter-spacing: -.06em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+  filter: blur(.4px);          /* 닦인 자리도 '유리 너머' — 아주 얇은 서리를 남긴다 */
+  user-select: none;
+}
+[data-theme="dark"] .lost__num { color: var(--lamp); text-shadow: 0 0 48px var(--lamp-soft), 0 0 120px var(--lamp-soft); }
+
+/* 김 서린 유리: 닦인 타원만 투명.
+   마스크 = 전면(#000) XOR 기운 타원(SVG, 안쪽 불투명 → 가장자리 페더). 타원 크기 = --wk × 4 정사각 타일 */
+.lost__fog {
+  position: absolute; inset: 0; z-index: 1;
+  background:
+    radial-gradient(circle at 30% 40%, var(--sweep) 0 1px, transparent 1.8px) 0 0 / 23px 29px,
+    radial-gradient(circle at 70% 60%, var(--sweep) 0 1.5px, transparent 2.3px) 7px 11px / 37px 31px,
+    radial-gradient(circle at 50% 50%, var(--sweep) 0 2.2px, transparent 3px) 13px 3px / 61px 53px,
+    linear-gradient(180deg, var(--glass-clear), var(--glass-fog-low, var(--glass-clear)));
+  /* 서리 밖 404 실루엣이 읽히게: 블러 12px · 옅은 김 */
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(140%);
+  --wk: var(--wk-static, 160px);
+  --wipe: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cdefs%3E%3CradialGradient id='g'%3E%3Cstop offset='0' stop-opacity='1'/%3E%3Cstop offset='.86' stop-opacity='1'/%3E%3Cstop offset='1' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Cellipse cx='100' cy='100' rx='80' ry='55' fill='url(%23g)' transform='rotate(18 100 100)'/%3E%3C/svg%3E");
+  -webkit-mask:
+    var(--wipe) calc(var(--mx) - var(--wk) * 2) calc(var(--my) - var(--wk) * 2) / calc(var(--wk) * 4) calc(var(--wk) * 4) no-repeat,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    var(--wipe) calc(var(--mx) - var(--wk) * 2) calc(var(--my) - var(--wk) * 2) / calc(var(--wk) * 4) calc(var(--wk) * 4) no-repeat exclude,
+    linear-gradient(#000 0 0);
+}
+.lost.is-wiping .lost__fog, .lost.is-wiping .lost__ring { --wk: 74px; }
+/* 흘러내린 물줄기 */
+.lost__drip {
+  position: absolute; top: calc(var(--i) * 7% + 4%); left: calc(var(--i) * 16% + 3%);
+  width: 2px; height: calc(36px + var(--i) * 14px);
+  opacity: .85;
+  border-radius: 2px;
+  background: linear-gradient(180deg, transparent, var(--sweep) 70%, var(--sweep));
+}
+.lost__drip::after { content: ""; position: absolute; bottom: -4px; left: -3px; width: 8px; height: 9px; border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%; background: var(--sweep); box-shadow: inset 0 -2px 2px var(--hairline); }
+.lost__drip:nth-child(2) { left: 41%; top: 6%; }
+.lost__drip:nth-child(4) { left: 78%; top: 12%; }
+
+.lost__hint {
+  position: absolute; top: 28px; right: 32px; z-index: 2;
+  display: none; align-items: center; gap: 6px;
+  min-height: 32px; padding: 0 14px;
+  border-radius: var(--r-pill);
+  background: var(--glass-1);
+  box-shadow: var(--sheen), var(--shadow-z1);
+  font-family: var(--font-ko); font-size: 13px; font-weight: 600; color: var(--text);
+  transition: opacity var(--dur-sheet) var(--ease-out);
+}
+.lost__hint [data-icon] { width: 16px; height: 16px; }
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .lost__hint { display: inline-flex; }
+  .lost.is-wiping .lost__hint { opacity: 0; }
+}
+
+/* 창 앞 카드 */
+.lost__card {
+  --g-shadow: var(--shadow-z3);
+  position: relative; z-index: 4;
+  grid-column: 1 / span 5;
+  margin: 0 0 28px 28px;
+  display: grid; gap: 14px;
+  padding: 28px 28px 20px;
+}
+.lost__title {
+  font-family: var(--font-ko);
+  font-size: calc(var(--t-title-size) * 1.15); line-height: 1.2;
+  font-weight: 800; letter-spacing: -.03em;
+}
+.lost__text { font-size: 15px; line-height: 1.7; color: var(--text-2); }
+.lost__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.lost__offline { margin-top: 6px; padding-top: 14px; border-top: 1px solid var(--hairline); }
+.lost__offline-label { font-family: var(--font-ko); font-size: 13px; font-weight: 600; color: var(--text-2); margin-bottom: 2px; }
+.lost__offline .list { margin: 0 -8px; }
+.lost__go { font-size: 13px; font-weight: 700; }
+
+@media (max-width: 1199px) {
+  .lost__card { grid-column: 1 / span 7; }
+}
+@media (max-width: 767px) {
+  .lost {
+    --my: 21%;
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+    margin: 12px var(--gutter) 20px;
+    border-radius: 32px;
+    padding-top: 250px;
+  }
+  .lost::after { box-shadow: inset 0 0 0 8px var(--glass-2), inset 0 0 0 9px var(--hairline), var(--sheen); }
+  .lost__pane { place-items: start center; padding: 72px 0 0; }
+  .lost { --mx: 34%; }
+  .lost__num { font-size: 46vw; }
+  .lost.is-wiping .lost__fog, .lost.is-wiping .lost__ring { --wk: 60px; }
+  .lost__hint { top: 18px; right: 18px; }
+  .lost__pane { padding-top: 84px; }
+  .lost__card { grid-column: 1; margin: 0 10px 10px; padding: 22px 18px 14px; border-radius: 24px; }
+  .lost__actions .btn { flex: 1 1 auto; }
+}
+
+/* 닦인 자리 가장자리에 맺힌 물기 — 기운 타원 테두리 + 물방울 8개 + 아래로 흐르는 물줄기 3개.
+   각 방울은 타원 둘레의 각도(--a)로 놓인다: 중심 + rotate(18°)·(rx cos a, ry sin a) */
+.lost__ring {
+  --wk: var(--wk-static, 160px);
+  --rx: calc(var(--wk) * 1.6 * .93);   /* 페더 한가운데 쯤 = 물기가 맺히는 경계 */
+  --ry: calc(var(--wk) * 1.1 * .93);
+  --tilt: 18deg;
+  position: absolute; z-index: 1;
+  left: var(--mx); top: var(--my);
+  width: 0; height: 0;
+  pointer-events: none;
+}
+.lost__ring::before {
+  content: ""; position: absolute; left: 0; top: 0;
+  width: calc(var(--rx) * 2); height: calc(var(--ry) * 2);
+  translate: -50% -50%; rotate: var(--tilt);
+  border-radius: 50%;
+  box-shadow: inset 0 0 22px 4px var(--sweep), 0 0 0 1px var(--sweep);
+  opacity: .5;
+}
+.lost__drop, .lost__run {
+  position: absolute;
+  --ex: calc(var(--rx) * cos(var(--a)));
+  --ey: calc(var(--ry) * sin(var(--a)));
+  left: calc(var(--ex) * cos(var(--tilt)) - var(--ey) * sin(var(--tilt)));
+  top: calc(var(--ex) * sin(var(--tilt)) + var(--ey) * cos(var(--tilt)));
+}
+.lost__drop {
+  width: var(--d); height: calc(var(--d) * 1.15); translate: -50% -50%;
+  border-radius: 50% 50% 50% 50% / 42% 42% 58% 58%;
+  background: radial-gradient(circle at 35% 30%, var(--tile-on) 0 22%, var(--sweep) 40%, transparent 72%);
+  box-shadow: 0 1px 1px var(--hairline-strong);
+}
+/* 물줄기: 아래쪽 둘레에서 시작해 곧게 흘러내린다 */
+.lost__run {
+  width: 2px; height: var(--h); translate: -50% 0;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--sweep), var(--tile-on));
+  opacity: .8;
+}
+.lost__run::after { content: ""; position: absolute; left: -2.5px; bottom: -5px; width: 7px; height: 8px; border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%; background: var(--sweep); box-shadow: inset 0 -2px 2px var(--hairline); }

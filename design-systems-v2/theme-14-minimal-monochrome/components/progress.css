@@ -1,0 +1,80 @@
+/* ==========================================================================
+   progress — 교정띠 채움(시그니처 B). 빈 칸 = rule-faint 외곽선 11칸,
+   채운 칸 = 해당 명도 + 아래 2px 선. 값은 aria-valuenow → app.js 가 --v 로 옮김.
+   + .gauge — 교정띠 위 기준 범위 표시(환경 계측: 조도·습도·온도)
+   ========================================================================== */
+.progress { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--sp-3); min-width: 0; }
+.progress__label { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: var(--sp-3); font-size: var(--fs-caption); color: var(--text-2); }
+.progress__label b { color: var(--text); font-weight: var(--fw-semi); }
+.progress__track {
+  position: relative;
+  height: 24px;
+}
+/* 11칸 외곽선 — 채움(흰 A 칸 포함) 위에 그려 칸이 늘 보인다 */
+.progress__track::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(90deg, var(--rule-faint) 0 1px, transparent 1px 9.0909%);
+  box-shadow: inset 0 0 0 var(--hair) var(--rule-faint);
+}
+.progress__fill {
+  position: absolute;
+  inset: 0;
+  background: var(--gs-strip);
+  box-shadow: inset 0 -2px 0 var(--rule-strong);
+  clip-path: inset(0 calc(100% - var(--v, 0) * 1%) 0 0);
+  transition: clip-path var(--dur-on) var(--ease-light);
+}
+.progress__val {
+  min-width: 3.2em;
+  text-align: right;
+  font-family: var(--ff-latin);
+  font-size: var(--fs-ui);
+  font-weight: var(--fw-semi);
+  font-feature-settings: "tnum";
+}
+.progress--sm .progress__track { height: 8px; }
+.progress--sm .progress__fill { box-shadow: none; }
+.progress--sm .progress__val { font-size: var(--fs-caption); font-weight: var(--fw-regular); color: var(--text-2); }
+/* 불확정(불러오는 중) — 패치가 A→B로 순차 깜빡임 */
+.progress--busy .progress__fill { clip-path: none; animation: yb-patch var(--dur-blink) steps(2, jump-none) infinite; box-shadow: none; }
+/* 실패 — 반전 블록 + ▲ */
+.progress.is-error .progress__track::after { box-shadow: inset 0 0 0 var(--hair-strong) var(--rule-strong); }
+.progress.is-error .progress__val::before { content: "▲ "; font-size: .8em; }
+.progress.is-done .progress__val::before { content: "■ "; font-size: .8em; }
+
+/* 계측 게이지 */
+.gauge { display: grid; gap: var(--sp-2); min-width: 0; }
+.gauge__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); font-size: var(--fs-caption); color: var(--text-2); }
+.gauge__val { font-family: var(--ff-latin); font-size: 28px; font-weight: var(--fw-light); line-height: 1; color: var(--text); font-feature-settings: "tnum"; }
+.gauge__val small { font-size: var(--fs-caption); margin-left: 2px; color: var(--text-2); }
+.gauge__bar { position: relative; height: 8px; background: var(--gs-strip); outline: var(--hair) solid var(--rule-faint); }
+/* 기준 범위 — 위 4px 괄호 */
+.gauge__range {
+  position: absolute;
+  top: -8px;
+  height: 6px;
+  left: calc(var(--from, 0) * 1%);
+  width: calc((var(--to, 100) - var(--from, 0)) * 1%);
+  border: var(--hair) solid var(--rule-strong);
+  border-bottom: 0;
+}
+/* 현재값 바늘 */
+.gauge__mark {
+  position: absolute;
+  top: -4px;
+  bottom: -6px;
+  left: calc(var(--at, 0) * 1%);
+  width: 2px;
+  margin-left: -1px;
+  background: var(--rule-strong);
+  box-shadow: 0 0 0 1px var(--bg);
+}
+.gauge__scale { display: flex; justify-content: space-between; font-family: var(--ff-latin); font-size: 11px; color: var(--text-2); font-feature-settings: "tnum"; }
+.gauge.is-over .gauge__head { color: var(--text); }
+.gauge.is-over .gauge__val { background: var(--invert-bg); color: var(--invert-text); padding: 2px 6px; }
+.gauge.is-over .gauge__val small { color: var(--invert-text-2); }
+
+@media (prefers-reduced-motion: reduce) { .progress__fill { transition: none; } .progress--busy .progress__fill { animation: none; } }

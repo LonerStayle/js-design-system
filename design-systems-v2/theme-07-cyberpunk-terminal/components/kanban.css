@@ -1,0 +1,81 @@
+/* kanban = tmux 4분할 — 열 사이 gap 0·공유 선, 열 제목 "출제 중 (4)", 카드 = 박스 행.
+   드래그 중 카드 = 반전, 놓일 자리 = 점선 자리표시. (열 = 상태라 4열 균등은 장르상 예외) */
+.board {
+  display: grid;
+  grid-template-columns: repeat(var(--board-cols, 4), minmax(0, 1fr));
+  gap: 0;
+  align-items: stretch;
+}
+.board > .board__col + .board__col { margin-left: -1px; }
+.board__col { display: flex; flex-direction: column; min-width: 0; }
+.board__col .pane__title .badge { font-size: inherit; }
+.board__list { display: grid; gap: 0; align-content: start; flex: 1; min-height: calc(var(--row) * 3); padding-bottom: var(--r-half); }
+.board__list.is-over { box-shadow: inset 0 0 0 1px var(--prompt); }
+.board__wip { color: var(--warn); }
+
+.board__card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 var(--c1);
+  padding: 6px var(--c1) 8px;
+  border: 1px solid var(--rule);
+  background: var(--bg);
+  color: var(--fg);
+  font-size: var(--fs-data);
+  line-height: var(--lh-data);
+  cursor: grab;
+  min-height: var(--touch);
+  text-align: left;
+  width: 100%;
+}
+.board__card + .board__card { margin-top: -1px; }
+.board__id { color: var(--hash); font-weight: 700; font-variant-numeric: tabular-nums; }
+.board__pts { color: var(--fg); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.board__title { grid-column: 1 / -1; color: var(--fg); margin-top: 2px; }
+.board__meta { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0 var(--c2); color: var(--fg-muted); font-size: var(--fs-meta); margin-top: 2px; }
+.board__meta .badge { font-size: var(--fs-meta); }
+.board__card:hover { border-color: var(--fg); z-index: 1; }
+.board__card:focus-visible { outline-offset: -3px; z-index: 2; }
+.board__card[aria-grabbed="true"],
+.board__card.is-dragging {
+  background: var(--select-bg);
+  color: var(--select-fg);
+  border-color: var(--select-bg);
+  cursor: grabbing;
+  z-index: 3;
+}
+.board__card[aria-grabbed="true"] *, .board__card.is-dragging * { color: var(--select-fg); }
+.board__card.is-blocked { border-color: var(--err); }
+.board__card.is-blocked .board__title::before { content: "! "; color: var(--err); font-weight: 700; }
+.board__card.is-done .board__title { color: var(--fg-muted); text-decoration: line-through; }
+.board__ghost {
+  height: var(--touch);
+  border: 1px dashed var(--prompt);
+  margin-top: -1px;
+}
+.board__add { margin-top: var(--r-half); justify-self: start; }
+.board__live { min-height: 1lh; color: var(--fg-muted); font-size: var(--fs-meta); }
+
+@media (max-width: 1023px) {
+  .board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .board > .board__col:nth-child(odd) { margin-left: 0; }
+}
+@media (max-width: 599px) {
+  .board {
+    grid-template-columns: repeat(var(--board-cols, 4), minmax(78vw, 1fr));
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+    padding-bottom: var(--r-half);
+  }
+  .board { align-items: start; }
+  .board > .board__col { scroll-snap-align: start; }
+  .board__list { min-height: 0; }
+  .board > .board__col + .board__col { margin-left: -1px; }
+  /* 옆 열이 남았다는 힌트: 오른쪽 4셀 페이드(app.js 가 is-overflow / is-end 토글) */
+  .board.is-overflow:not(.is-end) {
+    -webkit-mask-image: linear-gradient(to right, var(--fg) calc(100% - var(--c4)), transparent);
+    mask-image: linear-gradient(to right, var(--fg) calc(100% - var(--c4)), transparent);
+  }
+}

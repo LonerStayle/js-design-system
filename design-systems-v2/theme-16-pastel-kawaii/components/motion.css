@@ -1,0 +1,105 @@
+/* motion — "붙이고, 떼고, 눌린다"
+   공용 키프레임 + 상태 클래스 + 시연판(.motion-demo).
+   붙이기(stick): 1.12배로 떠 있다가 기본각+6° → 기본각으로 툭 착지
+   떼기(peel): 모서리부터 들려 위로 사라짐 · 눌림(press): 납작 · 버스트: 레몬 별 3개(유일한 반짝이) */
+
+@keyframes pk-stick {
+  0%   { scale: 1.12; rotate: calc((var(--tilt, 0deg) + 6deg) * var(--tilt-k)); translate: 0 -6px; opacity: 0; }
+  45%  { opacity: 1; }
+  100% { scale: 1; rotate: calc(var(--tilt, 0deg) * var(--tilt-k)); translate: 0 0; opacity: 1; }
+}
+@keyframes pk-peel {
+  0%   { translate: 0 0; rotate: calc(var(--tilt, 0deg) * var(--tilt-k)); opacity: 1; }
+  35%  { translate: 4px -6px; rotate: calc((var(--tilt, 0deg) - 5deg) * var(--tilt-k)); opacity: 1; }
+  100% { translate: 18px -40px; rotate: calc((var(--tilt, 0deg) - 14deg) * var(--tilt-k)); opacity: 0; }
+}
+@keyframes pk-press {
+  0%, 100% { scale: 1 1; }
+  40% { scale: .97 .94; }
+}
+@keyframes pk-stamp {
+  0%   { scale: 1.6; opacity: 0; rotate: -18deg; }
+  60%  { scale: .92; opacity: 1; }
+  100% { scale: 1; opacity: .92; rotate: -8deg; }
+}
+@keyframes pk-drop {          /* 포스트잇 떨어뜨리기 */
+  0%   { translate: 0 -24px; rotate: -3deg; opacity: 0; }
+  100% { translate: 0 0; rotate: 0deg; opacity: 1; }
+}
+@keyframes pk-burst {
+  0%   { translate: 0 0; scale: .2; opacity: 0; }
+  30%  { opacity: 1; }
+  100% { translate: var(--bx, 0) var(--by, -24px); scale: 1; opacity: 0; }
+}
+@keyframes pk-roll {
+  0%   { rotate: 0deg; translate: -10px 0; }
+  50%  { translate: 10px -3px; }
+  100% { rotate: 360deg; translate: -10px 0; }
+}
+@keyframes pk-breathe-soft { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+
+/* 상태 클래스 — JS가 붙였다 뗀다 */
+.is-sticking { animation: pk-stick var(--dur-stick) var(--ease-stick) both; }
+.is-peeling { animation: pk-peel 300ms var(--ease-peel) forwards; pointer-events: none; }
+.is-pressing { animation: pk-press 240ms var(--ease-peel); }
+.is-stamped { animation: pk-stamp 360ms var(--ease-stick) both; }
+
+/* 순차 붙이기 — 스티커 시트 등장 (부모에 .stick-in, 자식 --i 자동 대신 nth-child) */
+.stick-in > * { animation: pk-stick var(--dur-stick) var(--ease-stick) both; }
+.stick-in > :nth-child(2) { animation-delay: calc(var(--stagger) * 1); }
+.stick-in > :nth-child(3) { animation-delay: calc(var(--stagger) * 2); }
+.stick-in > :nth-child(4) { animation-delay: calc(var(--stagger) * 3); }
+.stick-in > :nth-child(5) { animation-delay: calc(var(--stagger) * 4); }
+.stick-in > :nth-child(6) { animation-delay: calc(var(--stagger) * 5); }
+.stick-in > :nth-child(7) { animation-delay: calc(var(--stagger) * 6); }
+.stick-in > :nth-child(8) { animation-delay: calc(var(--stagger) * 7); }
+.stick-in > :nth-child(n+9) { animation-delay: calc(var(--stagger) * 8); }
+
+/* 버스트 — JS가 대상 위치에 .burst(별 3개)를 띄운다 */
+.burst { position: fixed; left: 0; top: 0; width: 0; height: 0; pointer-events: none; z-index: calc(var(--z-toast) + 1); }
+.burst i {
+  position: absolute;
+  left: -6px; top: -6px;
+  width: 12px; height: 12px;
+  background: var(--st-lemon);
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  filter: var(--glow-filter);
+  animation: pk-burst 320ms var(--ease-peel) forwards;
+}
+.burst i:nth-child(1) { --bx: -22px; --by: -18px; }
+.burst i:nth-child(2) { --bx: 4px; --by: -30px; width: 9px; height: 9px; }
+.burst i:nth-child(3) { --bx: 24px; --by: -14px; }
+
+/* ---- 시연판: 스티커 시트 위에서 직접 눌러 보기 ----------------------- */
+.motion-demo {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+}
+.motion-demo__cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+.motion-demo__target {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  border-radius: 28px 22px 30px 20px;
+  font-family: 'Mochiy Pop One', var(--font-num);
+  font-size: 15px;
+}
+.motion-demo__name { font-family: var(--font-display-ko); font-weight: 700; font-size: 26px; line-height: 1; }
+.motion-demo__spec { font-family: var(--font-mono); font-size: 12px; color: var(--ink-soft); }
+@media (max-width: 720px) {
+  .motion-demo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .burst { display: none; }
+  .is-sticking, .stick-in > *, .is-stamped { animation: none; }
+  .pk--breathe { animation: none; }
+}

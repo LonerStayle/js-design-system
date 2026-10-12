@@ -1,0 +1,116 @@
+/* kanban — 다음 주 편성 회의: 최대화된 탐색기 창(편성 띠 + 폴더 창 4열)
+   옆 바탕화면에 계단식으로 겹친 보조 창 두 개(회의록 메모장 → 회차 등록 정보).
+   semantic 토큰만 사용. */
+
+/* 바탕 배치: [앱 창] [보조 창 계단] */
+.kb-desk { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-2); align-items: start; }
+@media (min-width: 1200px) {
+  .kb-desk { grid-template-columns: minmax(0, 1fr) 376px; }
+  .kb-aux { margin-top: var(--grid); }
+  /* 보조 창 계단(메모장 + 등록 정보)이 작업 표시줄 위(1440×900 기준 y 832)에서 끝나도록
+     메모장 종이를 9줄 높이로 고정하고 나머지는 메모장 안에서 스크롤한다 */
+  .kb-note__text { height: calc(13px * 1.75 * 9 + var(--sp-3) * 2); overflow-y: auto; padding-bottom: var(--sp-3); }
+}
+.kb-aux { display: grid; justify-items: start; }
+.kb-aux > .win { width: min(100%, 344px); }
+.kb-aux > .kb-props { margin: calc(var(--grid) * -1) 0 0 var(--grid); z-index: var(--z-win-active); }
+
+/* 도구 막대 */
+.kb-toolbar { gap: var(--sp-2); flex-wrap: nowrap; padding: 4px; }
+.kb-toolbar .addr { flex: 1 1 320px; min-width: 0; }
+
+/* 편성 띠: 오늘부터 42주차 끝까지 하루 한 칸 */
+.kb { display: flex; flex-direction: column; gap: var(--sp-3); }
+.kb .kanban { align-items: start; }
+.kb-strip-wrap { box-shadow: var(--bevel-in); background: var(--paper); padding: 4px; }
+.kb-strip { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(9, minmax(96px, 1fr)); gap: 2px; }
+.kb-day {
+  display: grid; gap: 2px; align-content: start;
+  padding: 6px 8px 8px;
+  background: var(--face);
+  box-shadow: var(--bevel-thin);
+  border-top: 4px solid var(--kb-c, var(--ink-muted));
+  min-width: 0;
+}
+.kb-day__date { font-size: var(--fs-xs); font-weight: 700; color: var(--ink-muted); }
+.kb-day__date b { font-family: var(--font-osd); font-weight: 400; font-size: 20px; letter-spacing: .04em; color: var(--ink); margin-right: 2px; }
+.kb-day__ep { font-family: var(--font-osd); font-size: var(--fs-osd-s); letter-spacing: .04em; line-height: 1; color: var(--ink); }
+.kb-day__state { font-size: var(--fs-xs); font-weight: 800; color: var(--kb-c, var(--ink-muted)); }
+.kb-day .osd-tag { justify-self: start; font-size: 16px; min-height: 20px; }
+.kb-day--live { --kb-c: var(--primary); background: var(--osd-bg); box-shadow: none; }
+.kb-day--live .kb-day__date, .kb-day--live .kb-day__date b, .kb-day--live .kb-day__ep { color: var(--osd-text); }
+.kb-day--fix { --kb-c: var(--success); }
+.kb-day--reh { --kb-c: var(--primary); }
+.kb-day--qa { --kb-c: var(--accent); }
+.kb-day--src { --kb-c: var(--ink-muted); }
+.kb-day--off { background: repeating-linear-gradient(-45deg, var(--face) 0 4px, var(--paper) 4px 8px); }
+.kb-day--off .kb-day__ep { font-family: var(--font-body); font-size: var(--fs-sm); font-weight: 800; }
+
+/* 폴더 창 4열 — 상태색 띠가 편성 띠와 같은 색 */
+.kb .kanban { grid-template-columns: repeat(var(--kanban-cols, 4), minmax(208px, 1fr)); }
+.kb-col .kanban__list { border-top: 4px solid var(--kb-c, var(--ink-muted)); min-height: 120px; }
+/* 열은 내용 높이만큼 — 카드 아래 바로 '회차 파일 추가', 그 아래 열마다의 부속 파일(메모·보관) */
+.kb-col { display: flex; flex-direction: column; }
+.kb-memo, .kb-archive { margin-top: var(--sp-2); padding: var(--sp-2) var(--sp-3) var(--sp-3); box-shadow: var(--bevel-well); display: grid; gap: 6px; font-size: var(--fs-xs); line-height: 1.5; }
+.kb-memo { background: var(--tooltip); color: var(--on-tooltip); box-shadow: 0 0 0 1px var(--ink); }
+.kb-memo__title, .kb-archive__title { display: flex; align-items: center; gap: 6px; font-weight: 800; font-size: var(--fs-sm); }
+.kb-memo__when { color: inherit; font-weight: 700; }
+.kb-memo__list, .kb-archive__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.kb-memo__list li { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 6px; align-items: start; }
+.kb-memo__list li.is-done { text-decoration: line-through; text-decoration-thickness: 1px; }
+.kb-memo__box { width: 12px; height: 12px; margin-top: 3px; background: var(--paper); box-shadow: inset 0 0 0 1px var(--ink); }
+.kb-archive__list li { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 0 8px; white-space: nowrap; align-items: baseline; padding: 4px 0; border-top: 1px dotted var(--bevel-lo); color: var(--ink-muted); }
+.kb-archive__list li > .t-osd { font-size: 18px; letter-spacing: .04em; }
+.kb-archive__list .osd-tag { margin-left: 2px; vertical-align: 1px; }
+.kb-archive__list b { font-weight: 800; }
+.kb-archive__list li.is-live { color: var(--ink); }
+.kb-col--src { --kb-c: var(--ink-muted); }
+.kb-col--qa { --kb-c: var(--accent); }
+.kb-col--reh { --kb-c: var(--primary); }
+.kb-col--fix { --kb-c: var(--success); }
+.kb .kanban__card { padding: 10px 8px; }
+.kb .kanban__card + .kanban__card { border-top: 1px dotted var(--bevel-lo); }
+.kb-price { margin-top: 4px; font-size: var(--fs-sm); font-weight: 800; font-variant-numeric: tabular-nums; }
+.kb-lock { display: flex; align-items: center; gap: 4px; margin-top: 4px; font-size: var(--fs-xs); font-weight: 800; color: var(--success); }
+.kb-qa { margin-top: 6px; }
+.kb-qa .progress__label { font-size: var(--fs-xs); font-weight: 700; }
+.kb-qa .progress__label .t-osd { font-size: 18px; }
+.kb-qa .progress__track { height: 16px; }
+.kanban__card[aria-selected="true"] .kb-price,
+.kanban__card[aria-selected="true"] .kanban__name { color: var(--on-select); }
+
+/* 회의록 메모장 */
+.kb-note__paper { margin-top: 2px; background: var(--paper); box-shadow: var(--bevel-in); padding: 2px; }
+.kb-note__text {
+  margin: 0; padding: var(--sp-3) var(--sp-4) calc(var(--sp-6) + var(--grid));
+  font-family: var(--font-code); font-size: 13px; line-height: 1.75;
+  white-space: pre-wrap; word-break: keep-all; color: var(--ink);
+}
+
+/* 회차 등록 정보 */
+.kb-props .tabs__panel { min-height: 300px; }
+.kb-props__id { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: var(--sp-3); align-items: center; }
+.kb-props__dl { margin: 0; display: grid; gap: 6px; font-size: var(--fs-sm); line-height: 1.5; }
+.kb-props__dl > div { display: grid; grid-template-columns: 68px minmax(0, 1fr); gap: 8px; }
+.kb-props__dl dt { color: var(--ink-muted); }
+.kb-props__dl dd { margin: 0; }
+.kb-props__cue { margin-top: 2px; }
+
+@media (max-width: 1199px) {
+  .kb-aux { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .kb-aux > .win { width: 100%; }
+  .kb-aux > .kb-props { margin: var(--grid) 0 0 calc(var(--grid) * -1); }
+}
+@media (max-width: 768px) {
+  .kb-toolbar { flex-wrap: wrap; }
+  .kb-toolbar .addr { flex-basis: 100%; }
+  .kb-toolbar > .toolbar__sep { display: none; }
+  .kb-strip { grid-template-columns: repeat(9, 92px); }
+  .kb .kanban { grid-template-columns: repeat(var(--kanban-cols, 4), minmax(260px, 86%)); }
+  .kb-col .kanban__list { min-height: 120px; }
+  .kb-aux { grid-template-columns: minmax(0, 1fr); margin-top: var(--sp-4); }
+  .kb-aux > .win { width: 100%; }
+  .kb-aux > .kb-props { margin: -16px 0 0; }
+  .kb-note__text { min-height: 0; }
+  .kb-status-opt { display: none; }
+}

@@ -1,0 +1,233 @@
+/* ==========================================================================
+   kanban — 매입 검수 보드 (10월 2주차 · W41)
+   구도: 3/9 벽보(레드 주차 칸 + 제목·흐름선) → 얇은 집계 띠
+        → 화면 끝까지 닿는 보드(열 사이 규칙선) → 잉크 슬랩 등급표(5단 자)
+   semantic 토큰만 사용
+   ========================================================================== */
+
+/* ---- 머리: 주차 칸 + 제목 ---------------------------------------------- */
+.kb-head { margin-top: calc(var(--bw) * -1); }
+.kb-week { display: grid; align-content: space-between; gap: var(--s-8); overflow: clip; }
+.kb-week__no { margin: 0 0 -.06em; line-height: .8; letter-spacing: -.01em; }
+.kb-week__range { font-size: var(--fs-sm); font-weight: 600; }
+
+.kb-title { display: grid; gap: var(--s-32); padding-block: var(--s-32); }
+.kb-title__top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--s-24); }
+.kb-title__h { margin: 0; }
+.kb-title__acts { padding-bottom: var(--s-8); }
+.kb-title .popover { right: 0; left: auto; width: min(360px, calc(100vw - 32px)); }
+.kb-title .popover p .kbd { margin-inline: 1px; }
+
+/* 흐름선: 네 단계를 화살표 띠로 — 숫자는 열 카드 수 */
+.flowline {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: var(--line);
+}
+.flowline li {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "n name" "n meta";
+  column-gap: var(--s-12);
+  align-items: center;
+  padding: var(--s-12) var(--s-24) var(--s-12) var(--s-16);
+}
+.flowline li + li { border-left: var(--line); }
+/* 칸 경계에 꽂힌 화살촉 */
+.flowline li + li::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -3px;
+  width: 14px;
+  height: 14px;
+  border-top: var(--line);
+  border-right: var(--line);
+  background: var(--surface);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.flowline li:nth-child(2) { background: var(--surface-2); }
+.flowline li:nth-child(2)::before { background: var(--surface); }
+.flowline li:nth-child(3)::before { background: var(--surface-2); }
+.flowline__n { grid-area: n; font: 800 var(--fs-d3)/1 var(--font-display); letter-spacing: 0; font-synthesis: none; }
+.flowline__name { grid-area: name; font-size: var(--fs-sm); font-weight: 700; }
+.flowline__meta { grid-area: meta; font: 500 var(--fs-label)/1.4 var(--font-label); color: var(--fg-muted); letter-spacing: 0; }
+.flowline li:nth-child(2) .flowline__meta { color: var(--danger-fg); font-weight: 600; }
+
+/* ---- 집계 띠 ----------------------------------------------------------- */
+.kb-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-8) var(--s-24);
+  margin-top: calc(var(--bw) * -1);
+  padding: var(--s-12) var(--gutter);
+  border-block: var(--line);
+  background: var(--highlight);
+  color: var(--on-highlight);
+  font: 500 var(--fs-sm)/1.5 var(--font-mono);
+  word-spacing: var(--ws-mix);
+}
+.kb-bar b { font-weight: 600; }
+
+/* ---- 보드: 화면 끝까지 ------------------------------------------------- */
+.kb-board { margin-top: calc(var(--bw) * -1); }
+.kb-board .board__list { padding: var(--s-32) var(--s-24) var(--s-48) var(--s-16); gap: var(--s-24); min-height: 420px; } /* base의 ul[class] 리셋이 컴포넌트 패딩을 덮어써서 다시 지정 */
+.kb-board .board__head { min-height: 88px; padding-top: var(--s-24); }
+.kb-board .kcard__title { padding-right: 52px; }
+
+/* ---- 열 전환 칸막이 (≤480 전용) ---------------------------------------- */
+.kb-switch { display: none; }
+
+/* ---- 등급표: 카탈로그 행 + 매입가 자 -----------------------------------
+   막대 길이 = 판매 예정가 대비 매입 비율. 등급 스티커는 막대 끝에 비뚤게 찍힌다. */
+.kb-grades { margin-top: calc(var(--bw) * -1); border-bottom: var(--line); }
+.kb-grades__row { border-top: var(--line); border-bottom: 0; }
+.gruler {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--rule);
+  gap: var(--bw);
+  border-top: var(--line);
+}
+.gruler > li {
+  display: grid;
+  grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
+  gap: var(--bw);
+  background: var(--rule);
+}
+.gruler > li > * { background: var(--surface); min-width: 0; }
+/* 눈금: 자의 머리 — 막대 칸 폭 기준 0 · 25 · 50 · 75 · 100 */
+.gruler__ticks, .gruler__unit { position: relative; min-height: 36px; font: 600 var(--fs-label)/1 var(--font-mono); color: var(--fg-muted); }
+.gruler__unit { display: flex; align-items: flex-end; padding: 0 var(--gutter) 8px; font-family: var(--font-label); }
+.gruler__ticks > span {
+  position: absolute;
+  bottom: 0;
+  left: calc(var(--gutter) + (100% - var(--gutter) * 2) * var(--at));
+  padding: 0 0 8px 4px;
+  border-left: var(--bw-thin) solid var(--rule);
+  white-space: nowrap;
+}
+.gruler__ticks > span:nth-child(1) { --at: 0; }
+.gruler__ticks > span:nth-child(2) { --at: .25; }
+.gruler__ticks > span:nth-child(3) { --at: .5; }
+.gruler__ticks > span:nth-child(4) { --at: .75; }
+.gruler__ticks > span:nth-child(5) { --at: 1; transform: translateX(-100%); border-left: 0; border-right: var(--bw-thin) solid var(--rule); padding: 0 4px 8px 0; }
+
+.gruler__track { display: flex; align-items: center; padding: var(--s-16) var(--gutter); }
+.gruler__bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: var(--pct);
+  height: 56px;
+  padding-left: var(--s-12);
+  background: var(--highlight);
+  color: var(--on-highlight);
+  border: var(--bw) solid var(--sticker-edge);
+}
+.gruler__row--m   { --pct: 60%; }
+.gruler__row--nm  { --pct: 50%; }
+.gruler__row--vgp { --pct: 40%; }
+.gruler__row--vg  { --pct: 25%; }
+.gruler__row--g   { --pct: 10%; }
+.gruler__row--m .gruler__bar { background: var(--accent); color: var(--on-accent); }
+.gruler__pct { font: 800 var(--fs-h1)/1 var(--font-display); letter-spacing: 0; font-variant-numeric: tabular-nums; font-synthesis: none; }
+.gruler__g {
+  position: absolute;
+  left: calc(100% + var(--s-12));
+  top: 50%;
+  margin-top: -18px;
+  min-width: 52px;
+  justify-content: center;
+  font-size: var(--fs-sm);
+  --sticker-bg: var(--surface);
+  --sticker-fg: var(--fg);
+}
+.gruler__row--m .gruler__g, .gruler__row--vgp .gruler__g { --tilt: var(--tilt-a); }
+.gruler__row--nm .gruler__g, .gruler__row--g .gruler__g { --tilt: var(--tilt-c); }
+.gruler__row--vg .gruler__g { --tilt: var(--tilt-b); }
+.gruler__text {
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: var(--s-12) var(--gutter);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  line-height: 1.5;
+}
+.gruler__ex { font: 600 var(--fs-label)/1.3 var(--font-mono); color: var(--fg-muted); word-spacing: var(--ws-mix); }
+
+/* ---- 매입 접수 드로어 --------------------------------------------------- */
+.kb-intake { display: grid; gap: var(--s-24); align-content: start; }
+.kb-intake .form-grid { gap: var(--s-16); }
+
+/* ---- 공통 푸터 (모든 화면 링크) ----------------------------------------- */
+
+/* ---- 반응형 ------------------------------------------------------------- */
+@media (max-width: 1024px) {
+  .gruler > li { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+  .flowline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .flowline li:nth-child(3) { border-left: 0; border-top: var(--line); }
+  .flowline li:nth-child(4) { border-top: var(--line); }
+  .flowline li:nth-child(3)::before { display: none; }
+}
+@media (max-width: 768px) {
+  .gruler > li { grid-template-columns: minmax(0, 1fr); }
+  .gruler__unit { display: none; }
+  .gruler__bar { min-width: 64px; } /* 10%도 숫자가 들어가게 — 좁은 화면에서만 */
+  .gruler__track { padding: var(--s-12) var(--gutter) var(--s-4); }
+  .gruler__bar { height: 44px; }
+  .gruler__pct { font-size: var(--fs-h2); }
+  .gruler__text { padding-top: var(--s-8); }
+  .gruler__row > * + * { margin-top: calc(var(--bw) * -1); } /* 같은 행의 두 칸은 선 없이 이어진다 */
+  .kb-week { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "no label" "no range"; align-items: end; column-gap: var(--s-16); }
+  .kb-week > .t-label { grid-area: label; }
+  .kb-week__no { grid-area: no; font-size: 88px; }
+  .kb-week__range { grid-area: range; }
+  .kb-title { padding-block: var(--s-24); gap: var(--s-24); }
+  .kb-title__h { font-size: var(--fs-d2); }
+  .kb-board .board__list { min-height: 240px; }
+}
+@media (max-width: 480px) {
+  /* 390에서 둘째 열이 카드 중간에서 잘리지 않게: 열 전환 칸막이로 한 열씩 */
+  .kb-switch {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--s-8) var(--s-8);
+    align-items: end;
+    margin-top: calc(var(--bw) * -1);
+    padding: var(--s-16) var(--gutter) 0;
+    border-top: var(--line);
+    background: var(--surface);
+  }
+  .kb-switch__tab {
+    display: flex;
+    align-items: center;
+    gap: var(--s-8);
+    min-height: var(--tab-h);
+    padding: 0 var(--s-12);
+    border: var(--line);
+    background: var(--surface-2);
+    color: var(--fg);
+    font: 700 var(--fs-sm)/1.2 var(--font-ui);
+    text-align: left;
+    cursor: pointer;
+  }
+  .kb-switch__tab[aria-pressed="true"] { min-height: var(--tab-h-on); background: var(--highlight); color: var(--on-highlight); }
+  .kb-switch__idx { font: 600 var(--fs-label)/1 var(--font-mono); }
+  .kb-switch__n { margin-left: auto; font: 600 var(--fs-label)/1 var(--font-mono); }
+  .kb-board { grid-auto-flow: row; grid-auto-columns: auto; grid-template-columns: minmax(0, 1fr); overflow: visible; margin-top: var(--s-12); }
+  .kb-board .board__col:not(.is-shown) { display: none; }
+  .flowline li { padding: var(--s-12); column-gap: var(--s-8); }
+  .flowline__meta { font-size: 11px; }
+  .kb-bar { font-size: var(--fs-xs); }
+}

@@ -1,0 +1,199 @@
+/* calendar — 월간 다이어리 페이지
+   모눈 칸 · 요일 머리글 손글씨 · 일정 = 칸 위 미니 스티커/테이프 조각 · 오늘 = 레몬 손그림 동그라미
+   일요일 숫자 체리 잉크, 토요일 하늘 잉크. 주는 월요일 시작. 읽기 영역 → 기울기 0° */
+
+.cal {
+  --peel-under: var(--paper-raised);
+  --cell-h: 92px;
+  position: relative;
+  background: var(--paper-raised);
+  border-radius: var(--r-paper);
+  box-shadow: var(--shadow-paper);
+  padding: 24px 20px 20px;
+  color: var(--ink);
+}
+.cal__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.cal__title { display: flex; align-items: baseline; gap: 10px; }
+.cal__month { font-family: 'Mochiy Pop One', var(--font-num); font-size: 56px; line-height: .9; color: var(--cherry-ink); letter-spacing: -0.02em; }
+.cal__year { font-family: var(--font-display-ko); font-weight: 700; font-size: 34px; line-height: 1; }
+.cal__year .num { font-size: .6em; }
+.cal__nav { display: flex; gap: 8px; }
+
+.cal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-top: 2px solid var(--grid-line-strong);
+  border-left: 2px solid var(--grid-line-strong);
+}
+.cal__dow {
+  padding: 6px 8px 2px;
+  font-family: var(--font-hand); letter-spacing: var(--hand-tracking-sm); word-spacing: var(--hand-word);
+  font-weight: 700;
+  font-size: 19px;
+  line-height: 1.2;
+  color: var(--ink-soft);
+  border-right: 2px solid var(--grid-line-strong);
+  border-bottom: 2px solid var(--grid-line-strong);
+  background: color-mix(in srgb, var(--wash-strawberry) 60%, transparent);
+}
+.cal__dow--sat { color: var(--info); }
+.cal__dow--sun { color: var(--cherry-ink); }
+
+.cal__day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  min-width: 0;
+  min-height: var(--cell-h);
+  padding: 6px 6px 8px;
+  text-align: left;
+  color: var(--ink);
+  border-right: 2px solid var(--grid-line-strong);
+  border-bottom: 2px solid var(--grid-line-strong);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-position: -1px -1px;
+  font: inherit;
+  cursor: pointer;
+  transition: background-color var(--dur-peel);
+}
+.cal__date {
+  position: relative;
+  z-index: 1;
+  align-self: flex-start;
+  display: grid;
+  place-items: center;
+  min-width: 28px;
+  height: 28px;
+  font-family: var(--font-num);
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.cal__day--sat .cal__date { color: var(--info); }
+.cal__day--sun .cal__date, .cal__day--holiday .cal__date { color: var(--cherry-ink); }
+.cal__day--out { color: var(--ink-faint); background-color: color-mix(in srgb, var(--paper) 70%, transparent); }
+.cal__day--out .cal__date { color: var(--ink-faint); font-weight: 500; }
+
+@media (hover: hover) { .cal__day:hover { background-color: var(--marker-soft); } }
+.cal__day:focus-visible { outline-offset: -5px; border-radius: 4px; }
+
+/* 오늘 — 레몬 스티커 위 손그림 동그라미 */
+.cal__day--today .cal__date::before {
+  content: "";
+  position: absolute;
+  inset: -6px -7px -5px -6px;
+  z-index: -1;
+  background: var(--st-lemon);
+  border: 2.5px solid var(--die-cut);
+  border-radius: 52% 46% 55% 44% / 48% 56% 44% 52%;
+  box-shadow: 0 3px 6px -3px var(--shadow-c), var(--glow);
+  rotate: -8deg;
+}
+.cal__day--today .cal__date { color: var(--on-sticker); }
+.cal__day--today .cal__date::after {           /* 손그림 펜 동그라미 */
+  content: "";
+  position: absolute;
+  inset: -10px -11px -8px -10px;
+  border: 2px solid var(--cherry-ink);
+  border-radius: 46% 54% 42% 58% / 55% 45% 60% 40%;
+  border-left-color: transparent;
+  rotate: 24deg;
+}
+
+/* 선택 */
+.cal__day[aria-pressed="true"], .cal__day[aria-selected="true"] {
+  background-color: var(--selected);
+  box-shadow: inset 0 0 0 3px var(--cherry);
+}
+/* 휴무(월) — 빗금 */
+.cal__day--closed { background-image: repeating-linear-gradient(-45deg, transparent 0 7px, color-mix(in srgb, var(--grid-line-strong) 70%, transparent) 7px 8px); }
+.cal__day:disabled, .cal__day[aria-disabled="true"] { cursor: not-allowed; color: var(--ink-faint); }
+.cal__closed-label { font-family: var(--font-hand); letter-spacing: var(--hand-tracking-sm); word-spacing: var(--hand-word); font-size: 14px; line-height: 1.1; color: var(--ink-soft); }
+
+/* 일정 — 미니 스티커 · 테이프 조각 */
+.cal__ev {
+  --evf: var(--st-mint);
+  display: block;
+  max-width: 100%;
+  padding: 2px 6px 0;
+  font-family: var(--font-display-ko);
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1.05;
+  color: var(--on-sticker);
+  background: var(--evf);
+  border: 2px solid var(--die-cut);
+  border-radius: 8px 10px 9px 11px;
+  box-shadow: 0 3px 5px -3px var(--shadow-c);
+  rotate: calc(var(--tilt, -2deg) * var(--tilt-k));
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.cal__ev + .cal__ev { --tilt: 2deg; }
+.cal__ev--strawberry { --evf: var(--st-strawberry); }
+.cal__ev--lemon { --evf: var(--st-lemon); }
+.cal__ev--lavender { --evf: var(--st-lavender); }
+.cal__ev--sky { --evf: var(--st-sky); }
+.cal__ev--peach { --evf: var(--st-peach); }
+.cal__ev--cherry { --evf: var(--cherry); color: var(--on-cherry); }
+/* 테이프형 일정: 여러 날 걸침 */
+.cal__ev--tape {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--on-tape);
+  background-color: color-mix(in srgb, var(--tape-strawberry) var(--tape-alpha), transparent);
+  background-image:
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--st-strawberry) 55%, transparent) 0 5px, transparent 5px 10px),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--st-strawberry) 55%, transparent) 0 5px, transparent 5px 10px);
+  clip-path: var(--zigzag);
+  --tooth: 4px;
+  padding: 3px 10px 1px;
+  mix-blend-mode: var(--tape-blend);
+  rotate: calc(-1deg * var(--tilt-k));
+}
+.cal__ev--tape.cal__ev--mint {
+  background-color: color-mix(in srgb, var(--tape-mint) var(--tape-alpha), transparent);
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--st-mint) 90%, transparent) 1.5px, transparent 1.5px),
+    linear-gradient(90deg, color-mix(in srgb, var(--st-mint) 90%, transparent) 1.5px, transparent 1.5px);
+  background-size: 7px 7px;
+}
+.cal__ev .num { font-size: 12px; }
+
+/* 범례 */
+.cal__legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 14px; font-family: var(--font-hand); letter-spacing: var(--hand-tracking-sm); word-spacing: var(--hand-word); font-size: 18px; color: var(--ink-soft); }
+.cal__legend i { display: inline-block; width: 14px; height: 14px; margin-right: 6px; border-radius: 50%; border: 2px solid var(--die-cut); vertical-align: -2px; box-shadow: 0 1px 3px var(--shadow-c); }
+
+/* 작은 달력 (사이드 · 모바일) — 일정은 점으로 */
+.cal--mini { --cell-h: 44px; padding: 16px 14px 14px; }
+.cal--mini .cal__month { font-size: 36px; }
+.cal--mini .cal__year { font-size: 26px; }
+.cal--mini .cal__day { align-items: center; padding: 6px 2px; }
+.cal--mini .cal__date { font-size: 13px; }
+.cal--mini .cal__ev { display: block; width: 8px; height: 8px; padding: 0; font-size: 0; border-width: 1.5px; border-radius: 50%; align-self: center; rotate: 0deg; }
+.cal--mini .cal__ev--tape { height: 6px; width: 16px; border-radius: 0; }
+
+@media (max-width: 720px) {
+  .cal { --cell-h: 64px; padding: 18px 12px 14px; }
+  .cal__ev { font-size: 15px; padding: 1px 4px 0; border-width: 1.5px; }
+  .cal__dow { padding: 4px 4px 0; font-size: 16px; }
+}
+@media (max-width: 480px) {
+  .cal { --cell-h: 52px; }
+  .cal__month { font-size: 44px; }
+  .cal__day { padding: 4px 2px 6px; align-items: center; }
+  .cal__date { font-size: 13px; min-width: 22px; height: 22px; }
+  .cal__ev { display: block; width: 9px; height: 9px; padding: 0; font-size: 0; border-radius: 50%; border-width: 1.5px; rotate: 0deg; flex: none; }
+  .cal__ev--tape { width: 18px; height: 7px; border-radius: 0; }
+  .cal__closed-label { display: none; }
+  .cal__dow { text-align: center; }
+}

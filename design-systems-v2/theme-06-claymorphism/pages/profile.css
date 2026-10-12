@@ -1,0 +1,396 @@
+/* ==========================================================================
+   profile — 콩떡대장의 방
+   peach 바닥 방: 왼쪽 큰 플레이어 카드(무대) · 가운데 벽 선반(트로피) + 시즌 기록 · 오른쪽 친구 트레이
+   sky 바닥 트레이 방: 최근 매치 끈(타임라인) + 오늘 성적
+   ========================================================================== */
+
+/* HUD: 지금 화면 = 내 방 (플레이어 칩이 눌린 홈으로) */
+
+/* ---- 방 1 · 세 칸 배치 ------------------------------------------------- */
+.myroom__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 5fr) minmax(0, 3.2fr);
+  grid-template-areas: "player mid friends";
+  gap: var(--sp-6) var(--gutter);
+  align-items: start;
+}
+.myroom__player { grid-area: player; }
+.myroom__mid { grid-area: mid; display: flex; flex-direction: column; gap: var(--sp-6); }
+/* 세 칸 바닥을 한 땅선에: 넓은 화면에선 칸을 늘이고 남는 높이는 카드 안(발판 위)에서 흡수 */
+@media (min-width: 1241px) {
+  .myroom__grid { align-items: stretch; }
+  .myroom__party { margin-top: auto; }
+  .myroom__season { flex: 1; }
+  .myroom__season .meter-field { margin-top: auto; }
+  .trophy { --cup-k: 1.3; }
+}
+.myroom__friends { grid-area: friends; }
+
+/* 플레이어 카드 — 썸네일이 곧 작은 무대 */
+.myroom__stage { --thumb-h: 270px; align-items: end; place-items: end center; padding-bottom: 34px; }
+.myroom__stage .badge { top: 16px; left: 16px; }
+.myroom__pedestal {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center;
+}
+.myroom__pedestal .dough { position: relative; z-index: 1; margin-bottom: -34px; }
+.myroom__disc { --d: 230px; width: 230px; }
+
+.myroom__id { display: flex; flex-direction: column; gap: 2px; }
+.myroom__name {
+  font-family: var(--font-hangul-bold);
+  font-weight: 400;
+  font-size: var(--fs-h2);
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+}
+.myroom__uid { display: flex; align-items: center; gap: var(--sp-2); color: var(--ink-muted); }
+.myroom__uid .t-mono { font-size: 15px; }
+.myroom__uid .btn--icon { --btn-h: 44px; }
+
+/* 숫자 세 개 — 크기·형태가 서로 다르다 */
+.myroom__stats {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: end;
+  gap: var(--sp-4);
+  margin: var(--sp-2) 0 0;
+  padding: var(--sp-4) var(--sp-5);
+  border-radius: var(--r-card);
+  background: var(--well);
+  box-shadow: var(--well-shadow);
+}
+.myroom__stat { display: flex; flex-direction: column-reverse; gap: 4px; min-width: 0; }
+.myroom__stat dt { font-family: var(--font-hangul-bold); font-size: 14px; color: var(--ink-muted); }
+.myroom__stat dd { margin: 0; display: flex; align-items: baseline; gap: 2px; }
+.myroom__stat--trophy .t-count { font-size: clamp(40px, 3.8vw, 58px); white-space: nowrap; }
+.myroom__ring { --ring-size: 56px; --ring-w: 6px; }
+.myroom__ring::before { background: var(--well); }
+.myroom__num {
+  font-family: var(--font-display); font-weight: 700;
+  font-variation-settings: "wdth" 112;
+  font-size: 34px; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 파티 4자리 */
+.myroom__party { margin-top: var(--sp-2); }
+.myroom__party-head { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+.myroom__party-head h3 { font-size: 18px; }
+.party { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-2); }
+.party__seat {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: var(--sp-3) 4px var(--sp-2);
+  border-radius: 24px;
+  background: var(--surface-2);
+  text-align: center;
+  min-width: 0;
+}
+.party__seat--host { background: var(--floor-mint); }
+.party__name { font-family: var(--font-hangul-bold); font-size: 13px; line-height: 1.3; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.party__role { font-size: 12px; color: var(--ink-muted); line-height: 1.2; }
+.party__seat--empty { background: transparent; box-shadow: inset 0 0 0 3px var(--well); }
+.party__invite {
+  display: grid; place-items: center;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: var(--well);
+  box-shadow: var(--well-shadow);
+  color: var(--ink);
+  transition: scale var(--dur-release) var(--ease-boing);
+}
+.party__invite:hover { scale: 1.08; }
+.party__invite:focus-visible { outline: none; box-shadow: var(--well-shadow), var(--focus); }
+.myroom__foot { padding-top: var(--sp-3); }
+
+/* ---- 가운데: 벽 선반 --------------------------------------------------- */
+.myroom__wall-head { margin-bottom: var(--sp-4); }
+.myroom__wall-title {
+  display: inline-block;
+  font-family: var(--font-hangul-bold);
+  font-weight: 400;
+  font-size: var(--fs-h3);
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+.trophies { gap: 10px; justify-content: space-between; }
+@media (min-width: 901px) { .trophies { padding: var(--sp-4) var(--sp-4) 0; } }
+.trophy {
+  --cup: 72px;
+  --cup-bg: var(--butter);
+  --cup-deep: var(--butter-deep);
+  --cup-fg: var(--on-butter);
+  display: flex; flex-direction: column; align-items: center;
+  width: calc(var(--cup) * .6 + 16px);
+}
+.trophy__cup {
+  position: relative;
+  display: grid; place-items: center;
+  width: calc(var(--cup) * .6);
+  height: calc(var(--cup) * var(--cup-k, 1));
+  border-radius: 14px 14px 48% 48% / 12px 12px 58% 58%;
+  background: var(--cup-bg);
+  color: var(--cup-fg);
+  --slab-h: var(--slab-sm);
+  --slab-color: var(--cup-deep);
+  box-shadow: inset 0 3px 0 var(--hi), inset 0 -6px 10px var(--lo), 0 var(--slab-h) 0 var(--slab-color);
+}
+.trophy__cup::before,
+.trophy__cup::after {   /* 손잡이 = 작은 반죽 고리 */
+  content: "";
+  position: absolute; top: 16%;
+  width: 12px; height: 20px;
+  border: 4px solid var(--cup-bg);
+  border-radius: 50%;
+  box-shadow: 0 2px 0 var(--cup-deep);
+}
+.trophy__cup::before { left: -9px; border-right-color: transparent; }
+.trophy__cup::after { right: -9px; border-left-color: transparent; }
+.trophy__s {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: .04em;
+  margin-top: -20%;
+}
+.trophy__base {
+  position: relative;
+  margin-top: 10px;
+  min-width: 100%;
+  padding: 2px 6px 3px;
+  border-radius: 10px;
+  background: var(--clay);
+  color: var(--ink);
+  font-family: var(--font-hangul-bold);
+  font-size: 13px;
+  line-height: 1.3;
+  text-align: center;
+  white-space: nowrap;
+  --slab-h: 3px; --slab-color: var(--clay-deep);
+  box-shadow: var(--slab);
+}
+.trophy__base::before {   /* 받침 기둥 */
+  content: ""; position: absolute; left: 50%; top: -10px;
+  width: 12px; height: 10px; margin-left: -6px;
+  background: var(--cup-deep);
+}
+.trophy--gold { --cup-bg: var(--butter); --cup-deep: var(--butter-deep); --cup-fg: var(--on-butter); }
+.trophy--silver { --cup-bg: var(--surface-2); --cup-deep: var(--clay-deep); --cup-fg: var(--ink); }
+[data-theme="dark"] .trophy--silver { --cup-bg: var(--ink-muted); --cup-deep: var(--ink-faint); --cup-fg: var(--clay-deep); }
+.trophy--bronze { --cup-bg: var(--skin-chestnut); --cup-deep: var(--skin-chestnut-deep); --cup-fg: var(--on-blue); }
+.trophy--making .trophy__cup {
+  background: transparent;
+  color: var(--ink);
+  box-shadow: none;
+  outline: 3px dashed var(--ink-faint);
+  outline-offset: -3px;
+}
+.trophy--making .trophy__cup::before,
+.trophy--making .trophy__cup::after { border-color: var(--ink-faint); border-right-color: transparent; box-shadow: none; }
+.trophy--making .trophy__cup::after { border-color: var(--ink-faint); border-left-color: transparent; }
+.trophy--making .trophy__base::before { background: var(--ink-faint); }
+.trophy--making .trophy__base { background: var(--butter); color: var(--on-butter); --slab-color: var(--butter-deep); }
+
+.trophies__legend {
+  display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4);
+  margin-top: calc(var(--sp-2) * -1);
+  font-family: var(--font-hangul-bold);
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+.trophies__legend span { display: inline-flex; align-items: center; gap: 6px; }
+.trophies__bean { width: 14px; height: 13px; border-radius: var(--blob-mint); }
+.trophies__bean--gold { background: var(--butter); box-shadow: 0 2px 0 var(--butter-deep); }
+.trophies__bean--silver { background: var(--surface-2); box-shadow: 0 2px 0 var(--clay-deep); }
+[data-theme="dark"] .trophies__bean--silver { background: var(--ink-muted); box-shadow: 0 2px 0 var(--ink-faint); }
+.trophies__bean--bronze { background: var(--skin-chestnut); box-shadow: 0 2px 0 var(--skin-chestnut-deep); }
+.trophies__bean--making { box-shadow: inset 0 0 0 2px var(--ink-faint); }
+
+/* 시즌 기록 카드 */
+.myroom__season { gap: var(--sp-4); }
+.myroom__rank { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px var(--sp-2); }
+.myroom__rank-num {
+  font-family: var(--font-display); font-weight: 700;
+  font-variation-settings: "wdth" 112;
+  font-size: var(--fs-count); line-height: .95;
+  letter-spacing: -0.01em;
+}
+.myroom__rank .t-jua { font-size: var(--fs-h3); }
+.myroom__top { align-self: center; margin-left: var(--sp-2); }
+.myroom__season .meter-field__label,
+.myroom__season .meter-field__value,
+.myroom__season .meter-field__value b { color: var(--on-butter); }
+.myroom__pass { --fill: var(--mint); --fill-deep: var(--mint-deep); }
+.myroom__season .card__foot .t-jua { font-size: 15px; }
+
+/* ---- 오른쪽: 친구 ------------------------------------------------------ */
+.myroom__friends { padding: var(--sp-5) var(--sp-4) var(--sp-5); }
+.myroom__friends .tray__head { padding-inline: var(--sp-2); margin-bottom: 0; }
+.myroom__friends .tray__title:focus { outline: none; }
+.myroom__friends .tray__meta { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-hangul-bold); }
+.friends__note { padding-inline: var(--sp-2); margin: 2px 0 var(--sp-3); }
+.friends .plist__row { padding: 6px 8px 6px 8px; gap: 10px; min-height: 58px; }
+.friends .plist__end .btn--icon { --btn-h: 44px; }
+.friends__on, .friends__dot { width: 12px; height: 12px; border-radius: 50%; background: var(--mint); box-shadow: 0 2px 0 var(--mint-deep); flex: none; }
+.friends__dot { margin-right: 10px; }
+.friends__dot--play { background: var(--butter); box-shadow: 0 2px 0 var(--butter-deep); }
+
+/* ---- 방 2 · 최근 매치 -------------------------------------------------- */
+.matches__grid { align-items: start; }
+.matches__log { padding-left: var(--sp-6); }
+.matches__line { padding-left: 52px; }
+.matches__line .tline__item { padding-bottom: var(--sp-4); }
+.matches__line .tline__item + .tline__item { padding-top: var(--sp-3); }
+.matches__line .tline__item--now { padding-bottom: var(--sp-5); }
+.matches__line .tline__item--now .tline__title { font-size: 20px; }
+.match { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-4); }
+.match__main { min-width: 0; }
+.match__score { display: flex; align-items: center; gap: var(--sp-3); flex: none; }
+.match__rank {
+  --rk: var(--clay); --rk-deep: var(--clay-deep); --rk-fg: var(--ink);
+  display: inline-flex; align-items: baseline; justify-content: center; gap: 1px;
+  min-width: 68px; min-height: 52px;
+  padding: 6px 12px 4px;
+  border-radius: 22px;
+  background: var(--rk);
+  color: var(--rk-fg);
+  font-family: var(--font-hangul-bold);
+  font-size: 15px;
+  --slab-h: var(--slab-sm); --slab-color: var(--rk-deep);
+  box-shadow: var(--slab);
+}
+.match__rank b { font-family: var(--font-display); font-weight: 700; font-size: 30px; line-height: 1; }
+.match__rank--1 { --rk: var(--butter); --rk-deep: var(--butter-deep); --rk-fg: var(--on-butter); }
+.match__rank--2 { --rk: var(--blue); --rk-deep: var(--blue-deep); --rk-fg: var(--on-blue); }
+.match__rank--3 { --rk: var(--pink); --rk-deep: var(--pink-deep); --rk-fg: var(--on-pink); }
+.match__rank--4 { --rk: var(--tomato); --rk-deep: var(--tomato-deep); --rk-fg: var(--on-tomato); }
+.match__delta {
+  min-width: 52px; text-align: right;
+  font-family: var(--font-display); font-weight: 700; font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  color: var(--mint-text);
+}
+.match__delta--down { color: var(--tomato-text); }
+
+.matches__side { display: flex; flex-direction: column; gap: var(--sp-6); }
+.matches__gain .t-count { display: block; }
+.matches__today .card__text b { font-family: var(--font-hangul-bold); font-weight: 400; }
+.gamebars { display: flex; flex-direction: column; gap: var(--sp-3); }
+.gamebar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px var(--sp-3); align-items: baseline; }
+.gamebar__name { font-family: var(--font-hangul-bold); font-size: 15px; }
+.gamebar__val { font-family: var(--font-display); font-weight: 600; font-size: 14px; color: var(--ink-muted); }
+.gamebar__meter { grid-column: 1 / -1; }
+.gamebar--none .gamebar__val { font-family: var(--font-body); font-weight: 400; }
+.gamebar--none .meter__fill { display: none; }
+
+.rival { display: flex; align-items: center; justify-content: space-around; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+.rival__side { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.rival__name { font-family: var(--font-hangul-bold); font-size: 14px; }
+.rival__win { font-family: var(--font-display); font-weight: 700; font-size: 34px; line-height: 1; }
+.rival__win small { font-family: var(--font-hangul-bold); font-weight: 400; font-size: 15px; margin-left: 2px; }
+.rival__side--win .rival__win { color: var(--butter-text); }
+.rival__vs { font-family: var(--font-display); font-weight: 700; font-size: 34px; color: var(--ink-faint); }
+
+/* ---- 반응형 ------------------------------------------------------------ */
+@media (max-width: 1240px) {
+  .myroom__grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    grid-template-areas: "player mid" "friends friends";
+  }
+  .friends { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px var(--sp-4); }
+}
+@media (max-width: 1024px) {
+  .matches__side { flex-direction: row; flex-wrap: wrap; }
+  .matches__side > * { flex: 1 1 280px; }
+}
+@media (max-width: 860px) {
+  .myroom__grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "player" "mid" "friends"; }
+  .trophies { justify-content: flex-start; gap: var(--sp-5); }
+}
+@media (max-width: 600px) {
+  .myroom__stage { --thumb-h: 220px; padding-bottom: 28px; }
+  .myroom__pedestal .dough { --size: 120px !important; margin-bottom: -28px; }
+  .myroom__disc { width: 190px; }
+  .myroom__stats { grid-template-columns: minmax(0, 1fr) auto auto; padding: var(--sp-3) var(--sp-4); gap: var(--sp-3); }
+  .myroom__stat--trophy .t-count { font-size: 44px; }
+  .myroom__num { font-size: 28px; }
+  .myroom__ring { --ring-size: 48px; --ring-w: 5px; }
+  .party { gap: 6px; }
+  .party__name { font-size: 12px; }
+  .friends { display: flex; }
+  .matches__log { padding: var(--sp-5) var(--sp-4); }
+  .matches__line { padding-left: 44px; }
+  .match { flex-direction: column; gap: var(--sp-2); }
+  .match__score { order: -1; }
+  .match__rank { min-height: 40px; min-width: 56px; padding: 4px 10px 2px; }
+  .match__rank b { font-size: 22px; }
+  .match__delta { text-align: left; font-size: 17px; }
+}
+
+/* 최근 매치: 제목 = 오늘 판 수 큰 숫자 */
+.matches__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px var(--sp-4); margin-bottom: var(--sp-5); }
+.matches__title { display: flex; align-items: baseline; gap: 8px; margin: 0; }
+.matches__title .t-count { line-height: .9; }
+.matches__title-ko { font-size: var(--fs-h3); }
+.matches__sub { color: var(--ink-muted); font-size: var(--fs-small); }
+
+/* 오늘 놀이 시간 — 설정 공방(자녀 보호)으로 가는 작은 카드 */
+.matches__time { gap: var(--sp-2); }
+.matches__time-num { display: flex; align-items: baseline; gap: 4px; font-family: var(--font-hangul-bold); font-size: 18px; }
+.matches__time-num b { font-family: var(--font-display); font-weight: 700; font-variation-settings: "wdth" 112; font-size: 44px; line-height: 1; }
+.matches__time-num span { font-family: var(--font-body); font-size: var(--fs-small); color: var(--ink-muted); }
+.matches__time-foot { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3); font-size: var(--fs-small); color: var(--ink-muted); }
+.matches__time-go { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-hangul-bold); color: var(--link); white-space: nowrap; }
+.matches__time-go .icon { width: 16px; height: 16px; }
+
+/* 시즌 7 길 — 버터 카드 안: 시작 · 오늘 · 할로윈 · 끝 */
+.seasonroad { position: relative; height: 64px; margin: var(--sp-2) 10px 0; list-style: none; padding: 0; }
+.seasonroad::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 6px; height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--butter-deep);
+  box-shadow: inset 0 2px 0 var(--lo);
+}
+.seasonroad::after {   /* 지나온 길 */
+  content: ""; position: absolute; left: 0; width: 29.6%; top: 6px; height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--on-butter);
+}
+.seasonroad__stop {
+  position: absolute; top: 0; left: var(--at);
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  translate: -50% 0;
+  font-size: 12px; line-height: 1.3; color: var(--on-butter); white-space: nowrap;
+}
+.seasonroad__stop::before {
+  content: ""; width: 20px; height: 20px; margin-bottom: 4px;
+  border-radius: 50%;
+  background: var(--clay);
+  box-shadow: inset 0 2px 0 var(--hi), 0 3px 0 var(--butter-deep);
+}
+.seasonroad__stop b { font-family: var(--font-hangul-bold); font-weight: 400; font-size: 14px; }
+.seasonroad__stop:first-child { translate: -10px 0; align-items: flex-start; }
+.seasonroad__stop--end { translate: calc(-100% + 10px) 0; align-items: flex-end; }
+.seasonroad__stop--now::before { background: var(--mint); box-shadow: inset 0 2px 0 var(--hi), 0 3px 0 var(--mint-deep); }
+.seasonroad__stop--event::before { background: var(--tomato); box-shadow: inset 0 2px 0 var(--hi), 0 3px 0 var(--tomato-deep); }
+
+/* 쉬는 친구 4명 — 줄 대신 낮잠 자리 */
+.friends__nap { margin-top: var(--sp-4); padding: var(--sp-3) var(--sp-2) 0; border-top: 3px dotted var(--well); }
+.friends__nap-head { display: flex; align-items: baseline; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.friends__nap-head .t-jua { font-size: 15px; color: var(--ink-muted); }
+.nappers { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; list-style: none; margin: 0; padding: 0; }
+.napper { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; text-align: center; }
+.napper .dough { margin-bottom: 4px; }
+.napper__name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--ink); }
+.napper__when { font-size: 11px; color: var(--ink-muted); white-space: nowrap; }
+
+/* 타임라인 메타의 링크 배지: 보이는 알약은 26px 그대로, 누르는 영역(링크 상자)은 44px */
+.tline__link {
+  display: inline-flex; align-items: center;
+  min-height: 44px; margin-block: -9px;
+  border-radius: var(--r-pill);
+  text-decoration: none; color: inherit;
+}
+.tline__link:hover .badge { translate: 0 -1px; }
+.tline__link:focus-visible { outline: none; }
+.tline__link:focus-visible .badge { box-shadow: var(--slab), var(--focus); }

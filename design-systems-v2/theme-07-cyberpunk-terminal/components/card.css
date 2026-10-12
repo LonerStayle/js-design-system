@@ -1,0 +1,182 @@
+/* card = pane — 시그니처 2: TUI 박스 창. 제목·메타·키 힌트가 테두리 선 위에 박힌다(htop·mc).
+   활성·포커스 = 이중선 + 제목 반전(Midnight Commander). ●●● 창 크롬 금지. */
+.pane {
+  --pane-line: var(--rule);
+  --pane-bw: 1px;
+  --pane-style: solid;
+  --pane-head-h: 20px;
+  --pane-pad-x: var(--c2);
+  position: relative;
+  /* flow-root: 제목 줄의 음수 margin 이 부모 블록과 접히지(collapse) 않게 한다.
+     접히면 pane 상자가 제목 줄 위로 10px 올라가 좌우 테두리가 모서리 위로 삐져나온다(블록 흐름 안의 pane 에서만 생기던 결함) */
+  display: flow-root;
+  min-width: 0;
+  color: var(--fg);
+  background: var(--pane-fill, transparent);
+  border: var(--pane-bw) var(--pane-style) var(--pane-line);
+  padding: var(--r-half) calc(var(--pane-pad-x) + 1px - var(--pane-bw));
+  text-decoration: none;
+}
+.pane:has(> .pane__head) { border-top: 0; padding-top: 0; }
+.pane:has(> .pane__keys) { border-bottom: 0; padding-bottom: 0; }
+/* 테두리 밖으로 반 줄 나오는 제목·키 줄의 자리. :where() 로 0 특이도 — 세션 흐름 간격(.session > * + *)이 이긴다 */
+:where(.pane:has(> .pane__head)) { margin-top: calc(var(--pane-head-h) / 2); }
+:where(.pane:has(> .pane__keys)) { margin-bottom: calc(var(--pane-head-h) / 2); }
+/* 프롬프트 바로 아래(간격 0) pane: 제목 줄이 명령 줄을 덮지 않게 */
+.block > .pane:has(> .pane__head), .sh-out > .pane:has(> .pane__head) { margin-top: calc(var(--pane-head-h) / 2 + 4px); }
+
+/* 위 테두리: ──┤ 제목 ├──────────┤ 메타 ├── */
+.pane__head,
+.pane__keys {
+  display: flex;
+  align-items: center;
+  height: var(--pane-head-h);
+  margin-inline: calc((var(--pane-pad-x) + 1px) * -1);
+  font-size: var(--fs-meta);
+  line-height: 1;
+  white-space: nowrap;
+  min-width: 0;
+}
+.pane__head { margin-top: calc(var(--pane-head-h) / -2); margin-bottom: var(--r-half); }
+.pane__keys { margin-top: var(--r-half); margin-bottom: calc(var(--pane-head-h) / -2); }
+
+.pane__head::before,
+.pane__head::after,
+.pane__meta::after {
+  content: "";
+  align-self: flex-end;
+  height: 50%;
+  border-top: var(--pane-bw) var(--pane-style) var(--pane-line);
+}
+.pane__keys::before,
+.pane__keys::after {
+  content: "";
+  align-self: flex-start;
+  height: 50%;
+  border-bottom: var(--pane-bw) var(--pane-style) var(--pane-line);
+}
+.pane__head::before, .pane__keys::before { flex: 0 0 var(--c2); }
+.pane__head::after, .pane__keys::after { flex: 1 1 var(--c1); order: 2; }
+
+.pane__title {
+  order: 1;
+  min-width: 0;
+  padding: 0 var(--c1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  line-height: var(--pane-head-h);
+  color: var(--fg);
+}
+.pane__title code { color: inherit; }
+.pane__meta {
+  order: 3;
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  gap: var(--c2);
+  padding-left: var(--c1);
+  color: var(--fg-muted);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.pane__meta::after { flex: 0 0 var(--c2); margin-left: calc(var(--c1) - var(--c2)); }
+.pane__keys > * { order: 1; }
+.pane__keys > :first-child { padding-left: var(--c1); }
+.pane__keys > :last-child { padding-right: var(--c1); }
+.pane__keys > * + * { margin-left: var(--c2); }
+
+/* 테두리 위 키 버튼: 보이는 높이 20px, 누르는 영역 44px */
+.pane__key {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 1ch;
+  height: var(--pane-head-h);
+  padding: 0 2px;
+  color: var(--fg);
+  font-size: var(--fs-meta);
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+}
+/* 테두리에 박힌 키: 글자 폭과 상관없이 누르는 영역은 최소 44×44 */
+.pane__key::after { content: ""; position: absolute; top: -12px; bottom: -12px; left: 50%; width: max(calc(100% + 4px), var(--touch)); transform: translateX(-50%); }
+.pane__key:hover { background: var(--select-bg); color: var(--select-fg); }
+.pane__key:active { background: var(--press-bg); color: var(--press-fg); }
+.pane__key:disabled { color: var(--fg-muted); cursor: not-allowed; background: none; }
+.pane__key kbd { color: inherit; }
+.pane__key:hover kbd::before, .pane__key:hover kbd::after { color: inherit; }
+
+.pane__body > * + * { margin-top: var(--r1); }
+.pane__foot { margin-top: var(--r-half); color: var(--fg-muted); font-size: var(--fs-meta); }
+
+/* ── 변형 ── */
+.pane--fill { --pane-fill: var(--pane); }
+.pane--flush { --pane-pad-x: 0px; }
+.pane--flush > .pane__head { margin-bottom: 0; }
+.pane--flush > .pane__keys { margin-top: 0; }
+.pane--tight > .pane__head { margin-bottom: 2px; }
+
+/* 활성·포커스된 pane = 이중선 + 제목 반전 */
+.pane.is-active,
+.pane--active,
+.pane:not(.pane--static):focus-within {
+  --pane-bw: 3px;
+  --pane-style: double;
+  --pane-line: var(--rule-strong);
+}
+.pane.is-active > .pane__head > .pane__title,
+.pane--active > .pane__head > .pane__title,
+.pane:not(.pane--static):focus-within > .pane__head > .pane__title {
+  background: var(--select-bg);
+  color: var(--select-fg);
+}
+
+/* 링크 pane (카드 전체가 이동) */
+a.pane { color: var(--fg); }
+a.pane:hover { background: var(--pane-fill, transparent); color: var(--fg); --pane-line: var(--fg); }
+a.pane:hover > .pane__head > .pane__title { background: var(--select-bg); color: var(--select-fg); }
+a.pane:active > .pane__head > .pane__title { background: var(--press-bg); color: var(--press-fg); }
+
+/* 선택됨 */
+.pane[aria-selected="true"], .pane.is-selected { --pane-line: var(--fg); }
+.pane[aria-selected="true"] > .pane__head > .pane__title,
+.pane.is-selected > .pane__head > .pane__title { background: var(--select-bg); color: var(--select-fg); }
+
+/* 비활성 */
+.pane[aria-disabled="true"] { --pane-style: dashed; color: var(--fg-muted); }
+.pane[aria-disabled="true"] > .pane__head > .pane__title { color: var(--fg-muted); background: none; }
+
+/* 불러오는 중: 제목 앞 점자 스피너 */
+.pane[aria-busy="true"] > .pane__head > .pane__title::before {
+  content: "⠋";
+  display: inline-block;
+  width: 2ch;
+  animation: sh-braille calc(var(--spin) * 10) steps(1, end) infinite;
+}
+
+/* 오류 */
+.pane--err, .pane[data-state="error"] { --pane-line: var(--err); }
+.pane--err > .pane__head > .pane__title,
+.pane[data-state="error"] > .pane__head > .pane__title { color: var(--err); }
+.pane--warn { --pane-line: var(--warn); }
+.pane--warn > .pane__head > .pane__title { color: var(--warn); }
+
+/* 세로로 쌓인 pane: 다음 pane 의 제목 선이 앞 pane 의 아래 선이 된다.
+   앞 pane 의 아래 테두리는 투명하게 둔다 — 그대로 두면 다음 pane 제목 글자 한가운데를 선이 그어 취소선처럼 보인다.
+   (제목 줄의 ──┤ ├── 선이 같은 높이에서 그 자리를 대신 그린다) */
+.pane-stack > .pane + .pane { margin-top: -1px; }
+.pane-stack > .pane:has(> .pane__keys) + .pane { margin-top: var(--r1); }
+.pane-stack > .pane:not(:has(> .pane__keys)):has(+ .pane > .pane__head) { border-bottom-color: transparent; }
+@media (max-width: 767px) {
+  .split > .pane:has(> .pane__keys) + .pane { margin-top: var(--r1); }
+  .split > .pane:not(:last-child):not(:has(> .pane__keys)) { padding-bottom: var(--r1); }
+  .split > .pane:not(:has(> .pane__keys)):has(+ .pane > .pane__head) { border-bottom-color: transparent; }
+}
+/* 나란히 놓인 pane 중 하나라도 아래 키 줄이 있으면 모두 같은 선에서 끝난다 */
+@media (min-width: 768px) {
+  .split:has(> .pane > .pane__keys) > .pane:not(:has(> .pane__keys)) { margin-bottom: calc(var(--pane-head-h) / 2); }
+}

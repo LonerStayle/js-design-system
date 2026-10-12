@@ -1,0 +1,173 @@
+/* dashboard — btop -p nr31 : 야간수리반 #31 리허설 운영 콘솔.
+   위 62/38 (벤치 미터 · D-14 카운트다운) → 창 전환 줄 → 아래 38/62 (풀이 표 · 제출 로그 스트림).
+   KPI 카드 줄 없음. 값은 semantic 토큰만. */
+
+/* ── 벤치 미터 (btop 프로세스 표처럼 열 정렬) ───────────────── */
+.dash-top { margin-top: calc(var(--r1) + var(--pane-head-h, 20px) / 2); }
+.bench {
+  font-size: var(--fs-data);
+  line-height: var(--lh-data);
+  font-variant-numeric: tabular-nums;
+}
+.bench__row {
+  display: grid;
+  grid-template-columns: 9ch minmax(14ch, 1fr) 23ch 20ch 16ch;
+  gap: 0 var(--c2);
+  align-items: center;
+  min-height: var(--touch);
+  padding: 4px var(--c1);
+  margin-inline: calc(var(--c1) * -1);
+  border-bottom: 1px dotted var(--rule);
+}
+.bench__row--head {
+  min-height: 0;
+  padding-block: 0 4px;
+  color: var(--fg-muted);
+  font-size: var(--fs-meta);
+  font-weight: 500;
+  border-bottom: 3px double var(--rule-strong);
+}
+.bench__row > * { min-width: 0; }
+.bench__host { color: var(--path); font-weight: 700; }
+.bench__who { display: grid; line-height: 1.35; }
+.bench__user { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bench__job { color: var(--fg-muted); font-size: var(--fs-meta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bench__spark { color: var(--prompt); white-space: nowrap; overflow: hidden; font-size: var(--fs-body); line-height: 1; }
+.bench__state { justify-self: start; white-space: nowrap; }
+.bench__state .badge { font-size: var(--fs-meta); }
+.bench .meter { font-size: var(--fs-meta); }
+
+.bench__row.is-idle .bench__host,
+.bench__row.is-idle .bench__spark { color: var(--fg-muted); }
+.bench__row.is-idle .meter__fill { color: var(--fg-muted); }
+.bench__row.is-self { background: var(--pane-2); --meter-bg: var(--pane-2); }
+.bench__row.is-warn { box-shadow: inset 3px 0 0 var(--warn); }
+
+/* bench06 팝업 트리거: 호스트 이름 그대로, 누르는 영역 44px */
+.bench__pop {
+  position: relative;
+  color: var(--path);
+  font-weight: 700;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.bench__pop::after { content: ""; position: absolute; inset: -12px -4px; }
+.bench__pop:hover, .bench__pop[aria-expanded="true"] { background: var(--select-bg); color: var(--select-fg); text-decoration: none; }
+
+.bench__sum {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--c4);
+  margin-top: var(--r-half);
+  color: var(--fg-muted);
+  font-size: var(--fs-data);
+  line-height: var(--lh-body);
+}
+.bench__sum b { color: var(--fg); }
+.bench__sum .c-prompt { color: var(--prompt); }
+
+/* ── D-14 카운트다운 pane ─────────────────────────────── */
+.count { display: grid; gap: var(--r1); padding-block: var(--r-half) var(--r-half); }
+.count__big { line-height: 1; }
+.count__num {
+  font-size: calc(var(--fs-num) * 1.75);
+  line-height: 1;
+  color: var(--prompt);
+}
+.count__when { font-size: var(--fs-data); line-height: var(--lh-body); }
+.count__label { font-size: var(--fs-data); line-height: var(--lh-data); color: var(--fg-muted); }
+.count__label b { color: var(--fg); font-size: var(--fs-h); }
+.count__reg { display: grid; gap: 4px; }
+.count__note { color: var(--fg-muted); font-size: var(--fs-meta); line-height: var(--lh-data); }
+
+.count__dl {
+  display: grid;
+  grid-template-columns: 10ch minmax(0, 1fr) auto;
+  gap: 2px var(--c2);
+  padding-top: var(--r-half);
+  border-top: 1px solid var(--rule);
+  font-size: var(--fs-data);
+  line-height: var(--lh-data);
+  font-variant-numeric: tabular-nums;
+}
+.count__dl dt { color: var(--fg-muted); }
+.count__d { text-align: right; font-weight: 700; }
+
+/* 문제 18칸 막대: 1칸 = 1문제. 상태별 채움 = 꽉 참(█) · 촘촘한 디더(▓) · 성긴 디더(▒) · 점선(░) */
+.cells { display: grid; gap: 6px; padding-top: var(--r-half); border-top: 1px solid var(--rule); }
+.cells__bar { display: flex; gap: 2px; height: var(--r1); }
+.cells__bar > .cells__c { flex: 1 1 0; height: 100%; }
+.cells__c { display: inline-block; width: 2ch; height: 1em; vertical-align: -0.12em; }
+.cells__c--ship { background: var(--ok); }
+.cells__c--review {
+  background-image: conic-gradient(var(--info) 25%, transparent 0 50%, var(--info) 0 75%, transparent 0);
+  background-size: 3px 3px;
+  box-shadow: inset 0 0 0 1px var(--info);
+}
+.cells__c--wip {
+  background-image: radial-gradient(var(--warn) 1px, transparent 1.2px);
+  background-size: 4px 4px;
+  box-shadow: inset 0 0 0 1px var(--warn);
+}
+.cells__c--idea { border: 1px dashed var(--fg-muted); }
+.cells__key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--c2);
+  font-size: var(--fs-meta);
+  line-height: var(--lh-body);
+  color: var(--fg);
+}
+
+/* ── 아래: 풀이 표 · 로그 ─────────────────────────────── */
+.dash-bottom { margin-top: calc(var(--r1) + var(--pane-head-h, 20px) / 2) !important; }
+.dash-log { display: flex; flex-direction: column; }
+.dash-log .log { max-width: none; flex: 1; }
+.dash-log .log__line { padding-block: 3px; }
+.dash-log .log__state { margin-top: var(--r-half); }
+.dash-bottom .tbl__t td:nth-child(4) { font-weight: 700; }
+.dash-bottom .tbl__t tr.is-err td:nth-child(4) { color: var(--err); }
+
+/* ≥768 · <1200: 벤치 열을 줄인다 */
+@media (max-width: 1399px) {
+  .bench__row { grid-template-columns: 8ch minmax(12ch, 1fr) 22ch 16ch; }
+  .bench__spark { display: none; }
+  .bench__row--head > :nth-child(4) { display: none; }
+}
+@media (max-width: 1199px) {
+  .dash-top, .dash-bottom { grid-template-columns: minmax(0, 1fr); }
+  .dash-top > .pane + .pane, .dash-bottom > .pane + .pane { margin-left: 0; margin-top: var(--r1); }
+  .dash-top > .pane:has(> .pane__keys) + .pane { margin-top: var(--r1); }
+  .count { grid-template-columns: auto minmax(0, 1fr); column-gap: var(--c4); align-items: start; }
+  .count__big { grid-row: span 2; }
+}
+@media (max-width: 767px) {
+  .bench__row {
+    grid-template-columns: 8ch minmax(0, 1fr) auto;
+    grid-template-areas: "host who state" "cpu cpu cpu";
+    row-gap: 2px;
+    padding-block: 6px;
+  }
+  .bench__row--head { display: none; }
+  .bench__job { white-space: normal; overflow: visible; }
+  .bench__row > :nth-child(1) { grid-area: host; }
+  .bench__row > :nth-child(2) { grid-area: who; }
+  .bench__row > :nth-child(3) { grid-area: cpu; }
+  .bench__row > .bench__state { grid-area: state; }
+  .count { grid-template-columns: minmax(0, 1fr); }
+  .count__big { grid-row: auto; }
+  .count__num { font-size: calc(var(--fs-num) * 2); }
+  /* 390: 표에서 출제자 열을 접어 풀이 수가 첫 화면에 보이게 */
+  .dash-bottom .tbl__t th:nth-child(2),
+  .dash-bottom .tbl__t td:nth-child(2) { display: none; }
+  /* 390: 로그는 두 줄씩 접히므로 마지막 10줄만(스트림이 위에서 지워도 nth-last 라 유지된다) */
+  .dash-log .log__line:nth-last-child(n+11) { display: none; }
+}
+
+/* 나란히 놓인 두 pane 은 같은 높이: 벤치 행이 남는 높이를 나눠 갖는다(빈 칸 없음) */
+.dash-bench { display: flex; flex-direction: column; }
+.dash-bench > .bench { flex: 1; display: grid; grid-template-rows: auto; grid-auto-rows: 1fr; }
+/* 세로로 쌓이면(<1200) 옆 pane 과 높이를 맞출 필요가 없다 — 행은 내용 높이만 */
+@media (max-width: 1199px) {
+  .dash-bench > .bench { grid-auto-rows: auto; }
+}

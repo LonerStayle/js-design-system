@@ -1,0 +1,265 @@
+/* ==========================================================================
+   table — 머리 행 위 2px 잉크 룰·아래 1px 룰, 행 헤어라인.
+   숫자 열 오른쪽 정렬 tabular-nums, 상태 열 = 배지.
+   모바일(<768) .table--stack = 행마다 2열 정의 블록(열이 적은 비교 표용).
+   모바일(<768) .table--lines = 행마다 2줄 압축(목록형 표용). 셀에 data-cell="key|when|end|title|state|meta|count"를 단다.
+   넓은 표는 .table-wrap 스크롤 + 오른쪽 페이드.
+   ========================================================================== */
+
+.table-wrap {
+  position: relative;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-soft) transparent;
+}
+.table-wrap:focus-visible { outline-offset: 2px; }
+.table-shell { position: relative; }
+.table-shell.has-more-end::after {
+  content: "";
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: var(--s-6);
+  pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--bg));
+}
+
+.table {
+  width: 100%;
+  min-width: var(--table-min, 640px);
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+.table__caption {
+  caption-side: top;
+  padding-bottom: var(--s-2);
+  text-align: left;
+  font-size: var(--fs-h4);
+  line-height: var(--lh-h4);
+  letter-spacing: var(--ls-h4);
+  font-weight: var(--fw-bold);
+}
+.table__caption small { display: block; font-size: var(--fs-small); line-height: var(--lh-small); font-weight: var(--fw-regular); color: var(--fg-muted); letter-spacing: 0; }
+.table thead th {
+  height: var(--ctl-md);
+  padding: 0 var(--s-2);
+  border-top: var(--line-block) solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: bottom;
+  padding-bottom: var(--s-1);
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  font-weight: var(--fw-bold);
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+.table td,
+.table tbody th {
+  height: var(--ctl-md);
+  padding: 12px var(--s-2);
+  border-bottom: 1px solid var(--rule-soft);
+  text-align: left;
+  vertical-align: top;
+}
+.table tbody th { font-weight: var(--fw-bold); }
+.table th:first-child,
+.table td:first-child { padding-left: 0; }
+.table th:last-child,
+.table td:last-child { padding-right: 0; }
+.table .num { text-align: right; white-space: nowrap; }
+.table .code-col { font-weight: var(--fw-bold); white-space: nowrap; }
+.table__sub { display: block; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--fg-muted); }
+.table tfoot td,
+.table tfoot th {
+  padding: 12px var(--s-2);
+  border-top: var(--line-block) solid var(--rule);
+  border-bottom: 0;
+  font-weight: var(--fw-bold);
+  text-align: left;
+}
+.table tfoot .num { text-align: right; }
+
+/* 행 상태 */
+.table tbody tr { transition: background-color var(--dur-1) var(--ease-linear); }
+.table--hover tbody tr:hover { background: var(--surface-2); }
+/* 선택 행: 회색 판 안에서는 종이색으로 떠올라 작은 글자·상태색이 4.5:1 을 유지한다(--row-select) */
+.table tbody tr[aria-selected="true"] { background: var(--row-select, var(--surface-2)); }
+.table tbody tr[aria-selected="true"] > :first-child { box-shadow: inset 4px 0 0 var(--accent); padding-left: var(--s-2); }
+.table tbody tr.is-now > :first-child::before {
+  content: "";
+  display: inline-block;
+  inline-size: var(--sq-xs);
+  block-size: var(--sq-xs);
+  margin-right: var(--s-1);
+  vertical-align: middle;
+  background: var(--accent);
+}
+/* 첫 칸이 선택 체크박스면 점은 체크박스 옆(다음 칸 앞)에 붙인다 — 체크박스 아래로 밀려 내려가지 않게 */
+.table tbody tr.is-now > .sel:first-child::before { content: none; }
+.table tbody tr.is-now > .sel:first-child + *::before {
+  content: "";
+  display: inline-block;
+  inline-size: var(--sq-xs);
+  block-size: var(--sq-xs);
+  margin-left: calc(-1 * (var(--sq-xs) + var(--s-1)));  /* 칸 여백으로 내어 걸어 코드 열 정렬을 지킨다 */
+  margin-right: var(--s-1);
+  vertical-align: middle;
+  background: var(--accent);
+}
+.table tbody tr.is-past { color: var(--fg-muted); }
+.table a:not([class]) { font-weight: var(--fw-bold); position: relative; }
+/* 표 안 링크의 터치 타깃: 밑줄은 글자에 붙이고(패딩 없음), 누르는 영역만 위아래로 넓힌다 */
+.table a:not([class])::before {
+  content: "";
+  position: absolute;
+  inset: -12px 0;
+}
+
+/* 정렬 머리 */
+.table__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--touch);
+  min-width: var(--touch);          /* 짧은 머리('공연' 등)도 누르는 폭 44px — 글자 위치는 그대로 */
+  margin-bottom: -10px;
+  font: inherit;
+  color: inherit;
+  white-space: nowrap;
+  transition: color var(--dur-1) var(--ease-linear);
+}
+.table__sort:hover { color: var(--fg); }
+.table__sort::after {
+  content: "";
+  inline-size: 0;
+  block-size: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--rule-soft);
+}
+th[aria-sort="ascending"] .table__sort,
+th[aria-sort="descending"] .table__sort { color: var(--fg); }
+th[aria-sort="ascending"] .table__sort::after { border-top: 0; border-bottom: 5px solid var(--accent); }
+th[aria-sort="descending"] .table__sort::after { border-top-color: var(--accent); }
+th.num .table__sort { flex-direction: row-reverse; }
+
+/* 선택 열 */
+.table .sel { width: var(--touch); padding-right: 0; }
+.table .sel .check { min-height: var(--touch); min-width: var(--touch); margin-block: -10px; padding: 0; align-items: center; } /* 누르는 영역 44×44, 상자·행 높이는 그대로(위아래 음수 여백) */
+.table .sel .check__input { inline-size: 24px; block-size: 24px; }
+
+/* 촘촘한 변형 */
+.table--dense td,
+.table--dense tbody th { height: var(--s-5); padding-top: var(--s-1); padding-bottom: var(--s-1); }
+
+/* 모바일: 행 = 2열 정의 블록 */
+@media (max-width: 767.98px) {
+  .table--stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .table.table--stack { min-width: 0; }
+  .table--stack,
+  .table--stack tbody,
+  .table--stack tr,
+  .table--stack td,
+  .table--stack tbody th { display: block; width: 100%; }
+  .table--stack { border-top: 0; }
+  .table--stack caption { display: block; width: 100%; }
+  .table--stack tbody { border-top: var(--line-block) solid var(--rule); }
+  .table--stack tbody tr { padding: var(--s-1) 0; border-bottom: 1px solid var(--rule); }
+  .table.table--stack tbody td,
+  .table.table--stack tbody th {
+    position: relative;
+    width: 100%;
+    height: auto;
+    min-height: var(--s-4);
+    padding: 4px 0 4px calc(38% + var(--s-2));
+    border: 0;
+    text-align: left;
+  }
+  .table--stack tbody td::before,
+  .table--stack tbody th::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    top: 4px;
+    width: 38%;
+    font-size: var(--fs-caption);
+    line-height: var(--lh-small);
+    font-weight: var(--fw-bold);
+    color: var(--fg-muted);
+  }
+  .table--stack .num { text-align: left; }
+  .table--stack tfoot { display: block; }
+  .table--stack tfoot tr { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 var(--s-2); }
+  /* 바닥 행은 정의 블록이 아니다 — 장면의 강조 열(예: td.cmp__now 의 38% 들여쓰기)이 tfoot 까지 번지지 않게
+     클래스를 겹쳐 명시도를 (0,3,2)로 올린다 */
+  .table--stack tfoot th,
+  .table--stack tfoot td { display: block; }
+  .table.table--stack.table--stack tfoot :is(th, td) { width: auto; height: auto; padding-left: 0; padding-right: 0; }
+  .table--stack tfoot th { flex: 1 1 100%; }
+  .table.table--stack tr[aria-selected="true"] > :first-child { box-shadow: none; padding-left: calc(38% + var(--s-2)); }
+  .table--stack tr[aria-selected="true"] { box-shadow: inset 4px 0 0 var(--accent); padding-left: var(--s-2); }
+}
+
+/* 모바일: .table--lines = 행마다 2줄 압축 (약 88px)
+   1줄: [선택] 코드 · 날짜·시각 ········ 판매율
+   2줄: 제목 ························ 상태 배지
+   3줄(작게): 홀 · 판매/좌석 같은 보조 값 */
+@media (max-width: 767.98px) {
+  .table--lines thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .table.table--lines { min-width: 0; }
+  .table--lines,
+  .table--lines tbody,
+  .table--lines tfoot { display: block; width: 100%; }
+  .table--lines caption { display: block; width: 100%; }
+  .table--lines tbody { border-top: var(--line-block) solid var(--rule); }
+  .table--lines tbody tr {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    align-items: baseline;
+    row-gap: 2px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+  .table.table--lines tbody td,
+  .table.table--lines tbody th {
+    display: block;
+    width: auto;
+    height: auto;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    text-align: left;
+  }
+  .table.table--lines tbody .sel { grid-row: 1 / 3; grid-column: 1; align-self: start; padding-right: var(--s-1); }
+  /* 누르는 영역 44×44. 오른쪽 음수 여백으로 열 폭(32px)과 상자 위치는 그대로 둔다 */
+  .table--lines .sel .check { min-height: var(--touch); min-width: var(--touch); margin: 0 -12px 0 0; align-items: flex-start; padding-top: 0; }
+  .table.table--lines tbody [data-cell="key"] { grid-row: 1; grid-column: 2; padding-right: var(--s-1); }
+  .table.table--lines tbody [data-cell="when"] { grid-row: 1; grid-column: 3; color: var(--fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .table.table--lines tbody [data-cell="end"] { grid-row: 1; grid-column: 4; text-align: right; font-weight: var(--fw-bold); padding-left: var(--s-2); }
+  .table.table--lines tbody [data-cell="title"] { grid-row: 2; grid-column: 2 / 4; font-weight: var(--fw-medium); padding-right: var(--s-2); }
+  .table.table--lines tbody [data-cell="title"] .table__sub { display: none; }
+  .table.table--lines tbody [data-cell="state"] { grid-row: 2; grid-column: 4; justify-self: end; align-self: center; }
+  .table.table--lines tbody [data-cell="meta"] { grid-row: 3; grid-column: 2 / 4; font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--fg-muted); }
+  .table.table--lines tbody [data-cell="count"] { grid-row: 3; grid-column: 4; text-align: right; padding-left: var(--s-2); font-size: var(--fs-caption); line-height: var(--lh-caption); color: var(--fg-muted); }
+  .table--lines tbody tr.is-now > :first-child::before { content: none; }
+  .table.table--lines tbody tr.is-now > .sel:first-child + :not([data-cell="key"])::before { content: none; }
+  .table--lines tbody tr.is-now [data-cell="key"]::before {
+    content: "";
+    display: inline-block;
+    inline-size: var(--sq-xs);
+    block-size: var(--sq-xs);
+    margin-right: 6px;
+    vertical-align: middle;
+    background: var(--accent);
+  }
+  .table.table--lines tr[aria-selected="true"] > :first-child { box-shadow: none; padding-left: 0; }
+  .table--lines tbody tr[aria-selected="true"] { box-shadow: inset 4px 0 0 var(--accent); padding-left: var(--s-2); }
+  .table--lines tfoot tr { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 var(--s-2); padding-top: var(--s-1); border-top: var(--line-block) solid var(--rule); }
+  .table.table--lines tfoot th,
+  .table.table--lines tfoot td { display: block; width: auto; padding: 4px 0; border: 0; }
+  .table--lines tfoot th { flex: 1 1 100%; }
+  .table--lines tfoot td:empty { display: none; }
+}

@@ -1,0 +1,64 @@
+/* motion = "찍히고, 깜빡이고, 다시 그린다" — 이징 없음. 0ms 또는 steps(). 3Hz 초과 점멸 금지.
+   동작 줄이기: base.css 의 전역 규칙 + app.js 가 최종 상태로 즉시 그린다. */
+
+/* 다시 그리기: 위→아래 4단계 */
+/* 음수 inset: 테두리 밖으로 반 줄 나온 pane 제목·키 줄까지 함께 그린다 */
+@keyframes sh-redraw {
+  from { clip-path: inset(-24px -8px 100% -8px); }
+  to { clip-path: inset(-24px -8px -24px -8px); }
+}
+.redraw { animation: sh-redraw var(--redraw) steps(4, end) both; }
+
+/* 글리치: RGB 분리 2px, 1회 160ms, 반복 금지 */
+@keyframes sh-glitch {
+  0% { text-shadow: -2px 0 var(--glitch-a), 2px 0 var(--glitch-b); transform: translateX(1px); }
+  33% { text-shadow: 2px 0 var(--glitch-a), -2px 0 var(--glitch-b); transform: translateX(-1px); clip-path: inset(10% 0 35% 0); }
+  66% { text-shadow: -1px 0 var(--glitch-a), 1px 0 var(--glitch-b); transform: translateX(0); clip-path: inset(50% 0 0 0); }
+  100% { text-shadow: none; transform: none; clip-path: none; }
+}
+.glitch-once { animation: sh-glitch var(--glitch) steps(3, end) 1 both; }
+
+/* 전원 켜짐(index 첫 진입, 세션당 1회) */
+@keyframes sh-power-on {
+  0% { transform: scaleY(.01); filter: brightness(3); }
+  40% { transform: scaleY(.01) scaleX(1); filter: brightness(3); }
+  100% { transform: none; filter: none; }
+}
+.is-power-on { animation: sh-power-on var(--power-on) steps(5, end) both; transform-origin: 50% 40%; }
+
+/* 줄 단위 출력: 페이드 없이 visibility 토글(app.js 가 .is-out 을 줄마다 붙인다) */
+[data-lines].is-printing > * { visibility: hidden; }
+[data-lines].is-printing > .is-out { visibility: visible; }
+
+/* 타이핑: app.js 가 글자를 추가. 타이핑 중 커서는 깜빡이지 않는다 */
+[data-type].is-typing + .cursor,
+[data-type].is-typing ~ .cursor { animation: none; }
+
+/* 데모 표 */
+.motion { display: grid; gap: 0; font-size: var(--fs-data); line-height: var(--lh-data); }
+.motion__row {
+  display: grid;
+  grid-template-columns: 14ch 22ch minmax(0, 1fr);
+  gap: 0 var(--c2);
+  align-items: center;
+  min-height: var(--touch);
+  padding: 4px var(--c1);
+  border-bottom: 1px solid var(--rule);
+}
+.motion__row:first-child { border-top: 1px solid var(--rule); }
+.motion__name { color: var(--path); font-weight: 700; }
+.motion__val { color: var(--hash); font-variant-numeric: tabular-nums; }
+.motion__demo { min-width: 0; color: var(--fg); overflow: hidden; }
+.motion__box {
+  display: inline-block;
+  padding: 2px var(--c1);
+  border: 1px solid var(--rule-strong);
+}
+@media (max-width: 767px) {
+  .motion__row { grid-template-columns: minmax(0, 1fr) auto; }
+  .motion__demo { grid-column: 1 / -1; padding-top: 4px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .redraw, .glitch-once, .is-power-on, .overlay.is-open > * { animation: none !important; clip-path: none !important; }
+}

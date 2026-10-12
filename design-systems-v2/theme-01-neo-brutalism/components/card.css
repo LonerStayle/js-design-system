@@ -1,0 +1,192 @@
+/* card — 두 종류뿐.
+   (1) .card       정적 패널: 보더만, 그림자 없음
+   (2) .card--poster 포스터 링크 카드: 그림자 + 프레스 + 모서리 가격 스티커
+   카드 사이 여백 대신 .wall 규칙선 그리드에 넣는다.
+   + .cover: CSS 도형으로 그린 앨범 커버 (캐러셀·상품에서도 사용) */
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--surface);
+  color: var(--fg);
+  border: var(--line);
+}
+.card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-8) var(--s-16);
+  padding: var(--s-16) var(--s-24);
+  border-bottom: var(--line-thin);
+}
+.card__body { display: flex; flex-direction: column; gap: var(--s-8); padding: var(--s-24); flex: 1; }
+.card__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-12);
+  padding: var(--s-16) var(--s-24);
+  border-top: var(--line-thin);
+}
+.card__media { border-bottom: var(--line); }
+.card__kicker { font: 600 var(--fs-label)/1.4 var(--font-mono); letter-spacing: var(--ls-mix); color: var(--fg-muted); word-spacing: var(--ws-mix); }
+.card__title { font-size: var(--fs-h3); font-weight: 700; line-height: var(--lh-ui); letter-spacing: var(--ls-head); }
+.card__title--display { font: 900 var(--fs-d3)/var(--lh-display) var(--font-display); letter-spacing: var(--ls-display); font-synthesis: none; }
+.card__meta { font: 500 var(--fs-xs)/1.5 var(--font-mono); color: var(--fg-muted); word-spacing: var(--ws-mix); }
+.card__text { font-size: var(--fs-sm); line-height: 1.7; }
+.card__price { font: 600 var(--fs-h3)/1 var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* 칸 안에 넣는 카드: 바깥 보더를 지운다 (규칙선이 대신함) */
+.card--bare { border: 0; }
+.card--alt { background: var(--surface-2); }
+
+/* ---- 포스터 링크 카드 ---------------------------------------------- */
+.card--poster {
+  --poster-bg: var(--surface);
+  --poster-fg: var(--fg);
+  background: var(--poster-bg);
+  color: var(--poster-fg);
+  text-decoration: none;
+  box-shadow: var(--shadow);
+  transition: transform var(--t-press) var(--ease-snap), box-shadow var(--t-press) var(--ease-snap);
+}
+a.card--poster:hover,
+.card--poster:has(.card__link:hover) { transform: translate(-2px, -2px); box-shadow: var(--shadow-up); }
+a.card--poster:active,
+.card--poster:has(.card__link:active) { transform: translate(var(--off), var(--off)); box-shadow: var(--shadow-0); }
+a.card--poster:focus-visible { outline: var(--bw) solid var(--focus); outline-offset: var(--bw); }
+.card--poster :is(.card__meta, .card__kicker) { color: inherit; }
+.card--red    { --poster-bg: var(--accent); --poster-fg: var(--on-accent); }
+.card--yellow { --poster-bg: var(--highlight); --poster-fg: var(--on-highlight); }
+.card--ink    { --poster-bg: var(--slab-ink); --poster-fg: var(--on-slab-ink); }
+.card--cobalt { --poster-bg: var(--info-fill); --poster-fg: var(--on-info); }
+
+/* 카드 전체를 덮는 링크 (안에 다른 버튼이 있을 때) */
+.card__link { color: inherit; text-decoration: none; }
+.card__link::after { content: ""; position: absolute; inset: 0; }
+.card__link:focus-visible { outline: none; }
+.card:has(.card__link:focus-visible) { outline: var(--bw) solid var(--focus); outline-offset: var(--bw); }
+
+.card.is-selected,
+.card[aria-selected="true"] { background: var(--highlight); color: var(--on-highlight); }
+.card[aria-disabled="true"] { background: var(--disabled-fill); color: var(--disabled-fg); box-shadow: none; }
+
+@media (max-width: 480px) {
+  .card__head, .card__foot { padding: var(--s-12) var(--s-16); }
+  .card__body { padding: var(--s-16); }
+}
+@media (prefers-reduced-motion: reduce) {
+  a.card--poster:hover, a.card--poster:active,
+  .card--poster:has(.card__link:hover), .card--poster:has(.card__link:active) { transform: none; }
+}
+
+/* ==========================================================================
+   .cover — 앨범 커버 (이미지 파일 대신 CSS 도형)
+   인쇄물이라 조명(라이트/다크)과 무관하게 같은 색: --print-* 토큰만 쓴다.
+   아티스트마다 한 벌씩 — 같은 그림을 다른 판에 돌려 쓰지 않는다.
+     --heukbaek    흑백전화     종이 면 + 잉크 가로 줄 5개 + 레드 버튼 하나
+     --moraesajang 모래사장     옐로 하늘 + 종이 모래 + 썰물 자국
+     --ohusesiban  오후세시반   코발트 면 + 기울어진 옐로 사각 + 레드 사각
+     --natjam      낮잠클럽     잉크 면 + 수평선에 걸친 옐로 해
+     --gimbap      김밥천국단   그린 면 + 김밥 단면(잉크 김 · 종이 밥 · 레드 속)
+     --soeum       소음주의보   잉크 면 + 어긋난 레드 직선 노이즈
+     --panpan      판판 크레이트 종이 면 + 오른쪽으로 잘린 레드 사각
+   선택적으로 .cover__title / .cover__no
+   ========================================================================== */
+.cover {
+  --c-bg: var(--print-red);
+  --c-ink: var(--print-ink);
+  --c-paper: var(--print-paper);
+  --c-pop: var(--print-yellow);
+  --c-red: var(--print-red);
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  container-type: inline-size;
+  background: var(--c-bg);
+  color: var(--c-ink);
+  isolation: isolate;
+}
+.cover::before,
+.cover::after { content: ""; position: absolute; z-index: -1; }
+
+/* 흑백전화 — 종이 면 + 잉크 가로 줄 5개 + 레드 버튼 */
+.cover--heukbaek { --c-bg: var(--print-paper); color: var(--print-ink); }
+.cover--heukbaek::before { left: 0; right: 0; top: 6cqw; height: 7cqw; background: var(--c-ink); box-shadow: 0 12cqw 0 var(--c-ink), 0 24cqw 0 var(--c-ink), 0 36cqw 0 var(--c-ink), 0 48cqw 0 var(--c-ink); }
+.cover--heukbaek::after { width: 16cqw; aspect-ratio: 1; right: 10cqw; top: 22cqw; background: var(--c-red); border: max(2px, 1.2cqw) solid var(--c-ink); }
+
+/* 모래사장 — 옐로 하늘 + 종이 모래(잉크 수평선) + 썰물 자국 */
+.cover--moraesajang { --c-bg: var(--print-yellow); color: var(--print-ink); }
+.cover--moraesajang::before { left: 0; right: 0; bottom: 0; height: 40%; background: var(--c-paper); border-top: max(3px, 2.4cqw) solid var(--c-ink); }
+.cover--moraesajang::after { left: 8cqw; bottom: 30cqw; width: 18cqw; height: max(2px, 2cqw); background: var(--c-ink); box-shadow: 28cqw 0 0 var(--c-ink), 56cqw 0 0 var(--c-ink), 14cqw 6cqw 0 var(--c-ink), 42cqw 6cqw 0 var(--c-ink), 28cqw 12cqw 0 var(--c-ink); }
+
+/* 오후세시반 — 코발트 면 + 기울어진 옐로 사각 + 레드 사각 */
+.cover--ohusesiban { --c-bg: var(--print-cobalt); color: var(--on-print-ink); }
+.cover--ohusesiban::before { width: 50%; aspect-ratio: 1; right: 8%; top: 30%; background: var(--c-pop); border: max(2px, 1.2cqw) solid var(--c-ink); transform: rotate(-8deg); }
+.cover--ohusesiban::after { width: 28%; aspect-ratio: 1; left: 10%; bottom: 12%; background: var(--c-red); border: max(2px, 1.2cqw) solid var(--c-ink); }
+
+/* 낮잠클럽 — 잉크 면 + 수평선에 걸친 옐로 해 */
+.cover--natjam { --c-bg: var(--print-ink); color: var(--on-print-ink); }
+.cover--natjam::before { width: 90%; aspect-ratio: 2 / 1; left: 5%; bottom: 0; border-radius: 999px 999px 0 0; background: var(--c-pop); }
+.cover--natjam::after { left: 5%; right: 5%; bottom: 0; height: max(3px, 2cqw); background: var(--c-red); }
+
+/* 김밥천국단 — 그린 면 + 김밥 단면 */
+.cover--gimbap { --c-bg: var(--print-green); color: var(--print-ink); }
+.cover--gimbap::before { width: 58%; aspect-ratio: 1; right: -6%; bottom: -8%; border-radius: var(--radius-round); background: var(--c-ink); border: 7cqw solid var(--c-paper); box-shadow: 0 0 0 max(2px, 1.2cqw) var(--c-ink); }
+.cover--gimbap::after { width: 14%; aspect-ratio: 1; left: 70%; bottom: 14%; background: var(--c-red); box-shadow: -5cqw -5cqw 0 0 var(--c-pop); }
+
+/* 소음주의보 — 잉크 면 + 어긋난 레드 직선 노이즈 */
+.cover--soeum { --c-bg: var(--print-ink); color: var(--on-print-ink); }
+.cover--soeum::before { left: -4%; top: 16cqw; width: 62%; height: max(2px, 2.4cqw); background: var(--c-red); box-shadow: 30cqw 6cqw 0 var(--c-red), 8cqw 12cqw 0 var(--c-red), 44cqw 18cqw 0 var(--c-red), 18cqw 24cqw 0 var(--c-red), 52cqw 30cqw 0 var(--c-red), 2cqw 36cqw 0 var(--c-red); }
+.cover--soeum::after { left: 20%; top: 22cqw; width: 26%; height: max(1px, 1cqw); background: var(--c-paper); box-shadow: 40cqw 12cqw 0 var(--c-paper), -10cqw 24cqw 0 var(--c-paper), 30cqw 30cqw 0 var(--c-paper); }
+
+/* 판판 크레이트 — 종이 면 + 오른쪽으로 잘린 레드 사각 */
+.cover--panpan { --c-bg: var(--print-paper); color: var(--print-ink); }
+.cover--panpan::before { width: 70%; height: 58%; right: -14%; top: 14%; background: var(--c-red); }
+.cover--panpan::after { width: 40%; height: 10%; left: 8%; bottom: 14%; background: var(--c-ink); }
+
+/* 같은 아티스트의 다른 판: 색만 바꾼 한 벌 (.cover--alt) */
+.cover--heukbaek.cover--alt { --c-bg: var(--print-ink); --c-ink: var(--print-paper); --c-red: var(--print-yellow); color: var(--on-print-ink); }
+.cover--moraesajang.cover--alt { --c-bg: var(--print-paper); --c-paper: var(--print-yellow); color: var(--print-ink); }
+.cover--ohusesiban.cover--alt { --c-bg: var(--print-yellow); --c-pop: var(--print-cobalt); color: var(--print-ink); }
+.cover--natjam.cover--alt { --c-bg: var(--print-red); --c-red: var(--print-ink); color: var(--print-ink); }
+.cover--gimbap.cover--alt { --c-bg: var(--print-red); --c-red: var(--print-green); color: var(--print-ink); }
+.cover--soeum.cover--alt { --c-bg: var(--print-paper); --c-red: var(--print-ink); --c-paper: var(--print-red); color: var(--print-ink); }
+
+.cover__title {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 8%;
+  font: 700 clamp(15px, 9cqw, 30px)/1.1 var(--font-ui);
+  letter-spacing: var(--ls-head);
+}
+/* 커버가 충분히 클 때만 Gasoek (32px 미만 금지 규칙) */
+@container (min-width: 300px) {
+  .cover__title { font: 400 max(32px, 11cqw)/1 var(--font-poster); letter-spacing: 0; font-synthesis: none; }
+}
+.cover--moraesajang .cover__title,
+.cover--ohusesiban .cover__title,
+.cover--natjam .cover__title,
+.cover--gimbap .cover__title { top: 8%; bottom: auto; }
+.cover--heukbaek .cover__title { bottom: 14%; }
+.cover--soeum .cover__title { bottom: 14%; }
+.cover__no {
+  position: absolute;
+  top: 6%;
+  left: 8%;
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: var(--ls-mix);
+  word-spacing: var(--ws-mix);
+}
+.cover--heukbaek .cover__no, .cover--soeum .cover__no,
+.cover--moraesajang .cover__no, .cover--ohusesiban .cover__no,
+.cover--natjam .cover__no, .cover--gimbap .cover__no { top: auto; bottom: 6%; }
+.cover--ohusesiban .cover__no { left: auto; right: 8%; }
+.cover--framed { border: var(--line); }

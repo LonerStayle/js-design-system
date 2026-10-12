@@ -1,0 +1,96 @@
+/* calendar — 쇼룸 예약 달력 (2026년 10월, 1일 = 목). 휴무 월요일은 LM-03 깨알 칸, 예약일은 판재색 원.
+   .cal[data-calendar](S1 LM-03 판) > .cal__head(.cal__title .cal__nav > button.cal__arrow)
+     .cal__grid(role="grid") > .cal__dow * 7 + .cal__day(button, aria-label="10월 14일 수요일 …")
+     상태: .cal__day--out(다른 달) [data-closed](휴무) [data-booked="n"](예약 수 원) [data-past](지난 날, 흐린 배지) [aria-current="date"](오늘)
+           [aria-pressed="true"](선택) :disabled(지난 날·마감)
+     .cal__legend · .cal__out([data-cal-output] 선택 결과 문구) */
+
+.cal {
+  --face: var(--surface);
+  --pat: var(--pat-lm03);
+  --off: var(--off-md);
+  --r: 0 var(--cut) 0 0;
+  padding: var(--sp-4) var(--sp-4) var(--sp-5);
+  max-width: 560px;
+}
+.cal__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); margin-bottom: var(--sp-4); }
+.cal__title { font-family: var(--ff-display); font-weight: 900; font-size: var(--fs-h2); line-height: 1; letter-spacing: var(--ls-display-ko); }
+.cal__title .cal__sub { display: block; margin-top: 6px; color: var(--text-muted); font-family: var(--ff-label-ko); font-size: 14px; font-weight: 400; letter-spacing: 0; }
+.cal__title .t-mono { display: block; margin-top: 6px; color: var(--text-muted); font-weight: 400; }
+.cal__nav { display: flex; gap: 8px; }
+.cal__arrow {
+  display: grid; place-items: center;
+  width: 44px; height: 44px; border-radius: 50%;
+  border: var(--bw) solid var(--line); background: var(--surface); color: var(--text);
+  transition: transform var(--dur-hover) var(--ease-pop), background-color var(--dur-hover);
+}
+.cal__arrow::before { content: ""; width: 9px; height: 12px; background: currentColor; clip-path: polygon(0 0, 100% 50%, 0 100%); }
+.cal__arrow--prev::before { transform: scaleX(-1); }
+.cal__arrow:hover { background: var(--accent); color: var(--on-accent); transform: rotate(-10deg); }
+.cal__arrow:disabled { color: var(--disabled-text); background: var(--surface-sunk); transform: none; }
+
+.cal__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: var(--bw) solid var(--line); border-left: var(--bw) solid var(--line); }
+.cal__dow {
+  padding: 8px 0 6px; text-align: center;
+  font-family: var(--ff-label-ko); font-size: 15px;
+  background: var(--bg-alt);
+  border-right: var(--bw) solid var(--line); border-bottom: var(--bw) solid var(--line);
+}
+.cal__dow--sun { color: var(--danger-text); }
+.cal__day {
+  position: relative;
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between;
+  min-height: 64px; padding: 6px 8px;
+  background: var(--surface); color: var(--text);
+  border-right: var(--bw) solid var(--line); border-bottom: var(--bw) solid var(--line);
+  font-family: var(--ff-mono); font-size: 14px; font-weight: 700; text-align: left;
+  transition: background-color 100ms;
+}
+.cal__day:hover { background: var(--bg-alt); }
+.cal__day:focus-visible { outline-offset: -5px; z-index: 1; }
+.cal__day--out { color: var(--text-muted); font-weight: 400; background: var(--bg); }
+.cal__day[data-closed] {
+  background: linear-gradient(var(--surface-sunk), var(--surface-sunk)) 0 0 / 100% 30px no-repeat, var(--pat-lm03), var(--surface-sunk);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+.cal__day[data-closed]::after { content: "휴무"; font-family: var(--ff-label-ko); font-weight: 400; font-size: 12px; padding: 0 4px; background: var(--surface); border: 1px solid var(--line); }
+.cal__day[data-booked]::after {
+  content: attr(data-booked);
+  align-self: flex-end;
+  display: grid; place-items: center;
+  min-width: 26px; height: 26px; padding: 0 4px;
+  border-radius: var(--round);
+  background: var(--success); color: var(--on-success);
+  border: var(--bw) solid var(--plate-ink);
+  font-size: 11px;
+}
+.cal__day[data-booked][data-full]::after { background: var(--danger); color: var(--on-danger); }
+/* 지난 날의 예약 수 — 흐린 배지(이번 주 합계에는 들어간다). 취소선이 번지지 않게 절대 위치 */
+.cal__day[data-past][data-booked]::after {
+  position: absolute; right: 8px; bottom: 6px;
+  background: var(--surface-sunk); color: var(--text-muted);
+  border-style: dashed; border-color: var(--text-muted);
+}
+.cal__day[aria-current="date"] { box-shadow: inset 0 0 0 3px var(--brand); }
+.cal__day[aria-current="date"]::before { content: "오늘"; position: absolute; right: 6px; top: 6px; font-family: var(--ff-label-ko); font-weight: 400; font-size: 12px; color: var(--brand-text); }
+.cal__day[aria-pressed="true"] { background: var(--brand); color: var(--on-brand); }
+.cal__day[aria-pressed="true"][aria-current="date"]::before { color: var(--on-brand); }
+.cal__day:disabled:not([data-closed]) { color: var(--disabled-text); background: var(--bg); cursor: not-allowed; text-decoration: line-through; text-decoration-thickness: 2px; }
+
+.cal__legend { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); margin-top: var(--sp-4); font-size: var(--fs-tag); color: var(--text-muted); }
+.cal__legend span { display: inline-flex; align-items: center; gap: 6px; }
+.cal__key { width: 16px; height: 16px; border: var(--bw) solid var(--line); background: var(--surface); }
+.cal__key--closed { background: var(--pat-lm03), var(--surface-sunk); }
+.cal__key--booked { border-radius: 50%; background: var(--success); border-color: var(--plate-ink); }
+.cal__key--full { border-radius: 50%; background: var(--danger); border-color: var(--plate-ink); }
+.cal__key--today { box-shadow: inset 0 0 0 3px var(--brand); }
+.cal__out { margin-top: var(--sp-3); font-family: var(--ff-label-ko); font-size: 17px; min-height: 1.4em; }
+
+@media (max-width: 480px) {
+  .cal { padding: var(--sp-3) var(--sp-3) var(--sp-4); }
+  .cal__day { min-height: 48px; padding: 4px 5px; font-size: 13px; }
+  .cal__day[data-booked]::after { min-width: 20px; height: 20px; font-size: 10px; }
+  .cal__day[data-closed]::after { content: ""; display: none; }
+  .cal__day[aria-current="date"]::before { display: none; }
+}

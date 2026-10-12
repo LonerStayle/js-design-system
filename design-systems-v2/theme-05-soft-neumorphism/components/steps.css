@@ -1,0 +1,108 @@
+/* ==========================================================================
+   steps — 로터리 위치
+   .steps__dial: 작은 노브 지시선이 현재 단계 눈금을 가리킨다 (--i 현재 0부터, --n 단계 수)
+   .steps__list: 완료(is-done) = 그린 LED · 현재(aria-current="step") = 주황 LED · 대기 = 꺼짐
+   ≤ 720px: 세로 LED 체인
+   ========================================================================== */
+.steps { display: flex; align-items: center; gap: var(--sp-5); min-width: 0; }
+.steps__dial {
+  --i: 0;
+  --n: 4;
+  position: relative;
+  flex: none;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  box-shadow: var(--sh-pressed);
+}
+.steps__dial::before {
+  content: "";
+  position: absolute;
+  inset: 16px;
+  border-radius: 50%;
+  background: var(--knob-cap);
+  box-shadow: var(--sh-raised);
+  rotate: calc(-135deg + var(--i) * (270deg / (var(--n) - 1)));
+  transition: rotate var(--dur-detent) var(--ease-detent);
+}
+.steps__dial::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 22px;
+  margin: -32px 0 0 -2px;
+  border-radius: 2px;
+  background: var(--ink);
+  transform-origin: 2px 32px;
+  rotate: calc(-135deg + var(--i) * (270deg / (var(--n) - 1)));
+  transition: rotate var(--dur-detent) var(--ease-detent);
+}
+.steps__list {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: var(--sp-2);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  counter-reset: step;
+}
+.steps__item {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  padding-top: 22px;
+  min-width: 0;
+  color: var(--ink-2);
+}
+/* 단계 사이 홈 선 */
+.steps__item::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 18px;
+  right: -8px;
+  height: 2px;
+  box-shadow: inset 0 1px 0 var(--lo-line), inset 0 -1px 0 var(--hi-line);
+}
+.steps__item:last-child::before { display: none; }
+.steps__led {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--sh-pressed-sm);
+}
+.steps__num { font-family: var(--font-mono); font-size: 13px; color: var(--ink-2); letter-spacing: .04em; }
+.steps__label { font-family: var(--font-ko); font-size: 15px; font-weight: 500; line-height: 1.4; color: var(--ink-2); }
+.steps__note { font-size: 13px; color: var(--ink-2); line-height: 1.5; }
+.steps__item.is-done .steps__led { background: var(--led-green); box-shadow: var(--glow-green); }
+.steps__item.is-done .steps__label { color: var(--ink); }
+.steps__item[aria-current="step"] .steps__led { background: var(--led-orange); box-shadow: var(--glow-orange); }
+.steps__item[aria-current="step"] .steps__label { color: var(--ink); font-weight: 700; }
+.steps__item.is-error .steps__led { background: var(--led-red); box-shadow: var(--glow-red); }
+.steps__item.is-error .steps__note { color: var(--text-red); }
+.steps__item a, .steps__item button { color: inherit; border-radius: 6px; }
+@media (max-width: 720px) {
+  .steps { align-items: flex-start; gap: var(--sp-4); }
+  .steps__dial { width: 72px; height: 72px; }
+  .steps__dial::before { inset: 12px; }
+  .steps__dial::after { height: 16px; margin-top: -24px; transform-origin: 2px 24px; }
+  .steps__list { grid-auto-flow: row; gap: var(--sp-4); }
+  .steps__item { padding: 0 0 0 26px; }
+  .steps__item::before { top: 16px; bottom: calc(var(--sp-4) * -1 + 2px); left: 4px; right: auto; width: 2px; height: auto; box-shadow: inset 1px 0 0 var(--lo-line), inset -1px 0 0 var(--hi-line); }
+  .steps__led { top: 4px; }
+}
+
+/* 처리 중 단계 — 현재 단계 LED 앰버 깜빡임 (측정음 재생 중 등) */
+.steps__item[aria-busy="true"] .steps__led { background: var(--led-amber); box-shadow: var(--glow-amber); animation: step-busy .8s steps(1) infinite; }
+@keyframes step-busy { 50% { opacity: .25; } }   /* 잔광 — 정지 화면에서도 꺼짐으로 읽히지 않게 */
+.steps__item a:hover, .steps__item button:hover { color: var(--ink); }
+.steps__item button:disabled { color: var(--ink-3); cursor: not-allowed; }

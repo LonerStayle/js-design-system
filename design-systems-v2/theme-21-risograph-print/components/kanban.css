@@ -1,0 +1,91 @@
+/* kanban — 「작업 대기열 벽」 열 머리 = 큰 숫자(건수, Anybody) + 상태명
+   카드 = A6 쪽지(잉크 칩 · 주문번호 Martian · 수량 · 납기) · 인쇄 중 카드엔 진행 망점 바
+   드래그 + 키보드(Space 집기 → ←/→ 열, ↑/↓ 순서 → Space 놓기) */
+.kanban {
+  display: grid;
+  grid-template-columns: repeat(var(--kcols, 5), minmax(232px, 1fr));
+  gap: var(--sp-4);
+  align-items: start;
+  min-width: 0;
+}
+.kanban__col { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
+.kanban__head {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--ink);
+}
+.kanban__count { font-family: var(--font-display); font-weight: 900; font-stretch: 150%; font-size: 56px; line-height: .8; letter-spacing: -0.02em; color: var(--c, var(--ink-blue)); font-variant-numeric: tabular-nums; }
+.kanban__name { font-family: var(--font-ko); font-size: 15px; font-weight: 700; line-height: 1.3; padding-bottom: 2px; }
+.kanban__sub { font-size: 12px; color: var(--ink-muted); font-weight: 500; display: block; }
+.kanban__list {
+  list-style: none;
+  /* 포커스·어긋남 여유는 위아래만 — 좌우 음수 여백은 마지막 열을 넘쳐 .scroll-x 페이드를 켠다 */
+  padding: 4px 0;
+  margin: -4px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 120px;
+  transition: background-color var(--dur-slip);
+}
+.kanban__list.is-over { background: radial-gradient(circle, var(--dot-row-hover) var(--dot-r-20), transparent calc(var(--dot-r-20) + .5px)) 0 0 / 6px 6px; }
+.kanban__more { font-family: var(--font-ko); font-size: 13px; color: var(--ink-muted); padding: 6px 4px; }
+
+/* A6 쪽지 */
+.kcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px 12px;
+  background: var(--paper-sheet);
+  color: var(--ink);
+  cursor: grab;
+  touch-action: manipulation;
+  transition: translate var(--dur-stamp) var(--ease-stamp), rotate var(--dur-stamp) var(--ease-stamp);
+}
+.kcard::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 2px var(--keyline);
+  translate: var(--mis-1x) var(--mis-1y);
+  mix-blend-mode: var(--blend);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-slip), translate var(--dur-slip) var(--ease-stamp);
+}
+.kcard:hover::after { opacity: 1; translate: var(--mis-2x) var(--mis-2y); }
+.kcard:focus-visible { outline-offset: 2px; }
+.kcard__top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.kcard__id { font-family: var(--font-mono); font-variation-settings: "wdth" 87.5; font-size: 12px; font-weight: 500; color: var(--ink-muted); }
+.kcard__title { font-family: var(--font-ko); font-size: 15px; font-weight: 700; line-height: 1.4; }
+.kcard__meta { font-size: 13px; line-height: 1.5; color: var(--ink-muted); }
+.kcard__meta .mono { font-size: 12px; color: var(--ink); }
+.kcard__foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 6px; border-top: 1px dashed var(--rule-soft); font-size: 12px; }
+.kcard__due { font-family: var(--font-ko); font-weight: 500; }
+.kcard__due .mono { font-size: 12px; }
+.kcard__due.is-soon { color: var(--text-red); font-weight: 700; }
+.kcard__who { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-muted); }
+.kcard .meter { margin-top: 2px; }
+/* 장터 스티커 — 쪽지 모서리에 붙임 */
+.kcard__sticker { position: absolute; top: -9px; right: 10px; z-index: 1; }
+/* 스티커가 붙은 카드는 머리 줄 오른쪽(잉크 칩)을 비워 둔다 */
+.kcard:has(> .kcard__sticker) .kcard__top { padding-right: 66px; }
+
+/* 상태 */
+.kcard.is-dragging { opacity: .45; }
+.kcard.is-grabbed { rotate: var(--tilt-1); translate: 0 -4px; cursor: grabbing; }
+.kcard.is-grabbed::after { opacity: 1; translate: var(--mis-3x) var(--mis-3y); }
+.kcard.is-done .kcard__title { color: var(--ink-muted); }
+.kcard[data-state="error"] { box-shadow: inset 6px 0 0 var(--ink-red); }
+.kcard[aria-disabled="true"] { cursor: default; color: var(--ink-muted); }
+
+/* 1100 미만: 열이 가로로 넘어간다(스냅 + 페이드 힌트, .scroll-x 와 함께) */
+@media (max-width: 1099px) {
+  .kanban { grid-template-columns: repeat(var(--kcols, 5), minmax(260px, 78vw)); scroll-snap-type: x mandatory; overflow-x: auto; padding-bottom: var(--sp-3); }
+  .kanban__col { scroll-snap-align: start; }
+}
+@media (prefers-reduced-motion: reduce) { .kcard { transition: none; } }

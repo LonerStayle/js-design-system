@@ -1,0 +1,153 @@
+/* table — 원장 표. 머리 2px 잉크 괘선, 헤더 12px sunken sticky, 행 var(--row) (32/40/48), 숫자 우측 tnum,
+   합계 이중선, 체크박스 열 + 일괄 액션바. ≤640px 에서 .table--stack 은 "원장 카드 행" 으로 전환. */
+
+.table-wrap { position: relative; width: 100%; overflow-x: auto; }
+/* .table-wrap 은 가로 스크롤 컨테이너라서 세로 sticky 도 래퍼 기준이 된다.
+   래퍼 안 머리행은 top 0 고정(페이지 기준 --sticky-top 은 래퍼 없이 놓인 표에만 쓴다).
+   긴 표를 래퍼 안에서 머리행 고정으로 스크롤하려면 .table-wrap--scroll. */
+.table-wrap > .table thead th { top: 0; }
+.table-wrap--scroll { max-height: var(--table-max-h, 480px); overflow: auto; }
+.table-wrap--flush { margin-inline: calc(-1 * var(--gutter)); width: calc(100% + 2 * var(--gutter)); }
+
+.table {
+  --row-2: 56px; /* 두 줄 셀(거래처 + 문서번호 .sub) 행 높이 */
+  width: 100%; border-collapse: separate; border-spacing: 0;
+  font-size: var(--fs-data); line-height: var(--lh-data); color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.table caption { caption-side: top; text-align: left; padding-bottom: var(--sp-3); font-size: var(--fs-data); color: var(--text-2); }
+.table th, .table td { padding: 0 var(--sp-3); text-align: left; vertical-align: middle; }
+.table th:first-child, .table td:first-child { padding-left: var(--cell-edge, var(--sp-3)); }
+.table th:last-child, .table td:last-child { padding-right: var(--cell-edge, var(--sp-3)); }
+
+.table thead th {
+  position: sticky; top: var(--sticky-top, 0); z-index: 2;
+  height: 32px; background: var(--surface-sunken);
+  border-top: 2px solid var(--rule-head); border-bottom: 1px solid var(--line-strong);
+  font-size: var(--fs-caption); font-weight: var(--fw-medium); color: var(--text-2); white-space: nowrap; letter-spacing: var(--ls-caption);
+}
+.table tbody td {
+  height: var(--row, var(--row-default)); border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  transition: background-color var(--dur-1) var(--ease-out);
+}
+.table tbody tr:hover td { background: var(--surface-hover); }
+.table tbody tr[aria-selected="true"] td { background: var(--primary-tint); }
+.table tbody tr[aria-selected="true"] td:first-child { box-shadow: inset 2px 0 0 var(--primary); }
+.table tbody tr.is-new td { animation: ll-row-new var(--dur-row) var(--ease-out); }
+.table tbody tr[data-state="error"] td { background: var(--danger-tint); }
+.table tbody tr[data-state="error"] td:first-child { box-shadow: inset 2px 0 0 var(--danger); }
+/* warn = 영수증누락·증빙 보완 등 처리 필요(경고색). error 는 한도 초과·반려에만. */
+.table tbody tr[data-state="warn"] td { background: var(--warning-tint); }
+.table tbody tr[data-state="warn"] td:first-child { box-shadow: inset 2px 0 0 var(--warning); }
+.table tbody tr[aria-disabled="true"] td { color: var(--text-3); }
+
+.table .num, .table th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.table .table__code { font-family: var(--font-mono); font-size: var(--fs-caption); color: var(--text-2); white-space: nowrap; }
+.table .sub { display: block; margin-top: 2px; font-size: var(--fs-caption); line-height: 1.35; color: var(--text-3); }
+/* 두 줄 셀이 있는 행만 숨 쉴 여백을 준다. 한 줄 행은 --row(40) 리듬 유지. */
+.table tbody tr:has(.sub) td { height: var(--row-2); padding-block: 8px; }
+.table--compact, [data-density="compact"] .table { --row-2: 48px; }
+.table--roomy, [data-density="roomy"] .table { --row-2: 60px; }
+.table .strong { font-weight: var(--fw-medium); }
+.table__check { width: 40px; padding-right: 0 !important; }
+.table__check .check { min-height: 0; }
+.table__actions { width: 1%; white-space: nowrap; text-align: right; }
+.table__link { color: var(--text); text-decoration: none; font-weight: var(--fw-medium); }
+.table__link:hover { color: var(--primary); text-decoration: underline; }
+
+/* 합계 행: 이중선 */
+.table tfoot td, .table tfoot th {
+  height: var(--row-roomy, 48px); border-top: 3px double var(--line-strong); border-bottom: 2px solid var(--rule-head);
+  font-weight: var(--fw-semi); background: var(--surface);
+}
+.table tfoot th { font-size: var(--fs-data); color: var(--text); }
+
+/* 정렬 버튼 */
+.table__sort {
+  display: inline-flex; align-items: center; gap: 4px; height: 100%;
+  font: inherit; color: inherit; letter-spacing: inherit;
+}
+.table__sort::after {
+  content: ""; width: 0; height: 0; opacity: .45;
+  border-left: 3.5px solid transparent; border-right: 3.5px solid transparent;
+  border-top: 4px solid currentColor;
+}
+th[aria-sort="ascending"] .table__sort, th[aria-sort="descending"] .table__sort { color: var(--text); font-weight: var(--fw-semi); }
+th[aria-sort="ascending"] .table__sort::after { opacity: 1; border-top: 0; border-bottom: 4px solid currentColor; }
+th[aria-sort="descending"] .table__sort::after { opacity: 1; }
+.table__sort:hover { color: var(--text); }
+th.num .table__sort { flex-direction: row-reverse; }
+
+/* 빈 결과 행 */
+.table__empty td { height: auto; padding: var(--sp-6) var(--sp-3); color: var(--text-2); text-align: left; }
+.table__empty td:hover { background: var(--surface); }
+
+/* 밀도 변형 */
+.table--compact { --row: var(--row-compact); }
+.table--roomy { --row: var(--row-roomy); }
+
+/* 테두리 없는 리스트형 (헤더 없음) */
+.table--bare thead th { position: static; background: transparent; border-top-width: 1px; border-top-color: var(--line); }
+
+/* 일괄 액션바: 선택 시 하단 고정 */
+.table-bulk {
+  position: sticky; bottom: var(--sp-4); z-index: 3;
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3);
+  width: fit-content; max-width: calc(100% - 2 * var(--sp-4)); margin: var(--sp-3) auto 0;
+  padding: var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-4);
+  background: var(--surface-ink); color: var(--on-surface-ink); border-radius: var(--r-panel);
+  box-shadow: var(--shadow-overlay);
+  font-size: var(--fs-data);
+  animation: ll-toast-in var(--dur-3) var(--ease-out) both;
+}
+.table-bulk__count { font-weight: var(--fw-semi); font-variant-numeric: tabular-nums; }
+.table-bulk__sum { color: var(--on-surface-ink-2); font-variant-numeric: tabular-nums; }
+.table-bulk__sep { width: 1px; height: 20px; background: var(--on-surface-ink-line); }
+.table-bulk .btn { height: 32px; }
+.table-bulk .btn--ghost { color: var(--on-surface-ink-2); }
+.table-bulk .btn--ghost:hover { background: color-mix(in srgb, var(--on-surface-ink) 12%, transparent); color: var(--on-surface-ink); }
+.table-bulk .btn--invert { background: var(--surface); color: var(--text); border-color: var(--surface); }
+.table-bulk .btn--invert:hover { background: var(--surface-sunken); border-color: var(--surface-sunken); }
+
+/* 표 위 도구줄 (검색 · 필터 · 밀도) */
+.table-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); padding: var(--sp-3) 0; }
+.table-tools__search { flex: 1 1 220px; max-width: 320px; }
+
+/* ── 모바일: 원장 카드 행 ── */
+@media (max-width: 640px) {
+  .table--stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .table--stack { border-top: 2px solid var(--rule-head); }
+  /* 체크박스 열이 없는 표는 2열, 있는 표만 3열 — 빈 첫 열의 gap 으로 들여쓰기가 생기지 않게 */
+  .table--stack tbody tr {
+    --c-main: 1; --c-end: 2;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--sp-3); row-gap: 2px;
+    align-items: center; padding: 10px var(--gutter); border-bottom: 1px solid var(--line); background: var(--surface);
+  }
+  .table--stack tbody tr:has(> td.table__check) { --c-main: 2; --c-end: 3; grid-template-columns: auto minmax(0, 1fr) auto; }
+  .table--stack tbody td {
+    display: block; height: auto !important; padding: 0 !important; border: 0; background: transparent !important;
+    grid-column: var(--c-main); font-size: var(--fs-caption); color: var(--text-3);
+  }
+  .table--stack tbody td:first-child { box-shadow: none !important; }
+  /* 행 상태는 td 가 아니라 tr 레벨에서 다시 칠한다 */
+  .table--stack tbody tr[aria-selected="true"] { background: var(--primary-tint); box-shadow: inset 2px 0 0 var(--primary); }
+  .table--stack tbody tr[data-state="error"] { background: var(--danger-tint); box-shadow: inset 2px 0 0 var(--danger); }
+  .table--stack tbody tr[data-state="warn"] { background: var(--warning-tint); box-shadow: inset 2px 0 0 var(--warning); }
+  .table--stack tbody tr:hover { background: var(--surface-hover); }
+  .table--stack td.table__check { grid-column: 1; grid-row: 1 / span 3; align-self: start; width: auto; }
+  .table--stack td.table__main { grid-row: 1; font-size: var(--fs-body); color: var(--text); font-weight: var(--fw-medium); }
+  .table--stack td.num { grid-column: var(--c-end); grid-row: 1; font-size: var(--fs-body); color: var(--text); font-weight: var(--fw-semi); }
+  .table--stack td.table__status { grid-column: var(--c-end); grid-row: 2; justify-self: end; }
+  /* 행동 열: 데스크톱의 width:1% 를 풀고, 금액·상태 오른쪽에 별도 열로 세워 두 줄 안에 끝낸다 */
+  .table--stack tbody tr:has(> td.table__actions) { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .table--stack tbody tr:has(> td.table__check):has(> td.table__actions) { grid-template-columns: auto minmax(0, 1fr) auto auto; }
+  .table--stack td.table__actions { width: auto; grid-column: -2 / -1; grid-row: 1 / span 2; align-self: center; justify-self: end; }
+  .table--stack td[data-label]:not(.table__main):not(.num)::before { content: attr(data-label) " · "; }
+  .table--stack td.hide-stack { display: none; }
+  .table--stack tfoot tr { display: flex; justify-content: space-between; padding: 0 var(--gutter); border-top: 3px double var(--line-strong); }
+  .table--stack tfoot td, .table--stack tfoot th { border: 0; padding: 0 !important; display: flex; align-items: center; }
+  .table--stack tfoot td:empty { display: none; }
+  .table--stack .table__empty td { grid-column: 1 / -1; padding: var(--sp-5) 0 !important; font-size: var(--fs-data); color: var(--text-2); }
+  .table-bulk { left: 0; right: 0; width: auto; max-width: none; margin-inline: var(--sp-2); bottom: var(--sp-2); }
+}

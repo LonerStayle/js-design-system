@@ -1,0 +1,231 @@
+/* ==========================================================================
+   inbox — 편지함
+   책상 위 장면: 왼쪽 = 오늘 온 봉투 더미(우표 = 채널), 오른쪽 = 펼친 편지지
+   + 편지 옆에 끼운 주문·구독 쪽지 + 아래에 겹쳐 붙인 답장 초안 포스트잇.
+   읽는 면(편지·답장 폼)은 0°, 쪽지·우표만 기울인다. semantic 토큰만 사용.
+   ========================================================================== */
+
+.mail {
+  display: grid;
+  grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
+  align-items: start;
+  gap: 60px;
+}
+
+/* ---- 봉투 더미 -------------------------------------------------------- */
+.pile { display: grid; gap: 20px; min-width: 0; }
+.pile__head { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+.pile__title { --tilt: -2deg; }
+.pile__meta { font-size: var(--t-small); color: var(--ink-soft); }
+.pile__meta b { background: none; padding: 0; color: var(--ink); }
+.pile__meta .num { font-size: 14px; }
+
+.pile__tabs .tabs__panel { padding-top: 20px; }
+
+.pile__list { display: grid; gap: 10px; }
+.pile__list .list__item + .list__item { border-top: 0; }
+.pile__list .list__item {
+  background: var(--paper-raised);
+  border-radius: 3px;
+  box-shadow: var(--shadow-paper);
+  transition: translate var(--dur-peel) var(--ease-peel);
+}
+/* 봉투 뚜껑 — 위 가장자리에서 가운데로 모이는 V 접힘선 */
+.pile__list .list__item::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 26px;
+  background:
+    linear-gradient(to top right, transparent calc(50% - 1px), var(--grid-line-strong) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)) 0 0 / 50% 100% no-repeat,
+    linear-gradient(to top left, transparent calc(50% - 1px), var(--grid-line-strong) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)) 100% 0 / 50% 100% no-repeat;
+  pointer-events: none;
+}
+.pile__list .list__item:nth-child(odd) { margin-right: 16px; }
+.pile__list .list__item:nth-child(even) { margin-left: 16px; }
+/* 지금 펼친 편지 — 더미에서 오른쪽으로 빼낸 봉투 */
+.pile__list .list__item:has([aria-current="true"]) { translate: 20px 0; z-index: 1; }
+
+.pile__list .list__row { min-height: 76px; padding: 18px 14px 12px; align-items: flex-start; }
+.pile__list .list__title { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.pile__list .list__side { padding-top: 2px; }
+.pile__list .stamp { margin-top: 2px; }
+.pile__list--done .list__title { color: var(--ink-soft); }
+
+.pile__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  font-family: var(--font-hand); letter-spacing: var(--hand-tracking-sm); word-spacing: var(--hand-word);
+  font-size: 18px;
+  color: var(--ink-soft);
+}
+.pile__legend > span { display: inline-flex; align-items: center; gap: 8px; }
+.stamp--mini { width: 20px; height: 24px; }
+
+/* ---- 책상 ------------------------------------------------------------- */
+.desk {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  grid-template-areas: "letter slip" "reply reply";
+  align-items: start;
+  column-gap: 40px;
+  min-width: 0;
+  padding-top: 20px;
+}
+
+/* 펼친 편지지 — 줄노트 + 왼쪽 빨간 여백선 */
+.letter {
+  grid-area: letter;
+  position: relative;
+  min-width: 0;
+  padding: 48px 48px 120px 72px;
+  background-color: var(--paper-raised);
+  background-image: linear-gradient(90deg, transparent 47px, color-mix(in srgb, var(--st-strawberry) 80%, transparent) 47px 49px, transparent 49px);
+  border-radius: var(--r-paper-sm);
+  box-shadow: var(--shadow-paper-lift);
+}
+.letter > .tape--top { --tape-w: 140px; }
+
+.letter__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: start;
+  gap: 16px;
+  padding-bottom: 20px;
+}
+.letter__from { grid-column: 1; grid-row: 1; min-width: 0; }
+.letter__stamp {
+  grid-column: 2; grid-row: 1;
+  width: 64px; height: 76px;
+  --tilt: 6deg;
+}
+.letter__stamp .ico { width: 30px; height: 30px; }
+.letter__menu { grid-column: 3; grid-row: 1; }
+.letter__id { font-size: var(--t-small); color: var(--ink-soft); }
+.letter__id .mono, .letter__id .num { font-size: 13px; }
+.letter__title { font-size: var(--t-h2); line-height: .95; margin-top: 8px; }
+.letter__who { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-weight: 500; }
+
+.letter__body {
+  display: grid;
+  gap: 32px;
+  max-width: 34em;
+  padding-top: 8px;
+  font-size: 17px;
+  line-height: 32px;
+  /* 줄노트 — 본문 줄 상자(32px) 바닥에 줄이 오도록 본문에만 긋는다 */
+  background-image: repeating-linear-gradient(transparent 0 31px, var(--grid-line-strong) 31px 32px);
+  background-position: 0 8px;
+}
+.letter__body p { margin: 0; }
+.letter__body .num { font-size: 16px; }
+.letter__body mark { background: linear-gradient(transparent 58%, var(--marker) 58% 88%, transparent 88%); }
+.letter__addr { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-weight: 500; }
+.letter__addr .label-sticker { --tilt: -3deg; }
+.letter__sign { justify-self: end; color: var(--ink-soft); }
+
+/* 편지 옆에 끼운 쪽지 */
+.slip { grid-area: slip; display: grid; gap: 40px; padding-top: 40px; }
+.slip__card {
+  --peel-under: var(--paper-raised);
+  position: relative;
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  padding: 28px 20px 20px;
+  background: var(--paper-raised);
+  border-radius: var(--r-paper-sm);
+  box-shadow: var(--shadow-paper);
+  rotate: calc(var(--tilt, 0deg) * var(--tilt-k));
+}
+.slip__card--order {
+  --tilt: 2deg;
+  background-color: var(--wash-sky);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+.slip__card--sub { --tilt: -2deg; background-color: var(--wash-peach); }
+.slip__card > .tape--tl, .slip__card > .tape--tr { --tape-w: 70px; }
+.slip__kicker { font-family: var(--font-hand); letter-spacing: var(--hand-tracking); word-spacing: var(--hand-word); font-weight: 700; font-size: 22px; line-height: 1.1; }
+.slip__id { font-size: 12px; color: var(--ink-soft); }
+.slip__kv { width: 100%; gap: 4px 12px; margin: 6px 0 4px; font-size: var(--t-small); }
+.slip__kv dt { font-size: 17px; }
+.slip__kv .num { font-size: 14px; }
+.slip__log { padding-left: 4px; }
+
+/* 답장 초안 — 편지 아래쪽에 겹쳐 붙인 레몬 포스트잇 (폼이라 0°) */
+.reply {
+  grid-area: reply;
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 20px;
+  margin: -80px 0 0 120px;
+  padding: 36px 40px 32px;
+  background: var(--wash-lemon);
+  border-radius: 2px 2px 4px 18px / 2px 2px 4px 8px;
+  box-shadow: var(--shadow-paper-lift);
+}
+.reply::before {                 /* 포스트잇 접착부 */
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 18px;
+  background: color-mix(in srgb, var(--st-lemon) 70%, transparent);
+  opacity: .6;
+  pointer-events: none;
+}
+.reply > .tape--tl, .reply > .tape--br { --tape-w: 92px; }
+.reply__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 20px; }
+.reply__title { font-size: var(--t-h3); }
+.reply__who { display: flex; align-items: center; gap: 8px; font-size: var(--t-small); color: var(--ink-soft); }
+.reply__who .num { font-size: 13px; }
+
+.reply__quick { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.reply__quick-label { font-weight: 700; margin-right: 4px; }
+
+.reply__text { min-height: 168px; background-color: transparent; }
+.reply__foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 20px; }
+
+/* ==========================================================================
+   반응형
+   ========================================================================== */
+@media (max-width: 1279px) {
+  .mail { grid-template-columns: minmax(300px, 360px) minmax(0, 1fr); gap: 40px; }
+  .desk { grid-template-columns: minmax(0, 1fr); grid-template-areas: "letter" "slip" "reply"; }
+  .slip { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); align-items: start; gap: 32px; padding-top: 40px; }
+  .reply { margin: 40px 0 0; }
+  .letter { padding-bottom: 48px; }
+}
+
+@media (max-width: 1079px) {
+  .mail { grid-template-columns: minmax(0, 1fr); gap: 60px; }
+  .pile__list .list__item:nth-child(odd) { margin-right: 24px; }
+  .pile__list .list__item:nth-child(even) { margin-left: 24px; }
+}
+
+@media (max-width: 719px) {
+  .mail { gap: 40px; }
+  .pile__list .list__item:nth-child(odd) { margin-right: 8px; }
+  .pile__list .list__item:nth-child(even) { margin-left: 8px; }
+  .pile__list .list__item:has([aria-current="true"]) { translate: 8px 0; }
+  .pile__list .list__row { gap: 10px; padding-inline: 10px; }
+  .pile__list .badge { font-size: 12px; }
+
+  .desk { padding-top: 0; }
+  .letter { padding: 40px 20px 32px 36px; background-image: linear-gradient(90deg, transparent 21px, color-mix(in srgb, var(--st-strawberry) 80%, transparent) 21px 23px, transparent 23px); }
+  .letter__head { grid-template-columns: minmax(0, 1fr) auto; }
+  .letter__stamp { grid-column: 2; grid-row: 1; width: 52px; height: 62px; }
+  .letter__menu { grid-column: 2; grid-row: 2; justify-self: end; }
+  .letter__title { font-size: var(--t-h2); }
+  .letter__body { font-size: 16px; gap: 20px; }
+
+  .slip { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .slip__log { padding-left: 20px; }
+  .reply__text { min-height: 260px; }
+  .reply { padding: 32px 20px 24px; }
+  .reply__foot .btn-row { width: 100%; justify-content: flex-end; }
+}

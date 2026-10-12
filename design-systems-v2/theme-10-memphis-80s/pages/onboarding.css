@@ -1,0 +1,285 @@
+/* ==========================================================================
+   pages/onboarding.css — 「내 공간에 맞는 패턴 찾기」 4단계 + 견본 박스 주문 완료
+   구도: 맨 위 풀블리드 '방 단면'(벽 + 바닥 + 가구 세트). 고를 때마다 벽색·가구색·무늬가 바뀐다.
+        → 바닥 아래 단계 줄 → 왼쪽 4단 큰 단계 번호/설명 + 오른쪽 8단 선택 판.
+   선택 상태는 CSS :has() 로 방 그림·이름표·단계 부제에 반영, 무늬는 app.js [data-finish-target].
+   semantic 토큰만 사용.
+   ========================================================================== */
+
+/* ---- 색 조합 → 방 변수 ------------------------------------------------- */
+.ob { --ca: var(--brand); --cb: var(--accent); }
+.ob:has(#cb-2:checked) { --ca: var(--info); --cb: var(--success); }
+.ob:has(#cb-3:checked) { --ca: var(--field-lilac); --cb: var(--field-salmon); }
+.ob:has(#cb-4:checked) { --ca: var(--success); --cb: var(--brand); }
+
+/* 선택 이름표: 고른 것만 보인다 */
+.ob-n > span { display: none; }
+.ob:has(#sp-living:checked) .ob-n--space [data-v="living"],
+.ob:has(#sp-cafe:checked) .ob-n--space [data-v="cafe"],
+.ob:has(#sp-work:checked) .ob-n--space [data-v="work"],
+.ob:has(#cb-1:checked) .ob-n--combo [data-v="1"],
+.ob:has(#cb-2:checked) .ob-n--combo [data-v="2"],
+.ob:has(#cb-3:checked) .ob-n--combo [data-v="3"],
+.ob:has(#cb-4:checked) .ob-n--combo [data-v="4"],
+.ob:has(input[name="fin"][value="LM-01"]:checked) .ob-n--fin [data-v="LM-01"],
+.ob:has(input[name="fin"][value="LM-02"]:checked) .ob-n--fin [data-v="LM-02"],
+.ob:has(input[name="fin"][value="LM-03"]:checked) .ob-n--fin [data-v="LM-03"],
+.ob:has(input[name="fin"][value="LM-04"]:checked) .ob-n--fin [data-v="LM-04"],
+.ob:has(input[name="fin"][value="LM-05"]:checked) .ob-n--fin [data-v="LM-05"],
+.ob:has(input[name="fin"][value="LM-06"]:checked) .ob-n--fin [data-v="LM-06"] { display: inline; }
+
+/* ---- 1. 방 단면 -------------------------------------------------------- */
+.ob-room {
+  --pi: var(--plate-ink);
+  position: relative;
+  height: clamp(460px, 42vw, 580px);
+  overflow: hidden;
+  border-bottom: var(--bw-floor) solid var(--line);
+  background: var(--cb);
+  transition: background-color var(--dur-enter) var(--ease-snap);
+}
+.ob-room__wall {
+  position: absolute; inset: 0 0 22% 0;
+  background: var(--cb);
+  transition: background-color var(--dur-enter) var(--ease-snap);
+}
+/* 벽 몰딩 한 줄 */
+.ob-room__wall::after { content: ""; position: absolute; left: 0; right: 0; bottom: 18%; height: 10px; background: var(--pat-lm06), var(--plate-white); border-block: var(--bw) solid var(--pi); }
+.ob-room__floor {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 22%;
+  background: var(--bg-alt);
+  border-top: var(--bw-floor) solid var(--pi);
+}
+.ob-room__rug {
+  position: absolute; left: 50%; top: 18%; width: min(560px, 54%); height: 52%;
+  background: var(--finish, var(--lam-lm01)), var(--laminate-ground);
+  border: var(--bw) solid var(--pi);
+  border-radius: 50%;
+}
+
+.ob-room__poster {
+  --face: var(--plate-white);
+  position: absolute; z-index: 2;
+  left: max(var(--page-pad), calc((100% - var(--grid-max)) / 2));
+  top: var(--sp-7);
+  width: min(500px, 42%);
+  padding: var(--sp-5) var(--sp-5) var(--sp-5);
+  transform: rotate(-2deg);
+  color: var(--plate-ink);
+}
+.ob-room__kicker { font-family: var(--ff-label-ko); font-size: 15px; display: flex; gap: 8px; align-items: baseline; }
+.ob-room__kicker .t-mono { background: var(--accent); padding: 1px 6px; border: var(--bw) solid var(--pi); }
+.ob-room__title { margin-top: var(--sp-3); font-size: clamp(36px, 4.2vw, 60px); line-height: 1.08; }
+.ob-room__by { margin-top: var(--sp-3); font-size: 15px; line-height: 1.65; color: var(--text-muted); }
+
+.ob-room__set {
+  position: absolute; z-index: 1;
+  right: max(var(--page-pad), calc((100% - var(--grid-max)) / 2 + 24px));
+  bottom: calc(22% - 2px);
+  display: none; align-items: flex-end; gap: 36px;
+  transform: scale(1.3); transform-origin: bottom right;
+}
+.ob:has(#sp-living:checked) .ob-room__set--living,
+.ob:has(#sp-cafe:checked) .ob-room__set--cafe,
+.ob:has(#sp-work:checked) .ob-room__set--work { display: flex; animation: ob-drop var(--dur-enter) var(--ease-pop); }
+@keyframes ob-drop { from { opacity: 0; translate: 0 -18px; rotate: -3deg; } }
+
+.ob-f { position: relative; display: block; flex: none; }
+.ob-f i { display: block; border: var(--bw) solid var(--pi); }
+
+/* 거실: 책장 · 소파 · 스탠드 */
+.ob-f--sofa { width: 280px; display: grid; grid-template-columns: 34px minmax(0, 1fr) 34px; grid-template-rows: 70px 46px 14px; }
+.ob-f--sofa i:nth-child(1) { grid-column: 1 / -1; grid-row: 1 / 3; background: var(--ca); border-radius: 40px 40px 0 0; }
+.ob-f--sofa i:nth-child(2) { grid-column: 2; grid-row: 2; background: var(--finish, var(--lam-lm01)), var(--laminate-ground); z-index: 1; margin-bottom: -2px; }
+.ob-f--sofa i:nth-child(3) { grid-column: 1 / -1; grid-row: 3; border: 0; background: var(--pi); clip-path: polygon(6% 0, 94% 0, 94% 100%, 86% 100%, 86% 40%, 14% 40%, 14% 100%, 6% 100%); }
+
+/* 카페: 카운터 · 원탁 둘 · 스툴 */
+.ob-f--counter { width: 230px; }
+.ob-f--counter i:nth-child(1) { height: 20px; margin-inline: -10px; background: var(--finish, var(--lam-lm01)), var(--laminate-ground); }
+.ob-f--counter i:nth-child(2) { height: 140px; margin-top: -2px; background: var(--ca); border-radius: 0 0 0 var(--cut); }
+.ob-f--ctable { width: 120px; display: flex; flex-direction: column; align-items: center; }
+.ob-f--ctable i:nth-child(1) { width: 120px; height: 18px; border-radius: var(--round); background: var(--finish, var(--lam-lm01)), var(--laminate-ground); }
+.ob-f--ctable i:nth-child(2) { width: 14px; height: 110px; background: var(--pi); margin-top: -2px; border-radius: 0 0 6px 6px; }
+.ob-f--ctable-2 i:nth-child(1) { width: 96px; }
+.ob-f--ctable-2 i:nth-child(2) { height: 92px; }
+.ob-f--stool i { width: 44px; height: 74px; background: var(--info); border-radius: 50% 50% 0 0 / 14px 14px 0 0; }
+
+/* 작업실: 벽 선반 · 책상 · 의자 · 스탠드 */
+.ob-f--wshelf { width: 170px; margin-bottom: 220px; margin-right: -120px; }
+.ob-f--wshelf i:nth-child(1) { width: 70px; height: 35px; margin-left: 24px; border-bottom: 0; border-radius: 70px 70px 0 0; background: var(--ca); }
+.ob-f--wshelf i:nth-child(2) { height: 18px; background: var(--finish, var(--lam-lm01)), var(--laminate-ground); }
+/* 상품 두 점(조명·의자)은 정본 일러스트(base.css 6-2 .fx) — 크기만 */
+.ob-shelf { --s: .84; } /* 거실 벽의 파도 책장 DH-SH-07 — 정본 그림, 선반은 고른 무늬(--finish) */
+.ob-lamp { --s: 1.05; }
+.ob-lamp--desk { --s: .5; margin-bottom: 138px; margin-left: -126px; }
+.ob-chair { --s: .9; margin-left: -12px; }
+.ob-f--desk { width: 330px; display: grid; grid-template-columns: 30px minmax(0, 1fr) 30px; grid-template-rows: 22px 118px; }
+.ob-f--desk i:nth-child(1) { grid-column: 1 / -1; grid-row: 1; margin-inline: -12px; background: var(--finish, var(--lam-lm01)), var(--laminate-ground); z-index: 1; }
+.ob-f--desk i:nth-child(2) { grid-column: 1; grid-row: 2; background: var(--ca); margin-top: -2px; }
+.ob-f--desk i:nth-child(3) { grid-column: 3; grid-row: 2; background: var(--ca); margin-top: -2px; }
+
+/* 이름표 (바닥 위) */
+.ob-room__label {
+  position: absolute; z-index: 3;
+  right: max(var(--page-pad), calc((100% - var(--grid-max)) / 2));
+  bottom: 5%;
+  display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
+  padding: 8px 16px 7px;
+  background: var(--plate-white); color: var(--plate-ink);
+  border: var(--bw) solid var(--pi); border-radius: var(--round);
+  box-shadow: var(--off-sm) var(--off-sm) 0 var(--pi);
+  font-family: var(--ff-label-ko); font-size: 17px; line-height: 1.2;
+}
+.ob-room__who { color: var(--text-muted); }
+.ob-room__sep { width: 8px; height: 8px; border-radius: 50%; background: var(--pi); }
+
+/* ---- 2. 단계 줄 -------------------------------------------------------- */
+.ob-steps { padding-block: var(--sp-6) var(--sp-5); border-bottom: var(--bw) dashed var(--line); }
+.ob-steps .steps__sub { color: var(--text); font-family: var(--ff-label-ko); font-size: 15px; }
+.ob-steps .steps__item[data-state="todo"] .steps__sub { color: var(--text-muted); }
+
+/* ---- 3. 단계 판 -------------------------------------------------------- */
+.ob-desk { padding-block: var(--sp-8) var(--sp-10); }
+.ob-panel { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: var(--sp-6) var(--sp-8); align-items: start; }
+.ob-panel__head { grid-row: 1 / span 2; }
+.ob-panel__body { grid-column: 2; min-width: 0; }
+.ob-panel > .ob-panel__nav { grid-column: 2; }
+.ob-panel__no { display: flex; align-items: baseline; gap: 10px; line-height: .9; }
+.ob-panel__no b { font-family: var(--ff-display); font-weight: 900; font-size: clamp(96px, 10vw, 152px); letter-spacing: -0.04em; color: var(--brand-text); }
+.ob-panel__no span { font-family: var(--ff-mono); font-size: 18px; color: var(--text-muted); }
+.ob-panel__title { margin-top: var(--sp-4); font-family: var(--ff-display-ko); font-weight: 400; font-size: var(--fs-d3); line-height: 1.1; }
+.ob-panel__help { margin-top: var(--sp-4); color: var(--text-muted); max-width: 26em; }
+.ob-panel__help b { color: var(--text); }
+.ob-panel__tip { display: flex; gap: var(--sp-3); align-items: flex-start; margin-top: var(--sp-5); padding-top: var(--sp-4); border-top: var(--bw) dashed var(--line); font-size: var(--fs-small); line-height: 1.6; }
+.ob-panel__tip b { font-family: var(--ff-label-ko); font-weight: 400; font-size: 16px; }
+.ob-panel__nav { display: flex; justify-content: space-between; gap: var(--sp-4); padding-top: var(--sp-5); border-top: var(--bw) solid var(--line); }
+
+/* 고르는 판 */
+.ob-tiles { display: grid; gap: var(--sp-5); }
+.ob-tiles--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.ob-tiles--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ob-tile {
+  --r: 0 var(--cut) 0 0;
+  display: flex; flex-direction: column; gap: 6px;
+  min-height: 248px;
+  padding: var(--sp-5);
+  cursor: pointer;
+  transition: transform var(--dur-hover) var(--ease-pop);
+}
+.ob-tile input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.ob-tile:hover { transform: translate(-3px, -3px); --off: var(--off-md); }
+.ob-tile:has(input:checked) { --face: var(--accent); --edge: var(--plate-ink); --off: var(--off-lift); color: var(--on-accent); transform: translate(-4px, -4px) rotate(-1.5deg); }
+.ob-tile:has(input:checked) .ob-tile__sub { color: var(--on-accent); }
+.ob-tile:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 6px; }
+.ob-tile__art { display: flex; align-items: flex-end; gap: 10px; height: 104px; margin-bottom: auto; padding-bottom: 10px; border-bottom: var(--bw-floor) solid currentColor; }
+.ob-tile__art i { display: block; border: var(--bw) solid var(--plate-ink); }
+.ob-tile__art--living i:nth-child(1) { width: 96px; height: 54px; background: var(--brand); border-radius: 28px 28px 0 0; }
+.ob-tile__art--living i:nth-child(2) { width: 40px; height: 92px; background: var(--info); }
+.ob-tile__art--cafe i { width: 64px; height: 14px; border-radius: var(--round); background: var(--pat-lm05), var(--plate-white); position: relative; margin-bottom: 64px; }
+.ob-tile__art--cafe i::after { content: ""; position: absolute; left: 50%; top: 100%; width: 8px; height: 66px; margin-left: -4px; background: var(--plate-ink); }
+.ob-tile__art--work i:nth-child(1) { width: 140px; height: 16px; background: var(--pat-lm02), var(--plate-white); margin-bottom: 52px; position: relative; }
+.ob-tile__art--work i:nth-child(1)::after { content: ""; position: absolute; left: 6px; right: 6px; top: 100%; height: 52px; background: linear-gradient(90deg, var(--success) 0 14px, transparent 14px calc(100% - 14px), var(--success) calc(100% - 14px)); }
+.ob-tile__art--work i:nth-child(2) { width: 0; height: 0; border: 0; border-left: 22px solid transparent; border-right: 22px solid transparent; border-bottom: 40px solid var(--danger); margin-bottom: 70px; margin-left: -60px; }
+.ob-tile__name { font-family: var(--ff-label-ko); font-size: 24px; line-height: 1.2; margin-top: var(--sp-3); }
+.ob-tile__sub { font-size: var(--fs-small); color: var(--text-muted); line-height: 1.55; }
+
+.ob-tile--combo { min-height: 220px; }
+.ob-chip { display: flex; height: 104px; margin-bottom: auto; align-items: center; }
+.ob-chip i { display: block; width: 72px; height: 72px; border: var(--bw) solid var(--plate-ink); border-radius: 50%; }
+.ob-chip i + i { margin-left: -22px; border-radius: 0; transform: rotate(8deg); }
+.ob-chip--1 i:nth-child(1) { background: var(--brand); } .ob-chip--1 i:nth-child(2) { background: var(--accent); }
+.ob-chip--2 i:nth-child(1) { background: var(--info); } .ob-chip--2 i:nth-child(2) { background: var(--success); }
+.ob-chip--3 i:nth-child(1) { background: var(--field-lilac); } .ob-chip--3 i:nth-child(2) { background: var(--field-salmon); }
+.ob-chip--4 i:nth-child(1) { background: var(--success); } .ob-chip--4 i:nth-child(2) { background: var(--brand); }
+
+.ob-swatches { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--sp-5) var(--sp-4); }
+.ob-swatches .swatch-pick__name { font-size: 16px; }
+
+/* 결제 요약 */
+.ob-bill { margin-top: var(--sp-5); border-top: var(--bw) solid var(--line); }
+.ob-bill > div { display: flex; justify-content: space-between; gap: var(--sp-3); padding: 10px 0; border-bottom: var(--bw) dashed var(--line-soft); font-size: 15px; }
+.ob-bill dt .t-mono { font-size: 11px; margin-left: 4px; color: var(--text-muted); }
+.ob-bill dd { margin: 0; font-family: var(--ff-mono); font-weight: 700; font-size: 14px; }
+.ob-bill__sum { border-bottom: var(--bw-floor) double var(--line) !important; }
+.ob-bill__sum dt { font-family: var(--ff-label-ko); font-size: 19px; }
+.ob-bill__sum dd { font-family: var(--ff-display); font-weight: 900; font-size: 28px; letter-spacing: -0.02em; }
+.ob-bill__note { margin-top: var(--sp-3); font-size: var(--fs-tag); color: var(--text-muted); line-height: 1.6; }
+.ob-form { align-content: start; }
+
+/* ---- 완료 ------------------------------------------------------------- */
+.ob-done { display: block; }
+.ob-done__box { --face: var(--surface); position: relative; max-width: 920px; margin-inline: auto; padding: var(--sp-8) var(--sp-7) var(--sp-7); }
+.ob-done__stamp { position: absolute; right: var(--sp-6); top: calc(var(--sp-6) * -1); background: var(--accent); color: var(--on-accent); border-color: var(--plate-ink); outline-color: var(--plate-ink); }
+.ob-done__no { color: var(--text-muted); }
+.ob-done__title { margin-top: var(--sp-3); font-size: clamp(36px, 4.4vw, 60px); line-height: 1.1; max-width: 13em; }
+.ob-done__text { margin-top: var(--sp-4); max-width: 36em; color: var(--text-muted); }
+.ob-done__sum { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-block: var(--sp-6); border: var(--bw) solid var(--line); }
+.ob-done__sum > div { padding: var(--sp-3) var(--sp-4); border-right: var(--bw) solid var(--line); }
+.ob-done__sum > div:last-child { border-right: 0; }
+.ob-done__sum dt { font-family: var(--ff-label-ko); font-size: 14px; color: var(--text-muted); }
+.ob-done__sum dd { margin: 4px 0 0; font-family: var(--ff-label-ko); font-size: 19px; line-height: 1.25; }
+.ob-done__sum dd.t-mono { font-family: var(--ff-mono); font-weight: 700; font-size: 16px; }
+
+/* ---- 반응형 ------------------------------------------------------------ */
+@media (max-width: 1180px) {
+  .ob-swatches { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ob-tiles--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ob-room__set { transform: scale(1); }
+}
+@media (max-width: 1024px) {
+  .ob-panel { grid-template-columns: minmax(0, 1fr); }
+  .ob-panel__head { grid-row: auto; }
+  .ob-panel__body, .ob-panel > .ob-panel__nav { grid-column: 1; }
+  .ob-panel__no b { font-size: 88px; }
+  .ob-done__sum { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ob-done__sum > div:nth-child(2) { border-right: 0; }
+  .ob-done__sum > div:nth-child(-n+2) { border-bottom: var(--bw) solid var(--line); }
+}
+@media (max-width: 768px) {
+  .ob-room { height: 560px; }
+  .ob-room__wall { bottom: 18%; }
+  .ob-room__floor { height: 18%; }
+  .ob-room__poster { left: var(--sp-4); right: var(--sp-4); top: var(--sp-5); width: auto; padding: var(--sp-4); --off: var(--off-md); }
+  .ob-room__title { font-size: 34px; }
+  .ob-room__by { font-size: 14px; }
+  .ob-room__set { right: 50%; bottom: calc(18% - 2px); transform: translateX(50%) scale(.6); transform-origin: bottom center; }
+  .ob-room__label { left: var(--sp-4); right: auto; bottom: 3%; font-size: 14px; padding: 6px 12px 5px; max-width: calc(100% - 32px); }
+  .ob-room__rug { top: 22%; height: 44%; width: 76%; left: 12%; }
+
+  /* 단계: 모바일에서도 가로 한 줄 (도형 번호 + 짧은 제목) */
+  .ob-steps { padding-block: var(--sp-5) var(--sp-4); }
+  .ob-steps .steps { flex-direction: row; gap: 0; }
+  .ob-steps .steps__item { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .ob-steps .steps__item:not(:last-child)::after { top: 20px; left: 48px; right: 4px; width: auto; height: 12px; }
+  .ob-steps .steps__mark { width: 44px; height: 44px; font-size: 13px; }
+  .ob-steps .steps__item:nth-child(2) .steps__mark { padding-top: 12px; }
+  .ob-steps .steps__text { padding-right: 4px; }
+  .ob-steps .steps__title { font-size: 14px; }
+  .ob-steps .steps__sub { display: none; }
+
+  .ob-desk { padding-block: var(--sp-6) var(--sp-9); }
+  .ob-panel { gap: var(--sp-5); }
+  .ob-panel__no b { font-size: 72px; }
+  .ob-panel__title { font-size: 30px; margin-top: var(--sp-2); }
+  .ob-tiles--3 { grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); }
+  .ob-tiles--3 .ob-tile { min-height: 0; flex-direction: row; flex-wrap: wrap; align-items: flex-end; column-gap: var(--sp-4); }
+  .ob-tiles--3 .ob-tile__art { height: 72px; margin: 0; width: 100%; transform-origin: bottom left; }
+  .ob-tile__art--living i:nth-child(1) { width: 72px; height: 40px; }
+  .ob-tile__art--living i:nth-child(2) { height: 64px; }
+  .ob-tile__art--cafe i { margin-bottom: 44px; } .ob-tile__art--cafe i::after { height: 46px; }
+  .ob-tile__art--work i:nth-child(1) { margin-bottom: 36px; } .ob-tile__art--work i:nth-child(1)::after { height: 36px; }
+  .ob-tile__art--work i:nth-child(2) { margin-bottom: 52px; }
+  .ob-tiles--4 { gap: var(--sp-4); }
+  .ob-tile--combo { min-height: 0; padding: var(--sp-4); }
+  .ob-chip { height: 76px; }
+  .ob-chip i { width: 54px; height: 54px; }
+  .ob-tile__name { font-size: 19px; }
+  .ob-tile--combo .ob-tile__sub { font-size: 13px; }
+  .ob-swatches { gap: var(--sp-4) var(--sp-3); }
+  .ob-panel__nav .btn { padding-inline: 16px; }
+  .ob-done__box { padding: var(--sp-7) var(--sp-4) var(--sp-5); }
+  .ob-done__stamp { width: 92px; height: 92px; right: var(--sp-3); top: -46px; font-size: 11px; }
+  .ob-done__sum { grid-template-columns: minmax(0, 1fr); }
+  .ob-done__sum > div { border-right: 0 !important; border-bottom: var(--bw) solid var(--line); }
+  .ob-done__sum > div:last-child { border-bottom: 0; }
+}

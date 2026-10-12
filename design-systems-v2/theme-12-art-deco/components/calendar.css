@@ -1,0 +1,105 @@
+/* calendar — 공연 달력. app.js 가 data-cal 로 격자를 그린다.
+   공연일 = 금 마름모(회차 수만큼) · 월요일 휴관 = 사선 해칭 · 오늘 = 이중선 칸 · 선택 = 공작록 면 */
+.cal { --cal-cell: 76px; display: flex; flex-direction: column; gap: var(--sp-4); }
+.cal__head { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: var(--sp-2); }
+.cal__title { text-align: center; font-family: var(--font-display-ko); font-weight: 900; font-size: 24px; line-height: 1.2; letter-spacing: -.02em; }
+.cal__title small { display: block; margin-top: 4px; font-family: var(--font-ui-ko); font-weight: 500; font-size: 12px; color: var(--gold-text); letter-spacing: 0; }
+.cal__nav { width: 44px; height: 44px; display: inline-grid; place-items: center; border: 1px solid var(--gold-edge); color: var(--gold-text); background: var(--paper-raised); transition: background-color var(--dur-2) var(--ease-out); }
+.cal__nav:hover { background: var(--hover); }
+.cal__nav:active { transform: translateY(1px); }
+.cal__nav:disabled { color: var(--disabled-ink); border-color: var(--disabled-line); background: var(--disabled-fill); }
+.cal__grid { width: 100%; table-layout: fixed; border-top: 1px solid var(--gold-line); border-bottom: 1px solid var(--gold-line); }
+.cal__grid th {
+  padding: 10px 0 8px;
+  font-family: var(--font-ui-ko);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--ink-muted);
+  border-bottom: 1px solid var(--gold-line);
+}
+.cal__grid th:first-child, .cal__grid th:last-child { color: var(--gold-text); }
+.cal__grid td { padding: 2px; vertical-align: top; }
+.cal__day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: var(--cal-cell);
+  padding: 8px 2px 6px;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid transparent;
+  transition: background-color var(--dur-2) var(--ease-out), border-color var(--dur-2) var(--ease-out);
+}
+.cal__num { font-family: var(--font-num); font-weight: 700; font-size: 19px; line-height: 1; font-variant-numeric: lining-nums tabular-nums; }
+.cal__shows { display: flex; gap: 5px; height: 8px; align-items: center; }
+.cal__shows i { width: 6px; height: 6px; background: var(--gold-edge); transform: rotate(45deg); }
+.cal__note { font-family: var(--font-ui-ko); font-size: 11px; line-height: 1.3; color: var(--ink-faint); white-space: nowrap; }
+.cal__day--show .cal__note { color: var(--gold-text); }
+.cal__day:hover { background: var(--hover); border-color: var(--gold-line); }
+.cal__day--out { color: var(--ink-faint); }
+/* 공연 없음(이 공연의 회차가 아닌 날) — 흐린 숫자, 마름모 없음 */
+.cal__day--none { color: var(--ink-faint); }
+.cal__day--none .cal__num { font-weight: 400; }
+.cal__day--none:hover, .cal__day--past:hover { background: transparent; border-color: transparent; }
+/* 지난 회차 — 빈 마름모, 고를 수 없음 */
+.cal__day--past { color: var(--ink-faint); }
+.cal__day--past .cal__num { font-weight: 400; text-decoration: line-through; text-decoration-color: var(--gold-line); text-decoration-thickness: 1px; }
+.cal__shows i.is-done { background: transparent; box-shadow: inset 0 0 0 1px var(--gold-line); }
+.cal__day--out .cal__num { font-weight: 400; }
+.cal__day--closed {
+  color: var(--ink-faint);
+  background: repeating-linear-gradient(135deg, transparent 0 6px, var(--gold-line) 6px 7px);
+  background-color: transparent;
+  opacity: .9;
+}
+.cal__day--closed .cal__note { color: var(--ink-muted); background: var(--paper); padding: 0 3px; }
+.cal__day--closed:hover { background: repeating-linear-gradient(135deg, var(--hover) 0 6px, var(--gold-line) 6px 7px); }
+/* 오늘 — 이중선 계단 칸 */
+.cal__day[aria-current="date"] {
+  border-color: var(--gold-edge);
+  box-shadow: inset 0 0 0 3px var(--paper), inset 0 0 0 4px var(--gold-edge);
+  clip-path: polygon(5px 0, calc(100% - 5px) 0, calc(100% - 5px) 2px, 100% 2px, 100% calc(100% - 2px), calc(100% - 5px) calc(100% - 2px), calc(100% - 5px) 100%, 5px 100%, 5px calc(100% - 2px), 0 calc(100% - 2px), 0 2px, 5px 2px);
+}
+.cal__day[aria-current="date"] .cal__num { color: var(--gold-text); }
+.cal__day[aria-current="date"]::after {
+  content: "오늘";
+  position: absolute;
+  top: 4px; right: 7px;
+  font-family: var(--font-ui-ko);
+  font-weight: 700;
+  font-size: 10px;
+  color: var(--gold-text);
+}
+/* 선택 */
+.cal__day[aria-selected="true"] {
+  background: var(--peacock);
+  border-color: var(--peacock);
+  color: var(--peacock-ink);
+  box-shadow: inset 0 0 0 3px var(--peacock), inset 0 0 0 4px var(--peacock-gold);
+}
+.cal__day[aria-selected="true"] .cal__note,
+.cal__day[aria-selected="true"]::after,
+.cal__day[aria-selected="true"] .cal__num { color: var(--peacock-gold); }
+.cal__day[aria-selected="true"] .cal__shows i { background: var(--peacock-gold); }
+.cal__day[aria-selected="true"] .cal__shows i.is-done { background: transparent; box-shadow: inset 0 0 0 1px var(--peacock-gold); }
+.cal__day:disabled { cursor: default; }
+.cal__day:disabled:hover { background: transparent; border-color: transparent; }
+.cal__day:focus-visible { outline-offset: -3px; z-index: 1; }
+.cal__legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; font-family: var(--font-ui-ko); font-size: 12px; color: var(--ink-muted); }
+.cal__legend span { display: inline-flex; align-items: center; gap: 6px; }
+.cal__legend i { width: 7px; height: 7px; background: var(--gold-edge); transform: rotate(45deg); }
+.cal__legend .is-closed { width: 14px; height: 10px; transform: none; background: repeating-linear-gradient(135deg, transparent 0 3px, var(--gold-line) 3px 4px); border: 1px solid var(--gold-line); }
+.cal__legend .is-today { width: 12px; height: 12px; transform: none; background: transparent; border: 1px solid var(--gold-edge); box-shadow: inset 0 0 0 2px var(--paper), inset 0 0 0 3px var(--gold-edge); }
+.cal__output { text-align: center; font-family: var(--font-ui-ko); font-weight: 700; font-size: 14px; color: var(--ink); min-height: 1.5em; }
+.cal--compact { --cal-cell: 52px; }
+.cal--compact .cal__note { display: none; }
+@media (max-width: 560px) {
+  .cal { --cal-cell: 54px; }
+  .cal__note { display: none; }
+  .cal__num { font-size: 16px; }
+  .cal__day[aria-current="date"]::after { content: none; }
+  .cal__grid td { padding: 1px; }
+}

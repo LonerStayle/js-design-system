@@ -1,0 +1,113 @@
+/* sidebar — 「도면 세트 탐색기」: 분야 트리(건축 A 38 / 구조 S 12 / 기계 M 8 / 전기 E 6)
+   폭 248, 오른쪽 1px 선. 현재 = --select 면 + 왼쪽 2px 잉크. 각 줄 시트 수 Mono
+   960 미만에서는 왼쪽 서랍으로 바뀐다([data-side-toggle] 로 연다, app.js) */
+.side {
+  position: sticky;
+  top: var(--nav-h);
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  width: var(--sidebar-w);
+  height: calc(100vh - var(--nav-h));
+  border-right: var(--rule);
+  background: var(--paper);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-mid) transparent;
+}
+.side__head { padding: var(--space-4) var(--space-4) var(--space-3); border-bottom: var(--rule-ink); }
+.side__set { display: flex; align-items: baseline; gap: var(--space-2); }
+.side__set-no { font-family: var(--type-mono); font-size: var(--fs-small); font-weight: 500; }
+.side__set-name { font-size: var(--fs-body); font-weight: 600; line-height: 1.4; }
+.side__meta { margin-top: 2px; font-size: var(--fs-small); color: var(--ink-2); }
+.side__meta .mono { font-size: 12px; }
+
+.side__nav { padding: var(--space-2) 0 var(--space-3); }
+.side__section + .side__section { margin-top: var(--space-2); }
+.side__label { padding: var(--space-3) var(--space-4) 4px; font-size: var(--fs-small); font-weight: 500; color: var(--ink-2); }
+
+/* 링크 줄 (화면 이동) */
+.side__link,
+.side__group-btn,
+.side__sheet {
+  display: grid;
+  grid-template-columns: 2.6em minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  color: var(--ink);
+  font-size: var(--fs-body);
+  line-height: 1.35;
+  text-align: left;
+  text-decoration: none;
+  transition: background-color var(--dur-tick) var(--ease-plot);
+}
+.side__link:hover, .side__group-btn:hover, .side__sheet:hover { background: var(--select); }
+.side__link[aria-current="page"], .side__sheet[aria-current="page"] {
+  background: var(--select);
+  box-shadow: inset 2px 0 0 var(--ink);
+  font-weight: 600;
+}
+.side__link:focus-visible, .side__group-btn:focus-visible, .side__sheet:focus-visible { outline-offset: -2px; }
+.side__no { font-family: var(--type-mono); font-size: var(--fs-small); color: var(--ink-2); }
+.side__count { font-family: var(--type-mono); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.side__count b { color: var(--ink); font-weight: 500; }
+@media (pointer: coarse) { .side__link, .side__group-btn, .side__sheet { min-height: var(--touch); } }
+
+/* 분야 묶음 — 펼침 */
+.side__group-btn { font-weight: 500; grid-template-columns: 20px minmax(0, 1fr) auto; }
+.side__caret { position: relative; width: 10px; height: 10px; justify-self: center; }
+.side__caret::before { content: ""; position: absolute; inset: 1px 3px 1px 1px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; rotate: -45deg; transition: rotate var(--dur-base) var(--ease-plot); }
+.side__group-btn[aria-expanded="true"] .side__caret::before { rotate: 45deg; }
+.side__disc { font-family: var(--type-mono); font-weight: 500; }
+.side__sheets { display: grid; margin-left: calc(var(--space-4) + 9px); border-left: var(--rule); }
+.side__sheets[hidden] { display: none; }
+.side__sheet { grid-template-columns: 4.2em minmax(0, 1fr) 1.25em; min-height: 36px; padding-left: var(--space-3); font-size: var(--fs-small); }
+/* 시트명은 한 줄 고정 — 넘치면 말줄임, 전체 이름은 title 로 */
+.side__name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 상태는 기호만(▲ 수정 중 · ○ 검토 중 · ■ 발행 준비), 이름은 aria-label */
+.side__state { justify-self: center; font-family: var(--type-mono); font-size: 11px; line-height: 1; }
+.side__state--red { color: var(--redline); }
+.side__state--warn { color: var(--warn); font-size: 13px; }
+.side__state--ok { color: var(--ok); font-size: 10px; }
+.side__sheet--red .side__no { color: var(--redline); }
+
+/* 분야 진행 막대 — 트리 아래 일반 흐름(사이드바 전체가 한 스크롤).
+   고정 바닥 띠로 두면 900px 높이에서 트리 마지막 줄(전기 E)을 덮는다 */
+.side__foot {
+  margin-top: auto;
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  border-top: var(--rule-ink);
+  font-size: var(--fs-small);
+  color: var(--ink-2);
+}
+.side__foot .meter + .meter { margin-top: var(--space-2); }
+
+/* 960 미만 — 왼쪽 서랍 */
+.side-scrim { display: none; }
+@media (max-width: 959px) {
+  .side {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: var(--z-drawer);
+    align-self: stretch;
+    height: auto;
+    width: min(320px, 88vw);
+    border-right: var(--stroke-bold) solid var(--ink);
+    background: var(--paper-sheet);
+    translate: -100% 0;
+    visibility: hidden;
+    transition: translate var(--dur-base) var(--ease-plot), visibility 0s linear var(--dur-base);
+  }
+  .side.is-open { translate: 0 0; visibility: visible; transition: translate var(--dur-base) var(--ease-plot), visibility 0s; }
+  .side-scrim { display: block; position: fixed; inset: 0; z-index: calc(var(--z-drawer) - 1); background: var(--scrim); opacity: 0; pointer-events: none; transition: opacity var(--dur-base) var(--ease-plot); }
+  .side.is-open + .side-scrim { opacity: 1; pointer-events: auto; }
+}
+.side__close { display: none; }
+@media (max-width: 959px) {
+  .side__close { display: inline-grid; position: absolute; top: 6px; right: 6px; }
+  .side__head { padding-right: 56px; }
+}
