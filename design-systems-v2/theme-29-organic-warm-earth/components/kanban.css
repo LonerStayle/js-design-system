@@ -1,0 +1,121 @@
+/* kanban — 작업판: 열 = 수확 대기 / 선별 / 포장 / 발송 완료
+   열 머리 = 판자(먹 면)에 손글씨, 카드 = 꼬리표 달린 쪽지(품목 · 생산자 · 수량 꼬리표)
+   키보드: 카드에 포커스 → ←/→ 로 옆 열로 옮김 (app.js). 마우스: 끌어 놓기.
+   상태: hover · focus-visible · .is-lifted(옮기는 중) · .is-dragging · .board__list.is-over · .is-warn(서리) · .is-done */
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 4), minmax(240px, 1fr));
+  gap: var(--s-5);
+  align-items: start;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding-bottom: var(--s-4);
+}
+.board__col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  scroll-snap-align: start;
+  background: color-mix(in srgb, var(--kraft-sunk) 55%, transparent);
+  border-radius: var(--r-paper);
+}
+.board__head {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px var(--s-3);
+  padding: var(--s-3) var(--s-4) var(--s-3);
+  background: var(--chalk);
+  color: var(--chalk-text);
+  border-radius: var(--r-paper) var(--r-paper) 0 0;
+}
+/* 판자 나뭇결 두 줄 */
+.board__head::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 4px;
+  background: repeating-linear-gradient(90deg, var(--chalk-line) 0 30px, transparent 30px 44px);
+}
+.board__title { font-family: var(--font-hand); font-weight: 400; font-size: 32px; line-height: 1; letter-spacing: 0; }
+.board__head .boxes { grid-column: 1 / -1; --box-full: var(--sun); --box-empty: transparent; --box-line: var(--chalk-dim); color: var(--chalk-dim); }
+
+.board__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-height: 120px;
+  margin: 0;
+  padding: var(--s-4) var(--s-3) var(--s-5);
+  list-style: none;
+  border: 2px dashed transparent;
+  border-top: 0;
+  transition: background-color var(--dur-quick), border-color var(--dur-quick);
+}
+.board__list.is-over { border-color: var(--stamp); background: var(--select-wash); }
+
+.kcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-4) var(--s-4) var(--s-3);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: var(--r-paper);
+  box-shadow: var(--shadow-paper);
+  cursor: grab;
+  transition: translate var(--dur-quick) var(--ease-out), rotate var(--dur-quick) var(--ease-out), box-shadow var(--dur-quick);
+}
+.kcard:nth-child(3n + 1) { rotate: -0.6deg; }
+.kcard:nth-child(3n + 2) { rotate: 0.5deg; }
+.kcard:hover { rotate: 0deg; translate: 0 -2px; box-shadow: var(--shadow-lift); }
+.kcard:focus-visible { rotate: 0deg; outline: 3px solid var(--focus); outline-offset: 3px; }
+.kcard.is-lifted { rotate: var(--tilt-d); box-shadow: var(--shadow-lift); outline: 3px dashed var(--stamp); outline-offset: 3px; }
+.kcard.is-dragging { opacity: .45; cursor: grabbing; }
+.kcard.is-moved { animation: tag-drop var(--dur-drop) var(--ease-drop) both; }
+.kcard__title { padding-right: 72px; font-weight: 800; font-size: 16px; line-height: 1.4; }
+.kcard__id { font-family: var(--font-mono); font-size: 12px; letter-spacing: var(--track-latin); color: var(--text-2); }
+.kcard__meta { display: flex; align-items: center; gap: var(--s-2); font-size: 13px; color: var(--text-2); }
+.kcard__foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); padding-top: var(--s-2); border-top: 1.5px dashed var(--line); font-size: 13px; color: var(--text-2); }
+/* 수량 꼬리표: 오른쪽 위에 매달린 미니 가격표 */
+.kcard__tail { position: absolute; top: -8px; right: 10px; rotate: 4deg; }
+.kcard.is-warn { box-shadow: var(--shadow-paper), inset 4px 0 0 var(--indigo); }
+.kcard.is-done { background: color-mix(in srgb, var(--surface) 70%, var(--kraft-sunk)); }
+.kcard.is-done .kcard__title { color: var(--text-2); }
+/* 고른 카드 (app.js syncSelection 이 .is-selected 를 붙인다) */
+.kcard.is-selected { background: color-mix(in srgb, var(--surface) 88%, var(--stamp)); box-shadow: var(--shadow-paper), inset 0 0 0 3px var(--stamp); }
+.kcard.is-warn.is-selected { box-shadow: var(--shadow-paper), inset 0 0 0 3px var(--stamp), inset 7px 0 0 var(--indigo); }
+
+.board__add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-height: var(--touch);
+  margin: 0 var(--s-3) var(--s-4);
+  border: 2px dashed var(--line-strong);
+  border-radius: var(--r-paper);
+  color: var(--text-2);
+  font-weight: 700;
+  font-size: 14px;
+}
+.board__add:hover { color: var(--text); border-color: var(--ink); background: var(--hover-wash); }
+
+@media (max-width: 1024px) {
+  .board { grid-template-columns: repeat(var(--cols, 4), minmax(260px, 82%)); }
+}
+
+/* 빈 열 */
+.board__list:empty::before {
+  content: attr(data-empty);
+  display: block;
+  padding: var(--s-5) var(--s-2);
+  font-family: var(--font-hand);
+  font-size: 26px;
+  line-height: 1.1;
+  color: var(--text-2);
+  text-align: left;
+}

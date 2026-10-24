@@ -874,6 +874,19 @@
   /* ─────────────────────────────────────────────
      18. 서랍 속 카드 당기기 — .cardstack__tab
   ───────────────────────────────────────────── */
+  /* 다음 카드에 가려진(당겨지지 않은) 카드의 본문은 inert — 숨은 버튼·링크·입력이 Tab 포커스를 받지 않게.
+     맨 뒤 카드와 당겨진 카드만 본문이 보이므로 그 둘은 살려 둔다. 탭(당기기 버튼)은 늘 포커스를 받는다. */
+  function syncCardstackInert(stack) {
+    const items = $$('.cardstack__item', stack);
+    items.forEach((it, i) => {
+      const covered = !it.classList.contains('is-pulled') && i < items.length - 1;
+      const tab = $('.cardstack__tab', it);
+      Array.from(it.children).forEach((child) => {
+        if (child === tab) return;
+        child.inert = covered;
+      });
+    });
+  }
   function pullCard(item, focusTab) {
     const stack = item.closest('.cardstack');
     if (!stack) return;
@@ -887,6 +900,7 @@
       const tb = $('.cardstack__tab', item); if (tb) tb.setAttribute('aria-expanded', 'true');
     }
     stack.classList.toggle('has-pulled', !already);
+    syncCardstackInert(stack);
     if (focusTab) { const tb = $('.cardstack__tab', item); if (tb) tb.focus(); }
   }
   doc.addEventListener('click', (e) => {
@@ -900,6 +914,7 @@
       const tb = $('.cardstack__tab', it);
       if (tb) tb.setAttribute('aria-expanded', String(it.classList.contains('is-pulled')));
     });
+    syncCardstackInert(stack);
   }
 
   /* ─────────────────────────────────────────────

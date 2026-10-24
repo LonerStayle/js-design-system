@@ -3,7 +3,7 @@
    좌표: 컨테이너 style="--span: 540" (분), 블록 style="--at: 60; --len: 50" (시작 기준 분), --ppm = 1분당 px */
 .tl { --ppm: 1.4px; --span: 540; position: relative; display: grid; grid-template-columns: 64px minmax(0, 1fr); background: var(--surface); color: var(--text); }
 .tl__ticks { position: relative; height: calc(var(--span) * var(--ppm)); margin: 0; padding: 0; list-style: none; border-right: var(--seam) solid var(--rule); }
-.tl__ticks > li { position: absolute; left: 0; right: 0; top: calc(var(--at) * var(--ppm)); padding: 0 8px; transform: translateY(-50%); font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.tl__ticks > li { position: absolute; left: 0; right: 0; top: calc(var(--at) * var(--ppm)); padding: 0 8px; transform: translateY(-50%); font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tl__ticks > li:first-child { transform: none; }
 .tl__lanes { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0; }
 .tl__lanes::before { /* 시간 눈금선 (60분마다) */
@@ -12,7 +12,10 @@
 }
 .tl__lane { position: relative; height: calc(var(--span) * var(--ppm)); min-width: 0; }
 .tl__lane + .tl__lane { border-left: var(--seam) solid var(--surface-sunk); }
-.tl__lane-head { position: sticky; top: 0; }
+.tl__corner { background: var(--block); color: var(--on-block); display: flex; align-items: center; padding: 0 8px; font-family: var(--font-mono); font-size: 12px; font-weight: 700; border-right: var(--seam) solid var(--rule); }
+.tl__heads { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 0; }
+.tl__head { display: flex; align-items: center; gap: 6px; min-height: var(--hit); padding: 0 10px; min-width: 0; background: var(--st); color: var(--on-st); font-size: var(--fs-sm); font-weight: 700; line-height: 1.2; white-space: nowrap; overflow: hidden; }
+.tl__head .sym { width: 10px; height: 10px; }
 .tl__set {
   position: absolute; left: 0; right: 0; top: calc(var(--at) * var(--ppm)); height: calc(var(--len) * var(--ppm));
   display: flex; flex-direction: column; justify-content: flex-start; gap: 2px; overflow: hidden;
@@ -21,8 +24,11 @@
 }
 a.tl__set:hover, button.tl__set:hover { background: var(--st-flip-bg); color: var(--st-flip-fg); text-decoration: none; }
 button.tl__set { border: 0; font: inherit; text-align: left; cursor: pointer; width: 100%; }
-.tl__set[aria-pressed="true"], .tl__set.is-picked { box-shadow: inset 0 0 0 4px var(--fill-yellow), inset 0 0 0 7px var(--fill-ink); }
-.tl__set[aria-expanded="true"] { background: var(--fill-yellow); color: var(--on-yellow); }
+.tl__set[aria-pressed="true"], .tl__set.is-picked {
+  box-shadow: inset 0 0 0 4px var(--fill-yellow), inset 0 0 0 7px var(--fill-ink);
+  padding: 10px 12px;   /* 7px 테 + 글자와 띄울 여백 — 모바일에서도 테가 글자를 먹지 않게 */
+}
+.tl__set[aria-expanded="true"] { box-shadow: inset 0 0 0 5px var(--fill-yellow); }   /* 면색은 그대로(무대색) — 노랑 테가 팝오버와 이어진다 */
 .tl__time { font-family: var(--font-mono); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .tl__name { font-family: var(--font-display); font-weight: 900; font-size: 15px; line-height: 1.05; letter-spacing: var(--track-ko); }
 .tl__set--t1 .tl__name { font-size: 30px; }
@@ -30,9 +36,16 @@ button.tl__set { border: 0; font: inherit; text-align: left; cursor: pointer; wi
 .tl__set--t3 .tl__name { font-size: 18px; }
 .tl__set--t1 { background: var(--headliner); color: var(--on-headliner); }
 .tl__now { position: absolute; left: 0; right: 0; top: calc(var(--at) * var(--ppm)); height: var(--seam); background: var(--danger-fill); z-index: 2; pointer-events: none; }
-.tl__now > span { position: absolute; left: 0; top: 50%; transform: translateY(-50%); padding: 2px 8px; background: var(--danger-fill); color: var(--on-danger); font-size: 12px; font-weight: 700; white-space: nowrap; }
+/* 라벨은 무대 열이 아니라 왼쪽 시간 눈금 칸 안에 둔다 — 공연 블록 이름을 가리지 않게 */
+.tl__now > span { position: absolute; right: 100%; top: 50%; transform: translateY(-50%); width: 64px; padding: 3px 4px; background: var(--danger-fill); color: var(--on-danger); font-size: 12px; font-weight: 700; line-height: 1.15; text-align: center; white-space: normal; }
+.tl__now > span b { display: block; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+/* 타임테이블 블록에 붙는 팝오버: .tl__lane 안, 블록 바로 뒤 형제. --at = 그 블록의 시작 분 → 블록 위쪽에 맞붙는다 */
+.tl__lane > .popover { top: auto; bottom: calc((var(--span) - var(--at)) * var(--ppm)); left: 0; width: min(320px, 80vw); }
 .tl--compact { --ppm: .9px; }
 .tl--compact .tl__name { font-size: 13px; }
+.tl--compact .tl__set { padding: 3px 8px; gap: 0; }
+.tl--compact .tl__time { line-height: 1.2; }
+.tl--compact .tl__set .tl__name { line-height: 1.15; }
 .tl--compact .tl__set--t1 .tl__name { font-size: 20px; }
 
 /* 목록형 타임라인(시간순 사건 기록): 세로 막대 + 무대색 칸 */
@@ -44,9 +57,14 @@ button.tl__set { border: 0; font: inherit; text-align: left; cursor: pointer; wi
 .tl-list__item.is-now { background: var(--notice); color: var(--on-notice); }
 @media (max-width: 640px) {
   .tl { grid-template-columns: 52px minmax(0, 1fr); }
+  .tl__ticks > li { padding: 0 4px; font-size: 11px; }
+  .tl__now > span { width: 52px; font-size: 11px; }
+  .scroll-x > .tl { min-width: 560px; }   /* 4개 무대 타임테이블은 가로 스크롤 영역 안에서 폭을 지킨다 */
   .tl__set { padding: 4px 6px; }
   .tl__set--t1 .tl__name { font-size: 20px; }
   .tl__set--t2 .tl__name { font-size: 16px; }
   .tl__name { font-size: 13px; }
   .tl__time { font-size: 11px; }
+  .tl__head { padding: 0 6px; font-size: 12px; }
+  .tl__head-name { display: none; }
 }

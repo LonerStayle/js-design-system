@@ -31,10 +31,10 @@
           <a class="menu__item" role="menuitem" href="dashboard.html">오늘 밤 서고 일지</a>
           <a class="menu__item" role="menuitem" href="inbox.html">서신함</a>
           <a class="menu__item" role="menuitem" href="kanban.html">수선 공방 작업대</a>
-          <a class="menu__item" role="menuitem" href="settings.html">열람증 설정</a>
           <div class="menu__sep" role="separator"></div>
           <p class="menu__label">회원 서가</p>
           <a class="menu__item" role="menuitem" href="onboarding.html" aria-current="page">열람증 발급</a>
+          <a class="menu__item" role="menuitem" href="settings.html">열람증 설정</a>
           <a class="menu__item" role="menuitem" href="pricing.html">회원 등급</a>
           <a class="menu__item" role="menuitem" href="product.html">「야장」 필사 노트</a>
           <a class="menu__item" role="menuitem" href="profile.html">진서람의 열람 기록</a>
@@ -197,6 +197,7 @@
       <div class="issue__nav" data-nav>
         <button class="btn btn--ghost" type="button" data-prev hidden>이전 장</button>
         <button class="btn btn--primary btn--lg" type="button" data-next><span data-next-label>서명하고 열람석 고르기</span></button>
+        <p class="sr-only" id="ob-pledge-hint">열람 규칙 다섯 조에 동의해야 다음 장으로 넘어갈 수 있습니다.</p>
       </div>
     </form>
 
@@ -228,7 +229,7 @@
 
 <footer class="colophon">
   <div class="colophon__inner">
-    <p class="colophon__explicit"><span class="black">Explicit</span>이 필사본은 2026년 10월 22일 목요일 밤 11시 10분, 정동 석루관 대열람실 사서 데스크에서 채이수가 마쳤다. 감수 한도경.</p>
+    <p class="colophon__record" data-record="onboarding">열람증 발급 창구 · 26.10.22 23:10</p>
     <div class="colophon__cols">
       <p><span class="colophon__head">석루서고</span>서울특별시 중구 정동길 41-9 석루관<br>02-735-1931 · desk@seokru.kr</p>
       <p><span class="colophon__head">야간 열람실</span>화–토 18:00–02:00 (입실 마감 00:30)<br>일·월 휴관</p>
@@ -239,8 +240,8 @@
       <a href="dashboard.html">서고 일지</a>
       <a href="inbox.html">서신함</a>
       <a href="kanban.html">수선 공방</a>
-      <a href="settings.html">열람증 설정</a>
       <a href="onboarding.html" aria-current="page">열람증 발급</a>
+      <a href="settings.html">열람증 설정</a>
       <a href="pricing.html">회원 등급</a>
       <a href="product.html">야장 노트</a>
       <a href="profile.html">열람 기록</a>
@@ -265,8 +266,8 @@
       <li class="command__item" role="option" data-keywords="연암집 박지원 SR-0007702"><span class="command__call">古 811.98 박79ㅇ v.3</span><span class="command__name">『연암집』 권3 필사본</span><span class="command__where">수선 중</span></li>
       <li class="command__item" role="option" data-keywords="secret history 타트 SR-0031904"><span class="command__call">W 813.54 T194s</span><span class="command__name">『비밀의 계절』<span class="book">The Secret History</span></span><span class="command__where">열람 가능</span></li>
       <li class="command__group" role="presentation">서고의 방</li>
-      <li class="command__item" role="option" data-href="dashboard.html" data-keywords="일지 대시보드"><span class="command__call">§</span><span class="command__name">오늘 밤 서고 일지</span><span class="command__where">업무 도구</span></li>
-      <li class="command__item" role="option" data-href="kanban.html" data-keywords="수선 공방 칸반"><span class="command__call">§</span><span class="command__name">수선 공방 작업대</span><span class="command__where">업무 도구</span></li>
+      <li class="command__item" role="option" data-href="dashboard.html" data-keywords="일지 대시보드"><span class="command__call command__call--room" aria-hidden="true">¶</span><span class="command__name">오늘 밤 서고 일지</span><span class="command__where">업무 도구</span></li>
+      <li class="command__item" role="option" data-href="kanban.html" data-keywords="수선 공방 칸반"><span class="command__call command__call--room" aria-hidden="true">¶</span><span class="command__name">수선 공방 작업대</span><span class="command__where">업무 도구</span></li>
     </ul>
     <p class="command__empty" hidden>이 청구기호의 책은 서가에 없습니다.<span class="hand">다른 서가에 꽂혀 있을 수 있음</span></p>
     <div class="command__foot"><span>↑↓ 이동</span><span>Enter 열기</span><span>Esc 닫기</span></div>
@@ -337,6 +338,13 @@
     var st3 = steps[2].querySelector('[data-step-stamp]'); if (st3) st3.textContent = sh.length + '곳';
   }
 
+  /* 서약에 체크하기 전에는 '서명하고 열람석 고르기'를 누를 수 없다 */
+  function lockNext() {
+    var locked = cur === 1 && !pledge.checked;
+    next.disabled = locked;
+    if (locked) next.setAttribute('aria-describedby', 'ob-pledge-hint'); else next.removeAttribute('aria-describedby');
+  }
+
   function show(n, focus) {
     cur = n;
     reached = Math.max(reached, n);
@@ -353,6 +361,7 @@
       var go = li.querySelector('[data-goto]');
       if (go) go.disabled = !(k <= reached && n !== 4 && k !== n);
     });
+    lockNext();
     prev.hidden = n === 1 || n === 4;
     next.hidden = n === 4;
     form.querySelector('[data-nav]').hidden = n === 4;
@@ -378,7 +387,7 @@
   form.addEventListener('input', preview);
   form.addEventListener('change', function (e) {
     preview();
-    if (e.target === pledge && pledge.checked) setError('pledge', '');
+    if (e.target === pledge) { if (pledge.checked) setError('pledge', ''); lockNext(); }
     if (e.target.name === 'shelf' && shelves().length) setError('shelves', '');
   });
   sign.addEventListener('input', function () { if (sign.value.trim()) setError('sign', ''); });

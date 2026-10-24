@@ -1,0 +1,309 @@
+/* ==========================================================================
+   pages/404 — 항로 이탈 · 신호 소실
+   구도: 화면 폭 전체를 차지하는 "고장 난 PFD"(속도·고도 테이프 고장 플래그,
+        자세계 빨강 대각 X, 방위 ---) 위에서 레티클이 수색 → 아래 3개 웨이포인트로 복귀.
+   semantic 토큰만 쓴다.
+   ========================================================================== */
+
+.lost { padding-bottom: var(--sp-12); }
+
+/* ---- 고장 PFD ---------------------------------------------------------- */
+.lostpfd { overflow: hidden; }
+.lostpfd .du__meta { font-family: var(--font-mono); }
+
+.lostpfd__fma {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: var(--stroke) solid var(--line-strong);
+  font-family: var(--font-code);
+  font-size: var(--fs-sm);
+  letter-spacing: var(--track-code);
+  color: var(--ink-muted);
+}
+.lostpfd__fma > span {
+  padding: var(--sp-2) var(--sp-3);
+  text-align: center;
+  white-space: nowrap;
+}
+.lostpfd__fma > span + span { border-left: var(--stroke) solid var(--line); }
+.lostpfd__fma b { color: var(--warning); text-shadow: var(--glow-warning); }
+.lostpfd__fma-warn { color: var(--warning); text-shadow: var(--glow-warning); }
+
+.lostpfd__body {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr) 104px;
+  grid-template-areas: "spd att alt";
+  min-height: 560px;
+}
+
+/* 속도·고도 테이프 — 눈금만 남고 값 대신 고장 플래그 */
+.lostpfd__tape {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bezel);
+}
+.lostpfd__tape--spd { grid-area: spd; border-right: var(--stroke) solid var(--line-strong); }
+.lostpfd__tape--alt { grid-area: alt; border-left: var(--stroke) solid var(--line-strong); }
+.lostpfd__scale { position: absolute; top: 0; bottom: 0; width: 14px; }
+.lostpfd__tape--spd .lostpfd__scale { right: 0; }
+.lostpfd__tape--alt .lostpfd__scale { left: 0; }
+
+.lostpfd__flag,
+.lostpfd__att-flag,
+.lostpfd__hdg-flag {
+  padding: 2px var(--sp-2);
+  border: var(--stroke-strong) solid var(--warning);
+  background: var(--window);
+  color: var(--warning);
+  font-family: var(--font-code);
+  font-weight: 700;
+  font-size: var(--fs-lg);
+  letter-spacing: var(--track-code);
+  text-shadow: var(--glow-warning);
+  line-height: 1.2;
+}
+
+/* 자세계 — 하늘·땅 없이 검은 유리 + 빨강 대각 X */
+.lostpfd__att {
+  --rx: 0px;
+  --ry: 0px;
+  grid-area: att;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;   /* 안내 창은 오른쪽, 왼쪽 절반은 레티클 수색 구역 — 둘이 겹치지 않는다 */
+  padding: var(--sp-12) var(--sp-12) var(--sp-12) var(--sp-group);
+  background: var(--window);
+  overflow: hidden;
+  isolation: isolate;
+}
+.lostpfd__x {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(to top right, transparent calc(50% - 1px), var(--warning) calc(50% - 0.75px), var(--warning) calc(50% + 0.75px), transparent calc(50% + 1px)),
+    linear-gradient(to bottom right, transparent calc(50% - 1px), var(--warning) calc(50% - 0.75px), var(--warning) calc(50% + 0.75px), transparent calc(50% + 1px));
+  opacity: 0.85;
+}
+.lostpfd__att-flag {
+  position: absolute;
+  left: var(--sp-4);
+  top: var(--sp-4);
+}
+
+/* 레티클 — 포인터를 따라 수색, 입력이 없으면 확장 사각 수색 패턴 */
+.reticle {
+  position: absolute;
+  left: 20%;
+  top: 34%;
+  z-index: 0;
+  width: 120px;
+  height: 120px;
+  margin: -60px 0 0 -60px;
+  color: var(--select);
+  pointer-events: none;
+  animation: lost-search 14s linear infinite;
+}
+.reticle svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  filter: drop-shadow(var(--glow-select));
+}
+.reticle__read {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  margin-left: 4px;
+  padding: 0 4px;
+  white-space: nowrap;
+  border: var(--stroke) solid currentColor;
+  background: var(--window);
+  color: var(--select);
+}
+.lostpfd__att.is-track .reticle {
+  animation: none;
+  transform: translate(var(--rx), var(--ry));
+  transition: transform var(--dur-fast) var(--ease-instrument);
+}
+/* 확장 사각 수색(Expanding Square Search) */
+/* 수색 경로는 왼쪽 구역 안에서만 돈다(ATT 플래그 아래 ~ 안내 창 왼쪽 끝 앞) */
+@keyframes lost-search {
+  0%   { transform: translate(0, 0); }
+  12%  { transform: translate(0, 80px); }
+  26%  { transform: translate(-80px, 80px); }
+  40%  { transform: translate(-80px, -60px); }
+  56%  { transform: translate(80px, -60px); }
+  72%  { transform: translate(80px, 160px); }
+  88%  { transform: translate(-80px, 160px); }
+  100% { transform: translate(0, 0); }
+}
+
+/* 안내 창 — X 위에 놓인 판독 창 */
+.lost__msg {
+  position: relative;
+  z-index: 1;
+  max-width: 600px;
+  padding: var(--sp-group);
+  border: var(--stroke) solid var(--line-strong);
+  background: var(--surface);
+}
+.lost__code {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  font-family: var(--font-latin-display);
+  font-weight: 600;
+  font-size: var(--fs-4xl);
+  line-height: 1;
+  color: var(--warning);
+  text-shadow: var(--glow-warning);
+}
+.lost__code .t-code { font-size: var(--fs-sm); color: var(--warning); }
+.lost__title { margin-top: var(--sp-4); }
+.lost__text {
+  margin-top: var(--sp-3);
+  color: var(--ink-muted);
+  font-size: var(--fs-sm);
+  line-height: 1.8;
+}
+.lost__text .icode { color: var(--ink); overflow-wrap: anywhere; }
+
+/* 방위 테이프 — 값 없음 */
+.lostpfd__hdg {
+  position: relative;
+  height: 64px;
+  border-top: var(--stroke) solid var(--line-strong);
+  background: var(--bezel);
+}
+.lostpfd__hdg-scale { position: absolute; inset: 0 0 auto 0; }
+.lostpfd__hdg-rdo {
+  position: absolute;
+  left: 50%;
+  bottom: var(--sp-2);
+  transform: translateX(-50%);
+}
+.lostpfd__hdg-flag {
+  position: absolute;
+  left: var(--sp-4);
+  bottom: var(--sp-2);
+  font-size: var(--fs-sm);
+}
+
+/* ---- 직전 웨이포인트로 복귀 ------------------------------------------ */
+.back { display: flex; flex-direction: column; gap: var(--sp-4); }
+.back__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+.back__hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--ink-muted);
+}
+.back__route {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-gap);
+  padding-top: 26px;
+}
+/* 경로선 — 지난 구간(흰 선), 웨이포인트 마름모 */
+.back__route::before {
+  content: "";
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  top: 9px;
+  height: 0;
+  border-top: var(--stroke-strong) solid var(--ink-muted);
+}
+.back__wp { position: relative; display: flex; }
+.back__wp::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  top: -23px;
+  width: 12px;
+  height: 12px;
+  border: var(--stroke-strong) solid var(--ink);
+  background: var(--bg);
+  transform: rotate(45deg);
+}
+.back__card {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "dir go" "name go" "desc go";
+  gap: var(--sp-1) var(--sp-4);
+  padding: var(--sp-4) var(--sp-group) var(--sp-group) var(--sp-4);
+  color: var(--ink);
+}
+.back__dir { grid-area: dir; color: var(--select); text-shadow: var(--glow-select); }
+.back__name {
+  grid-area: name;
+  font-family: var(--font-ko-display);
+  font-size: var(--fs-xl);
+  line-height: var(--lh-xl);
+  letter-spacing: var(--track-ko-title);
+}
+.back__desc { grid-area: desc; font-size: var(--fs-xs); line-height: 1.7; color: var(--ink-muted); }
+.back__go {
+  grid-area: go;
+  align-self: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xl);
+  color: var(--ink-muted);
+  transition: color var(--dur-fast) var(--ease-instrument);
+}
+.back__card:hover .back__go,
+.back__card:focus-visible .back__go { color: var(--select); }
+
+/* ---- 반응형 ----------------------------------------------------------- */
+/* 좁은 데스크톱 — 수색 구역이 좁아지면 레티클은 안내 창 위 띠로 올리고 정지 */
+@media (max-width: 1279px) {
+  .lostpfd__att { flex-direction: column; justify-content: flex-start; align-items: center; padding: 200px var(--sp-group) var(--sp-12); }
+  .reticle { left: 50%; top: 116px; animation: none; }
+}
+@media (max-width: 1024px) {
+  .lostpfd__body { grid-template-columns: 72px minmax(0, 1fr) 72px; }
+  .lostpfd__flag { font-size: var(--fs-sm); }
+}
+@media (max-width: 767px) {
+  .lostpfd__fma { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lostpfd__fma > span:nth-child(3) { border-left: 0; }
+  .lostpfd__fma > span:nth-child(n+3) { border-top: var(--stroke) solid var(--line); }
+  .lostpfd__body {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: "spd alt" "att att";
+    min-height: 0;
+  }
+  /* 세로 테이프 → 위쪽 가로 띠 */
+  .lostpfd__tape { min-height: var(--hit); border: 0; border-bottom: var(--stroke) solid var(--line-strong); }
+  .lostpfd__tape--alt { border-left: var(--stroke) solid var(--line-strong); }
+  .lostpfd__scale { display: none; }
+  .lostpfd__flag { font-size: var(--fs-sm); }
+  .lostpfd__att { min-height: 460px; padding: 132px var(--sp-4) var(--sp-8); }
+  .lost__msg { padding: var(--sp-4); }
+  .lost__code { font-size: var(--fs-3xl); }
+  .lost__title.h-panel { font-size: var(--fs-lg); line-height: var(--lh-lg); }
+  .reticle { left: 62%; top: 66px; width: 88px; height: 88px; margin: -44px 0 0 -44px; animation: none; }
+
+  .back__route { grid-template-columns: minmax(0, 1fr); padding-top: 0; padding-left: 28px; }
+  .back__route::before { left: 9px; right: auto; top: 22px; bottom: 22px; height: auto; border-top: 0; border-left: var(--stroke-strong) solid var(--ink-muted); }
+  .back__wp::before { left: -25px; top: 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reticle { animation: none; transform: none; }
+}

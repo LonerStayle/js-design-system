@@ -1,0 +1,176 @@
+/* ==========================================================================
+   kanban — 「면 배열 보드」 (10월 26일 월요일 밤 23:40)
+   위: 오늘 밤 마감 줄(22:30 → 01:35 가로 자) · 가운데: 취재·데스크·교열·조판·강판 5열 보드
+   아래: 강판 전 7면 배정표(7소단) + 쪽지 옮긴 기록(5소단).
+   semantic 토큰만 사용.
+   ========================================================================== */
+
+/* ---------- 머리 ---------- */
+.kb-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-3) var(--sp-5);
+  padding: var(--sp-4) 0 var(--sp-3);
+}
+.kb-head__main { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.kb-head__title {
+  font-family: var(--font-headline);
+  font-size: var(--fs-hd-4);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+.kb-head__sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px var(--sp-3);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink-75);
+}
+.kb-head__sub .mono { color: var(--ink); }
+.kb-head__tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+
+/* ---------- 마감 줄 — 22:30 → 01:35 가로 자 ---------- */
+.clockline {
+  padding: 30px 0 34px;
+  border-top: var(--rule-2);
+  border-bottom: var(--rule-0);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.clockline::-webkit-scrollbar { display: none; }
+.clockline:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* 좁은 화면: 줄이 넘치면 오른쪽 끝을 흐려 옆으로 밀 수 있음을 알린다 + 「밀어 보기」 힌트 */
+.clockline__hint { display: none; }
+@media (max-width: 899px) {
+  .clockline {
+    position: relative;
+    mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 40px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 40px), transparent 100%);
+  }
+  .clockline.is-end { mask-image: none; -webkit-mask-image: none; }
+  .clockline__hint {
+    display: block;
+    margin-top: 6px;
+    font-family: var(--font-ui);
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--ink-55);
+    text-align: right;
+  }
+}
+.clockline__track {
+  position: relative;
+  min-width: 560px;
+  height: 12px;
+  margin: 0 56px 0 40px;
+  border-top: 2px solid var(--ink);
+  background: repeating-linear-gradient(to right, var(--ink-55) 0 1px, transparent 1px calc(100% / 37));
+  background-size: 100% 6px;
+  background-repeat: no-repeat;
+}
+.clockline__past {
+  position: absolute;
+  left: 0; top: -2px;
+  width: var(--at);
+  height: 12px;
+  background-image: var(--ht-40);
+  background-size: 4px 4px;
+}
+.clockline__mark {
+  position: absolute;
+  left: var(--at);
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+  font-family: var(--font-ui);
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--ink);
+}
+.clockline__mark .mono { font-weight: 500; font-size: 12px; color: var(--ink-75); }
+.clockline__mark::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 1px);
+  height: 11px;
+  border-left: 2px solid var(--ink);
+}
+.clockline__mark--low { bottom: auto; top: calc(100% + 10px); }
+.clockline__mark--low::after { top: auto; bottom: calc(100% + 1px); height: 13px; }
+.clockline__mark--past { color: var(--ink-55); transform: none; }
+.clockline__mark--past::after { left: 0; border-color: var(--ink-55); }
+.clockline__mark--past .mono { color: var(--ink-55); text-decoration: line-through; }
+.clockline__mark--now { color: var(--spot-text); }
+.clockline__mark--now .mono { color: var(--spot-text); }
+.clockline__mark--now::after { border-left: 3px solid var(--spot); height: 28px; }
+.clockline__mark--key .mono { color: var(--ink); font-weight: 500; }
+.clockline__mark--key { font-size: 14px; }
+.clockline__mark--end { transform: translateX(-100%); }
+.clockline__mark--end::after { left: auto; right: 0; }
+
+.kb-help {
+  margin: var(--sp-3) 0 var(--sp-3);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--ink-55);
+}
+
+/* ---------- 보드 장면 조정 ---------- */
+.kb-board { grid-template-columns: repeat(5, minmax(200px, 1fr)); }
+.kb-board .board__due::before { content: "마감 "; font-family: var(--font-ui); font-weight: 600; }
+.kb-board .board__due { white-space: nowrap; }
+.board__col--report .board__list { background-image: none; }
+.board__col--done { background: var(--paper-fold); }
+.board__col--done .board__head { background: var(--paper-fold); }
+.kb-board .slip__page { flex: none; white-space: nowrap; }
+.kb-board .slip__by { white-space: nowrap; }
+.slip__lock {
+  font-weight: 800;
+  font-size: 12px;
+  color: var(--ok);
+  white-space: nowrap;
+}
+.slip__lock::before { content: "■ "; font-size: 0.8em; }
+.slip[aria-disabled="true"] { background: var(--paper-fold); }
+
+/* ---------- 아래 ---------- */
+.kb-low { margin-top: var(--sp-7); }
+.kb-pages .tbl th[scope="row"].mono { font-size: 13px; color: var(--ink); font-weight: 500; }
+.kb-pages .tbl td:nth-child(2) { font-family: var(--font-head-serif); font-weight: 700; font-size: 15px; }
+.kb-pages .tbl td .ink-55 { font-family: var(--font-ui); font-weight: 600; font-size: 12px; }
+.kb-log { display: flex; flex-direction: column; gap: var(--sp-2); }
+.kb-log__title {
+  font-family: var(--font-headline);
+  font-size: 22px;
+  line-height: 1.25;
+}
+.kb-log .list { border-top: var(--rule-2); }
+.kb-log .list__title { font-size: 14px; }
+
+/* ---------- 태블릿 ---------- */
+@media (max-width: 1023px) {
+  .kb-board { grid-template-columns: repeat(5, minmax(232px, 1fr)); }
+  .kb-pages, .kb-log { grid-column: 1 / -1; }
+}
+
+/* ---------- 모바일 ---------- */
+@media (max-width: 599px) {
+  .kb-head__tools { width: 100%; }
+  .kb-head__tools .pop__panel--end { right: auto; left: 0; }
+  .clockline__track { margin-left: 24px; }
+  .kb-pages .tbl { min-width: 480px; }
+}
+.kb-board .slip__top { flex-wrap: nowrap; }
+.kb-board .slip__id { letter-spacing: 0; overflow-wrap: normal; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: clip; }
+.kb-board .slip__meta > .slip__note { flex-basis: 100%; }
+.kb-board .slip__meta > .slip__note::before { content: none; }

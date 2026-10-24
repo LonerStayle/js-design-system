@@ -7,7 +7,7 @@ index.html · pages/*.html 담당은 **이 문서만 보고** 마크업한다. �
 1. **장서 카드와 날짜도장**: 데이터는 카드(`.card`, 붉은 여백선 + 막대 구멍)에 담고, 상태는 날짜도장(`.stamp`)으로 찍는다. 알약 배지는 쓰지 않는다.
 2. **주서와 각주**: 흑 한 색으로 쓰고 구조만 주서로 표시한다. 장 번호, 두문자, ¶, 각주 번호, 현재 위치가 여기에 해당한다. 설명은 본문에 넣지 않고 각주(`.fn` → `.apparatus` · `.gloss` · `.field__help`)로 내린다.
 
-**금지**: 금색(`--gold`)을 글자·테두리·버튼에 쓰기(장식 SVG만 허용) · 블랙레터(`.black`, `--font-black`)를 워드마크·장 번호·표제지 라틴 이외에 쓰기 · 데이터 라벨에 로마숫자 쓰기 · 한글에 Special Elite·넓은 자간 쓰기 · `href="#"` · 인라인 onclick · 인라인 `grid-template-columns` · raw hex. 단, `style="--val:81.4%"`, `--h`, `--w`, `--from`, `--span`, `--tilt`, `--n`처럼 **커스텀 속성을 주입하는 것은 허용**한다.
+**금지**: 금색(`--gold`)을 글자·테두리·버튼에 쓰기(장식 SVG만 허용) · 블랙레터(`.black`, `--font-black`)를 워드마크·표제지 라틴·간기 이외에 쓰기(장 번호 포함 — 장 번호는 `--font-numeral` Crimson Pro 600) · 책등·표지 같은 물건 색에 글자용 의미 토큰 쓰기(`--pigment-*` + `--night-dim`) · 데이터 라벨에 로마숫자 쓰기 · 한글에 Special Elite·넓은 자간 쓰기 · `href="#"` · 인라인 onclick · 인라인 `grid-template-columns` · raw hex. 단, `style="--val:81.4%"`, `--h`, `--w`, `--from`, `--span`, `--tilt`, `--n`처럼 **커스텀 속성을 주입하는 것은 허용**한다.
 
 ---
 
@@ -97,14 +97,14 @@ index.html · pages/*.html 담당은 **이 문서만 보고** 마크업한다. �
 ### 다섯 개의 손 (글꼴 유틸)
 | 클래스 | 쓰는 곳 |
 |---|---|
-| `.t-numeral` | 장 번호(블랙레터, 주서) |
+| `.t-numeral` | 장 번호(Crimson Pro 600 로마숫자, 주서) |
 | `.t-title-page` | 표제지 "조판 규범" |
 | `.t-chapter` `.t-h2` `.t-h3` | 장 표제 · 절 제목 (Noto Serif KR) |
 | `.t-ui` | 컨트롤 같은 무게의 라벨 |
 | `.type` / `.type-ko` | 카드 타자 글씨 (라틴 Special Elite, 한글 Nanum Gothic Coding) |
 | `.call` | 청구기호·등록번호·ID (`W 823.7 S545f`, `SR-0018442`, `RQ-261022-07`) — **한글 금지** |
 | `.hand` | 사서 연필 메모 — 화면당 3곳 이하, 필수 정보 금지 |
-| `.black` | 블랙레터 — 워드마크·장 번호·`Bibliotheca`·`Explicit`만 |
+| `.black` | 블랙레터 — 워드마크·`Bibliotheca`·`Explicit`만 |
 | `.rubric` `.muted` `.meta` `.num` `.book` `.pilcrow` | 주서 글자 · 보조 · 캡션 · 표 숫자 · 서양 서명 이탤릭 · ¶ |
 
 ### `.folio` — 필사본 한 장 (본문 단 + 방주 단)
@@ -200,10 +200,10 @@ index.html · pages/*.html 담당은 **이 문서만 보고** 마크업한다. �
           <a class="menu__item" role="menuitem" href="pages/dashboard.html">오늘 밤 서고 일지</a>
           <a class="menu__item" role="menuitem" href="pages/inbox.html">서신함</a>
           <a class="menu__item" role="menuitem" href="pages/kanban.html">수선 공방 작업대</a>
-          <a class="menu__item" role="menuitem" href="pages/settings.html">열람증 설정</a>
           <div class="menu__sep" role="separator"></div>
           <p class="menu__label">회원 서가</p>
           <a class="menu__item" role="menuitem" href="pages/onboarding.html">열람증 발급</a>
+          <a class="menu__item" role="menuitem" href="pages/settings.html">열람증 설정</a>
           <a class="menu__item" role="menuitem" href="pages/pricing.html">회원 등급</a>
           <a class="menu__item" role="menuitem" href="pages/product.html">「야장」 필사 노트</a>
           <a class="menu__item" role="menuitem" href="pages/profile.html">진서람의 열람 기록</a>
@@ -267,7 +267,7 @@ index 스니펫과 같다. 다른 곳은 다음 다섯 군데뿐이다.
 | profile | 진서람의 열람 기록 |
 | 404 | 빈 서가 |
 
-### 3-3. 간기 푸터 — **index.html 경로** (모든 HTML에 1종)
+### 3-3. 간기 푸터 — **index.html 전용** (간기 `Explicit` 문단은 필사본인 index에만)
 ```html
 <footer class="colophon">
   <div class="colophon__inner">
@@ -282,8 +282,8 @@ index 스니펫과 같다. 다른 곳은 다음 다섯 군데뿐이다.
       <a href="pages/dashboard.html">서고 일지</a>
       <a href="pages/inbox.html">서신함</a>
       <a href="pages/kanban.html">수선 공방</a>
-      <a href="pages/settings.html">열람증 설정</a>
       <a href="pages/onboarding.html">열람증 발급</a>
+      <a href="pages/settings.html">열람증 설정</a>
       <a href="pages/pricing.html">회원 등급</a>
       <a href="pages/product.html">야장 노트</a>
       <a href="pages/profile.html">열람 기록</a>
@@ -294,25 +294,51 @@ index 스니펫과 같다. 다른 곳은 다음 다섯 군데뿐이다.
 </footer>
 ```
 
-### 3-4. 간기 푸터 — **pages/*.html 경로**
-3-3과 같다. `colophon__links`만 다음처럼 바꾼다(현재 페이지 링크에 `aria-current="page"`를 붙인다).
+### 3-4. 페이지 푸터 — **pages/*.html 경로** (간기 없음)
+pages 9장은 필사본이 아니므로 간기 문장을 쓰지 않는다. 주소 · 열람 시간 · 수선 접수 · 내비 · ©만 두고, 맨 위에 페이지별 기록 한 줄(`colophon__record`, `data-record`=페이지 이름)을 둔다.
 ```html
+<footer class="colophon">
+  <div class="colophon__inner">
+    <!-- ① 페이지별 기록 한 줄 — 아래 표의 문구 그대로 -->
+    <p class="colophon__record" data-record="dashboard">26.10.22 23:10 기록 · 야간 사서 채이수 (L-07)</p>
+    <div class="colophon__cols">
+      <p><span class="colophon__head">석루서고</span>서울특별시 중구 정동길 41-9 석루관<br>02-735-1931 · desk@seokru.kr</p>
+      <p><span class="colophon__head">야간 열람실</span>화–토 18:00–02:00 (입실 마감 00:30)<br>일·월 휴관</p>
+      <p><span class="colophon__head">수선 공방 접수</span>수·토 13:00–17:00<br>귀중본 사전 열람 예약제</p>
+    </div>
+    <!-- ② 현재 페이지 링크에만 aria-current="page" -->
     <nav class="colophon__links" aria-label="열람 기록부">
       <a href="../index.html">차례</a>
       <a href="dashboard.html">서고 일지</a>
       <a href="inbox.html">서신함</a>
       <a href="kanban.html">수선 공방</a>
-      <a href="settings.html">열람증 설정</a>
       <a href="onboarding.html">열람증 발급</a>
+      <a href="settings.html">열람증 설정</a>
       <a href="pricing.html">회원 등급</a>
       <a href="product.html">야장 노트</a>
       <a href="profile.html">열람 기록</a>
       <a href="404.html">빈 서가</a>
     </nav>
+    <p class="colophon__fine">© 2026 석루서고 · <span class="call">BIBLIOTHECA SEOKRU</span> · 1931 준공 · 2021 개관</p>
+  </div>
+</footer>
 ```
-index의 간기(12구역)는 이 푸터가 그대로 맡는다. 간기 문장은 바꾸지 않는다.
 
-### 3-5. 카드 서랍 사이드바 — **pages 업무 도구 4장 전용** (index에는 쓰지 않음)
+| 페이지 | `data-record` 문구 |
+|---|---|
+| dashboard | 26.10.22 23:10 기록 · 야간 사서 채이수 (L-07) |
+| inbox | 서신함 · 26.10.22 23:10 기준 · 야간 사서 채이수 |
+| kanban | 수선 기록 · 26.10.22 23:10 · 담당 모윤재 |
+| settings | 열람증 석-1187 · 26.10.21 가입 · 다음 결제 11.21 |
+| onboarding | 열람증 발급 창구 · 26.10.22 23:10 |
+| pricing | 회원 등급 · 2026년 10월 기준 · 부가세 포함 |
+| product | 석루서고 상점 · 평일 15시 전 주문 당일 발송 |
+| profile | 열람 기록 · 진서람 석-0412 · 26.10.22 23:10 기준 |
+| 404 | 빈 자리 기록 · 26.10.22 23:10 · 사서 데스크 채이수 |
+
+index의 간기(12구역)는 3-3 푸터가 맡는다. 간기 문장은 바꾸지 않고, pages에는 옮겨 쓰지 않는다.
+
+### 3-5. 카드 서랍 사이드바 (업무 서랍) — **사서 업무 도구 3장 전용: dashboard · inbox · kanban** (index에는 쓰지 않음)
 ```html
 <aside class="desk__side" id="desk-side" aria-label="업무 서랍">
   <nav class="cabinet" aria-label="업무 도구">
@@ -338,8 +364,28 @@ index의 간기(12구역)는 이 푸터가 그대로 맡는다. 간기 문장은
   </nav>
 </aside>
 ```
-- **settings만 머리 부분(`cabinet__head`)을 다음과 같이 바꾼다.** 이 화면은 회원 은가람의 계정 화면이고, 서랍 목록·푸터는 그대로 둔다.
-  `<span class="seal seal--member" aria-hidden="true">은</span><span class="cabinet__who"><span class="cabinet__name">은가람</span><span class="cabinet__role">신규 회원 · <span class="call">석-1187</span></span></span>`
+- **업무 서랍(위 스니펫)은 사서가 로그인한 dashboard · inbox · kanban 3장에만 쓴다.** 회원이 로그인한 settings에는 아래 3-5b "회원 서랍"을 쓴다. 회원 화면에 사서 업무 서랍·서고 현황을 보이지 않는다.
+
+### 3-5b. 회원 서랍 — **settings 전용** (회원 은가람 로그인)
+```html
+<aside class="desk__side" id="desk-side" aria-label="회원 서랍">
+  <nav class="cabinet cabinet--member" aria-label="회원 메뉴">
+    <div class="cabinet__head">
+      <span class="seal seal--member" aria-hidden="true">은</span><span class="cabinet__who"><span class="cabinet__name">은가람</span><span class="cabinet__role">열람 회원 · <span class="call">석-1187</span></span></span>
+      <button class="cabinet__close" type="button" data-sidebar-close aria-label="회원 서랍 닫기"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <p class="cabinet__group">회원 서랍</p>
+    <ul class="cabinet__list">
+      <li><a class="cabinet__drawer" href="settings.html" aria-current="page"><span class="cabinet__plaque">열람증 설정</span><span class="knob" aria-hidden="true"></span></a></li>
+      <li><a class="cabinet__drawer" href="profile.html"><span class="cabinet__plaque">열람 기록</span><span class="knob" aria-hidden="true"></span></a></li>
+      <li><a class="cabinet__drawer" href="pricing.html"><span class="cabinet__plaque">회원 등급</span><span class="knob" aria-hidden="true"></span></a></li>
+      <li><a class="cabinet__drawer" href="../index.html"><span class="cabinet__plaque">조판 규범</span><span class="knob" aria-hidden="true"></span></a></li>
+    </ul>
+    <div class="cabinet__foot"><strong>다음 결제 11/21 토 ₩15,000</strong><br>오늘 밤 신청 <span class="call">RQ-261022-09</span> · A3</div>
+  </nav>
+</aside>
+```
+러닝헤드의 서랍 열기 버튼 `aria-label`은 "회원 서랍 열기"로 바꾼다. 개수 배지(count)는 회원 서랍에 두지 않는다.
 - 회원용 5장(onboarding · pricing · product · profile · 404)에는 사이드바를 두지 않고 `.folio`/`.spread` 판면으로 짠다.
 
 ### 3-6. 서가 검색 카드 — 모든 HTML의 body 끝 (⌘K)
@@ -359,8 +405,8 @@ index의 간기(12구역)는 이 푸터가 그대로 맡는다. 간기 문장은
       <li class="command__item" role="option" data-keywords="연암집 박지원 SR-0007702"><span class="command__call">古 811.98 박79ㅇ v.3</span><span class="command__name">『연암집』 권3 필사본</span><span class="command__where">수선 중</span></li>
       <li class="command__item" role="option" data-keywords="secret history 타트 SR-0031904"><span class="command__call">W 813.54 T194s</span><span class="command__name">『비밀의 계절』<span class="book">The Secret History</span></span><span class="command__where">열람 가능</span></li>
       <li class="command__group" role="presentation">서고의 방</li>
-      <li class="command__item" role="option" data-href="pages/dashboard.html" data-keywords="일지 대시보드"><span class="command__call">§</span><span class="command__name">오늘 밤 서고 일지</span><span class="command__where">업무 도구</span></li>
-      <li class="command__item" role="option" data-href="pages/kanban.html" data-keywords="수선 공방 칸반"><span class="command__call">§</span><span class="command__name">수선 공방 작업대</span><span class="command__where">업무 도구</span></li>
+      <li class="command__item" role="option" data-href="pages/dashboard.html" data-keywords="일지 대시보드"><span class="command__call command__call--room" aria-hidden="true">¶</span><span class="command__name">오늘 밤 서고 일지</span><span class="command__where">업무 도구</span></li>
+      <li class="command__item" role="option" data-href="pages/kanban.html" data-keywords="수선 공방 칸반"><span class="command__call command__call--room" aria-hidden="true">¶</span><span class="command__name">수선 공방 작업대</span><span class="command__where">업무 도구</span></li>
     </ul>
     <p class="command__empty" hidden>이 청구기호의 책은 서가에 없습니다.<span class="hand">다른 서가에 꽂혀 있을 수 있음</span></p>
     <div class="command__foot"><span>↑↓ 이동</span><span>Enter 열기</span><span>Esc 닫기</span></div>
@@ -505,7 +551,7 @@ pages에서는 `data-href` 경로를 `dashboard.html`처럼 같은 폴더 기준
     <tbody>
       <tr><td><span class="stamp stamp--sm stamp--date stamp--tilt-b">26.09.18</span></td><td>진서람</td><td class="call">R2</td></tr>
       <tr class="is-now"><td><span class="stamp stamp--sm stamp--date">26.10.22</span></td><td>진서람 (열람 중)</td><td class="call">R2</td></tr>
-      <tr class="loan__empty"><td>.</td><td>.</td><td>.</td></tr>     <!-- 빈 줄 -->
+      <tr class="loan__empty" aria-hidden="true"><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>     <!-- 빈 줄: 스크린리더에서 숨긴다 -->
     </tbody>
   </table>
 </div>
@@ -681,7 +727,7 @@ pages에서는 `data-href` 경로를 `dashboard.html`처럼 같은 폴더 기준
 <div class="marquee" data-marquee>
   <div class="marquee__viewport"><div class="marquee__track">
     <ul class="marquee__group">
-      <li class="marquee__item"><span class="stamp stamp--sm stamp--date">26.10.22</span>『폭풍의 언덕』 반납 · A12</li>
+      <li class="marquee__item"><span class="stamp stamp--sm stamp--date">26.10.22</span>『오트란토 성』 반납 · A16</li>
       <li class="marquee__item"><span class="stamp stamp--sm stamp--date stamp--tilt-c">26.10.22</span>『프랑켄슈타인』 반납 예정 01:30 · R2</li>
     </ul>
     <ul class="marquee__group" aria-hidden="true"> …같은 항목 그대로 복제… </ul>
@@ -822,9 +868,12 @@ T194s</span>
 </ol>
 ```
 로마숫자는 장식이므로 `aria-hidden`을 주고, 한글 단계명은 반드시 함께 쓴다. 오류 단계는 `.is-error`, 세로 배치는 `.steps--vertical`(≤640에서는 자동)이다. 온보딩에서 지난 단계로 돌아가는 링크는 `.steps__link`로 만든다.
+steps의 로마숫자는 40px 이하이므로 Noto Serif KR 900이다(40px 초과 장 번호는 Crimson Pro 600). 페이지 CSS에서 번호 글꼴을 덮어쓰지 않는다. 단계 칸 전체가 누르는 자리가 되도록 `.steps__link::after { inset: 0 }`로 히트 영역을 넓힌다.
 
 ### table — 장서 대장 · 신청 장부
+순서는 **표제 → (선택 시) 일괄 바 → 표 머리**다. 일괄 바가 표제 위에 붙어 제목을 누르지 않게, 표제는 표 밖 제목 요소로 두고 `<caption>`은 `sr-only`로 남긴다.
 ```html
+<h3 class="entry__head">열람 신청 대기 · 5건</h3>
 <div class="bulkbar" id="rq-bulk" hidden>
   <span class="bulkbar__count">선택 <b data-bulk-count>0</b>건</span>
   <button class="btn btn--primary btn--sm" type="button" data-bulk-action="approve">일괄 승인</button>
@@ -833,7 +882,7 @@ T194s</span>
 </div>
 <div class="ledger-wrap">
   <table class="ledger ledger--cards" data-table-select data-bulk="rq-bulk">
-    <caption>열람 신청 대기 · 5건</caption>
+    <caption class="sr-only">열람 신청 대기 · 5건</caption>
     <thead><tr>
       <th class="ledger__check" scope="col"><input class="check" type="checkbox" data-select-all aria-label="전체 선택"></th>
       <th scope="col" aria-sort="ascending"><button class="ledger__sort" type="button">번호<span class="ledger__sort-icon" aria-hidden="true"></span></button></th>
@@ -860,7 +909,7 @@ T194s</span>
 - 선택: 행이 `aria-selected="true"`(주서 tint)가 되고, 일괄 바에 n건이 표시된다. 일괄 승인·반려를 누르면 `[data-status]` 칸에 도장이 새로 찍힌다.
 - 열 클래스: `.ledger__num`(오른쪽 정렬, 표 숫자), `.ledger__call`, `.ledger__title`(+ `.book` 원어), `.ledger__actions`
 - 변형: `.ledger--dense`, `tfoot`(합계 줄, 아래 이중 괘), 빈 상태 `<tr class="ledger__state"><td colspan="7">…</td></tr>`
-- **`.ledger--cards`**: ≤640에서 행마다 장서 카드가 되며, 각 `td`의 `data-label`이 라벨로 쓰인다. 가로 스크롤 표를 원하면 이 클래스를 빼고 `.ledger-wrap`에 맡긴다.
+- **`.ledger--cards`**: ≤640에서 행마다 장서 카드 축약형 3줄이 된다 — 1줄 `data-label="청구기호"`(또는 `"번호"`) 타자 13px + `data-label="상태"` 도장 오른쪽, 2줄 `.ledger__title` 명조 600, 3줄 나머지 칸을 ` · `로 잇는 메타(`"신청자"`·`"등록번호"`가 첫 메타). 체크 상자는 왼쪽 붉은 여백선 안. `data-label` 이름을 이 규칙대로 붙인다. 가로 스크롤 표를 원하면 이 클래스를 빼고 `.ledger-wrap`에 맡긴다.
 
 ### tabs — 서랍 색인 탭
 ```html
@@ -886,13 +935,13 @@ T194s</span>
 
 ### toast — 반납 쪽지
 - 버튼 트리거: `data-toast="ok|warn|info|danger"` + `data-toast-title` + `data-toast-text` + (선택) `data-toast-stamp="26.10.22 23:10"`. 도장 글자를 빼려면 `data-toast-stamp=""`를 준다.
-- 스크립트에서 띄우기: `Seokru.toast({ title: '기록했습니다', text: '『폭풍의 언덕』 반납 · A12', tone: 'ok', stamp: '26.10.22 23:10' })`. 5초 뒤 내려가고, hover하면 멈춘다. 닫기 버튼의 이름은 "알림 닫기"다.
+- 스크립트에서 띄우기: `Seokru.toast({ title: '기록했습니다', text: '『오트란토 성』 반납 · A16', tone: 'ok', stamp: '26.10.22 23:10' })`. 5초 뒤 내려가고, hover하면 멈춘다. 닫기 버튼의 이름은 "알림 닫기"다.
 - 정적 견본(쪽지 3장 겹침):
 ```html
 <div class="toast-stack">
   <div class="toast toast--info">…</div>
   <div class="toast toast--ok">…</div>
-  <div class="toast"><div><b class="toast__title">기록했습니다</b><p class="toast__text">『폭풍의 언덕』 반납 · A12</p><span class="stamp stamp--sm stamp--date toast__stamp">26.10.22 23:10</span></div>
+  <div class="toast"><div><b class="toast__title">기록했습니다</b><p class="toast__text">『오트란토 성』 반납 · A16</p><span class="stamp stamp--sm stamp--date toast__stamp">26.10.22 23:10</span></div>
     <button class="toast__close" type="button" aria-label="알림 닫기"><svg class="icon icon--sm" …닫기…/></button></div>
 </div>
 ```

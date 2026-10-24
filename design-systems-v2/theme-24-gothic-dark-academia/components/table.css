@@ -53,6 +53,7 @@ th.ledger__num { text-align: right; }
 .ledger__title .book { display: block; font-size: 14px; color: var(--ink-2); }
 .ledger__check { width: 44px; padding-right: 0; }
 .ledger__check .check { margin: 0; }
+.ledger__check .check::before { content: ""; position: absolute; inset: -12px; }   /* 20px 상자 + 사방 12px = 44×44 히트 영역 */
 .ledger__actions { text-align: right; white-space: nowrap; }
 
 /* 정렬 머리 */
@@ -111,44 +112,64 @@ th[aria-sort="descending"] .ledger__sort-icon::after { border-color: var(--rubri
 
 /* ≤640: 장서 카드 행 */
 @media (max-width: 640px) {
-  .ledger--cards, .ledger--cards tbody, .ledger--cards tr, .ledger--cards td { display: block; }
+  /* ≤640: 표 → 장서 카드 축약형 3줄 (DIRECTION 5-9)
+     1줄 = 청구기호/번호(타자 13px) ··· 상태 도장(오른쪽)
+     2줄 = 『서명』 (명조 600, 왼쪽 정렬)
+     3줄 = 나머지 칸을 ' · '로 이은 메타 13px (+ 처리 버튼 오른쪽)
+     라벨(data-label)은 화면에서 숨기고 읽기 프로그램에만 남긴다. 체크 상자는 왼쪽 붉은 여백선 안. */
+  .ledger--cards, .ledger--cards tbody { display: block; }
   .ledger--cards { border-top: 0; }
   .ledger--cards caption { display: block; width: auto; }
   .ledger--cards thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .ledger--cards tbody tr {
     position: relative;
-    margin-bottom: var(--s-3);
-    padding: var(--s-3) var(--s-4) var(--s-3) 40px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: 4px;
+    min-height: 92px;
+    margin-bottom: var(--s-2);
+    padding: 10px var(--s-3) 10px 40px;
     background-color: var(--leaf-raised);
     background-image: linear-gradient(to right, transparent 28px, var(--rubric) 28px, var(--rubric) 29px, transparent 29px);
     border: 1px solid var(--hairline);
     border-radius: var(--r-card);
   }
+  .ledger--cards tbody tr[hidden] { display: none; }
   .ledger--cards td {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: var(--s-3);
-    padding: 4px 0;
+    order: 3;
+    display: block;
+    min-width: 0;
+    padding: 0;
     border: 0;
     background: none !important;
     box-shadow: none !important;
-    text-align: right;
-  }
-  .ledger--cards td::before {
-    content: attr(data-label);
-    flex: none;
-    font-family: var(--font-ui);
-    font-weight: 600;
-    font-size: 13px;
-    color: var(--ink-3);
     text-align: left;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink-2);
   }
-  .ledger--cards td.ledger__check { position: absolute; top: 10px; right: 12px; width: auto; padding: 0; }
-  .ledger--cards td.ledger__check::before { display: none; }
-  .ledger--cards td:nth-child(2) { padding-right: 44px; }
-  .ledger--cards td.ledger__title { min-width: 0; flex-wrap: wrap; }
-  .ledger--cards td.ledger__title .book { flex-basis: 100%; }
+  .ledger--cards td::before { content: none; }   /* 라벨은 화면에서 숨긴다 — 칸 이름은 시각적으로 숨긴 thead가 그대로 가진다 */
+  /* 1줄 */
+  .ledger--cards td:is([data-label="청구기호"], [data-label="번호"]) {
+    order: 0; flex: 1 1 auto; font-family: var(--font-type); font-size: 13px; letter-spacing: 0.02em; color: var(--ink-2); white-space: nowrap;
+  }
+  .ledger--cards td[data-label="상태"] { order: 1; flex: none; margin-left: auto; }
+  /* 2줄 */
+  .ledger--cards td.ledger__title {
+    order: 2; flex: 0 0 100%;
+    font-family: var(--font-title); font-weight: 600; font-size: 16px; line-height: 1.4; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ledger--cards td.ledger__title .book { display: inline; margin-left: 6px; font-family: var(--font-text); font-weight: 400; font-size: 13px; }
+  /* 3줄 — 메타는 ' · '로 잇는다. 줄의 첫 메타(신청자 · 등록번호)에는 점을 찍지 않는다 */
+  .ledger--cards td { white-space: nowrap; }
+  .ledger--cards td.ledger__num, .ledger--cards td.ledger__call { font-family: var(--font-type); }
+  .ledger--cards td:not(.ledger__check, .ledger__title, .ledger__actions, [data-label="청구기호"], [data-label="번호"], [data-label="상태"], [data-label="신청자"], [data-label="등록번호"])::before {
+    content: "·"; margin: 0 6px; font-family: var(--font-text); color: var(--ink-3);
+  }
+  .ledger--cards td.ledger__actions { order: 4; margin-left: auto; }
+  .ledger--cards td.ledger__check { position: absolute; top: 10px; left: 4px; width: 20px; padding: 0; }
   .ledger--cards tbody tr[aria-selected="true"], .ledger--cards tbody tr.is-selected { border-color: var(--rubric); box-shadow: inset 0 0 0 1px var(--rubric); }
   .ledger--cards tfoot { display: none; }
 }

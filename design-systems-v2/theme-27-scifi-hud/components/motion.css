@@ -1,0 +1,150 @@
+/* ==========================================================================
+   motion — 셀프테스트 점등 · 숫자 롤 · 선 그리기 · 계통 흐름
+   y 이동·튕김 없음. opacity · clip-path · transform(롤)만.
+   상시 움직임은 화면당 최대 2개(계통 흐름 + ATIS 띠). 점멸은 마스터 경고 램프 1개.
+   움직임 줄이기: 전부 정지, 최종 상태 즉시 표시(base.css 전역 규칙).
+   ========================================================================== */
+
+/* ---- 1. 셀프테스트 점등 — [data-boot] -------------------------------------
+   0→120ms 검은 화면 · 120→240ms 테스트 패턴(램프 색 띠 + 눈금) · 240→480ms 내용
+   app.js가 처음 보일 때 .is-on + --boot-delay(열 순서 60ms 간격)를 붙인다. */
+.js [data-boot]:not(.is-on) { opacity: 0; }
+.js [data-boot].is-on {
+  animation: boot-in var(--dur-boot) linear var(--boot-delay, 0ms) both;
+}
+@keyframes boot-in {
+  0% { opacity: 0; }
+  24.9% { opacity: 0; }
+  25% { opacity: 1; }
+  100% { opacity: 1; }
+}
+/* DU에는 테스트 패턴 덮개 */
+.js .du[data-boot].is-on::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg,
+      var(--ok-face) 0 20%, var(--select-face) 20% 40%, var(--target-face) 40% 60%,
+      var(--caution-face) 60% 80%, var(--warning-face) 80% 100%) left top / 100% 4px no-repeat,
+    repeating-linear-gradient(90deg, var(--ink-muted) 0 1px, transparent 1px var(--tick-major)) left 50% / 100% 12px no-repeat,
+    repeating-linear-gradient(90deg, var(--line-strong) 0 1px, transparent 1px var(--tick-minor)) left 50% / 100% 6px no-repeat,
+    var(--surface);
+  animation: boot-pattern var(--dur-boot) linear var(--boot-delay, 0ms) both;
+}
+@keyframes boot-pattern {
+  0% { opacity: 1; background-size: 0 0, 0 0, 0 0, auto; }
+  24.9% { opacity: 1; background-size: 0 0, 0 0, 0 0, auto; }
+  25% { opacity: 1; background-size: 100% 4px, 100% 12px, 100% 6px, auto; }
+  49.9% { opacity: 1; background-size: 100% 4px, 100% 12px, 100% 6px, auto; }
+  50% { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+/* ---- 2. 숫자 롤(오도미터) — <span class="roll" data-roll="118">118</span> --- */
+.roll {
+  display: inline-flex;
+  height: 1.15em;
+  line-height: 1.15;
+  overflow: hidden;
+  vertical-align: bottom;
+  font-variant-numeric: tabular-nums;
+}
+.roll__col {
+  display: flex;
+  flex-direction: column;
+  transform: translateY(calc(var(--d, 0) * -1.15em));
+  transition: transform var(--dur-base) var(--ease-instrument);
+}
+.roll__col > span { display: block; height: 1.15em; }
+.roll__sym { display: inline-block; }
+
+/* ---- 3. 선 그리기 — SVG 경로에 class="draw__line" pathLength="1" ----------------------------- */
+.draw .draw__line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.draw.is-on .draw__line {
+  animation: draw-line var(--dur-draw) var(--ease-instrument) var(--draw-delay, 0ms) forwards;
+}
+@keyframes draw-line { to { stroke-dashoffset: 0; } }
+.no-js .draw .draw__line { stroke-dashoffset: 0; }
+
+/* ---- 4. 계통 흐름 — 전원이 들어온 선만 (1.2s linear) -------------------
+   HTML 버스선: <span class="bus bus--on"></span> (세로 .bus--v)
+   SVG 선: class="flow" + style="stroke:var(--ok)" */
+.bus {
+  display: block;
+  height: 2px;
+  min-width: 16px;
+  background: var(--line-strong);
+}
+.bus--v { width: 2px; height: auto; min-width: 0; min-height: 16px; }
+.bus--on {
+  background: repeating-linear-gradient(90deg, var(--ok) 0 8px, transparent 8px 12px);
+  background-size: 12px 2px;
+  box-shadow: var(--glow-ok);
+  animation: bus-flow 1.2s linear infinite;
+}
+.bus--v.bus--on {
+  background: repeating-linear-gradient(180deg, var(--ok) 0 8px, transparent 8px 12px);
+  background-size: 2px 12px;
+  animation-name: bus-flow-v;
+}
+.bus--caut { background: var(--caution); }
+@keyframes bus-flow { to { background-position: 12px 0; } }
+@keyframes bus-flow-v { to { background-position: 0 12px; } }
+
+.flow {
+  stroke-dasharray: 8 4;
+  animation: svg-flow 1.2s linear infinite;
+}
+@keyframes svg-flow { to { stroke-dashoffset: -12; } }
+
+/* ---- 5. 점멸 — 마스터 경고 램프 하나에만 (2Hz) -------------------------- */
+@keyframes master-blink {
+  0%, 49.9% { opacity: 1; }
+  50%, 100% { opacity: 0.25; }
+}
+
+/* ---- 모션 시연 칸 --------------------------------------------------------- */
+.motion {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 220px;
+  border: var(--stroke) solid var(--line);
+  background: var(--surface);
+}
+.motion__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 40px;
+  padding: 0 var(--sp-3);
+  border-bottom: var(--stroke) solid var(--line);
+}
+.motion__name { font-family: var(--font-ko); font-weight: 700; font-size: var(--fs-sm); margin-right: auto; }
+.motion__stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-4);
+  min-width: 0;
+}
+.motion__spec {
+  padding: var(--sp-2) var(--sp-3);
+  border-top: var(--stroke) solid var(--line);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--ink-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js [data-boot]:not(.is-on) { opacity: 1; }
+  .js .du[data-boot].is-on::after { content: none; }
+  .draw .draw__line { stroke-dashoffset: 0; }
+  .bus--on, .flow { animation: none; }
+}

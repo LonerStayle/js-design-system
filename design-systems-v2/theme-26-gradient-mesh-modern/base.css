@@ -68,6 +68,11 @@ table { border-collapse: collapse; }
 .signal-ink { color: var(--signal-ink); }
 .measure { max-width: 34em; }
 .label-ko { letter-spacing: 0; }
+/* 모노·넓은 자간 라벨 안의 한글(요일 등)은 본문 글꼴 + 자간 0 — "10.27 <span class="ko">화</span>" */
+.ko,
+.mono .ko, .t-caption .ko, .timeline__time .ko, .kanban__time .ko, .badge--mono .ko, .mesh__label .ko {
+  font-family: var(--font-text); letter-spacing: 0; font-size: max(1em, 12px); font-weight: inherit;
+}
 
 /* ── 레이아웃 프리미티브 ── */
 .wrap { width: 100%; max-width: calc(var(--content-max) + var(--safe) * 2); margin-inline: auto; padding-inline: var(--safe); }
@@ -109,6 +114,13 @@ table { border-collapse: collapse; }
 }
 .plate--ink { background: var(--cue); color: var(--on-cue); }
 .plate--sm { padding: 6px 10px; border-radius: 10px; font-size: var(--t-caption); }
+/* 시각·ID 는 한 덩어리 — '14:0 / 0' 처럼 끊기지 않게 */
+.plate .mono { white-space: nowrap; }
+/* 글만 있는 플레이트: 문장 하나가 flex 아이템으로 쪼개지지 않게(아이콘 없는 시각·문장 혼합) */
+.plate--text { display: inline-block; }
+/* 두 줄 플레이트: 위 = 시각, 아래 = 설명 */
+.plate--stack { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 0; }
+.plate--stack > span { display: block; }
 
 /* ─────────────────────────────────────────────
    시그니처 1 — 무드 메쉬
@@ -116,7 +128,9 @@ table { border-collapse: collapse; }
    ───────────────────────────────────────────── */
 .mesh {
   --m0: var(--mood-day-0); --m1: var(--mood-day-1); --m2: var(--mood-day-2); --m3: var(--mood-day-3); --m4: var(--mood-day-4);
-  --mesh-size: 72% 78%;
+  /* 낮 리허설은 페이드 반경을 좁혀 네 점이 '점'으로 읽히게, 밤은 넓게 번진다 */
+  --ms-day: 56% 62%; --ms-night: 72% 78%;
+  --mesh-size: var(--ms-day);
   position: relative;
   isolation: isolate;
   background-color: var(--m0);
@@ -135,18 +149,21 @@ table { border-collapse: collapse; }
 .scope-dark .mesh,
 .mesh.scope-dark {
   --m0: var(--mood-night-0); --m1: var(--mood-night-1); --m2: var(--mood-night-2); --m3: var(--mood-night-3); --m4: var(--mood-night-4);
+  --mesh-size: var(--ms-night);
   color: var(--white);
 }
-.mesh > * { position: relative; z-index: 1; }
+/* 장면 내용은 언제나 제어점 핸들(z 2) 위에 — 핸들은 글자 뒤로 지나간다 */
+.mesh > * { position: relative; z-index: 3; }
 .mesh--stage { min-height: 100svh; }
-.mesh--soft { --mesh-size: 90% 96%; }
-.mesh--tight { --mesh-size: 56% 64%; }
+.mesh--soft { --ms-day: 70% 76%; --ms-night: 90% 96%; }
+.mesh--tight { --ms-day: 46% 54%; --ms-night: 56% 64%; }
 /* 원색 메쉬(커버 아트와 같은 색). 위에 글자 금지 */
 .mesh--raw,
 [data-theme="dark"] .mesh--raw,
 .scope-dark .mesh--raw {
   --m0: color-mix(in srgb, var(--mood-1) 55%, var(--mood-4));
   --m1: var(--mood-1); --m2: var(--mood-2); --m3: var(--mood-3); --m4: var(--mood-4);
+  --mesh-size: var(--ms-night);
 }
 /* 색이 빠진 회색 메쉬(empty·404). .lit-N 으로 제어점 색 복귀 */
 .mesh--mute,
@@ -159,20 +176,63 @@ table { border-collapse: collapse; }
 .mesh--mute.lit-1.lit-2.lit-3.lit-4 { --m0: var(--mood-day-0); }
 [data-theme="dark"] .mesh--mute.lit-1.lit-2.lit-3.lit-4 { --m0: var(--mood-night-0); color: var(--white); }
 
-/* 드리프트 — 제어점 위치를 10s alternate 로 */
+/* 드리프트 — 제어점 위치를 10s alternate 로.
+   제어점(핸들)은 글자 블록 바깥에서만 움직인다. 장면의 글자 앵커에 맞춰 세 가지 궤도를 고른다.
+   A mesh-drift   : 글자가 좌측·좌하단 → 핸들은 상단 가장자리와 우측 1/3
+   B mesh-drift-b : 글자가 중앙 패널 → 핸들은 네 모서리
+   C mesh-drift-c : 글자가 좌상단 + 아래 카드 → 핸들은 우상단·상단 가장자리, 나머지는 카드 뒤 */
 @keyframes mesh-drift {
-  0%   { --p1x: 16%; --p1y: 22%; --p2x: 84%; --p2y: 16%; --p3x: 80%; --p3y: 82%; --p4x: 24%; --p4y: 86%; }
-  50%  { --p1x: 30%; --p1y: 34%; --p2x: 70%; --p2y: 26%; --p3x: 88%; --p3y: 66%; --p4x: 14%; --p4y: 70%; }
-  100% { --p1x: 22%; --p1y: 12%; --p2x: 92%; --p2y: 38%; --p3x: 64%; --p3y: 90%; --p4x: 36%; --p4y: 78%; }
+  0%   { --p1x: 14%; --p1y: 12%; --p2x: 84%; --p2y: 16%; --p3x: 88%; --p3y: 74%; --p4x: 72%; --p4y: 92%; }
+  50%  { --p1x: 28%; --p1y: 8%;  --p2x: 74%; --p2y: 26%; --p3x: 93%; --p3y: 58%; --p4x: 78%; --p4y: 89%; }
+  100% { --p1x: 40%; --p1y: 13%; --p2x: 91%; --p2y: 34%; --p3x: 82%; --p3y: 82%; --p4x: 70%; --p4y: 94%; }
 }
 @keyframes mesh-drift-b {
-  0%   { --p1x: 74%; --p1y: 20%; --p2x: 20%; --p2y: 28%; --p3x: 30%; --p3y: 84%; --p4x: 86%; --p4y: 78%; }
-  50%  { --p1x: 62%; --p1y: 32%; --p2x: 12%; --p2y: 14%; --p3x: 44%; --p3y: 72%; --p4x: 90%; --p4y: 92%; }
-  100% { --p1x: 82%; --p1y: 10%; --p2x: 28%; --p2y: 40%; --p3x: 22%; --p3y: 92%; --p4x: 72%; --p4y: 70%; }
+  0%   { --p1x: 80%; --p1y: 16%; --p2x: 12%; --p2y: 18%; --p3x: 14%; --p3y: 82%; --p4x: 88%; --p4y: 80%; }
+  50%  { --p1x: 70%; --p1y: 10%; --p2x: 6%;  --p2y: 30%; --p3x: 24%; --p3y: 76%; --p4x: 93%; --p4y: 64%; }
+  100% { --p1x: 88%; --p1y: 24%; --p2x: 20%; --p2y: 11%; --p3x: 8%;  --p3y: 70%; --p4x: 80%; --p4y: 88%; }
+}
+@keyframes mesh-drift-c {
+  0%   { --p1x: 70%; --p1y: 18%; --p2x: 50%; --p2y: 9%;  --p3x: 30%; --p3y: 90%; --p4x: 92%; --p4y: 40%; }
+  50%  { --p1x: 82%; --p1y: 30%; --p2x: 60%; --p2y: 11%; --p3x: 44%; --p3y: 91%; --p4x: 88%; --p4y: 46%; }
+  100% { --p1x: 76%; --p1y: 14%; --p2x: 44%; --p2y: 10%; --p3x: 22%; --p3y: 90%; --p4x: 95%; --p4y: 36%; }
+}
+/* D mesh-drift-d : 글자가 우측(숫자 2/3 앵커) → 핸들은 상단 가장자리와 좌측 1/3 (A 의 좌우 반전)
+   E mesh-drift-e : 낮은 띠(콘솔 페이지) → 핸들은 위·아래 가장자리 줄에만 */
+@keyframes mesh-drift-d {
+  0%   { --p1x: 86%; --p1y: 12%; --p2x: 16%; --p2y: 14%; --p3x: 8%;  --p3y: 70%; --p4x: 42%; --p4y: 92%; }
+  50%  { --p1x: 72%; --p1y: 8%;  --p2x: 26%; --p2y: 22%; --p3x: 5%;  --p3y: 52%; --p4x: 46%; --p4y: 88%; }
+  100% { --p1x: 60%; --p1y: 13%; --p2x: 9%;  --p2y: 30%; --p3x: 14%; --p3y: 84%; --p4x: 40%; --p4y: 94%; }
+}
+@keyframes mesh-drift-f {
+  0%   { --p1x: 40%; --p1y: 10%; --p2x: 62%; --p2y: 12%; --p3x: 54%; --p3y: 88%; --p4x: 4%;  --p4y: 20%; }
+  50%  { --p1x: 52%; --p1y: 14%; --p2x: 58%; --p2y: 22%; --p3x: 64%; --p3y: 92%; --p4x: 2%;  --p4y: 30%; }
+  100% { --p1x: 46%; --p1y: 8%;  --p2x: 66%; --p2y: 8%;  --p3x: 58%; --p3y: 90%; --p4x: 6%;  --p4y: 12%; }
+}
+@keyframes mesh-drift-e {
+  0%   { --p1x: 38%; --p1y: 10%; --p2x: 88%; --p2y: 12%; --p3x: 64%; --p3y: 92%; --p4x: 97%; --p4y: 62%; }
+  50%  { --p1x: 50%; --p1y: 14%; --p2x: 80%; --p2y: 8%;  --p3x: 56%; --p3y: 90%; --p4x: 95%; --p4y: 76%; }
+  100% { --p1x: 44%; --p1y: 8%;  --p2x: 94%; --p2y: 16%; --p3x: 70%; --p3y: 94%; --p4x: 98%; --p4y: 50%; }
 }
 .mesh--drift { animation: mesh-drift var(--dur-drift) ease-in-out infinite alternate; }
-.mesh--drift-b { --p1x: 74%; --p1y: 20%; --p2x: 20%; --p2y: 28%; --p3x: 30%; --p3y: 84%; --p4x: 86%; --p4y: 78%; }
+.mesh--drift-d { --p1x: 86%; --p1y: 12%; --p2x: 16%; --p2y: 14%; --p3x: 8%; --p3y: 70%; --p4x: 42%; --p4y: 92%; }
+.mesh--drift.mesh--drift-d { animation-name: mesh-drift-d; }
+.mesh--drift-e { --p1x: 38%; --p1y: 10%; --p2x: 88%; --p2y: 12%; --p3x: 64%; --p3y: 92%; --p4x: 97%; --p4y: 62%; }
+.mesh--drift.mesh--drift-e { animation-name: mesh-drift-e; }
+/* F mesh-drift-f : 글자 좌측 + 우측에 띠를 뚫고 내려오는 오브(settings) → 핸들은 가운데 위·아래와 왼쪽 가장자리 */
+.mesh--drift-f { --p1x: 40%; --p1y: 10%; --p2x: 62%; --p2y: 12%; --p3x: 54%; --p3y: 88%; --p4x: 4%; --p4y: 20%; }
+.mesh--drift.mesh--drift-f { animation-name: mesh-drift-f; }
+.mesh--drift-b { --p1x: 80%; --p1y: 16%; --p2x: 12%; --p2y: 18%; --p3x: 14%; --p3y: 82%; --p4x: 88%; --p4y: 80%; }
 .mesh--drift.mesh--drift-b { animation-name: mesh-drift-b; }
+.mesh--drift-c { --p1x: 70%; --p1y: 18%; --p2x: 50%; --p2y: 9%; --p3x: 30%; --p3y: 90%; --p4x: 92%; --p4y: 40%; }
+.mesh--drift.mesh--drift-c { animation-name: mesh-drift-c; }
+/* G mesh-drift-g : 가로 타임라인 + 하단 헤드라인(index 10) → 핸들은 장면 위 20% 띠 안에서만 좌우로 흐른다 */
+@keyframes mesh-drift-g {
+  0%   { --p1x: 10%; --p1y: 9%;  --p2x: 38%; --p2y: 15%; --p3x: 66%; --p3y: 8%;  --p4x: 91%; --p4y: 16%; }
+  50%  { --p1x: 18%; --p1y: 14%; --p2x: 46%; --p2y: 9%;  --p3x: 74%; --p3y: 15%; --p4x: 95%; --p4y: 10%; }
+  100% { --p1x: 6%;  --p1y: 12%; --p2x: 32%; --p2y: 18%; --p3x: 60%; --p3y: 12%; --p4x: 88%; --p4y: 19%; }
+}
+.mesh--drift-g { --p1x: 10%; --p1y: 9%; --p2x: 38%; --p2y: 15%; --p3x: 66%; --p3y: 8%; --p4x: 91%; --p4y: 16%; }
+.mesh--drift.mesh--drift-g { animation-name: mesh-drift-g; }
 .mesh--drift.is-paused, .mesh--drift[data-drift="off"] { animation-play-state: paused; }
 
 /* 핸들 — "설계된 메쉬"로 읽히게 하는 장치 */
@@ -185,12 +245,15 @@ table { border-collapse: collapse; }
   border: 2px solid var(--handle-ring);
   box-shadow: 0 0 0 1px var(--handle-outline);
   pointer-events: none;
+  transition: opacity 240ms var(--ease-ui);
 }
+/* app.js 가드: 드리프트·포인터 추종 중 글자와 겹치는 순간 핸들(+라벨)을 숨긴다 */
+.mesh__handle.is-veiled { opacity: 0; }
 .mesh__handle[data-p="1"] { --hx: var(--p1x); --hy: var(--p1y); --hox: var(--o1x); --hoy: var(--o1y); --hc: var(--m1); }
 .mesh__handle[data-p="2"] { --hx: var(--p2x); --hy: var(--p2y); --hox: var(--o2x); --hoy: var(--o2y); --hc: var(--m2); }
 .mesh__handle[data-p="3"] { --hx: var(--p3x); --hy: var(--p3y); --hox: var(--o3x); --hoy: var(--o3y); --hc: var(--m3); }
 .mesh__handle[data-p="4"] { --hx: var(--p4x); --hy: var(--p4y); --hox: var(--o4x); --hoy: var(--o4y); --hc: var(--m4); }
-button.mesh__handle { pointer-events: auto; cursor: pointer; width: 22px; height: 22px; margin: -11px 0 0 -11px; }
+button.mesh__handle { z-index: 4; pointer-events: auto; cursor: pointer; width: 22px; height: 22px; margin: -11px 0 0 -11px; }
 button.mesh__handle::after { content: ""; position: absolute; inset: -12px; border-radius: 50%; }
 button.mesh__handle:hover { transform: scale(1.15); }
 button.mesh__handle:focus-visible { outline-offset: 4px; }
@@ -206,7 +269,8 @@ button.mesh__handle:focus-visible { outline-offset: 4px; }
 .mesh__label b { font-weight: 500; }
 .mesh__handle[data-flip~="x"] .mesh__label { left: auto; right: 14px; }
 .mesh__handle[data-flip~="y"] .mesh__label { top: auto; bottom: 14px; }
-@media (max-width: 640px) { .mesh__label { display: none; } .mesh--labels-sm .mesh__label { display: block; } }
+/* 모바일: 라벨은 숨기지 않고 'P1' 만 남긴다(값은 생략) — 라벨 없는 점은 렌더 찌꺼기처럼 보인다 */
+@media (max-width: 640px) { .mesh__label { padding: 3px 6px; } .mesh__label > :not(b) { display: none; } }
 
 /* 커버 아트 — 원색 무드 메쉬, 12px, 핸들 없음 */
 .art {
@@ -270,7 +334,7 @@ button.mesh__handle:focus-visible { outline-offset: 4px; }
   overflow: clip;
 }
 .stage--ink { background: var(--stage-ink); }
-.stage--bg { background: var(--bg); }
+.stage--bg { background: var(--stage-floor); }
 .stage--night { background: var(--night-950); }
 .stage--auto { min-height: auto; }
 .stage__inner { width: 100%; max-width: var(--content-max); margin-inline: auto; }
@@ -291,34 +355,44 @@ button.mesh__handle:focus-visible { outline-offset: 4px; }
 .stage-band__inner { width: 100%; max-width: var(--content-max); margin-inline: auto; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--sp-5); }
 .app .stage-band { padding-top: 32px; }
 
-/* 클리커 — 하단 고정 진행선 + 챕터 + 카운터 (index) */
+/* 클리커 — 하단 고정 띠(반투명 단색 + 1px 상단 라인) 안에 챕터 · 이전/다음 · 카운터 · 진행선 (index)
+   app.js: 장면이 잉크면 .scope-dark 로 띠도 밤 토큰, 푸터가 보이면 .is-off 로 숨김 */
+:root { --clicker-h: 56px; }
 .clicker {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
-  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4);
-  padding: 10px var(--safe) 13px;
-  pointer-events: none;
+  height: var(--clicker-h);
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: var(--sp-4);
+  padding: 0 var(--safe) 3px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+  transition: opacity 240ms var(--ease-ui), visibility 0s linear 0s;
 }
-.clicker::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--line); opacity: .6; }
+.clicker.is-off { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 240ms var(--ease-ui), visibility 0s linear 240ms; }
+.clicker::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--line); }
 .clicker__line {
   position: absolute; left: 0; bottom: 0; height: 3px;
   width: 100%; transform-origin: 0 50%; transform: scaleX(var(--progress, 0));
   background: linear-gradient(90deg, var(--mood-a), var(--mood-b));
   transition: transform 200ms linear;
 }
-.clicker__chapter, .clicker__count {
-  pointer-events: auto;
-  background: var(--surface); color: var(--ink);
-  border-radius: var(--r-pill);
-  padding: 6px 14px;
-  font-size: var(--t-small); line-height: 1.4;
-  box-shadow: 0 0 0 1px var(--line);
-}
-.clicker__chapter { letter-spacing: 0; font-weight: 500; }
-.clicker__count { font-family: var(--font-mono); font-size: 12px; letter-spacing: var(--track-mono); font-variant-numeric: tabular-nums; }
+.clicker__chapter { justify-self: start; font-size: var(--t-small); line-height: 1.4; letter-spacing: 0; font-weight: 500; color: var(--ink); }
+.clicker__count { justify-self: end; font-family: var(--font-mono); font-size: 12px; letter-spacing: var(--track-mono); font-variant-numeric: tabular-nums; }
 .clicker__count b { font-weight: 500; color: var(--ink); }
 .clicker__count span { color: var(--ink-3); }
-.clicker__nav { display: inline-flex; gap: 6px; pointer-events: auto; }
-@media (max-width: 640px) { .clicker__chapter { display: none; } .clicker { justify-content: flex-end; } }
+.clicker__nav { display: inline-flex; gap: 6px; }
+/* 모바일: 이전/다음과 챕터는 숨기고 카운터만 우상단 — 띠는 3px 진행선만 남는다 */
+@media (max-width: 640px) {
+  .clicker { height: 3px; padding: 0; background: none; border-top: 0; display: block; }
+  .clicker__chapter, .clicker__nav { display: none; }
+  .clicker__count {
+    position: fixed; top: calc(var(--navbar-h) + 12px); right: 16px;
+    padding: 6px 12px; border-radius: var(--r-pill);
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    box-shadow: 0 0 0 1px var(--line);
+    color: var(--ink);
+  }
+}
 
 /* ── 아이콘 ── */
 [data-icon] { display: inline-flex; align-items: center; justify-content: center; width: var(--icon, 20px); height: var(--icon, 20px); flex: none; }
@@ -343,7 +417,7 @@ button.mesh__handle:focus-visible { outline-offset: 4px; }
 .site-footer__word { font-family: var(--font-display); font-size: 44px; font-weight: 900; line-height: 1; letter-spacing: var(--track-display); color: var(--ink); text-decoration: none; }
 .site-footer__tag { color: var(--ink-2); }
 .site-footer__col h2 { font-family: var(--font-kr); font-size: var(--t-small); font-weight: 700; color: var(--ink); letter-spacing: 0; margin-bottom: var(--sp-3); }
-.site-footer__col ul { display: flex; flex-direction: column; gap: 2px; }
+.site-footer__col ul { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .site-footer__col a { display: inline-flex; align-items: center; min-height: 36px; color: var(--ink-2); text-decoration: none; }
 .site-footer__col a:hover { color: var(--ink); text-decoration: underline; }
 .site-footer__col a[aria-current="page"] { color: var(--ink); font-weight: 500; }
@@ -378,14 +452,36 @@ button.mesh__handle:focus-visible { outline-offset: 4px; }
 ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
 ::view-transition-new(root) { z-index: 2; }
 
-/* ── 실시간 차트 프리미티브 [data-livechart] (dashboard 동시 시청자) ── */
+/* ── 실시간 차트 프리미티브 [data-livechart] (dashboard 동시 시청자: 송출 전체 창 + 끝 90초 라이브 구간) ── */
 .livechart { position: relative; display: flex; flex-direction: column; gap: 12px; }
-.livechart__plot { position: relative; height: var(--chart-h, 200px); }
+.livechart__plot { position: relative; height: var(--chart-h, 200px); margin: 26px 0 52px 56px; }
 .livechart__plot svg { width: 100%; height: 100%; overflow: visible; }
 .livechart__grid { stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; }
-.livechart__area { fill: color-mix(in srgb, var(--mood-a) 14%, transparent); stroke: none; }
-.livechart__line { fill: none; stroke: var(--mood-a); stroke-width: 2.5; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
-.livechart__peak { fill: var(--signal); }
-.livechart__now { fill: var(--surface); stroke: var(--ink); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.livechart__base { stroke: var(--line-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.livechart__cue { stroke: var(--line-strong); stroke-width: 1; stroke-dasharray: 3 4; vector-effect: non-scaling-stroke; }
+.livechart__area { fill: color-mix(in srgb, var(--mood-a) 12%, transparent); stroke: none; }
+.livechart__line { fill: none; stroke: var(--mood-a); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.livechart__live { fill: none; stroke: var(--signal); stroke-width: 4; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
+.livechart__y { position: absolute; right: calc(100% + 10px); top: 0; bottom: 0; }
+.livechart__y span { position: absolute; right: 0; transform: translateY(-50%); font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.livechart__cues { position: absolute; inset: 0; pointer-events: none; }
+.livechart__cue-label { position: absolute; top: calc(100% + 6px); display: flex; gap: 4px; padding-left: 4px; border-left: 1px solid var(--line-strong); font-size: 11px; line-height: 1.3; color: var(--ink-3); white-space: nowrap; letter-spacing: 0; }
+.livechart__cue-label b { font-weight: 500; font-size: 11px; color: var(--ink-2); }
+.livechart__cue-label:nth-child(2n) { top: calc(100% + 26px); }
+.livechart__cue-label:nth-child(2n)::before { content: ""; position: absolute; left: -1px; top: -20px; height: 20px; border-left: 1px solid var(--line-strong); }
+.livechart__peak-dot, .livechart__now { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; }
+.livechart__peak-dot { background: var(--mood-a); box-shadow: 0 0 0 2px var(--surface); }
+.livechart__peak-label { position: absolute; transform: translate(-50%, calc(-100% - 12px)); padding: 2px 8px; border-radius: 6px; background: var(--surface); color: var(--signal-ink); font-size: 12px; font-weight: 500; white-space: nowrap; box-shadow: 0 0 0 1px var(--line); }
+.livechart__peak-label .mono, .livechart__peak-label b { font-size: 12px; }
+.livechart__now { left: 100%; background: var(--surface); box-shadow: 0 0 0 3px var(--signal); }
 .livechart__axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.02em; }
-.livechart[data-paused] .livechart__line { stroke: var(--ink-3); }
+.livechart[data-paused] .livechart__live { stroke: var(--ink-3); }
+.livechart[data-paused] .livechart__now { box-shadow: 0 0 0 3px var(--ink-3); }
+@media (max-width: 640px) {
+  .livechart__plot { margin-left: 44px; margin-bottom: 30px; }
+  .livechart__y span { font-size: 10px; }
+  /* 좁은 폭: 큐 이름은 숨기고 시각만, 하나 걸러 */
+  .livechart__cue-label { font-size: 0; }
+  .livechart__cue-label b { font-size: 10px; }
+  .livechart__cue-label:nth-child(2n) { display: none; }
+}

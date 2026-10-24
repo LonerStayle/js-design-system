@@ -1,0 +1,90 @@
+/* kanban — 런칭 큐시트 보드. 무대 띠는 클리커 카운터 "6 / 14" 하나(시그니처 2를 무대 크기로),
+   그 아래 00:00까지의 시간 레일 → 막힌 큐 경고 → 보기 도구 → 전폭 보드. */
+
+/* ── 무대 띠: "6 / 14" 카운터가 띠 하단의 큐 진행선(14칸)과 한 줄로 이어지는 가로 구도 ── */
+.kb-band { min-height: clamp(240px, 22vw, 300px); }
+.kb-band__inner { flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: var(--sp-3); }
+.kb-band__inner > .crumbs { align-self: flex-start; }
+.kb-band__row { display: flex; align-items: flex-end; gap: var(--sp-6); margin-bottom: 0.14em; padding-bottom: var(--sp-3); }
+.kb-band__count {
+  flex: none;
+  font-family: var(--font-display);
+  font-size: clamp(72px, 9.6vw, 156px);
+  line-height: 0.82;
+  letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
+}
+.kb-band__count b { font-weight: 900; }
+.kb-band__total { font-weight: 300; }
+.kb-band__track { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; padding-bottom: 0.4em; }
+.kb-band__next { align-self: flex-start; margin-left: calc(6 / 14 * 100% - 12px); }
+.kb-band__ticks { display: flex; gap: 4px; list-style: none; padding: 0; margin: 0; }
+.kb-band__ticks li { flex: 1; height: 12px; border-radius: 3px; background: color-mix(in srgb, var(--surface) 62%, transparent); }
+.kb-band__ticks li.is-done {
+  background-image: linear-gradient(90deg, var(--mood-a), var(--mood-b));
+  background-size: 1400% 100%;
+  background-position: calc(var(--i) / 13 * 100%) 0;
+}
+.kb-band__ticks li.is-live { background: var(--signal); }
+.kb-band__ticks li.is-next { box-shadow: inset 0 0 0 2px var(--ink); }
+.kb-band__ends { display: flex; justify-content: space-between; }
+.kb-band__ends .mono { font-size: 12px; padding: 2px 8px; border-radius: 6px; background: var(--surface); color: var(--ink-2); }
+.kb-band__sub { font-size: clamp(17px, 1.5vw, 22px); }
+
+/* ── 시간 레일 ── */
+.kb-rail { display: flex; flex-direction: column; gap: var(--sp-4); }
+.kb-rail__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; }
+.kb-rail__head .mono { font-size: 12px; }
+.kb-rail__line .timeline__body { border: 1px solid var(--line); }
+.kb-rail__line .timeline__title { font-size: 15px; }
+.kb-rail__line .timeline__meta { font-size: 13px; }
+.kb-rail__line .timeline__meta .mono { font-size: 12px; }
+.kb-rail__line .timeline__item[data-state="now"] .timeline__body { background: var(--cue); border-color: var(--cue); }
+.kb-rail__line .timeline__item[data-state="now"] .timeline__title { color: var(--on-cue); }
+.kb-rail__line .timeline__item[data-state="now"] .timeline__meta { color: var(--on-cue-2); }
+.kb-rail__goal .timeline__dot { background: var(--signal); box-shadow: none; }
+.kb-rail__goal .timeline__body { border-color: var(--signal); box-shadow: inset 0 0 0 1px var(--signal); }
+.kb-rail__goal .timeline__title { color: var(--ink); font-weight: 700; }
+.kb-rail__goal .timeline__time { color: var(--signal-ink); font-weight: 500; }
+
+/* ── 보기 도구 ── */
+.kb-tools { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3) var(--sp-5); flex-wrap: wrap; }
+.kb-tools__filter .chip .mono { color: var(--ink-3); font-size: 11px; }
+.kb-tools__filter .chip .avatar { --av: 28px; }
+.kb-tools__hint { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.kb-tools__hint kbd { font-family: var(--font-mono); font-size: 11px; padding: 2px 7px; border-radius: 6px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--ink-2); }
+
+/* ── 보드: 4열 전폭, 완료 열은 한 단 가라앉힌다 ── */
+.kb-board { --cols: 4; grid-template-columns: repeat(3, minmax(250px, 1fr)) minmax(250px, 0.9fr); }
+.kb-board .kanban__col[data-col="live"] { background: var(--surface-2); box-shadow: inset 0 3px 0 var(--signal); }
+.kb-board .kanban__col[data-col="done"] { background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
+.kb-board .kanban__col[data-col="done"] .kanban__card { background: var(--surface); padding-block: 10px; gap: 6px; }
+.kb-board .kanban__col[data-col="done"] .kanban__name { font-size: var(--t-small); }
+.kb-board .kanban__name { word-break: keep-all; }
+
+@media (max-width: 1200px) {
+  .kb-rail__line { overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+  .kb-rail__line .timeline__item { min-width: 150px; }
+}
+@media (max-width: 760px) {
+  /* 모바일에서도 가로 레일 유지(세로로 풀면 보드가 한참 밀린다) + 오른쪽 페이드 힌트 */
+  .kb-rail__line.timeline--h {
+    flex-direction: row; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none;
+    margin-inline: calc(var(--safe) * -1); padding: 0 var(--safe) 4px; scroll-padding-inline: var(--safe);
+    -webkit-mask-image: linear-gradient(90deg, var(--ink) 82%, transparent); mask-image: linear-gradient(90deg, var(--ink) 82%, transparent);
+  }
+  .kb-rail__line::-webkit-scrollbar { display: none; }
+  .kb-rail__line .timeline__item { display: flex; flex-direction: column; gap: 12px; flex: none; min-width: 148px; padding: 0 12px 0 0; scroll-snap-align: start; }
+  .kb-rail__line .timeline__time { order: -1; grid-column: auto; }
+  .kb-rail__line .timeline__rail { grid-column: auto; grid-row: auto; height: 16px; align-items: center; justify-content: flex-start; }
+  .kb-rail__line .timeline__rail::before { top: 50%; bottom: auto; left: 16px; right: -12px; width: auto; height: 3px; margin-top: -1.5px; }
+  .kb-rail__line .timeline__dot { margin-top: 0; }
+  .kb-rail__line .timeline__body { grid-column: auto; }
+  .kb-tools__hint { display: none; }
+}
+@media (max-width: 640px) {
+  .kb-board { grid-template-columns: repeat(4, minmax(260px, 84vw)); }
+  .kb-band__count { font-size: clamp(72px, 26vw, 112px); }
+  .kb-band__row { flex-direction: column; align-items: stretch; gap: var(--sp-4); }
+  .kb-band__next { margin-left: 0; }
+}

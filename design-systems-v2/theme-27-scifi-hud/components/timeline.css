@@ -1,0 +1,219 @@
+/* ==========================================================================
+   timeline — 비행 프로필(수직 단면) · 로그북
+   가로 시간 눈금 축 + 고도 단면 선, 사건은 축 위 마커 + 라벨.
+   세로형(로그북 .log)도 같은 축 문법(왼쪽 시간 눈금).
+   ========================================================================== */
+
+/* ---- 비행 프로필 ------------------------------------------------------- */
+.prof {
+  position: relative;
+  min-width: 0;
+  padding-left: 60px;      /* 왼쪽 고도 라벨 자리 */
+}
+.prof__plot {
+  position: relative;
+  height: 160px;
+  border-left: var(--stroke) solid var(--line-strong);
+  border-bottom: var(--stroke) solid var(--line-strong);
+  background-image:
+    linear-gradient(var(--line), var(--line)),
+    linear-gradient(var(--line), var(--line));
+  background-size: 100% 1px, 100% 1px;
+  background-position: 0 33.33%, 0 66.66%;
+  background-repeat: no-repeat;
+}
+/* 고도 단면 SVG — viewBox="0 0 100 40" preserveAspectRatio="none" */
+.prof__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.prof__area { fill: var(--select-tint); stroke: none; }
+.prof__line {
+  fill: none;
+  stroke: var(--select);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+.prof__line--done { stroke: var(--ok); }
+.prof__line--plan { stroke: var(--line-strong); stroke-dasharray: 4 4; }
+/* 고도 라벨(왼쪽 축) */
+.prof__alt {
+  position: absolute;
+  left: -6px;
+  transform: translate(-100%, -50%);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+/* 현재 위치 — 마젠타 기체 표지 */
+.prof__now {
+  position: absolute;
+  left: calc(var(--t) * 1%);
+  top: calc(var(--y, 0) * 1%);
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border: var(--stroke-strong) solid var(--target);
+  background: var(--window);
+  transform: rotate(45deg);
+  box-shadow: var(--halo-target);
+}
+.prof__now::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  background: var(--target);
+}
+
+/* 시간 눈금 축 */
+.prof__axis {
+  position: relative;
+  height: 40px;
+  background-image:
+    repeating-linear-gradient(90deg, var(--ink-muted) 0 1px, transparent 1px 12.5%),
+    repeating-linear-gradient(90deg, var(--line-strong) 0 1px, transparent 1px 2.5%);
+  background-size: calc(100% + 1px) 10px, calc(100% + 1px) 5px;
+  background-position: left top, left top;
+  background-repeat: no-repeat;
+}
+.prof__tick {
+  position: absolute;
+  top: 12px;
+  left: calc(var(--t) * 1%);
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+.prof__tick:first-child { transform: none; }
+.prof__tick:last-child { transform: translateX(-100%); }
+
+/* 사건 마커 + 라벨 */
+.prof__events {
+  position: relative;
+  min-height: 64px;
+  border-top: var(--stroke) solid var(--line);
+}
+.prof__evt {
+  position: absolute;
+  top: 0;
+  left: calc(var(--t) * 1%);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 0 0 8px;
+  width: max-content;
+  max-width: 160px;
+  border-left: var(--stroke) solid var(--ink-muted);
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+}
+.prof__evt::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: -4px;
+  width: 7px;
+  height: 7px;
+  background: var(--ink-muted);
+  transform: rotate(45deg);
+}
+.prof__evt time { font-family: var(--font-mono); color: var(--ink-muted); }
+.prof__evt--done { border-color: var(--ok); }
+.prof__evt--done::before { background: var(--ok-face); }
+.prof__evt--now { border-color: var(--target); }
+.prof__evt--now::before { background: var(--target-face); }
+.prof__evt--now time { color: var(--target); }
+.prof__evt--caut { border-color: var(--caution); }
+.prof__evt--caut::before { background: var(--caution-face); }
+.prof__evt--end { left: auto; right: calc(100% - var(--t) * 1%); border-left: 0; border-right: var(--stroke) solid var(--ink-muted); padding: 10px 8px 0 0; text-align: right; align-items: flex-end; }
+.prof__evt--end::before { left: auto; right: -4px; }
+
+/* ---- 로그북 (세로) ------------------------------------------------------ */
+.log {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.log__item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 64px 20px minmax(0, 1fr);
+  gap: 0 var(--sp-2);
+  padding-bottom: var(--sp-4);
+}
+/* 왼쪽 시간 */
+.log__time {
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  line-height: var(--lh-sm);
+}
+.log__time small { display: block; font-size: var(--fs-micro); font-weight: 400; color: var(--ink-muted); }
+/* 축 — 눈금 */
+.log__axis {
+  position: relative;
+  border-left: var(--stroke-strong) solid var(--line-strong);
+  margin-left: 9px;
+  background-image: repeating-linear-gradient(180deg, var(--line-strong) 0 1px, transparent 1px var(--tick-minor));
+  background-size: 5px 100%;
+  background-repeat: no-repeat;
+}
+.log__item:last-child .log__axis { border-left-color: transparent; background: none; }
+.log__axis::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 5px;
+  width: 9px;
+  height: 9px;
+  background: var(--bg);
+  border: var(--stroke-strong) solid var(--ink-muted);
+  transform: rotate(45deg);
+}
+.log__body { min-width: 0; padding-bottom: var(--sp-1); }
+.log__title { font-family: var(--font-ko); font-weight: 700; font-size: var(--fs-sm); line-height: var(--lh-sm); }
+.log__title .t-mono { margin-right: 6px; }
+.log__text { font-size: var(--fs-xs); color: var(--ink-muted); line-height: 1.6; }
+
+.log__item--done .log__axis { border-left-color: var(--ok); }
+.log__item--done .log__axis::before { background: var(--ok-face); border-color: var(--ok-face); }
+.log__item--now .log__axis::before { background: var(--target-face); border-color: var(--target-face); box-shadow: var(--halo-target); }
+.log__item--now .log__time { color: var(--target); text-shadow: var(--glow-target); }
+.log__item--caut .log__axis::before { background: var(--caution-face); border-color: var(--caution-face); }
+.log__item--warn .log__axis::before { background: var(--warning-face); border-color: var(--warning-face); }
+
+@media (max-width: 767px) {
+  .prof__plot { height: 120px; }
+  .prof__events { min-height: 0; display: flex; flex-direction: column; gap: var(--sp-2); padding-top: var(--sp-2); }
+  .prof__evt,
+  .prof__evt--end {
+    position: static;
+    transform: none;
+    max-width: none;
+    flex-direction: row;
+    gap: var(--sp-2);
+    padding: 0 0 0 var(--sp-3);
+    border-left: var(--stroke-strong) solid var(--ink-muted);
+    border-right: 0;
+    text-align: left;
+    align-items: baseline;
+  }
+  .prof__evt::before { display: none; }
+  .prof__evt--done { border-left-color: var(--ok); }
+  .prof__evt--now { border-left-color: var(--target); }
+  .prof__evt--caut { border-left-color: var(--caution); }
+  .prof__tick:not(:first-child):not(:last-child):nth-child(even) { display: none; }
+  .log__item { grid-template-columns: 52px 20px minmax(0, 1fr); }
+}

@@ -1,0 +1,177 @@
+/* ==========================================================================
+   button — 베젤 소프트키 (.skey)
+   직사각 44px · 1px line-strong · 눌림 = 램프 점등 · primary = 시안 면 + 베벨 컷
+   destructive = 빨강 선 + 사선 해치 가드 → 1회차 "덮개 열림", 2회차 실행
+   ========================================================================== */
+
+.skey {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: var(--hit);
+  min-width: var(--hit);
+  padding: 0 var(--sp-4);
+  border: var(--stroke) solid var(--line-strong);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  transition:
+    border-color var(--dur-fast) var(--ease-instrument),
+    background-color var(--dur-fast) var(--ease-instrument),
+    color var(--dur-fast) var(--ease-instrument);
+}
+.skey:hover { border-color: var(--select); }
+.skey:active { background: var(--pressed); }
+
+/* 2줄 소프트키 — 위 라틴 코드, 아래 한글 */
+.skey__code {
+  font-family: var(--font-code);
+  font-size: var(--fs-micro);
+  line-height: var(--lh-micro);
+  font-weight: 400;
+  letter-spacing: var(--track-code);
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.skey--stack {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  padding-block: var(--sp-1);
+  text-align: left;
+}
+
+/* 크기 · 모양 */
+.skey--icon { width: var(--hit); padding: 0; }
+.skey--block { display: flex; width: 100%; }
+.skey--compact { min-height: 32px; min-width: 32px; padding: 0 var(--sp-3); }
+.skey--compact::after { content: ""; position: absolute; inset: -6px; }
+.skey--quiet { border-color: transparent; }
+.skey--quiet:hover { border-color: var(--line-strong); }
+
+/* ---- primary — 시안 면(조종사 주 조작) + 한쪽 베벨 컷 ------------------
+   clip-path는 포커스 외곽선까지 자르므로 면만 ::before에 그린다 */
+.skey--primary {
+  isolation: isolate;
+  border-color: transparent;
+  color: var(--on-select);
+}
+.skey--primary::before {
+  content: "";
+  position: absolute;
+  inset: calc(var(--stroke) * -1);
+  z-index: -1;
+  background: var(--select-face);
+  clip-path: polygon(0 0, calc(100% - var(--bevel)) 0, 100% var(--bevel), 100% 100%, 0 100%);
+  transition: background-color var(--dur-fast) var(--ease-instrument);
+}
+.skey--primary:hover { border-color: transparent; }
+.skey--primary:hover::before { background: color-mix(in srgb, var(--select-face) 86%, var(--ink)); }
+.skey--primary:active { background: transparent; }
+.skey--primary:active::before { background: color-mix(in srgb, var(--select-face) 78%, var(--bg)); }
+.skey--primary .skey__code { color: inherit; opacity: 0.8; }
+
+/* ---- 눌림 = 램프 점등 (토글 소프트키) ---------------------------------- */
+.skey[aria-pressed="true"] {
+  background: var(--pressed);
+  border-color: var(--ok);
+}
+.skey[aria-pressed="true"]::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: 4px;
+  height: 3px;
+  background: var(--ok-face);
+  box-shadow: var(--halo-ok);
+}
+.skey--primary[aria-pressed="true"]::before {
+  inset: calc(var(--stroke) * -1);
+  height: auto;
+  box-shadow: none;
+}
+
+/* 현재 위치(내비 링크로 쓰일 때) = 마젠타 */
+.skey[aria-current="page"],
+.skey[aria-current="true"] {
+  border-color: var(--target);
+  color: var(--target);
+  text-shadow: var(--glow-target);
+}
+
+/* ---- destructive — 빨강 선 + 사선 해치 가드 --------------------------- */
+.skey--danger {
+  border-color: var(--warning);
+  color: var(--warning);
+  background-image: repeating-linear-gradient(-45deg, var(--warning-tint) 0 6px, transparent 6px 12px);
+}
+.skey--danger:hover { border-color: var(--warning); background-color: var(--warning-tint); }
+/* 덮개 열림(1회차) — 빨강 램프 점등, 2회차에 실행 */
+.skey--danger[data-armed="true"] {
+  background: var(--warning-face);
+  color: var(--on-warning);
+  box-shadow: var(--halo-warning);
+}
+.skey--danger[data-armed="true"] .skey__code { color: inherit; }
+
+/* ---- 오류 (직전 동작 실패) --------------------------------------------- */
+.skey[data-state="error"] {
+  border-color: var(--caution);
+  color: var(--caution);
+}
+
+/* ---- 비활성 — 점선 테두리 + 보조 글자 --------------------------------- */
+.skey:disabled,
+.skey[aria-disabled="true"] {
+  border-style: dashed;
+  border-color: var(--line-strong);
+  background: transparent;
+  color: var(--ink-muted);
+  text-shadow: none;
+  cursor: not-allowed;
+}
+.skey--primary:disabled::before,
+.skey--primary[aria-disabled="true"]::before { background: var(--bezel); }
+.skey--danger:disabled { background-image: none; }
+
+/* ---- 처리 중 — 12분할 눈금 링이 한 칸씩 점등 -------------------------- */
+.skey[aria-busy="true"] {
+  pointer-events: none;
+  color: var(--ink-muted);
+}
+.skey--primary[aria-busy="true"] { color: var(--on-select); }
+.skey[aria-busy="true"]::after {
+  content: "";
+  position: relative;
+  inset: auto;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border-radius: var(--radius-round);
+  background:
+    conic-gradient(from -12deg, currentColor 0 24deg, transparent 24deg 360deg),
+    repeating-conic-gradient(from -4deg, color-mix(in srgb, currentColor 35%, transparent) 0 8deg, transparent 8deg 30deg);
+  -webkit-mask: radial-gradient(circle, transparent 4px, var(--mask) 4.5px);
+  mask: radial-gradient(circle, transparent 4px, var(--mask) 4.5px);
+  animation: skey-busy 1.2s steps(12) infinite;
+}
+@keyframes skey-busy { to { transform: rotate(360deg); } }
+
+/* 소프트키 묶음 */
+.skey-row { display: flex; flex-wrap: wrap; gap: var(--sp-gap); }
+
+/* 테마 토글은 램프 점등 표현을 쓰지 않는다(야간/주간은 상태가 아니라 화면 모드) */
+.skey[data-theme-toggle][aria-pressed="true"] { background: transparent; border-color: var(--line-strong); }
+.skey[data-theme-toggle][aria-pressed="true"]::before { content: none; }
+.skey[data-theme-toggle]:hover { border-color: var(--select); }

@@ -1,0 +1,258 @@
+/* ==========================================================================
+   progress — 테이프 바 / 세로 진행 테이프 / 원호 게이지
+   시그니처 1: 값은 눈금 위에 놓이고, 현재 값은 포인터 달린 리드아웃 창에 든다.
+   구간 경계(SoC 35% 주의 · 25% 경고)는 눈금 아래 색 띠로. 빨-노-초 그라데이션 금지.
+   ========================================================================== */
+
+/* ---- 가로 테이프 ------------------------------------------------------- */
+.tape {
+  --val: 0;
+  --tape-c: var(--select);
+  --tape-glow: var(--glow-select);
+  position: relative;
+  min-width: 0;
+}
+.tape--ok   { --tape-c: var(--ok);      --tape-glow: var(--glow-ok); }
+.tape--caut { --tape-c: var(--caution); --tape-glow: var(--glow-caution); }
+.tape--warn { --tape-c: var(--warning); --tape-glow: var(--glow-warning); }
+.tape--tgt  { --tape-c: var(--target);  --tape-glow: var(--glow-target); }
+
+.tape__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-1);
+  font-size: var(--fs-sm);
+}
+.tape__label { font-family: var(--font-ko); font-weight: 700; }
+.tape__note { font-size: var(--fs-xs); color: var(--ink-muted); }
+
+/* 창이 뜨는 자리(32px) + 트랙 */
+.tape__body {
+  position: relative;
+  padding-top: 34px;
+}
+.tape__track {
+  position: relative;
+  height: 18px;
+  border-bottom: var(--stroke) solid var(--line-strong);
+  background-image:
+    repeating-linear-gradient(90deg, var(--ink-muted) 0 1px, transparent 1px 10%),
+    repeating-linear-gradient(90deg, var(--line-strong) 0 1px, transparent 1px 2.5%);
+  background-size: calc(100% + 1px) 12px, calc(100% + 1px) 6px;
+  background-position: left bottom, left bottom;
+  background-repeat: no-repeat;
+}
+/* 채움 — 눈금 위 6px 막대 */
+.tape__fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 6px;
+  width: calc(var(--val) * 1%);
+  background: var(--tape-c);
+  box-shadow: var(--tape-glow);
+  transition: width var(--dur-base) var(--ease-instrument);
+}
+/* 현재값 창 — 채움 끝 위에, 아래 포인터 */
+.tape__rdo {
+  --rdo-c: var(--tape-c);
+  position: absolute;
+  top: 0;
+  left: clamp(0px, calc(var(--val) * 1% - 28px), calc(100% - 56px));
+  min-width: 56px;
+  justify-content: center;
+  transition: left var(--dur-base) var(--ease-instrument);
+}
+.tape__scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  line-height: var(--lh-micro);
+  color: var(--ink-muted);
+}
+
+/* SoC 구간 띠: 0–25 빨강 · 25–35 앰버 (눈금 아래 3px) */
+.tape--soc .tape__track::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 3px;
+  background:
+    linear-gradient(90deg, var(--warning) 0 25%, var(--caution) 25% 35%, transparent 35% 100%);
+}
+/* 목표 마커(마젠타) — style="--goal:80" */
+.tape__goal {
+  position: absolute;
+  top: -4px;
+  bottom: 0;
+  left: calc(var(--goal) * 1%);
+  width: 2px;
+  background: var(--target);
+  box-shadow: var(--glow-target);
+}
+.tape__goal::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: -4px;
+  border-style: solid;
+  border-width: 6px 5px 0 5px;
+  border-color: var(--target) transparent transparent transparent;
+}
+
+/* 처리 중(값 미정) — 눈금이 흐름 */
+.tape[aria-busy="true"] .tape__fill {
+  width: 100%;
+  background: repeating-linear-gradient(90deg, var(--tape-c) 0 12px, transparent 12px 24px);
+  background-size: 24px 6px;
+  animation: tape-busy 1.2s linear infinite;
+  box-shadow: none;
+}
+@keyframes tape-busy { to { background-position: 24px 0; } }
+
+/* ---- 행형 테이프 — [라벨][트랙][창] 한 줄 (기체 8대 SoC 등) ------------- */
+.tape--row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) 64px;
+  align-items: end;
+  gap: var(--sp-3);
+  min-height: 36px;
+}
+.tape--row .tape__label { font-family: var(--font-mono); font-size: var(--fs-sm); padding-bottom: 2px; }
+.tape--row .tape__body { padding-top: 0; }
+.tape--row .tape__track { height: 16px; }
+.tape--row .tape__rdo {
+  position: static;
+  min-width: 0;
+  justify-self: end;
+}
+
+/* ---- 세로 진행 테이프 (체크리스트 진행·스크롤) ------------------------- */
+.vtape {
+  --val: 0;
+  position: relative;
+  width: 64px;
+  min-height: 240px;
+  height: 100%;
+}
+.vtape__scale {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 14px;
+  border-right: var(--stroke) solid var(--line-strong);
+  background-image:
+    repeating-linear-gradient(0deg, var(--ink-muted) 0 1px, transparent 1px 10%),
+    repeating-linear-gradient(0deg, var(--line-strong) 0 1px, transparent 1px 2.5%);
+  background-size: 12px calc(100% + 1px), 6px calc(100% + 1px);
+  background-position: right bottom, right bottom;
+  background-repeat: no-repeat;
+}
+.vtape__fill {
+  position: absolute;
+  left: 16px;
+  bottom: 0;
+  width: 4px;
+  height: calc(var(--val) * 1%);
+  background: var(--ok);
+  box-shadow: var(--glow-ok);
+  transition: height var(--dur-base) var(--ease-instrument);
+}
+.vtape__rdo {
+  position: absolute;
+  left: 30px;
+  bottom: clamp(0px, calc(var(--val) * 1% - 12px), calc(100% - 26px));
+  transition: bottom var(--dur-base) var(--ease-instrument);
+}
+
+/* ---- 원호 게이지 — SoC (240° 호, 초록·앰버·빨강 구간 + 바늘 + 중앙 숫자) -- */
+.gauge {
+  --val: 0;
+  --g-c: var(--ink);
+  --g-glow: var(--glow-ink);
+  position: relative;
+  width: min(100%, 220px);
+  aspect-ratio: 1;
+  color: var(--ink);
+}
+.gauge--ok   { --g-c: var(--ok);      --g-glow: var(--glow-ok); }
+.gauge--caut { --g-c: var(--caution); --g-glow: var(--glow-caution); }
+.gauge--warn { --g-c: var(--warning); --g-glow: var(--glow-warning); }
+.gauge__svg { width: 100%; height: 100%; }
+.gauge__svg circle {
+  fill: none;
+  transform: rotate(150deg);
+  transform-origin: 60px 60px;
+}
+.gauge__track { stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 240 120; }
+.gauge__zone { stroke-width: 4; }
+.gauge__zone--warn { stroke: var(--warning); stroke-dasharray: 60 300; }
+.gauge__zone--caut { stroke: var(--caution); stroke-dasharray: 24 336; stroke-dashoffset: -60; }
+.gauge__zone--ok   { stroke: var(--ok); stroke-dasharray: 156 204; stroke-dashoffset: -84; }
+.gauge__ticks {
+  stroke: var(--ink-muted);
+  stroke-width: 6;
+  stroke-dasharray: 1.5 22.5 1.5 22.5 1.5 22.5 1.5 22.5 1.5 22.5 1.5 22.5 1.5 22.5 1.5 22.5 1.5 22.5 1.5 22.5 1.5 118.5;
+  stroke-dashoffset: 0.75;
+}
+.gauge__needle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 40%;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--g-c);
+  box-shadow: var(--g-glow);
+  transform-origin: 0 50%;
+  transform: rotate(calc(150deg + var(--val) * 2.4deg));
+  transition: transform var(--dur-base) var(--ease-instrument);
+}
+.gauge__needle::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-round);
+  background: var(--bg);
+  border: var(--stroke-strong) solid var(--g-c);
+}
+.gauge__rdo {
+  position: absolute;
+  left: 50%;
+  top: 66%;
+  transform: translateX(-50%);
+  padding: 0 var(--sp-2);
+  border: var(--stroke-strong) solid var(--g-c);
+  background: var(--window);
+  color: var(--g-c);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--fs-xl);
+  line-height: 1.25;
+  text-shadow: var(--g-glow);
+  white-space: nowrap;
+}
+.gauge__rdo small { font-size: 0.5em; color: var(--ink-muted); font-weight: 400; margin-left: 2px; }
+.gauge__label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 2%;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--track-code);
+  color: var(--ink-muted);
+}
+.gauge--sm { width: 120px; }
+.gauge--sm .gauge__rdo { font-size: var(--fs-sm); }

@@ -1,0 +1,205 @@
+/* ==========================================================================
+   table — 운항표
+   헤더 = 라틴 모노 코드 + 한글 · 숫자·시각 우측 정렬 모노 · 상태 = 미니 램프 ·
+   행 호버 = 시안 왼쪽 레일 · 행 번호 레일(눈금) ·
+   모바일: 편명·상태(.tbl__keep)만 남기고 행 펼침 버튼으로 나머지 표시
+   ========================================================================== */
+
+.tbl-wrap {
+  position: relative;
+  min-width: 0;
+  overflow-x: auto;
+  background: var(--surface);
+  border: var(--stroke) solid var(--line);
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+.tbl {
+  width: 100%;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+  font-variant-numeric: tabular-nums;
+}
+.tbl caption {
+  padding: var(--sp-2) var(--sp-4);
+  text-align: left;
+  font-family: var(--font-ko);
+  font-weight: 700;
+  font-size: var(--fs-md);
+  border-bottom: var(--stroke) solid var(--line);
+}
+.tbl th,
+.tbl td {
+  padding: 0 var(--sp-3);
+  height: var(--hit);
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: var(--stroke) solid var(--line);
+  white-space: nowrap;
+}
+.tbl thead th {
+  height: 48px;
+  background: var(--bg);
+  border-bottom: var(--stroke) solid var(--line-strong);
+  font-weight: 400;
+  vertical-align: bottom;
+  padding-bottom: 6px;
+}
+.th__code {
+  display: block;
+  font-family: var(--font-code);
+  font-size: var(--fs-micro);
+  line-height: 1.3;
+  letter-spacing: var(--track-code);
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.th__ko {
+  display: block;
+  font-family: var(--font-ko);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.4;
+}
+.tbl .num,
+.tbl th.num { text-align: right; }
+.tbl td.num,
+.tbl td.mono { font-family: var(--font-mono); }
+.tbl td.wrap { white-space: normal; min-width: 200px; }
+
+/* 행 번호 레일 — 눈금 */
+.tbl__no {
+  width: 44px;
+  padding-right: var(--sp-2) !important;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  text-align: right !important;
+  background-image: linear-gradient(var(--line-strong), var(--line-strong));
+  background-size: 6px 1px;
+  background-position: right center;
+  background-repeat: no-repeat;
+}
+
+/* 행 상태 */
+.tbl tbody tr { position: relative; transition: background-color var(--dur-fast) var(--ease-instrument); }
+.tbl tbody tr:hover { background: var(--bezel); }
+.tbl tbody tr:hover > :first-child { box-shadow: inset 2px 0 0 var(--select); }
+.tbl tbody tr[aria-selected="true"] { background: var(--select-tint); }
+.tbl tbody tr[aria-selected="true"] > :first-child { box-shadow: inset 2px 0 0 var(--select); }
+.tbl tbody tr[aria-current="true"] > :first-child { box-shadow: inset 3px 0 0 var(--target); }
+.tbl tbody tr.is-caut > :first-child { box-shadow: inset 3px 0 0 var(--caution); }
+.tbl tbody tr.is-warn > :first-child { box-shadow: inset 3px 0 0 var(--warning); }
+.tbl tbody tr.is-muted { color: var(--ink-muted); }
+.tbl tfoot td {
+  border-bottom: 0;
+  border-top: var(--stroke) solid var(--line-strong);
+  color: var(--ink-muted);
+  font-size: var(--fs-xs);
+}
+.tbl__flight { font-family: var(--font-mono); font-weight: 700; }
+.tbl__chg { color: var(--caution); font-weight: 700; }
+.tbl__chg::before { content: "→ "; color: var(--ink-muted); font-weight: 400; }
+
+/* 정렬 머리 */
+.tbl__sort {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 6px;
+  min-height: 36px;
+  text-align: inherit;
+  color: inherit;
+}
+th.num .tbl__sort { flex-direction: row-reverse; }
+.tbl__sort::after {
+  content: "";
+  width: 0;
+  height: 0;
+  margin-bottom: 4px;
+  border-style: solid;
+  border-width: 0 4px 6px 4px;
+  border-color: transparent transparent var(--line-strong) transparent;
+}
+.tbl__sort:hover .th__ko { color: var(--select); }
+th[aria-sort="ascending"] .tbl__sort::after { border-bottom-color: var(--select); }
+th[aria-sort="descending"] .tbl__sort::after { border-width: 6px 4px 0 4px; border-color: var(--select) transparent transparent transparent; }
+th[aria-sort] .th__code { color: var(--select); }
+
+/* 열 폭 고정 — <colgroup>의 열 클래스. 상태(STS)는 폭을 비워 남는 폭을 모두 받는다.
+   (자동 분배로 ROUTE→STD, REG→CAPT 사이에 죽은 공간이 생기던 문제) */
+.tbl__col--chk   { width: 44px; }
+.tbl__col--no    { width: 48px; }
+.tbl__col--flt   { width: 96px; }
+.tbl__col--route { width: 128px; }
+.tbl__col--time  { width: 96px; }
+.tbl__col--reg   { width: 200px; }
+.tbl__col--capt  { width: 96px; }
+.tbl__col--pax   { width: 64px; }
+
+/* 선택 체크 칸 */
+.tbl__check { width: 44px; }
+.tbl__check .check { min-height: 0; }
+
+/* 모바일 펼침 칸 (행 맨 끝 td, 데스크톱에선 숨김) */
+.tbl .tbl__exp { display: none; }
+
+/* 처리 중 */
+.tbl-wrap[aria-busy="true"] tbody { opacity: 0.4; }
+
+/* ---- 모바일 — 편명·상태만 남기고 행 펼침 ------------------------------ */
+@media (max-width: 767px) {
+  .tbl-wrap--stack { overflow-x: visible; }
+  .tbl--stack thead,
+  .tbl--stack colgroup { display: none; }
+  .tbl--stack,
+  .tbl--stack tbody { display: block; }
+  .tbl--stack tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto var(--hit);
+    align-items: center;
+    column-gap: var(--sp-2);
+    padding: var(--sp-1) 0 var(--sp-1) var(--sp-3);
+    border-bottom: var(--stroke) solid var(--line);
+  }
+  .tbl--stack td {
+    display: none;
+    height: auto;
+    padding: 0;
+    border: 0;
+  }
+  .tbl--stack td.tbl__keep { display: block; grid-row: 1; }
+  .tbl--stack td.tbl__keep ~ td.tbl__keep { justify-self: end; }
+  .tbl--stack td.tbl__exp {
+    display: block;
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .tbl--stack .tbl__exp .icon { transition: transform var(--dur-base) var(--ease-instrument); }
+  .tbl--stack tr.is-open .tbl__exp .icon { transform: rotate(180deg); }
+  .tbl--stack tr.is-open td:not(.tbl__keep):not(.tbl__no):not(.tbl__check):not(.tbl__exp) {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: var(--sp-2);
+    padding: 6px var(--sp-3) 6px 0;
+    border-top: var(--stroke) solid var(--line);
+    text-align: left;
+    white-space: normal;
+  }
+  .tbl--stack tr.is-open td[data-label]::before {
+    content: attr(data-label);
+    font-family: var(--font-ko);
+    font-size: var(--fs-xs);
+    color: var(--ink-muted);
+  }
+  .tbl--stack tbody tr:hover > :first-child,
+  .tbl--stack tbody tr[aria-selected="true"] > :first-child { box-shadow: none; }
+  .tbl--stack tbody tr:hover { box-shadow: inset 2px 0 0 var(--select); }
+  .tbl--stack tbody tr[aria-current="true"] { box-shadow: inset 3px 0 0 var(--target); }
+  .tbl--stack tbody tr.is-caut { box-shadow: inset 3px 0 0 var(--caution); }
+  .tbl--stack tbody tr.is-warn { box-shadow: inset 3px 0 0 var(--warning); }
+  .tbl--stack tfoot { display: block; }
+  .tbl--stack tfoot tr { display: block; }
+  .tbl--stack tfoot td { display: block; padding: var(--sp-2) var(--sp-3); }
+}

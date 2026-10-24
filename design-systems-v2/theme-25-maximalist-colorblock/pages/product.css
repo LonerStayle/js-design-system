@@ -1,0 +1,272 @@
+/* product — 라인업 블록 티셔츠. 색을 고르는 일이 곧 무대를 고르는 일이다.
+   고른 색은 :has()로 페이지 전체 변수(--tee, --pd-bg)를 바꾼다: 티셔츠 면 + 뒤 판의 맞붙는 색.
+   맞붙는 짝은 가장 시끄러운 이웃 셋(핑크|블루, 라임|핑크, 오렌지|보라). semantic 토큰만 사용. */
+
+.pd {
+  --tee: var(--stage-pink); --tee-ink: var(--on-pink); --tee-hi: var(--on-pink); --tee-mark: var(--stage-pink);
+  --tee-seam: var(--fill-ink);
+  --pd-bg: var(--stage-blue); --pd-fg: var(--on-blue);
+}
+.pd:has(#tee-b:checked) { --tee: var(--stage-blue); --tee-ink: var(--on-blue); --tee-hi: var(--clash-yellow); --tee-mark: var(--clash-yellow); --pd-bg: var(--stage-pink); --pd-fg: var(--on-pink); }
+.pd:has(#tee-l:checked) { --tee: var(--stage-lime); --tee-ink: var(--on-lime); --tee-hi: var(--clash-violet); --tee-mark: var(--stage-lime); --pd-bg: var(--stage-pink); --pd-fg: var(--on-pink); }
+.pd:has(#tee-o:checked) { --tee: var(--stage-orange); --tee-ink: var(--on-orange); --tee-hi: var(--on-orange); --tee-mark: var(--stage-orange); --pd-bg: var(--fill-violet); --pd-fg: var(--on-violet); }
+
+/* 고른 색 이름 · 합계 줄은 고른 값만 보인다 */
+.pd-is { display: none; }
+.pd:has(#tee-p:checked) .pd-is--p, .pd:has(#tee-b:checked) .pd-is--b,
+.pd:has(#tee-l:checked) .pd-is--l, .pd:has(#tee-o:checked) .pd-is--o { display: inline; }
+
+/* ---------- 1. 티셔츠 판 ---------- */
+.pd-stage {
+  display: flex; flex-direction: column;
+  padding: var(--sp-4) var(--pad-x) var(--sp-6);
+  background: var(--pd-bg); color: var(--pd-fg);
+  transition: background-color var(--dur-flip) linear, color var(--dur-flip) linear;
+}
+.pd-view { display: flex; flex-direction: column; flex: 1; }
+.pd-view__bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3) var(--sp-5); flex-wrap: wrap; border-bottom: var(--seam) solid currentColor; }
+.pd-stage .tabs__list { border-bottom: 0; }
+.pd-stage .tabs__tab { color: inherit; }
+.pd-stage .tabs__tab[aria-selected="true"] { background: var(--notice); color: var(--on-notice); }
+.pd-stage .tabs__tab:hover:not([aria-selected="true"]) { background: var(--fill-ink); color: var(--on-ink); }
+.pd-view__now { font-size: 15px; line-height: 1.4; }
+.pd-view__now b { font-family: var(--font-display-ko); font-weight: 900; font-size: 20px; letter-spacing: var(--track-ko); }
+.pd-view__now .t-mono { font-weight: 700; }
+.pd-view__panel { display: grid; place-items: start center; padding-block: var(--sp-6); }
+.pd-view__panel[hidden] { display: none; }
+
+/* 티셔츠: SVG path 하나로 그린다 — 어깨 경사, 사선 소매 끝단(+ 끝단 박음선), 아래로 갈수록 좁아지는 몸판, 목둘레 립.
+   면은 고른 무대색(--tee), 이음선은 3px 먹 하나. 프린트는 몸판 폭의 70% 안쪽에만 찍는다.
+   좌표: viewBox 400×440 · 가슴 폭 98→302(204) · 프린트 130→270(140 = 70%) */
+.tee { container-type: inline-size; width: min(100%, 640px); margin: 0 auto; }
+.tee__shape { position: relative; aspect-ratio: 400 / 440; }
+.tee__svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.tee__cloth { fill: var(--tee); stroke: var(--tee-seam); stroke-width: 3; stroke-linejoin: round; transition: fill var(--dur-flip) linear; }
+.tee__line { fill: none; stroke: var(--tee-seam); stroke-width: 3; stroke-linecap: round; }
+.tee__rib { fill: none; stroke: var(--tee-seam); stroke-width: 3; stroke-linecap: round; }
+
+/* 프린트: 포스터와 같은 빌링 서열. T1·T2 줄은 data-fit 으로 프린트 폭에 맞춘다 (cqi = 티셔츠 폭 기준) */
+.tee__print {
+  position: absolute; top: 19%; left: 32.5%; width: 35%; bottom: 14%;
+  display: flex; flex-direction: column; justify-content: center; gap: 1.6cqi;
+  color: var(--tee-ink); font-family: var(--font-display-ko); font-weight: 900; letter-spacing: -0.02em;
+}
+.tee__head { display: flex; align-items: center; justify-content: space-between; gap: 1.2cqi; margin: 0; }
+.tee__mark { padding: .12em .22em; background: var(--fill-ink); color: var(--tee-mark); font-size: 5.2cqi; line-height: 1; }
+.tee__code { font-family: var(--font-mono); font-weight: 700; font-size: max(9px, 1.9cqi); line-height: 1.25; letter-spacing: 0; text-align: right; }
+.tee .bill { margin: 0; font-family: var(--font-display-ko); }
+.tee .tee__l1 { font-size: 6cqi; line-height: .95; color: var(--tee-hi); }
+.tee .tee__l2 { font-size: 3.6cqi; line-height: 1; }
+.tee .tee__l1 .bill__sep, .tee .tee__l2 .bill__sep { color: var(--tee-ink); }
+.tee__more { margin: 0; font-family: var(--font-body); font-weight: 700; font-size: max(11px, 2.4cqi); line-height: 1.2; }
+.tee__foot { display: flex; align-items: center; justify-content: space-between; gap: 1cqi; margin: 1cqi 0 0; padding-top: 1.4cqi; border-top: max(2px, .5cqi) solid var(--tee-ink); font-size: max(10px, 2cqi); }
+.tee__syms { display: inline-flex; gap: 1cqi; padding: .7cqi 1cqi; background: var(--fill-ink); }   /* 고른 색과 같은 기호도 보이게 먹 칩 위에 */
+.tee__syms .sym { width: 2.4cqi; height: 2.4cqi; }
+
+/* 뒤판 */
+.tee__print--back { top: 15%; bottom: auto; justify-content: flex-start; gap: 2.2cqi; align-items: flex-start; }
+.tee__big { margin: 0; padding: 0 .1em .06em; background: var(--fill-ink); color: var(--tee-mark); font-size: 17cqi; line-height: .96; }
+.tee__date { margin: 0; font-family: var(--font-display); font-stretch: 110%; font-size: 4.4cqi; line-height: .95; letter-spacing: var(--track-latin); color: var(--tee-hi); }
+.tee__stages { display: grid; gap: .8cqi; margin: 0; padding: 0; list-style: none; font-size: 2.6cqi; font-weight: 700; }
+.tee__stages li { display: flex; align-items: center; gap: 1cqi; }
+.tee__stages .sym { width: 2.2cqi; height: 2.2cqi; }
+
+/* ---------- 1. 구매 블록 ---------- */
+.pd-buy { display: flex; flex-direction: column; gap: var(--sp-5); min-width: 0; padding: var(--sp-4) var(--pad-x) var(--sp-7); background: var(--surface); }
+.pd-buy__title { display: flex; flex-direction: column; gap: var(--sp-3); }
+.pd-buy__h { font-family: var(--font-display-ko); font-weight: 900; font-size: min(var(--fs-t3), 60px); line-height: 1.02; letter-spacing: var(--track-ko); }
+.pd-buy__price {
+  font-family: var(--font-display); font-weight: 900; font-stretch: 110%; font-size: var(--fs-t2); line-height: var(--lh-t2);
+  letter-spacing: var(--track-latin); font-variant-numeric: tabular-nums; color: var(--pink-text);
+}
+.pd-buy__won { font-size: .48em; vertical-align: .7em; margin-right: .06em; }
+.pd-buy__lead { max-width: 30em; font-size: 16px; line-height: 1.7; }
+
+.pd-opt { min-width: 0; margin: 0; padding: 0; border: 0; }
+.pd-opt__legend { display: flex; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-2); padding: 0; font-weight: 900; font-size: 18px; }
+.pd-opt__sub { font-weight: 400; font-size: 13px; color: var(--text-muted); }
+
+/* 사이즈 · 남은 수량 표: 티셔츠 아래 종이 칸 — 고른 색 줄만 그 무대색 면 */
+.pd-chart { margin-top: var(--sp-5); background: var(--surface); color: var(--text); }
+.pd-chart__table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.pd-chart__cap { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); padding: 10px var(--sp-4); background: var(--fill-ink); color: var(--on-ink); text-align: left; font-family: var(--font-display-ko); font-weight: 900; font-size: 18px; }
+.pd-chart__cap .t-mono { font-size: 12px; color: var(--on-block-muted); font-family: var(--font-mono); }
+.pd-chart__table th, .pd-chart__table td { padding: 9px 10px; border-bottom: var(--seam) solid var(--surface-sunk); text-align: right; font-weight: 700; white-space: nowrap; }
+.pd-chart__table thead th { background: var(--surface-sunk); font-size: 13px; }
+.pd-chart__table th[scope="row"], .pd-chart__table thead th:first-child { text-align: left; }
+.pd-chart__table th[scope="row"] .sym { width: 11px; height: 11px; margin-right: 6px; color: var(--st-text); vertical-align: 0; }
+.pd-chart__table th[scope="row"] .t-mono { margin-left: 6px; font-size: 11px; color: var(--text-muted); }
+.pd-chart__size th, .pd-chart__size td { color: var(--text-muted); }
+.pd-chart__out { color: var(--danger-text); text-decoration: line-through; text-decoration-thickness: 2px; }
+.pd:has(#tee-p:checked) .pd-chart__row--p, .pd:has(#tee-b:checked) .pd-chart__row--b,
+.pd:has(#tee-l:checked) .pd-chart__row--l, .pd:has(#tee-o:checked) .pd-chart__row--o { background: var(--st); color: var(--on-st); --text-muted: var(--on-st); --danger-text: var(--on-st); --st-text: var(--on-st); }
+.pd-chart__note { padding: 10px var(--sp-4) 12px; font-size: 13px; color: var(--text-muted); }
+
+/* 색 견본: 무대색 블록 넷이 맞붙는다. 고른 칸 = 먹 테 + 종이 테 + 체크 */
+.pd-swatches { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.pd-sw {
+  position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 6px;
+  min-height: 104px; padding: 12px; background: var(--st); color: var(--on-st); cursor: pointer;
+  transition: background-color var(--dur-flip) linear, color var(--dur-flip) linear;
+}
+.pd-sw input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.pd-sw__sym .sym { width: 18px; height: 18px; }
+.pd-sw__name { font-family: var(--font-display-ko); font-weight: 900; font-size: 22px; line-height: 1; letter-spacing: var(--track-ko); }
+.pd-sw__stage { font-size: 13px; font-weight: 700; line-height: 1.2; }
+/* 칩마다 고른 사이즈의 남은 수량 */
+.pd-sw__stock { font-size: 13px; font-weight: 700; line-height: 1.2; }
+.pd-stk { display: none; }
+.pd:has([name="tee-size"][value="S"]:checked) .pd-stk--S, .pd:has([name="tee-size"][value="M"]:checked) .pd-stk--M,
+.pd:has([name="tee-size"][value="L"]:checked) .pd-stk--L, .pd:has([name="tee-size"][value="XL"]:checked) .pd-stk--XL,
+.pd:has([name="tee-size"][value="2XL"]:checked) .pd-stk--2XL { display: inline; }
+.pd-sw:hover:not(:has(input:checked)) { background: var(--st-flip-bg); color: var(--st-flip-fg); }
+.pd-sw:has(input:checked) { box-shadow: inset 0 0 0 4px var(--fill-ink), inset 0 0 0 8px var(--surface); padding: 16px; }
+.pd-sw:has(input:checked)::after {
+  content: ""; position: absolute; top: 14px; right: 14px; width: 22px; height: 22px; background: var(--fill-ink);
+  -webkit-mask: var(--mask-check) center / contain no-repeat; mask: var(--mask-check) center / contain no-repeat;
+}
+.pd-sw:has(input:focus-visible) { outline: 3px solid var(--focus-out); outline-offset: 3px; }
+
+/* 사이즈: 다섯 칸이 맞붙는 줄, 고른 칸만 블루 */
+.pd-sizes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--surface-sunk); }
+.pd-size { position: relative; display: grid; place-items: center; min-height: 56px; cursor: pointer; transition: background-color var(--dur-flip) linear, color var(--dur-flip) linear; }
+.pd-size + .pd-size { border-left: var(--seam) solid var(--surface); }
+.pd-size input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.pd-size span { font-family: var(--font-display); font-weight: 900; font-size: 20px; letter-spacing: var(--track-latin); }
+.pd-size:hover { background: var(--notice); color: var(--on-notice); }
+.pd-size:has(input:checked) { background: var(--action); color: var(--on-action); }
+.pd-size--out { cursor: not-allowed; color: var(--disabled-fg); background: var(--disabled-fill); grid-template-rows: auto auto; align-content: center; gap: 0; }
+.pd-size--out:hover { background: var(--disabled-fill); color: var(--disabled-fg); }
+.pd-size--out input { cursor: not-allowed; }
+.pd-size--out span { text-decoration: line-through; text-decoration-thickness: 2px; }
+.pd-size--out small { font-size: 11px; font-weight: 700; color: var(--danger-text); line-height: 1.1; }
+.pd-size:has(input:focus-visible) { outline: 3px solid var(--focus-out); outline-offset: -3px; box-shadow: inset 0 0 0 6px var(--focus-in); }
+
+.pd-opt--ship { display: flex; flex-direction: column; }
+.pd-opt--ship .radio { display: flex; }
+
+.pd-sum { border-top: var(--seam) solid var(--rule); padding-top: var(--sp-3); }
+.pd-sum__row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); font-size: 15px; font-weight: 700; }
+.pd-sum__row--post { display: none; }
+.pd:has(#ship-post:checked) .pd-sum__row--post { display: flex; }
+.pd:has(#ship-post:checked) .pd-sum__row--gate { display: none; }
+.pd-sum__total { font-family: var(--font-display); font-weight: 900; font-size: 32px; letter-spacing: var(--track-latin); font-variant-numeric: tabular-nums; }
+.pd-buy__pay { font-size: 13px; color: var(--text-muted); }
+
+/* ---------- 2. 색이 곧 무대: 수용 인원 순으로 줄의 크기와 폭이 준다 ---------- */
+.pd-map__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-2) var(--sp-5); flex-wrap: wrap; }
+.pd-map__h { font-family: var(--font-display-ko); font-weight: 900; font-size: var(--fs-t4); line-height: 1.1; letter-spacing: var(--track-ko); }
+.pd-map__note { font-size: 14px; }
+.pd-step {
+  --step-name: 26px;
+  display: grid; grid-template-columns: auto minmax(0, auto) minmax(0, 1fr) auto auto auto; align-items: center; column-gap: var(--sp-5);
+  min-height: 88px; padding: var(--sp-4) var(--pad-x); cursor: pointer;
+  transition: background-color var(--dur-flip) linear, color var(--dur-flip) linear;
+}
+.pd-step:nth-child(1) { --step-name: var(--fs-t3); min-height: 132px; }
+.pd-step:nth-child(2) { --step-name: var(--fs-t4); min-height: 108px; }
+.pd-step:nth-child(3) { --step-name: 28px; }
+.pd-step:nth-child(4) { --step-name: 24px; min-height: 76px; }
+.pd-step__sym .sym { width: 36px; height: 36px; }
+.pd-step:nth-child(1) .pd-step__sym .sym { width: 52px; height: 52px; }
+.pd-step__name { font-family: var(--font-display-ko); font-weight: 900; font-size: var(--step-name); line-height: 1; letter-spacing: var(--track-ko); white-space: nowrap; }
+.pd-step__what { font-size: 15px; font-weight: 700; line-height: 1.4; }
+.pd-step__cap { font-size: 14px; font-weight: 700; white-space: nowrap; }
+.pd-step__cap b { font-family: var(--font-display); font-weight: 900; font-stretch: 125%; font-size: 26px; letter-spacing: var(--track-latin); margin-right: 2px; }
+.pd-step__code { font-family: var(--font-mono); font-weight: 700; font-size: 13px; }
+.pd-step__on { visibility: hidden; padding: 6px 10px; background: var(--fill-ink); color: var(--clash-yellow); font-size: 13px; font-weight: 700; white-space: nowrap; }
+.pd:has(#tee-p:checked) .pd-step[for="tee-p"] .pd-step__on,
+.pd:has(#tee-b:checked) .pd-step[for="tee-b"] .pd-step__on,
+.pd:has(#tee-l:checked) .pd-step[for="tee-l"] .pd-step__on,
+.pd:has(#tee-o:checked) .pd-step[for="tee-o"] .pd-step__on { visibility: visible; }
+.pd-step:hover { background: var(--fill-ink); color: var(--on-ink); }
+.pd-step:hover .pd-step__on { background: var(--fill-yellow); color: var(--on-yellow); }
+
+/* ---------- 3. 같이 담기 ---------- */
+.pd-more__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-2) var(--sp-5); flex-wrap: wrap; padding-top: var(--sp-7); }
+.pd-good { display: flex; flex-direction: column; min-width: 0; }
+.pd-good__art { height: 300px; }
+.pd-good__info { display: flex; flex-direction: column; gap: var(--sp-2); flex: 1; padding: var(--sp-4) var(--pad-x) var(--sp-5); }
+.pd-good--poster .pd-good__info { background: var(--surface-sunk); }
+.pd-good--hanky .pd-good__info { background: var(--surface); }
+.pd-good__name { font-family: var(--font-display-ko); font-weight: 900; font-size: 22px; line-height: 1.15; letter-spacing: var(--track-ko); }
+.pd-good--poster .pd-good__name { font-size: var(--fs-t4); }
+.pd-good__note { font-size: 14px; line-height: 1.6; }
+.pd-good__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); margin-top: auto; padding-top: var(--sp-3); }
+.pd-good__price { font-family: var(--font-display); font-weight: 900; font-size: 26px; letter-spacing: var(--track-latin); font-variant-numeric: tabular-nums; }
+.pd-good--poster .pd-good__price { font-size: 32px; }
+
+/* 포스터 그림: 먹 판 위 B2 세로 한 장 (위에서부터 쨍 · T1 · T2 · T3 · T4 띠) */
+.pd-poster { display: flex; flex-direction: column; justify-content: center; align-items: center; padding: var(--sp-5); background: var(--fill-ink); }
+.pd-poster > span { width: min(200px, 72%); }
+.pd-poster__top { display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--stage-pink); color: var(--on-pink); }
+.pd-poster__top b { font-family: var(--font-display-ko); font-size: 30px; line-height: 1; }
+.pd-poster__top i { font-style: normal; font-family: var(--font-mono); font-weight: 700; font-size: 10px; }
+.pd-poster__t1 { padding: 8px; background: var(--fill-violet); color: var(--on-violet); font-family: var(--font-display-ko); font-weight: 900; font-size: 17px; line-height: 1; white-space: nowrap; overflow: hidden; }
+.pd-poster__t2 { padding: 6px 8px; background: var(--fill-yellow); color: var(--on-yellow); font-family: var(--font-display-ko); font-weight: 900; font-size: 9px; line-height: 1.25; }
+.pd-poster__t3 { display: flex; flex-direction: column; gap: 6px; padding: 10px 8px; background: var(--surface); }
+.pd-poster__t3 i { height: 6px; background: var(--text-muted); }
+.pd-poster__t3 i:nth-child(2) { width: 84%; }
+.pd-poster__t3 i:nth-child(3) { width: 92%; }
+.pd-poster__t4 { display: grid; grid-template-columns: 1fr 1fr; height: 36px; }
+.pd-poster__t4 i:first-child { background: var(--stage-lime); }
+.pd-poster__t4 i:last-child { background: var(--stage-orange); }
+
+/* 손수건: 네 장이 2×2로 맞붙는다 */
+.pd-hanky { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+.pd-hanky i { background: var(--st); }
+
+/* 돗자리: 노랑 판 위 접힌 줄무늬 */
+.pd-mat { display: flex; align-items: stretch; gap: 0; padding: var(--sp-6) var(--sp-5) 0; }
+.pd-mat i { flex: 1; background: var(--stage-blue); }
+.pd-mat i:nth-child(even) { background: var(--fill-ink); }
+
+.pd-ship__line { display: block; font-size: 15px; font-weight: 700; line-height: 1.6; }
+.pd-ship__line b { font-family: var(--font-display); font-weight: 900; font-size: 18px; letter-spacing: var(--track-latin); white-space: nowrap; }
+.pd-ship__line .sym { width: 14px; height: 14px; margin-right: var(--sp-2); vertical-align: -1px; }
+
+/* ---------- 반응형 ---------- */
+@media (max-width: 1024px) {
+  .pd-stage { min-height: 0; }
+  .pd-step { grid-template-columns: auto minmax(0, auto) minmax(0, 1fr) auto auto; }
+  .pd-step__code { display: none; }
+}
+@media (max-width: 640px) {
+  /* 구매 흐름 순서: 티셔츠 그림 → 상품명·가격 → 색·사이즈 → 받는 방법·담기 → 사이즈·재고 표.
+     티셔츠 판(.pd-stage)을 풀어(display: contents) 그림과 표를 구매 블록 앞뒤로 따로 놓는다 */
+  .grid.pd-hero { display: flex; flex-direction: column; }
+  .pd-stage, .pd-view { display: contents; }
+  .pd-view__bar, .pd-view__panel { order: 1; background: var(--pd-bg); color: var(--pd-fg); padding-inline: var(--pad-x); transition: background-color var(--dur-flip) linear, color var(--dur-flip) linear; }
+  .pd-view__bar { padding-top: var(--sp-3); border-bottom: 0; box-shadow: inset 0 calc(-1 * var(--seam)) 0 currentColor; }
+  .pd-view__panel { padding-bottom: var(--sp-5); }
+  .pd-buy { order: 2; }
+  .pd-chart { order: 3; margin: 0; border-top: var(--seam) solid var(--rule); }
+  .tee { width: 90%; }
+  .pd-chart__table th, .pd-chart__table td { padding: 8px 6px; font-size: 13px; }
+  .pd-chart__table th[scope="row"] .t-mono { display: none; }
+  .pd-sw__stock { font-size: 12px; }
+  .pd-stage { padding-bottom: var(--sp-5); }
+  .pd-view__now { padding: var(--sp-2) 0; }
+  .pd-view__panel { padding-top: var(--sp-4); }
+  .pd-buy { gap: var(--sp-4); padding-top: var(--sp-3); }
+  .pd-buy__h { font-size: 34px; }
+  .pd-sw { min-height: 88px; padding: 10px; }
+  .pd-sw:has(input:checked) { padding: 13px; }
+  .pd-sw:has(input:checked)::after { top: 12px; right: 12px; width: 16px; height: 16px; }
+  .pd-sw__name { font-size: 18px; }
+  .pd-size span { font-size: 17px; }
+  .pd-step { grid-template-columns: auto minmax(0, 1fr) auto; row-gap: 4px; column-gap: var(--sp-3); min-height: 0 !important; padding: var(--sp-3) var(--pad-x); }
+  .pd-step__sym { grid-row: 1 / span 2; grid-column: 1; }
+  .pd-step__name { grid-row: 1; grid-column: 2; }
+  .pd-step__cap { grid-row: 1; grid-column: 3; }
+  .pd-step__what { grid-row: 2; grid-column: 2 / -1; font-size: 13px; }
+  .pd-step__name { font-size: min(var(--step-name), 28px); white-space: normal; }
+  .pd-step__cap b { font-size: 20px; }
+  .pd-step__on { display: none; }
+  .pd:has(#tee-p:checked) .pd-step[for="tee-p"], .pd:has(#tee-b:checked) .pd-step[for="tee-b"],
+  .pd:has(#tee-l:checked) .pd-step[for="tee-l"], .pd:has(#tee-o:checked) .pd-step[for="tee-o"] { box-shadow: inset 6px 0 0 var(--fill-ink); }
+  .pd-step__sym .sym, .pd-step:nth-child(1) .pd-step__sym .sym { width: 28px; height: 28px; }
+  .pd-good__art { height: 220px; }
+}
+
+.pd-good__id { display: block; margin-top: 4px; font-family: var(--font-mono); font-size: 12px; font-weight: 700; letter-spacing: var(--track-code); color: var(--text-muted); }

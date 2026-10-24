@@ -40,6 +40,7 @@
     moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
     close: '<path d="M6 6l12 12M18 6 6 18"/>',
     menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+    'panel-left': '<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M9.5 4.5v15M6 8.5h1.5M6 11.5h1.5"/>',
     'chevron-left': '<path d="m15 6-6 6 6 6"/>',
     'chevron-right': '<path d="m9 6 6 6-6 6"/>',
     'chevron-down': '<path d="m6 9 6 6 6-6"/>',
@@ -176,11 +177,22 @@
 
   /* ───────────── 무드 · 메쉬 ───────────── */
   function moodOf(el) { var m = el && el.closest ? el.closest('[data-mood]') : null; return m ? m.getAttribute('data-mood') : (root.getAttribute('data-mood') || '001'); }
+  // 핸들 라벨 = 지금 무대에 실제로 칠해진 stop 값(낮 리허설 틴트 / 밤 본 행사 색).
+  // data-mesh-hex="N" → 실제 값만, data-mesh-pair → "원색 → 낮|밤 실제 값"
+  function isNight(el) { return currentTheme() === 'dark' || !!(el.closest && el.closest('.scope-dark')); }
   function refreshMeshLabels(scope) {
     $$('[data-mesh-hex]', scope).forEach(function (el) {
       var n = el.getAttribute('data-mesh-hex');
-      var v = getComputedStyle(el).getPropertyValue('--mood-' + n).trim();
-      if (v) el.textContent = v.toUpperCase();
+      // 404·empty: 아직 색이 돌아오지 않은 제어점은 값이 없다 — 라벨이 거짓말하지 않게
+      if (el.closest('.mesh__handle[aria-pressed="false"]')) { el.innerHTML = '<span class="ko">비어 있음</span>'; return; }
+      var cs = getComputedStyle(el), raw = el.closest('.mesh--raw');
+      var night = isNight(el);
+      var brand = cs.getPropertyValue('--mood-' + n).trim().toUpperCase();
+      var real = raw ? brand : cs.getPropertyValue('--mood-' + (night ? 'night-' : 'day-') + n).trim().toUpperCase();
+      if (!real) return;
+      if (el.hasAttribute('data-mesh-pair') && real !== brand) {
+        el.innerHTML = brand + ' → <span class="ko">' + (night ? '밤' : '낮') + '</span> ' + real;
+      } else el.textContent = real;
     });
     $$('[data-mood-name]', scope).forEach(function (el) { var m = moodOf(el); el.textContent = MOODS[m] ? MOODS[m].name : ''; });
     $$('[data-mood-id]', scope).forEach(function (el) { el.textContent = 'MOOD-' + moodOf(el); });
@@ -245,6 +257,60 @@
     $$('.mesh--drift', scope).forEach(function (m) { if (m._gyDrift) return; m._gyDrift = true; driftIO.observe(m); });
   }
 
+  // 핸들 가드: 드리프트·포인터 추종으로 핸들(+라벨)이 글자 상자와 겹치면 잠시 숨긴다(.is-veiled)
+  var guarded = [];
+  function textBoxes(mesh, mr) {
+    var out = [], range = doc.createRange(), n;
+    var w = doc.createTreeWalker(mesh, NodeFilter.SHOW_TEXT, { acceptNode: function (t) { return t.nodeValue.trim() && !t.parentNode.closest('.mesh__handle') ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT; } });
+    while ((n = w.nextNode())) {
+      range.selectNodeContents(n);
+      Array.prototype.forEach.call(range.getClientRects(), function (r) { if (r.width && r.height) out.push([r.left - mr.left - 12, r.top - mr.top - 8, r.right - mr.left + 12, r.bottom - mr.top + 8]); });
+    }
+    // 불투명한 면(플레이트·카드·버튼·커버 아트)의 가장자리에서 핸들이 반쯤 삐져나와 보이지 않게
+    Array.prototype.forEach.call(mesh.querySelectorAll('*'), function (el) {
+      if (el.closest('.mesh__handle') || !el.offsetWidth) return;
+      var cs = getComputedStyle(el), bg = cs.backgroundColor;
+      var solid = (bg && bg !== 'transparent' && !/rgba\([^)]*,\s*0\)$/.test(bg)) || cs.backgroundImage !== 'none';
+      if (!solid) return;
+      var r = el.getBoundingClientRect();
+      out.push([r.left - mr.left - 10, r.top - mr.top - 10, r.right - mr.left + 10, r.bottom - mr.top + 10]);
+    });
+    return out;
+  }
+  function guardTick(force) {
+    guarded.forEach(function (m) {
+      var g = m._gyGuard; if (!g.inView && !force) return;
+      var mr = m.getBoundingClientRect();
+      if (force || !g.boxes || ++g.age > 8) { g.boxes = textBoxes(m, mr); g.age = 0; }
+      g.handles.forEach(function (h) {
+        var rs = [h.getBoundingClientRect()], lb = $('.mesh__label', h);
+        if (lb && lb.offsetWidth) rs.push(lb.getBoundingClientRect());
+        var hit = rs.some(function (r) {
+          var x1 = r.left - mr.left, y1 = r.top - mr.top, x2 = r.right - mr.left, y2 = r.bottom - mr.top;
+          return g.boxes.some(function (b) { return x1 < b[2] && x2 > b[0] && y1 < b[3] && y2 > b[1]; });
+        });
+        h.classList.toggle('is-veiled', hit);
+      });
+    });
+  }
+  var guardIO = 'IntersectionObserver' in window ? new IntersectionObserver(function (en) { en.forEach(function (e) { if (e.target._gyGuard) e.target._gyGuard.inView = e.isIntersecting; }); }) : null;
+  function initHandleGuard(scope) {
+    $$('.mesh', scope).forEach(function (m) {
+      if (m._gyGuard) return;
+      var hs = $$('.mesh__handle', m).filter(function (h) { return h.parentNode === m && h.tagName !== 'BUTTON'; });
+      if (!hs.length) return;
+      m._gyGuard = { handles: hs, boxes: null, age: 0, inView: true };
+      guarded.push(m);
+      if (guardIO) guardIO.observe(m);
+    });
+    if (!initHandleGuard._t) {
+      initHandleGuard._t = setInterval(function () { guardTick(false); }, 120);
+      window.addEventListener('resize', function () { guardTick(true); });
+      if (doc.fonts && doc.fonts.ready) doc.fonts.ready.then(function () { guardTick(true); });
+    }
+    guardTick(true);
+  }
+
   // 404 · empty: 회색 메쉬의 핸들을 눌러 색 복귀
   function onRestoreHandle(btn) {
     var mesh = btn.closest('[data-restore]');
@@ -252,6 +318,7 @@
     var n = btn.getAttribute('data-p');
     mesh.classList.add('lit-' + n);
     btn.setAttribute('aria-pressed', 'true');
+    refreshMeshLabels(btn);
     var lit = [1, 2, 3, 4].filter(function (i) { return mesh.classList.contains('lit-' + i); }).length;
     var counter = $('[data-restore-count]', mesh.parentNode) || $('[data-restore-count]');
     if (counter) counter.textContent = lit + ' / 4';
@@ -699,7 +766,7 @@
       if (chap) chap.textContent = s.getAttribute('data-chapter');
       if (cnt) cnt.innerHTML = '<b>' + pad2(i + 1) + '</b><span> / ' + pad2(total) + '</span>';
       var m = s.getAttribute('data-mood') || root.getAttribute('data-mood') || '001';
-      if (clicker) clicker.setAttribute('data-mood', m);
+      if (clicker) { clicker.setAttribute('data-mood', m); clicker.classList.toggle('scope-dark', s.classList.contains('scope-dark')); }
       if (navbar) navbar.setAttribute('data-mood', m);
       $$('[data-scene-link]').forEach(function (a) { a.setAttribute('aria-current', a.getAttribute('href') === '#' + s.id ? 'true' : 'false'); });
       emit(s, 'scene', { index: i, chapter: s.getAttribute('data-chapter') });
@@ -711,6 +778,11 @@
       scenes.forEach(function (s) { io.observe(s); });
     }
     setScene(0);
+    // 푸터(사업자 표기)가 보이면 클리커 띠를 걷는다
+    var foot = $('.site-footer');
+    if (clicker && foot && 'IntersectionObserver' in window) {
+      new IntersectionObserver(function (en) { clicker.classList.toggle('is-off', en[0].isIntersecting); }, { threshold: 0, rootMargin: '0px 0px -48px 0px' }).observe(foot);
+    }
     deck.go = function (i) {
       i = clamp(i, 0, total - 1);
       scenes[i].scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' });
@@ -732,9 +804,13 @@
   }
   function kanbanCounts(board) {
     $$('.kanban__col', board).forEach(function (col) {
+      // data-total: 발췌 보드(index 미니 보드)에서 화면 밖 카드까지 센 정본 열 합계(kanban.html 기준)
       var cards = $$('.kanban__card', col), done = cards.filter(function (c) { return c.getAttribute('data-done') === 'true'; }).length;
-      var cnt = $('[data-kanban-count]', col); if (cnt) cnt.innerHTML = '<b>' + done + '</b> / ' + cards.length;
-      var line = $('.kanban__line span', col); if (line) line.style.setProperty('--value', cards.length ? (done / cards.length).toFixed(4) : 0);
+      if (col._gyExtra === undefined) col._gyExtra = Math.max(0, (parseInt(col.getAttribute('data-total'), 10) || cards.length) - cards.length);
+      var total = cards.length + col._gyExtra;
+      if (col.hasAttribute('data-col-done')) done += col._gyExtra;
+      var cnt = $('[data-kanban-count]', col); if (cnt) cnt.innerHTML = '<b>' + done + '</b> / ' + total;
+      var line = $('.kanban__line span', col); if (line) line.style.setProperty('--value', total ? (done / total).toFixed(4) : 0);
     });
   }
   function colName(col) { var t = $('.kanban__title', col); return t ? t.childNodes[0].textContent.trim() : ''; }
@@ -1028,27 +1104,83 @@
     });
   }
 
-  /* ───────────── 실시간 차트 (동시 시청자) ───────────── */
+  /* ───────────── 실시간 차트 (동시 시청자) ─────────────
+     본 차트 = 송출 전체 창(data-start–data-end, 15초 간격). 큐 시각에 세로 마커, y 라벨은 data-ticks.
+     맨 오른쪽 90초(6점)만 1.5초마다 갱신되는 '라이브 구간'으로 강조한다.
+     스파크라인(무대 띠) = 같은 라이브 90초를 min–max 로 확대한 것("최근 90초 확대"라고 라벨에 적는다). */
+  function hm(t) { var p = t.split(':'); return +p[0] * 60 + +p[1]; }
   function initLiveChart(scope) {
     $$('[data-livechart]', scope).forEach(function (lc) {
       if (lc._gy) return; lc._gy = true;
       var plot = $('.livechart__plot', lc); if (!plot) return;
-      var basev = parseFloat(lc.getAttribute('data-base')) || 41092, n = 60, W = 600, H = 200;
-      var seed = 7, data = [];
-      function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
-      var v = basev * 1.32;
-      for (var i = 0; i < n; i++) { v = v + (basev - v) * 0.06 + (rnd() - 0.5) * basev * 0.03; data.push(v); }
-      data[n - 1] = basev;
+      var basev = parseFloat(lc.getAttribute('data-base')) || 41092;
       var max = parseFloat(lc.getAttribute('data-max')) || 70000;
-      plot.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true"><line class="livechart__grid" x1="0" x2="' + W + '" y1="' + H * 0.25 + '" y2="' + H * 0.25 + '"/><line class="livechart__grid" x1="0" x2="' + W + '" y1="' + H * 0.5 + '" y2="' + H * 0.5 + '"/><line class="livechart__grid" x1="0" x2="' + W + '" y1="' + H * 0.75 + '" y2="' + H * 0.75 + '"/><path class="livechart__area"/><path class="livechart__line"/></svg>';
-      var area = $('.livechart__area', plot), line = $('.livechart__line', plot), out = $('[data-livechart-value]', lc), btn = $('[data-livechart-toggle]', lc);
-      function y(val) { return (H - val / max * H).toFixed(1); }
+      var t0 = hm(lc.getAttribute('data-start') || '19:00'), t1 = hm(lc.getAttribute('data-end') || '20:42');
+      var anchors = (lc.getAttribute('data-anchors') || '').split(',').filter(Boolean).map(function (x) { var q = x.split('='); return [hm(q[0]), +q[1]]; });
+      var cues = (lc.getAttribute('data-cues') || '').split(',').filter(Boolean).map(function (x) { var q = x.split('='); return [q[0], q[1]]; });
+      var ticks = (lc.getAttribute('data-ticks') || '20000,40000,60000').split(',').map(Number);
+      var W = 1000, H = 240, step = 0.25, span = t1 - t0, seed = 11;
+      function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+      // 앵커 사이를 부드럽게(smoothstep) 잇고 ±0.4% 흔들림
+      function at(m) {
+        for (var i = 0; i < anchors.length - 1; i++) {
+          var A = anchors[i], B = anchors[i + 1];
+          if (m >= A[0] && m <= B[0]) { var k = (m - A[0]) / (B[0] - A[0]); at.k = k; k = k * k * (3 - 2 * k); return A[1] + (B[1] - A[1]) * k; }
+        }
+        return anchors.length ? anchors[anchors.length - 1][1] : basev;
+      }
+      var full = [], peakV = anchors.reduce(function (mx, A) { return Math.max(mx, A[1]); }, 0);
+      for (var m = t0; m <= t1 + 1e-9; m += step) {
+        var v = at(m), isAnchor = anchors.some(function (A) { return Math.abs(A[0] - m) < 1e-6; });
+        // 흔들림은 앵커에서 0, 구간 가운데서 최대 — 앵커 값(정본)과 최고점이 흔들림에 밀리지 않게
+        var amp = 4 * (at.k || 0) * (1 - (at.k || 0));
+        full.push(Math.round(isAnchor ? v : Math.min(peakV - 40, v * (1 + (rnd() - 0.5) * 0.008 * amp))));
+      }
+      full[full.length - 1] = basev;
+      var N = full.length, LIVE = 7; // 마지막 90초 = 15초 간격 6구간(7점)
+      // 라이브 90초 원본(1.5초 간격 60점) — 스파크라인과 본 차트 끝 구간이 같은 데이터를 쓴다
+      var live = [], v2 = basev;
+      for (var j = 0; j < 60; j++) { live.unshift(Math.round(v2)); v2 = v2 + basev * 0.00035 + (rnd() - 0.5) * basev * 0.004; }
+      live[59] = basev;
+      function X(i) { return (i / (N - 1) * W); }
+      function Y(val) { return (H - val / max * H); }
+      function pct(m) { return ((m - t0) / span * 100).toFixed(3) + '%'; }
+      var peakI = 0; full.forEach(function (val, i) { if (val > full[peakI]) peakI = i; });
+      var h = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true">';
+      ticks.forEach(function (tk) { h += '<line class="livechart__grid" x1="0" x2="' + W + '" y1="' + Y(tk).toFixed(1) + '" y2="' + Y(tk).toFixed(1) + '"/>'; });
+      h += '<line class="livechart__base" x1="0" x2="' + W + '" y1="' + H + '" y2="' + H + '"/>';
+      cues.forEach(function (c) { var x = ((hm(c[0]) - t0) / span * W).toFixed(1); h += '<line class="livechart__cue" x1="' + x + '" x2="' + x + '" y1="0" y2="' + H + '"/>'; });
+      h += '<path class="livechart__area"/><path class="livechart__line"/><path class="livechart__live"/></svg>';
+      h += '<div class="livechart__y" aria-hidden="true">' + ticks.map(function (tk) { return '<span style="top:' + (Y(tk) / H * 100).toFixed(2) + '%">' + fmtNum(tk) + '</span>'; }).join('') + '</div>';
+      h += '<div class="livechart__cues" aria-hidden="true">' + cues.map(function (c, i) { return '<span class="livechart__cue-label" style="left:' + pct(hm(c[0])) + '"><b class="mono">' + c[0] + '</b>' + c[1] + '</span>'; }).join('') + '</div>';
+      h += '<span class="livechart__peak-dot" aria-hidden="true" style="left:' + (X(peakI) / W * 100).toFixed(2) + '%;top:' + (Y(full[peakI]) / H * 100).toFixed(2) + '%"></span>';
+      h += '<span class="livechart__peak-label" aria-hidden="true" style="left:' + (X(peakI) / W * 100).toFixed(2) + '%;top:' + (Y(full[peakI]) / H * 100).toFixed(2) + '%">최고 <b class="mono">' + fmtNum(full[peakI]) + '</b> · <span class="mono">' + lc.getAttribute('data-peak-time') + '</span></span>';
+      h += '<span class="livechart__now" aria-hidden="true"></span>';
+      plot.innerHTML = h;
+      var area = $('.livechart__area', plot), line = $('.livechart__line', plot), liveP = $('.livechart__live', plot), nowDot = $('.livechart__now', plot);
+      var out = $('[data-livechart-value]', lc), btn = $('[data-livechart-toggle]', lc);
+      var syncs = $$('[data-livechart-sync]');
+      var sparks = $$('[data-livechart-spark]').map(function (sp) {
+        sp.innerHTML = '<svg viewBox="0 0 240 64" preserveAspectRatio="none" aria-hidden="true"><path class="spark__area"/><path class="spark__line"/><circle class="spark__now" r="4"/></svg>';
+        return { a: $('.spark__area', sp), l: $('.spark__line', sp), c: $('.spark__now', sp) };
+      });
       function draw() {
-        var d = '';
-        data.forEach(function (val, i) { d += (i ? 'L' : 'M') + (i / (n - 1) * W).toFixed(1) + ' ' + y(val); });
-        line.setAttribute('d', d);
+        // 본 차트의 마지막 7점 = 라이브 60점을 10개 간격으로 뽑은 값
+        for (var k = 0; k < LIVE; k++) full[N - LIVE + k] = live[Math.min(59, k * 10 - 1 < 0 ? 0 : k * 10 - 1)];
+        full[N - 1] = live[59];
+        var d = '', dl = '';
+        full.forEach(function (val, i) { d += (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(val).toFixed(1); if (i >= N - LIVE) dl += (i === N - LIVE ? 'M' : 'L') + X(i).toFixed(1) + ' ' + Y(val).toFixed(1); });
+        line.setAttribute('d', d); liveP.setAttribute('d', dl);
         area.setAttribute('d', d + 'L' + W + ' ' + H + 'L0 ' + H + 'Z');
-        if (out) out.textContent = fmtNum(data[n - 1]);
+        nowDot.style.top = (Y(full[N - 1]) / H * 100).toFixed(2) + '%';
+        var txt = fmtNum(live[59]);
+        if (out) out.textContent = txt;
+        syncs.forEach(function (el) { el.textContent = txt + (el.getAttribute('data-suffix') || ''); });
+        if (sparks.length) {
+          var lo = Math.min.apply(null, live) - 120, hi = Math.max.apply(null, live) + 120, sd = '';
+          live.forEach(function (val, i) { sd += (i ? 'L' : 'M') + (i / 59 * 240).toFixed(1) + ' ' + (60 - (val - lo) / (hi - lo) * 56).toFixed(1); });
+          sparks.forEach(function (sp) { sp.l.setAttribute('d', sd); sp.a.setAttribute('d', sd + 'L240 64L0 64Z'); sp.c.setAttribute('cx', 240); sp.c.setAttribute('cy', (60 - (live[59] - lo) / (hi - lo) * 56).toFixed(1)); });
+        }
       }
       draw();
       var t = 0;
@@ -1056,7 +1188,8 @@
         clearInterval(t);
         lc.toggleAttribute('data-paused', !on);
         if (btn) { btn.setAttribute('aria-pressed', String(!on)); var lb = $('.livechart__toggle-label', btn); if (lb) lb.textContent = on ? '일시정지' : '이어 보기'; var ic = $('[data-icon]', btn); if (ic) setIcon(ic, on ? 'pause' : 'play'); }
-        if (on) t = setInterval(function () { var last = data[n - 1]; data.shift(); data.push(Math.max(0, last + (basev - last) * 0.1 + (rnd() - 0.5) * basev * 0.025)); draw(); }, 1500);
+        // 갱신은 정본 값 ±30명 안에서만 흔든다(상단 무대 띠 숫자도 같은 값으로 동기화)
+        if (on) t = setInterval(function () { live.shift(); live.push(basev + Math.round((rnd() - 0.5) * 60)); draw(); }, 1500);
       }
       if (btn) btn.addEventListener('click', function () { run(lc.hasAttribute('data-paused')); });
       run(!reduced() && !lc.hasAttribute('data-start-paused'));
@@ -1243,6 +1376,7 @@
     initLiveChart(scope);
     initMeshFollow(scope);
     initDrift(scope);
+    initHandleGuard(scope);
     $$('.steps[data-step]', scope).forEach(function (s) { setStep(s, parseInt(s.getAttribute('data-step'), 10) || 1); });
     var cmd = $('#command', scope); if (cmd) initCommand(cmd);
     refreshMeshLabels(scope);

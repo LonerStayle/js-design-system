@@ -1,0 +1,365 @@
+/* ==========================================================================
+   pages/dashboard.css — 김포 OCC 야간 당직 상황판 (윤서하)
+   구도: 당직 머리 띠 → [ND 항로도 7 | 정시율·CAS 5] → [주의 기체 4 | 기체 8대 8] → 운항표 12
+   semantic 토큰만 사용.
+   ========================================================================== */
+
+/* ---- 당직 머리 띠 ------------------------------------------------------ */
+.watch {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: end;
+  gap: var(--sp-group);
+  padding-bottom: var(--sp-4);
+}
+/* 아래 가장자리 = 눈금 띠 (시그니처 1) */
+.watch::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 10px;
+  border-top: var(--stroke) solid var(--line-strong);
+  background-image:
+    repeating-linear-gradient(90deg, var(--ink-muted) 0 1px, transparent 1px var(--tick-major)),
+    repeating-linear-gradient(90deg, var(--line-strong) 0 1px, transparent 1px var(--tick-minor));
+  background-size: 100% 8px, 100% 4px;
+  background-position: left top, left top;
+  background-repeat: no-repeat;
+}
+.watch__id { display: flex; align-items: flex-start; gap: var(--sp-3); min-width: 0; }
+.watch__id .du__code { margin-top: 6px; }
+.watch__title .h-panel { margin: 0; }
+.watch__who { margin-top: var(--sp-1); font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--ink-muted); }
+.watch__who b { color: var(--ink); font-weight: 700; }
+
+.watch__next {
+  display: flex;
+  gap: 0;
+  margin: 0;
+}
+.watch__next > div {
+  padding: 0 var(--sp-4);
+  border-left: var(--stroke) solid var(--line);
+}
+.watch__next dt { font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--ink-muted); }
+.watch__next dd { margin: 0; font-size: var(--fs-sm); line-height: var(--lh-sm); white-space: nowrap; }
+.watch__next .t-mono { font-weight: 700; }
+
+.watch__clock {
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  column-gap: var(--sp-4);
+  align-items: center;
+  justify-items: end;
+}
+.watch__clock-label { grid-row: 1 / 3; color: var(--ink-muted); }
+.watch__clock .rdo { justify-self: end; }
+.watch__utc { font-size: var(--fs-xs); color: var(--ink-muted); }
+
+/* ---- ND 항로도 --------------------------------------------------------- */
+.nd { min-width: 0; }
+.nd > .du { min-width: 0; }
+.nd__map {
+  position: relative;
+  aspect-ratio: 720 / 420;
+  background: var(--window);
+  border-bottom: var(--stroke) solid var(--line);
+}
+.nd__svg { width: 100%; height: 100%; overflow: hidden; }
+.nd__svg text { font-family: var(--font-code); font-size: 10px; letter-spacing: 0.06em; text-anchor: middle; }
+
+.nd__river { fill: none; stroke: var(--pressed); stroke-width: 18; stroke-linecap: round; stroke-linejoin: round; }
+[data-theme="light"] .nd__river { stroke: var(--bezel); }
+.nd__rng circle { fill: none; stroke: var(--line-strong); stroke-width: 1; stroke-dasharray: 2 6; }
+.nd__tick { fill: var(--ink-muted); }
+.nd__corr { fill: none; stroke: var(--line-strong); stroke-width: 1; stroke-dasharray: 6 4; }
+.nd__corr--spur { stroke-dasharray: 2 4; }
+.nd__flown { fill: none; stroke: var(--ink); stroke-width: 1.5; opacity: 0.55; }
+.nd__active { fill: none; stroke: var(--target); stroke-width: 2.5; filter: drop-shadow(0 0 3px var(--target-tint)); }
+
+.nd__wpt path { fill: var(--window); stroke: var(--ink-muted); stroke-width: 1.2; }
+.nd__wpt text { fill: var(--ink-muted); }
+.nd__wpt .nd__wpt-next { stroke: var(--target); fill: var(--window); }
+.nd__wpt text.nd__wpt-next { fill: var(--target); stroke: none; font-weight: 700; }
+
+.nd__vpt rect { fill: var(--window); stroke: var(--ink); stroke-width: 1.5; }
+.nd__vpt .nd__vcode { fill: var(--ink); font-size: 11px; font-weight: 700; }
+.nd__vpt .nd__vko { fill: var(--ink-muted); font-family: var(--font-ko); font-size: 10px; letter-spacing: 0; }
+
+.nd__wind { fill: none; stroke: var(--select); stroke-width: 1.5; }
+.nd__wxtext { fill: var(--select); text-anchor: start !important; font-weight: 700; }
+.nd__wxko { fill: var(--select); font-family: var(--font-ko) !important; letter-spacing: 0 !important; text-anchor: start !important; }
+.nd__gust { fill: none; stroke: var(--select); stroke-width: 10; stroke-dasharray: 2 5; opacity: 0.45; }
+
+.nd__frame path { fill: none; stroke: var(--ink-muted); stroke-width: 1.2; }
+.nd__frame text { fill: var(--ink-muted); }
+.nd__off { display: none; }
+.nd__off path { fill: var(--ink-muted); }
+.nd__off text { fill: var(--ink-muted); text-anchor: start !important; }
+
+/* 표적 + 데이터 블록 */
+.nd__ac {
+  position: absolute;
+  z-index: 2;
+  left: calc(var(--px) - 22px);
+  top: calc(var(--py) - 22px);
+}
+.nd__ac .tgt { background: transparent; }
+.nd__ac .tgt::before { background: var(--window); }
+.nd__ac .tgt--caut::before { background: var(--caution-tint); }
+.nd__ac .pop { min-width: 232px; }
+
+.nd__tag {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 2px 6px;
+  background: color-mix(in srgb, var(--window) 82%, transparent);
+  border-left: var(--stroke) solid var(--line-strong);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  line-height: 14px;
+  white-space: nowrap;
+  pointer-events: none;
+  text-shadow: var(--glow-ink);
+}
+.nd__tag b { font-weight: 700; font-size: var(--fs-xs); }
+.nd__tag-dest { color: var(--target); text-shadow: var(--glow-target); }
+.nd__tag--caut { color: var(--caution); border-left-color: var(--caution); text-shadow: var(--glow-caution); }
+/* 위치: 표적 기준 왼쪽 위 / 오른쪽 위 / 왼쪽 아래 */
+.nd__ac, .nd__tag { --px: calc(var(--x) * 1%); --py: calc(var(--y) * 1%); }
+.nd__tag--nw { right: calc(100% - var(--px) + 14px); bottom: calc(100% - var(--py) + 14px); }
+.nd__tag--ne { left: calc(var(--px) + 14px); bottom: calc(100% - var(--py) + 16px); }
+.nd__tag--sw { right: calc(100% - var(--px) + 14px); top: calc(var(--py) + 14px); }
+.nd__tag--se { left: calc(var(--px) + 14px); top: calc(var(--py) + 12px); }
+
+/* 계층 소프트키 — :has 로 지도 계층 켜고 끄기 */
+.nd:has([data-layer="tfc"][aria-pressed="false"]) :is(.nd__tag, .nd__ac) { display: none; }
+.nd:has([data-layer="wpt"][aria-pressed="false"]) .nd__wpt { display: none; }
+.nd:has([data-layer="rng"][aria-pressed="false"]) .nd__rng { display: none; }
+.nd:not(:has([data-layer="wx"][aria-pressed="true"])) .nd__wx { display: none; }
+
+/* 비행 중 목록 */
+.nd__traffic { padding: var(--sp-3) var(--sp-4) var(--sp-4); }
+.du__body > .nd__traffic { margin-top: 0; }
+.nd__traffic-head { margin-bottom: var(--sp-2); font-size: var(--fs-xs); color: var(--ink-muted); display: flex; align-items: center; gap: var(--sp-2); }
+.nd__traffic .rows__title .t-mono { margin-right: 6px; }
+.nd__traffic .rows__meta { color: var(--ink); }
+
+.nd__foot { justify-content: space-between; }
+.nd__legend { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); font-size: var(--fs-xs); color: var(--ink-muted); }
+.nd__key { display: inline-flex; align-items: center; gap: 6px; }
+.nd__key::before { content: ""; width: 20px; height: 0; border-top: 2px solid var(--ink); opacity: 0.55; }
+.nd__key--active::before { border-top-color: var(--target); opacity: 1; }
+.nd__key--corr::before { border-top: 1px dashed var(--line-strong); opacity: 1; }
+
+/* ---- 정시율 · CAS 열 --------------------------------------------------- */
+.ops-side { min-width: 0; }
+.ops-side > .ops-cas { flex: 1; }
+
+.otp__top { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-4) var(--sp-group); }
+.otp__top .rdo--xl { padding-inline: var(--sp-3); }
+.otp__facts { display: grid; gap: var(--sp-1); margin: 0; min-width: 140px; }
+.otp__facts > div { display: flex; justify-content: space-between; gap: var(--sp-4); border-bottom: var(--stroke) solid var(--line); padding-bottom: 2px; }
+.otp__facts dt { font-size: var(--fs-sm); color: var(--ink-muted); }
+.otp__facts dd { margin: 0; font-family: var(--font-mono); font-weight: 700; font-size: var(--fs-sm); }
+
+.otp__strip { position: relative; padding-top: 32px; }
+.du__body > .otp__strip { margin-top: var(--sp-4); }
+/* 64편 = 64칸 램프 띠: 완료(초록) · 비행 중(마젠타) · 지연(앰버) · 남음(꺼진 칸) */
+.otp__bar {
+  display: block;
+  height: 20px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 calc(100% / 64 - 2px), var(--surface) calc(100% / 64 - 2px) calc(100% / 64)),
+    linear-gradient(90deg,
+      var(--ok-face) 0 73.4375%,
+      var(--target-face) 73.4375% 78.125%,
+      var(--caution-face) 78.125% 79.6875%,
+      var(--pressed) 79.6875% 100%);
+}
+.otp__now {
+  position: absolute;
+  top: 0;
+  left: 79.6875%;
+  transform: translateX(-50%);
+  font-size: var(--fs-micro);
+}
+.otp__legend { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-4); font-size: var(--fs-xs); color: var(--ink-muted); }
+.otp__legend li { display: inline-flex; align-items: center; gap: 6px; }
+.otp__legend b { color: var(--ink); }
+.otp__sw { width: 10px; height: 10px; background: var(--pressed); border: var(--stroke) solid var(--line-strong); }
+.otp__sw--done { background: var(--ok-face); border-color: var(--ok-face); }
+.otp__sw--air { background: var(--target-face); border-color: var(--target-face); }
+.otp__sw--late { background: var(--caution-face); border-color: var(--caution-face); }
+.otp .tape { margin-top: var(--sp-4); }
+
+/* ---- 주의 기체 --------------------------------------------------------- */
+.focus__top {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--sp-4);
+}
+.focus__top .gauge { width: 148px; }
+.focus__ldr dd { white-space: nowrap; }
+.focus .prof { margin-top: var(--sp-4); }
+/* 19:39 주의와 19:42 현재가 가까워 라벨을 한 단 내려 엇갈리게 */
+.focus .prof__events { min-height: 100px; }
+.focus .prof__evt--caut { padding-top: 50px; }
+.ops-cas .cas__code { min-width: 0; }
+
+/* ---- 기체 8대 ---------------------------------------------------------- */
+.fleet__scale,
+.fleet__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 220px) 184px;
+  align-items: center;
+  gap: var(--sp-4);
+}
+.fleet__scale-tape {
+  display: flex;
+  justify-content: space-between;
+  padding-left: calc(72px + var(--sp-3));
+  padding-right: calc(64px + var(--sp-3));
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--ink-muted);
+}
+.fleet__scale-tape span { width: 0; display: flex; justify-content: center; white-space: nowrap; }
+.fleet__list { display: flex; flex-direction: column; }
+.du__body > .fleet__list { margin-top: var(--sp-1); }
+.fleet__scale { padding-left: var(--sp-2); }
+.fleet__row {
+  min-height: 60px;
+  padding: var(--sp-1) 0 var(--sp-1) var(--sp-2);
+  border-bottom: var(--stroke) solid var(--line);
+}
+.fleet__row:last-child { border-bottom: 0; }
+.fleet__loc { font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--ink-muted); }
+.fleet__loc .t-mono { color: var(--ink); font-size: var(--fs-xs); }
+.fleet__sts { display: inline-flex; align-items: center; gap: var(--sp-2); justify-self: start; font-size: var(--fs-xs); }
+.fleet__sts .t-mono { color: var(--ink-muted); }
+.fleet__row--nogo .tape__label { color: var(--warning); text-shadow: var(--glow-warning); }
+.fleet__row--caut .tape__label { color: var(--caution); text-shadow: var(--glow-caution); }
+.fleet__row--nogo { box-shadow: inset 3px 0 0 var(--warning); }
+.fleet__row--caut { box-shadow: inset 3px 0 0 var(--caution); }
+.fleet__row--nogo .tape__fill { background: var(--line-strong); box-shadow: none; }
+
+/* ---- 운항표 ------------------------------------------------------------ */
+.ops-tbl { border: 0; }
+.ops-tbl .mono .lamp { margin-left: 6px; }
+.ops-foot { justify-content: space-between; }
+.ops-foot__keys { display: inline-flex; flex-wrap: wrap; gap: var(--sp-gap); }
+
+/* ---- ND 계층 소프트키 — 마크업은 지도 바로 뒤(교통 목록 앞).
+   데스크톱: DU 왼쪽 바깥 44px 레일로 띄움 · 모바일: 지도 바로 아래 44px 가로 줄 + 오른쪽 페이드 */
+.nd > .du { grid-column: 2; }
+.nd .nd__keys {
+  position: absolute;
+  top: calc(var(--stroke) * -1);
+  left: calc(-1 * (var(--hit) + var(--sp-gap) + var(--stroke)));
+  width: var(--hit);
+}
+
+/* ---- 반응형 ------------------------------------------------------------ */
+@media (max-width: 1280px) {
+  .fleet__scale,
+  .fleet__row { grid-template-columns: minmax(0, 1fr) minmax(0, 180px) 168px; }
+}
+@media (max-width: 1100px) {
+  .watch { grid-template-columns: minmax(0, 1fr) auto; }
+  .watch__next { grid-column: 1 / -1; grid-row: 2; }
+  .watch__next > div:first-child { padding-left: 0; border-left: 0; }
+}
+@media (max-width: 1024px) {
+  .grid > .ops-side { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+  .grid > .focus { grid-column: 1 / -1; }
+  .focus__top { grid-template-columns: 148px minmax(0, 1fr); }
+}
+@media (max-width: 767px) {
+  .grid > .ops-side { grid-template-columns: minmax(0, 1fr); }
+  .watch { grid-template-columns: minmax(0, 1fr); gap: var(--sp-3); }
+  .watch__id .du__code { display: none; }
+  .watch__next { display: grid; grid-template-columns: 1fr 1fr; row-gap: var(--sp-2); }
+  .watch__next > div { padding: 0 var(--sp-3); }
+  .watch__next > div:first-child { grid-column: 1 / -1; }
+  .watch__next > div:nth-child(2) { padding-left: 0; border-left: 0; }
+  .watch__clock { justify-items: start; grid-template-columns: auto auto auto; grid-template-rows: auto; }
+  .watch__clock-label { grid-row: auto; }
+  .watch__clock .rdo--lg { font-size: var(--fs-xl); }
+
+  .nd__svg text { font-size: 20px; }
+  .nd__vpt .nd__vcode { font-size: 22px; }
+  .nd__vpt .nd__vko,
+  .nd__wpt text,
+  .nd__tick,
+  .nd__wxko { display: none; }
+  .nd__wpt text.nd__wpt-next { display: inline; }
+  .nd__tag span { display: none; }
+  .nd__tag { padding: 0 4px; line-height: 16px; }
+  .nd__ac .pop,
+  .nd__ac .pop--below { min-width: 200px; max-width: 220px; top: calc(100% + 4px); bottom: auto; }
+  .nd > .du { grid-column: auto; }
+  .nd .nd__keys {
+    position: static;
+    width: auto;
+    flex-direction: row;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: var(--sp-2) var(--sp-3);
+    border-top: var(--stroke) solid var(--line);
+    border-bottom: var(--stroke) solid var(--line);
+    background: var(--bezel);
+    -webkit-mask-image: linear-gradient(90deg, var(--mask) calc(100% - 40px), transparent);
+    mask-image: linear-gradient(90deg, var(--mask) calc(100% - 40px), transparent);
+  }
+  .nd .nd__keys.is-end { -webkit-mask-image: none; mask-image: none; }
+  .nd .nd__keys::-webkit-scrollbar { display: none; }
+  .nd .nd__keys > .skey { width: auto; min-width: 64px; padding-inline: var(--sp-3); flex: none; }
+  .nd__traffic { padding: var(--sp-3); }
+  .nd__traffic .rows__item { grid-template-columns: auto minmax(0, 1fr); }
+  .nd__traffic .rows__meta { grid-column: 2; }
+  .nd__traffic .rows__sub { white-space: normal; }
+
+  .otp__top .rdo--xl { font-size: 56px; }
+
+  .focus__top { grid-template-columns: 1fr; justify-items: center; }
+  .focus__ldr { width: 100%; }
+
+  .fleet__scale { display: none; }
+  .focus .prof__events { min-height: 0; }
+  .focus .prof__evt--caut { padding-top: 0; }
+  .fleet__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 2px;
+    min-height: 0;
+    padding: var(--sp-2) 0 var(--sp-2) var(--sp-2);
+  }
+  .fleet__row > .tape { grid-column: 1 / -1; }
+  .fleet__loc { font-size: var(--fs-xs); }
+  .fleet__sts { justify-self: end; }
+
+  .ops-foot__keys { width: 100%; }
+  .ops-foot__keys .skey { flex: 1; }
+}
+.nd__svg text.nd__vend { text-anchor: end; }
+
+/* ---- 767 이하: 항로도를 김포–잠실–수서 구간(x 330–720, y 10–370)으로 잘라 키운다 ----
+   SVG는 원래 좌표 그대로 두고 상자를 키워 옮긴다. 표적·태그 좌표도 같은 식으로 환산. */
+@media (max-width: 767px) {
+  .nd__map { aspect-ratio: 390 / 360; min-height: 300px; overflow: hidden; }
+  .nd__svg { position: absolute; left: -84.615%; top: -11.111%; width: 184.615%; max-width: none; height: 116.667%; }
+  .nd__ac, .nd__tag { --px: calc((var(--x) * 7.2 - 330) / 3.9 * 1%); --py: calc((var(--y) * 4.2 - 40) / 3.6 * 1%); }
+  .nd__svg text { font-size: 11px; }
+  .nd__vpt .nd__vcode { font-size: 12px; }
+  .nd__vpt .nd__vko, .nd__wpt text { display: inline; font-size: 11px; }
+  .nd__off { display: inline; }
+  .nd__tag--nw { right: auto; bottom: auto; left: calc(var(--px) + 8px); top: calc(var(--py) + 22px); }
+}

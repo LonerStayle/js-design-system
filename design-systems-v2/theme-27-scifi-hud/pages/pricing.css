@@ -1,0 +1,453 @@
+/* ==========================================================================
+   pricing — 탑승권 · 정기권 · 전세 요금
+   구도: 전폭 노선도 DU(지도 + 노선 소프트키 열) →
+         [정기권 큰 DU 8단 | 전세 좁은 DU 4단] →
+         [베젤 위 취소 수수료 테이프 7단 | 수하물 계산 5단]
+   3단 대칭 요금 카드 없음. semantic 토큰만 사용.
+   ========================================================================== */
+
+/* ==========================================================================
+   노선도 + 노선 열
+   ========================================================================== */
+.fare__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+}
+.fmap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  min-width: 0;
+}
+.fmap__stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 800 / 440;
+  background-color: var(--window);
+  background-image:
+    repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 12.5%),
+    repeating-linear-gradient(180deg, var(--line) 0 1px, transparent 1px 22.727%);
+  border: var(--stroke) solid var(--line);
+  overflow: hidden;
+}
+.fmap__svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.fmap__river { fill: none; stroke: var(--bezel); stroke-width: 24; stroke-linecap: round; }
+.fmap__corr { fill: none; stroke: var(--line-strong); stroke-width: 1.5; stroke-dasharray: 2 6; }
+.fmap__rt {
+  fill: none;
+  stroke: var(--ink-muted);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  transition: stroke var(--dur-fast) var(--ease-instrument), stroke-width var(--dur-fast) var(--ease-instrument);
+}
+.fmap__wp path { fill: var(--window); stroke: var(--ink-muted); stroke-width: 1.5; }
+.fmap__vp circle { fill: var(--window); stroke: var(--ink); stroke-width: 2.5; }
+
+/* HTML 라벨 — viewBox 800×440 좌표를 %로 */
+.vp, .wp, .fwin, .fmap__river-lbl {
+  position: absolute;
+  left: calc(var(--x) / 800 * 100%);
+  top: calc(var(--y) / 440 * 100%);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.fmap__river-lbl {
+  left: 3%;
+  top: 19%;
+  font-family: var(--font-ko);
+  font-size: var(--fs-xs);
+  color: var(--ink-muted);
+}
+.vp {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: var(--font-ko);
+  font-size: var(--fs-xs);
+  color: var(--ink-muted);
+}
+.vp b {
+  font-family: var(--font-code);
+  font-size: var(--fs-sm);
+  letter-spacing: var(--track-code);
+  color: var(--ink);
+  text-shadow: var(--glow-ink);
+}
+.vp--s { transform: translate(-50%, 14px); }
+.vp--nw { transform: translate(calc(-100% - 12px), calc(-100% - 6px)); }
+.vp--e { transform: translate(16px, -50%); }
+.wp {
+  transform: translate(-50%, calc(-100% - 10px));
+  font-family: var(--font-code);
+  font-size: 10px;
+  letter-spacing: var(--track-code);
+  color: var(--ink-muted);
+}
+.fmap__off { display: none; }
+.fwin { z-index: 1; transition: border-color var(--dur-fast) var(--ease-instrument); }
+.fwin.rdo--ptr-t { transform: translate(-50%, 10px); }
+.fwin.rdo--ptr-b { transform: translate(-50%, calc(-100% - 10px)); }
+.fwin.rdo--ptr-l { transform: translate(10px, -50%); }
+
+/* 고른 노선 = 마젠타(활성 경로), 호버 = 시안 */
+.fare:has([data-route="gy"]:hover) .fmap__rt--gy,
+.fare:has([data-route="iy"]:hover) .fmap__rt--iy,
+.fare:has([data-route="yj"]:hover) .fmap__rt--yj,
+.fare:has([data-route="js"]:hover) .fmap__rt--js,
+.fare:has([data-route="sp"]:hover) .fmap__rt--sp,
+.fare:has([data-route="gj"]:hover) .fmap__rt--gj { stroke: var(--select); stroke-width: 3; }
+
+.fare:has([data-route="gy"][aria-pressed="true"]) .fmap__rt--gy,
+.fare:has([data-route="iy"][aria-pressed="true"]) .fmap__rt--iy,
+.fare:has([data-route="yj"][aria-pressed="true"]) .fmap__rt--yj,
+.fare:has([data-route="js"][aria-pressed="true"]) .fmap__rt--js,
+.fare:has([data-route="sp"][aria-pressed="true"]) .fmap__rt--sp,
+.fare:has([data-route="gj"][aria-pressed="true"]) .fmap__rt--gj { stroke: var(--target); stroke-width: 4; }
+
+.fare:has([data-route="gy"][aria-pressed="true"]) .fwin--gy,
+.fare:has([data-route="iy"][aria-pressed="true"]) .fwin--iy,
+.fare:has([data-route="yj"][aria-pressed="true"]) .fwin--yj,
+.fare:has([data-route="js"][aria-pressed="true"]) .fwin--js,
+.fare:has([data-route="sp"][aria-pressed="true"]) .fwin--sp,
+.fare:has([data-route="gj"][aria-pressed="true"]) .fwin--gj { --rdo-c: var(--target); text-shadow: var(--glow-target); z-index: 2; }
+
+.fmap__key {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-group);
+  font-size: var(--fs-xs);
+  color: var(--ink-muted);
+}
+.fmap__key li { display: inline-flex; align-items: center; gap: var(--sp-2); }
+.fmap__sw { width: 24px; height: 0; border-top: 2px solid var(--ink-muted); }
+.fmap__sw--sel { border-top: 4px solid var(--target); }
+.fmap__sw--corr { border-top: 2px dotted var(--line-strong); }
+
+/* 노선 소프트키 열 */
+.fare__side {
+  display: flex;
+  flex-direction: column;
+  border-left: var(--stroke) solid var(--line);
+  min-width: 0;
+}
+.frows { display: flex; flex-direction: column; }
+.frow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "code meta" "ko fare";
+  align-items: baseline;
+  gap: 2px var(--sp-3);
+  min-height: 64px;
+  padding: var(--sp-2) var(--sp-4) var(--sp-2) calc(var(--sp-4) - 3px);
+  border-bottom: var(--stroke) solid var(--line);
+  border-left: 3px solid transparent;
+  text-align: left;
+  color: var(--ink);
+  transition: background-color var(--dur-fast) var(--ease-instrument), border-color var(--dur-fast) var(--ease-instrument);
+}
+.frow:hover { background: var(--bezel); border-left-color: var(--select); }
+.frow__code {
+  grid-area: code;
+  font-family: var(--font-code);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--track-code);
+  color: var(--ink-muted);
+}
+.frow__ko { grid-area: ko; font-family: var(--font-ko); font-weight: 700; font-size: var(--fs-base); }
+.frow__meta { grid-area: meta; justify-self: end; font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-muted); }
+.frow__fare {
+  grid-area: fare;
+  justify-self: end;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--fs-lg);
+  font-variant-numeric: tabular-nums;
+}
+.frow[aria-pressed="true"] { background: var(--bezel); border-left-color: var(--target); }
+.frow[aria-pressed="true"] .frow__code,
+.frow[aria-pressed="true"] .frow__fare { color: var(--target); text-shadow: var(--glow-target); }
+
+.fare__pick {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-top: auto;
+  padding: var(--sp-4);
+  border-top: var(--stroke) solid var(--line-strong);
+}
+.fare__pick-label { font-size: var(--fs-xs); color: var(--ink-muted); }
+.fare__pick-val { font-family: var(--font-ko); font-weight: 700; font-size: var(--fs-md); line-height: var(--lh-md); color: var(--target); }
+
+/* ==========================================================================
+   정기권 · 전세
+   ========================================================================== */
+.fare-plans { align-items: stretch; }
+
+.pass__body {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: var(--sp-group) var(--sp-group);
+  align-content: start;
+}
+.pass__body > * + * { margin-top: 0; }
+.pass__price { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-2); }
+.pass__rdo { font-size: 48px; }
+.pass__unit { font-size: var(--fs-base); }
+
+/* 편도와 비교 — 눈금 위 막대 + 표지 */
+.cmp { min-width: 0; }
+.cmp__title, .win__title { font-family: var(--font-ko); font-weight: 700; font-size: var(--fs-sm); margin-bottom: var(--sp-2); }
+.cmp__plot { position: relative; height: 124px; }
+.cmp__plot::before {           /* 눈금 트랙 */
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 34px;
+  height: 14px;
+  border-bottom: var(--stroke) solid var(--line-strong);
+  background-image:
+    repeating-linear-gradient(90deg, var(--ink-muted) 0 1px, transparent 1px 25%),
+    repeating-linear-gradient(90deg, var(--line-strong) 0 1px, transparent 1px 6.25%);
+  background-size: calc(100% + 1px) 12px, calc(100% + 1px) 6px;
+  background-position: left bottom;
+  background-repeat: no-repeat;
+}
+.cmp__fill {
+  position: absolute;
+  left: 0; top: 34px;
+  width: 43.125%;
+  height: 14px;
+  background: var(--select-tint);
+  border-right: var(--stroke-strong) solid var(--select);
+  border-bottom: var(--stroke-strong) solid var(--select);
+}
+.cmp__pass { position: absolute; left: 43.125%; top: 0; transform: translateX(-50%); }
+.cmp__scale {
+  position: absolute;
+  left: 0; right: 0; top: 52px;
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--ink-muted);
+}
+/* 눈금 숫자 다섯 개를 대눈금(0·25·50·75·100%) 바로 아래에 둔다.
+   42,000·78,000 표지 세로선이 지나가므로 숫자에 DU 면 바탕을 깔아 선 위로 올린다 */
+.cmp__scale > span { position: absolute; top: 0; white-space: nowrap; padding: 0 3px; background: var(--surface); z-index: 1; transform: translateX(-50%); }
+.cmp__scale > :nth-child(1) { left: 0; transform: none; padding-left: 0; }
+.cmp__scale > :nth-child(2) { left: 25%; }
+.cmp__scale > :nth-child(3) { left: 50%; }
+.cmp__scale > :nth-child(4) { left: 75%; }
+.cmp__scale > :nth-child(5) { left: 100%; transform: translateX(-100%); padding-right: 0; }
+.cmp__mk {
+  position: absolute;
+  z-index: 0;
+  top: 26px;
+  display: flex;
+  flex-direction: column;
+  padding: 44px 0 0 6px;
+  border-left: var(--stroke-strong) solid var(--ink);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+.cmp__mk b { font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--ink); }
+.cmp__mk em { font-style: normal; font-family: var(--font-mono); color: var(--ok); text-shadow: var(--glow-ok); }
+.cmp__mk--gy { left: 52.5%; transform: translateX(-100%); border-left: 0; border-right: var(--stroke-strong) solid var(--ink); padding: 44px 6px 0 0; align-items: flex-end; text-align: right; }
+.cmp__mk--yj { left: 57.5%; }
+.cmp__mk--gj { left: 97.5%; transform: translateX(-100%); border-left: 0; border-right: var(--stroke-strong) solid var(--ink); padding: 44px 6px 0 0; align-items: flex-end; text-align: right; }
+
+.pass__terms { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: var(--sp-group); }
+@media (max-width: 767px) { .pass__terms { grid-template-columns: minmax(0, 1fr); } }
+
+/* 이용 시간대 — 하루 시간축 */
+.win { grid-column: 1 / -1; min-width: 0; }
+.win__plot {
+  position: relative;
+  height: 40px;
+  border-bottom: var(--stroke) solid var(--line-strong);
+  background-image: repeating-linear-gradient(90deg, var(--line-strong) 0 1px, transparent 1px calc(100% / 18));
+  background-size: calc(100% + 1px) 6px;
+  background-position: left bottom;
+  background-repeat: no-repeat;
+}
+.win__ops {
+  position: absolute;
+  left: 5.556%;
+  width: 86.111%;
+  top: 14px;
+  height: 12px;
+  background: var(--bezel);
+  border: var(--stroke) solid var(--line);
+}
+.win__slot {
+  position: absolute;
+  top: 4px;
+  height: 32px;
+  width: 13.889%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--stroke-strong) solid var(--target);
+  background: var(--target-tint);
+}
+.win__slot b { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--target); text-shadow: var(--glow-target); white-space: nowrap; }
+.win__slot--am { left: 5.556%; }
+.win__slot--pm { left: 66.667%; }
+.win__scale {
+  display: flex;
+  justify-content: space-between;
+  margin: 4px 0 var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  color: var(--ink-muted);
+}
+
+.chtr__price { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-2); }
+.chtr__calc { display: flex; flex-direction: column; gap: var(--sp-2); padding-top: var(--sp-2); }
+.chtr__q { font-size: var(--fs-xs); color: var(--ink-muted); }
+.chtr__keys > .skey { flex: 1 1 0; }
+.chtr__total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding-top: var(--sp-3);
+  border-top: var(--stroke) solid var(--line);
+}
+
+/* ==========================================================================
+   취소 수수료 테이프 · 수하물
+   ========================================================================== */
+.fare-rules { align-items: stretch; }
+.cnx { border-color: var(--line-strong); }
+.cnx .du__body { display: flex; flex-direction: column; gap: var(--sp-3); }
+.cnx .du__body > * + * { margin-top: 0; }
+.cnx__bar {
+  position: relative;
+  display: flex;
+  margin-top: 34px;
+}
+.cnx__zone {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-top: 4px solid currentColor;
+  font-size: var(--fs-xs);
+  color: var(--ink-muted);
+}
+.cnx__zone b { font-family: var(--font-mono); font-size: var(--fs-lg); line-height: 1.2; }
+.cnx__zone--ok { width: 50%; color: var(--ok); background: var(--ok-tint); }
+.cnx__zone--caut { width: 32%; color: var(--caution); background: var(--caution-tint); }
+.cnx__zone--warn { width: 18%; color: var(--warning); background: var(--warning-tint); }
+.cnx__zone--ok b, .cnx__zone--caut b, .cnx__zone--warn b { text-shadow: var(--glow-ink); }
+.cnx__zone > :not(b) { color: var(--ink); }
+.cnx__zone { color: var(--ink); }
+.cnx__zone--ok { border-top-color: var(--ok); }
+.cnx__zone--ok b { color: var(--ok); }
+.cnx__zone--caut { border-top-color: var(--caution-face); }
+.cnx__zone--caut b { color: var(--caution); }
+.cnx__zone--warn { border-top-color: var(--warning-face); }
+.cnx__zone--warn b { color: var(--warning); }
+/* 지금 표지 — SG132 기준 출발 12시간 33분 전 */
+.cnx__now {
+  position: absolute;
+  left: 66.6%;
+  top: -10px;
+  height: 14px;               /* 띠 위쪽 테두리까지만 — 칸 글자를 관통하지 않는다 */
+  border-left: var(--stroke-strong) solid var(--target);
+}
+.cnx__now .rdo { position: absolute; bottom: calc(100% + 8px); left: 0; transform: translateX(-50%); font-family: var(--font-ko); }
+.cnx__axis { position: relative; height: 20px; font-family: var(--font-ko); font-size: var(--fs-xs); color: var(--ink-muted); }
+.cnx__axis span { position: absolute; top: 0; white-space: nowrap; }
+.cnx__axis span:nth-child(1) { left: 0; }
+.cnx__axis span:nth-child(2) { left: 50%; transform: translateX(-50%); }
+.cnx__axis span:nth-child(3) { left: 82%; transform: translateX(-50%); }
+.cnx__axis span:nth-child(4) { right: 0; }
+.cnx__ex { font-size: var(--fs-sm); max-width: 64ch; }
+
+.bag__slider::before {      /* 무료 구간 0–10kg */
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 50%;
+  top: 51px;
+  height: 14px;
+  background: var(--ok-tint);
+  border-bottom: var(--stroke-strong) solid var(--ok);
+  pointer-events: none;
+}
+.bag__free { display: flex; align-items: center; gap: var(--sp-2); color: var(--ink-muted); }
+.bag__free-sw { width: 16px; height: 10px; background: var(--ok-tint); border-bottom: var(--stroke-strong) solid var(--ok); }
+.bag__fee {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding-top: var(--sp-3);
+  border-top: var(--stroke) solid var(--line);
+}
+
+/* ==========================================================================
+   반응형
+   ========================================================================== */
+@media (max-width: 1024px) {
+  .fare__body { grid-template-columns: minmax(0, 1fr); }
+  .fare__side { border-left: 0; border-top: var(--stroke) solid var(--line); }
+  .pass__body { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 767px) {
+  .fmap { padding: var(--sp-3); }
+  /* 좁은 화면 — 김포·여의도·잠실·수서·판교 구간(x 230–710)만 잘라 키운다. 인천 구간은 화면 밖 화살표로 */
+  .fmap__stage { aspect-ratio: 480 / 440; min-height: 300px; }
+  .fmap__svg { left: -47.917%; right: auto; width: 166.667%; max-width: none; }
+  .vp, .wp, .fwin { left: calc((var(--x) - 230) / 480 * 100%); }
+  .wp, .fmap__river-lbl, .fwin--iy { display: none; }
+  .wp { font-size: 10px; }
+  .vp { font-size: var(--fs-micro); gap: 4px; }
+  .vp b { font-size: var(--fs-xs); }
+  .fwin { font-size: var(--fs-micro); }
+  .fmap__off {
+    position: absolute;
+    left: 6px;
+    top: calc(262 / 440 * 100%);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    background: var(--window);
+    border: var(--stroke) solid var(--line-strong);
+    font-family: var(--font-ko);
+    font-size: var(--fs-micro);
+    color: var(--ink-muted);
+    white-space: nowrap;
+  }
+  .fmap__off b { font-family: var(--font-code); color: var(--ink); letter-spacing: var(--track-code); }
+  .vp--nw { transform: translate(-8px, calc(-100% - 12px)); }
+  .fwin.fwin--js, .fwin.fwin--sp { transform: translate(calc(-100% - 12px), -50%); }
+  .vp--e { font-size: 0; }
+  .fwin--js::before, .fwin--js::after, .fwin--sp::before, .fwin--sp::after { display: none; }
+  .fmap__off-arrow { width: 0; height: 0; border: 5px solid transparent; border-right: 7px solid var(--ink-muted); border-left: 0; }
+  .vp--e { transform: translate(10px, -50%); }
+  .pass__rdo { font-size: var(--fs-2xl); }
+  .cmp__plot { height: 196px; margin-bottom: var(--sp-2); }
+  .cmp__mk--yj { left: 57.5%; }
+  .cmp__mk { font-size: var(--fs-micro); }
+  .cmp__mk--gj { padding-top: 92px; }
+  .cmp__mk--gj b, .cmp__mk--gj em { font-size: var(--fs-xs); }
+  .win__slot b { display: none; }
+  .cnx__zone { padding: var(--sp-2); }
+  .cnx__zone b { font-size: var(--fs-md); white-space: nowrap; }
+  .cnx__zone--ok { width: 44%; }
+  .cnx__zone--warn { width: 24%; }
+  .cnx__now { left: 60%; }
+  .cnx__axis span:nth-child(3) { left: 76%; }
+  .cnx__axis span:nth-child(2) { display: none; }
+}

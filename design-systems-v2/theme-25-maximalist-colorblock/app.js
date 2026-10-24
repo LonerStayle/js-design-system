@@ -192,9 +192,11 @@
     panel.classList.add('is-open');
     trigger.setAttribute('aria-expanded', 'true');
     floating = { panel, trigger };
-    // 화면 밖으로 나가면 오른쪽 기준으로
-    panel.classList.remove('menu--end', 'popover--end');
+    // 화면 밖으로 나가면 오른쪽 기준으로. 마크업에 처음부터 적힌 --end는 지우지 않는다(자동으로 붙인 것만 되돌림)
+    if (panel.dataset.autoEnd) { panel.classList.remove('menu--end', 'popover--end'); delete panel.dataset.autoEnd; }
+    if (panel.classList.contains('menu--end') || panel.classList.contains('popover--end')) return;
     const r = panel.getBoundingClientRect();
+    if (r.right > innerWidth - 8) panel.dataset.autoEnd = '1';
     if (r.right > innerWidth - 8) panel.classList.add(panel.classList.contains('menu') ? 'menu--end' : 'popover--end');
   }
   function closeFloating(returnFocus) {
@@ -547,13 +549,29 @@
     $$('[data-reveal-group]', scope).forEach((g) => {
       Array.from(g.children).forEach((c, n) => { if (!c.hasAttribute('data-reveal')) c.setAttribute('data-reveal', ''); c.style.setProperty('--i', n); });
     });
-    const els = $$('[data-reveal]', scope);
-    if (reduced() || !('IntersectionObserver' in window)) { els.forEach((e) => e.classList.add('is-in')); return; }
-    const io = new IntersectionObserver((ents) => {
-      ents.forEach((en) => { if (en.isIntersecting) { en.target.classList.add('is-in'); io.unobserve(en.target); } });
-    }, { rootMargin: '0px 0px -6% 0px', threshold: 0.01 });
-    els.forEach((e) => io.observe(e));
+    const els = $$('[data-reveal]', scope).filter((e) => !e.classList.contains('is-in'));
+    if (reduced()) { els.forEach((e) => e.classList.add('is-in')); return; }
+    // clip-path로 숨긴 요소는 IntersectionObserver가 면적 0으로 보고 알리지 않으므로(Chrome),
+    // getBoundingClientRect(클립과 무관)로 직접 판정한다. 띠당 한 번.
+    els.forEach((e) => whenInView(e, () => e.classList.add('is-in')));
   }
+  // 화면에 들어오면 한 번 실행. clip-path로 숨긴 요소는 IntersectionObserver가 면적 0으로 보고
+  // 알리지 않으므로(Chrome) getBoundingClientRect(클립과 무관)로 직접 판정한다.
+  const viewPending = new Map();
+  let viewQueued = false;
+  function checkView() {
+    viewQueued = false;
+    const limit = innerHeight * 0.94;
+    viewPending.forEach((fn, e) => {
+      const r = e.getBoundingClientRect();
+      if ((r.width || r.height) && r.top < limit && r.bottom > 0) { viewPending.delete(e); fn(); }
+    });
+  }
+  function whenInView(el, fn) { viewPending.set(el, fn); checkView(); }
+  const queueView = () => { if (!viewQueued && viewPending.size) { viewQueued = true; requestAnimationFrame(checkView); } };
+  addEventListener('scroll', queueView, { passive: true });
+  addEventListener('resize', queueView);
+  ['jj:tab', 'jj:step', 'jj:open'].forEach((ev) => doc.addEventListener(ev, queueView));
 
   /* ======================================================================
      13. 카운트업 [data-count="1284"] — 한 번만, 600ms
@@ -564,10 +582,8 @@
     if (Number.isNaN(target)) return;
     const dec = (el.dataset.count.split('.')[1] || '').length;
     const final = el.textContent;
-    if (reduced() || !('IntersectionObserver' in window)) return;
-    const io = new IntersectionObserver((ents) => {
-      if (!ents.some((x) => x.isIntersecting)) return;
-      io.disconnect();
+    if (reduced()) return;
+    whenInView(el, () => {
       const t0 = performance.now();
       const step = (now) => {
         const p = Math.min(1, (now - t0) / 600);
@@ -577,7 +593,6 @@
       };
       requestAnimationFrame(step);
     });
-    io.observe(el);
   }
 
   /* ======================================================================
@@ -685,7 +700,61 @@
   /* ======================================================================
      16. 달력 — 날짜 단일 선택
      ====================================================================== */
+  /* 달 넘김: .cal[data-cal-month="2026-10"] + .cal__nav[data-cal-step="-1|1"].
+     처음 마크업에 적힌 달은 그대로 보관했다가 돌아오면 되살리고, 다른 달은 날짜 칸을 새로 그린다.
+     다른 달의 일정은 data-cal-events='{"2026-09-10":"2차 라인업"}' 로 넘긴다. 범위 밖이면 버튼이 꺼진다(data-cal-min/max). */
+  const DOW_KO = ['일', '월', '화', '수', '목', '금', '토'];
+  function calMonthNav(cal) {
+    const grid = $('.cal__grid', cal);
+    const navs = $$('.cal__nav[data-cal-step]', cal);
+    if (!grid || !navs.length || !cal.dataset.calMonth) return;
+    const home = cal.dataset.calMonth;
+    const homeHTML = grid.innerHTML;
+    let events = {};
+    try { events = JSON.parse(cal.dataset.calEvents || '{}'); } catch (e) { /* 잘못된 JSON은 무시 */ }
+    const monthEl = $('.cal__month', cal);
+    const yearEl = $('.cal__year', cal);
+    const out = $('[data-cal-output]', cal);
+    let cur = home;
+    const shift = (ym, k) => { const [y, m] = ym.split('-').map(Number); const d = new Date(y, m - 1 + k, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
+    const label = (ym) => `${Number(ym.split('-')[1])}월`;
+    function render(ym) {
+      if (ym === home) { grid.innerHTML = homeHTML; }
+      else {
+        const [y, m] = ym.split('-').map(Number);
+        const first = new Date(y, m - 1, 1).getDay();
+        const days = new Date(y, m, 0).getDate();
+        const prevDays = new Date(y, m - 1, 0).getDate();
+        let h = DOW_KO.map((d, i) => `<span class="cal__dow${i === 0 ? ' cal__dow--sun' : i === 6 ? ' cal__dow--sat' : ''}">${d}</span>`).join('');
+        for (let i = first - 1; i >= 0; i--) h += `<span class="cal__day cal__day--muted"><span class="cal__num">${prevDays - i}</span></span>`;
+        for (let d = 1; d <= days; d++) {
+          const key = `${ym}-${String(d).padStart(2, '0')}`;
+          const ev = events[key];
+          if (!ev) h += `<span class="cal__day"><span class="cal__num">${d}</span></span>`;
+          else if (typeof ev === 'object' && ev.day) h += `<span class="cal__day cal__day--fest"><span class="cal__num">${d}</span><span class="cal__ev"><span class="dno dno--${ev.day}">D${ev.day}</span>${ev.t}</span></span>`;
+          else h += `<span class="cal__day cal__day--deadline"><span class="cal__num">${d}</span><span class="cal__ev">${typeof ev === 'object' ? ev.t : ev}</span></span>`;
+        }
+        const tail = (7 - ((first + days) % 7)) % 7;
+        for (let d = 1; d <= tail; d++) h += `<span class="cal__day cal__day--muted"><span class="cal__num">${d}</span></span>`;
+        grid.innerHTML = h;
+      }
+      if (monthEl) monthEl.textContent = label(ym);
+      if (yearEl) yearEl.textContent = ym.split('-')[0];
+      navs.forEach((b) => {
+        const k = Number(b.dataset.calStep);
+        const next = shift(ym, k);
+        const off = (k < 0 && cal.dataset.calMin && next < cal.dataset.calMin) || (k > 0 && cal.dataset.calMax && next > cal.dataset.calMax);
+        b.disabled = !!off;
+        b.setAttribute('aria-label', `${label(next)} 보기`);
+      });
+      if (out) out.textContent = `${ym.split('-')[0]}년 ${label(ym)}`;
+    }
+    navs.forEach((b) => b.addEventListener('click', () => { cur = shift(cur, Number(b.dataset.calStep)); render(cur); }));
+    render(cur);
+    if (out) out.textContent = '';
+  }
   function initCalendar(cal) {
+    calMonthNav(cal);
     const out = $('[data-cal-output]', cal);
     cal.addEventListener('click', (e) => {
       const d = e.target.closest('button.cal__day');
@@ -711,6 +780,11 @@
       if (bad && !ids.includes(err.id)) ids.push(err.id);
       input.setAttribute('aria-describedby', ids.filter((x) => bad || x !== err.id).join(' '));
       err.classList.toggle('is-shown', bad);
+      // 상황에 맞는 문장: 빈 칸이면 data-msg-empty, 값이 있는데 형식이 틀리면 data-msg-pattern
+      if (bad && (err.dataset.msgEmpty || err.dataset.msgPattern)) {
+        const msg = input.validity && input.validity.valueMissing ? err.dataset.msgEmpty : err.dataset.msgPattern;
+        if (msg) { const sym = $('.sym', err); err.textContent = ''; if (sym) err.appendChild(sym); err.appendChild(doc.createTextNode(msg)); }
+      }
     }
   }
   function initForm(form) {
@@ -769,11 +843,54 @@
      19. 찜·고르기 토글 [data-pick] (aria-pressed) + [data-pick-group]의 [data-pick-count]
          스위치 [role="switch"] · 복사 [data-copy] · 진행 막대 · 모션 실연 · 가로 스크롤 힌트
      ====================================================================== */
+  /* 시간 겹침 [data-pick-group][data-pick-conflict]: 찜한 [data-pick][data-day][data-start][data-end] 중
+     같은 날 시간이 겹치는 것에 .is-conflict 를 붙이고, 'jj:picks' 이벤트로 결과(on·clash·lines)를 알린다.
+     목록·지도처럼 장면마다 다른 다시 그리기는 그 이벤트를 받아서 한다. */
+  const toMin = (t) => { const a = String(t).split(':'); return (+a[0]) * 60 + (+a[1]); };
+  const hasBatchim = (w) => { const c = w.charCodeAt(w.length - 1); return c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 !== 0; };
+  const STAGE_KO = { P: '쨍 스테이지', B: '물결 스테이지', L: '잔디 스테이지', O: '귤 텐트' };
+  const DAY_KO = { 1: '토', 2: '일' };
+  function checkConflict(group) {
+    const all = $$('[data-pick][data-day][data-start][data-end]', group);
+    const on = all.filter((b) => b.getAttribute('aria-pressed') === 'true');
+    const clash = {}; const lines = [];
+    all.forEach((b) => b.classList.remove('is-conflict'));
+    for (let i = 0; i < on.length; i++) {
+      for (let j = i + 1; j < on.length; j++) {
+        const a = on[i]; const b = on[j];
+        if (a.dataset.day !== b.dataset.day) continue;
+        const st = Math.max(toMin(a.dataset.start), toMin(b.dataset.start));
+        const en = Math.min(toMin(a.dataset.end), toMin(b.dataset.end));
+        if (en <= st) continue;
+        const first = toMin(a.dataset.start) <= toMin(b.dataset.start) ? a : b; const second = first === a ? b : a;
+        clash[a.dataset.set || a.id] = clash[b.dataset.set || b.id] = true;
+        a.classList.add('is-conflict'); b.classList.add('is-conflict');
+        const n1 = first.textContent.trim(); const n2 = second.textContent.trim();
+        lines.push(`${DAY_KO[a.dataset.day] || ''} ${n1}${hasBatchim(n1) ? '과' : '와'} ${n2}${hasBatchim(n2) ? '이' : '가'} ${en - st}분 겹쳐요 (${first.dataset.start}–${first.dataset.end} ${STAGE_KO[first.dataset.stage] || ''} · ${second.dataset.start}–${second.dataset.end} ${STAGE_KO[second.dataset.stage] || ''}).`);
+      }
+    }
+    $$('[data-pick-conflict-alert]', group).forEach((al) => {
+      al.hidden = !lines.length;
+      const t = $('[data-pick-conflict-text]', al);
+      if (t) t.textContent = lines.join(' ');
+    });
+    group.dispatchEvent(new CustomEvent('jj:picks', { bubbles: true, detail: { on, clash, lines } }));
+  }
   function syncPick(group) {
     const n = $$('[data-pick][aria-pressed="true"]', group).length;
     $$('[data-pick-count]', group).forEach((c) => { c.textContent = n; });
+    if (group.hasAttribute('data-pick-conflict')) checkConflict(group);
   }
   doc.addEventListener('click', (e) => {
+    /* 하나만 고르는 걸러 보기 줄 [data-choose]: 누른 단추만 aria-pressed=true, [data-choose-now]에 이름을 적는다 */
+    const chBtn = e.target.closest('[data-choose] button[aria-pressed]');
+    if (chBtn && !chBtn.disabled) {
+      const g = chBtn.closest('[data-choose]');
+      $$('button[aria-pressed]', g).forEach((b) => b.setAttribute('aria-pressed', b === chBtn ? 'true' : 'false'));
+      const now = $('[data-choose-now]', g);
+      if (now) now.textContent = chBtn.dataset.label || chBtn.textContent.trim();
+      return;
+    }
     const pick = e.target.closest('[data-pick]');
     if (pick && !pick.disabled) {
       const on = pick.getAttribute('aria-pressed') !== 'true';
